@@ -1,6 +1,6 @@
 # Data Model
 
-23 tables in the backend spreadsheet. Every table declares its columns and types in
+26 tables in the backend spreadsheet. Every table declares its columns and types in
 `src/server/01_Schema.gs`; the bootstrap routine creates or migrates the physical
 sheets to match. Migration is forward-only — columns are appended, never dropped or
 reordered.
@@ -14,10 +14,16 @@ reordered.
   history is never silently destroyed.
 * `accountId` / `gstin` is the join key between plans, activities and facts. Facts
   also snapshot `regionId` and `pocUserId` so history survives a re-assignment.
+* `category` is the Business Function partition key on every table below that
+  carries it. It is an unconstrained string, governed by `DB_BusinessFunctions`
+  rather than a hardcoded enum — see [`ARCHITECTURE.md` §10](ARCHITECTURE.md).
+  OMP's two categories keep their historical literal values (`Plastic`, `Metal`).
 
 ## Relationships
 
 ```
+DB_BusinessFunctions -< DB_ActivityTypeDef, DB_MetricDef   (GENERIC functions only)
+
 DB_Users -+-< DB_KPIAssignment >- DB_KPI >- DB_KRA >- DB_Cycles
           +-< DB_Accounts >-+-< DB_AccountPlan >- DB_Cycles
           |                 +-< DB_Activities
@@ -28,8 +34,8 @@ DB_Users -+-< DB_KPIAssignment >- DB_KPI >- DB_KRA >- DB_Cycles
           +-< DB_Reviews >-< DB_Actions
           +-< DB_Pipeline >-< DB_Documents
 
-DB_Shipments  --gstin--> DB_Accounts        (synced fact)
-DB_Onboarding --gstin--> DB_Accounts        (synced fact)
+DB_Shipments  --gstin--> DB_Accounts        (synced fact, OMP only)
+DB_Onboarding --gstin--> DB_Accounts        (synced fact, OMP only)
 DB_Regions -< DB_Users, DB_Accounts, facts
 DB_Snapshots, DB_Audit, DB_SyncLog, DB_Config  (no foreign keys)
 ```
@@ -47,6 +53,80 @@ Primary key `key` - 5 columns
 | `key` | STR |  |
 | `value` | STR |  |
 | `description` | STR |  |
+| `updatedAt` | DATETIME |  |
+| `updatedBy` | STR |  |
+
+### `DB_BusinessFunctions`
+
+The config-driven registry that replaced the hardcoded Plastic/Metal `CATEGORY` enum. `businessFunctionId` is the exact value stored in `category` on every other table.
+
+Primary key `businessFunctionId` - 15 columns
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `businessFunctionId` | STR | stored as `category` on every fact/plan table |
+| `name` | STR |  |
+| `description` | STR |  |
+| `icon` | STR |  |
+| `color` | STR |  |
+| `sequence` | NUM |  |
+| `active` | BOOL |  |
+| `calculatorMode` | STR | LEGACY (hand-written engine code) \| GENERIC (DB_MetricDef-driven) |
+| `streamMode` | STR | SUPPLY_DEMAND \| SINGLE |
+| `streamLabels` | JSON | `{streamKey: label}` |
+| `hasAccountPlan` | BOOL | true only for OMP — gates the tonnage/rate/GMV planning tabs |
+| `createdAt` | DATETIME |  |
+| `createdBy` | STR |  |
+| `updatedAt` | DATETIME |  |
+| `updatedBy` | STR |  |
+
+### `DB_ActivityTypeDef`
+
+Declarative activity taxonomy for GENERIC business functions — the config-only analog of the hardcoded `ACTIVITY_TYPES` array. A LEGACY function (OMP) never has rows here.
+
+Primary key `activityTypeId` - indexed on 'businessFunctionId' - 14 columns
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `activityTypeId` | STR | the key stored in DB_Activities.activityType |
+| `businessFunctionId` | STR |  |
+| `label` | STR |  |
+| `icon` | STR |  |
+| `measures` | JSON | array of `{key,label,unit,column,default}`; column is count\|measureA\|measureB\|measureC |
+| `requiresAccount` | BOOL |  |
+| `evidence` | STR | NONE \| OPTIONAL \| REQUIRED |
+| `systemOwned` | BOOL |  |
+| `sequence` | NUM |  |
+| `active` | BOOL |  |
+| `help` | STR |  |
+| `createdAt` | DATETIME |  |
+| `createdBy` | STR |  |
+| `updatedAt` | DATETIME |  |
+| `updatedBy` | STR |  |
+
+### `DB_MetricDef`
+
+Declarative metric registry for GENERIC business functions — the config-only analog of the hardcoded `METRICS` object. `06b_GenericEngine.gs` is a pure interpreter of these rows.
+
+Primary key `metricKey` - indexed on 'businessFunctionId' - 16 columns
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `metricKey` | STR | globally unique; referenced by DB_KPI.metricKey |
+| `businessFunctionId` | STR |  |
+| `label` | STR |  |
+| `unit` | STR |  |
+| `direction` | STR | enum |
+| `aggregation` | STR | COUNT \| SUM \| DISTINCT_COUNT \| RATIO \| DERIVED |
+| `sourceActivityType` | STR | for COUNT \| SUM \| DISTINCT_COUNT |
+| `measureField` | STR | for SUM (measureA..C) and DISTINCT_COUNT (field to distinct on) |
+| `numeratorMetric` | STR | for RATIO |
+| `denominatorMetric` | STR | for RATIO |
+| `multiplier` | NUM | for RATIO; 100 for a percentage, 1 for a plain ratio |
+| `expression` | STR | for DERIVED — arithmetic over other metric keys |
+| `active` | BOOL |  |
+| `createdAt` | DATETIME |  |
+| `createdBy` | STR |  |
 | `updatedAt` | DATETIME |  |
 | `updatedBy` | STR |  |
 
@@ -361,6 +441,10 @@ Primary key `activityId` - indexed on 'cycleId', 'pocUserId', 'activityDate', 'a
 | `createdBy` | STR |  |
 | `updatedAt` | DATETIME |  |
 | `updatedBy` | STR |  |
+| `subjectName` | STR | free-text subject for GENERIC business functions with no DB_Accounts counterpart |
+| `measureA` | NUM | generic measure slot — GENERIC business functions only |
+| `measureB` | NUM | generic measure slot |
+| `measureC` | NUM | generic measure slot |
 
 ### `DB_Shipments`
 

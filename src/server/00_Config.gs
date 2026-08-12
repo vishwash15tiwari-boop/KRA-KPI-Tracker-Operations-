@@ -41,9 +41,40 @@ var CATEGORIES = [CATEGORY.PLASTIC, CATEGORY.METAL];
 /** Supply serves sellers; Demand serves buyers. Each carries its own KRA set. */
 var STREAM = Object.freeze({
   SUPPLY: 'SUPPLY',
-  DEMAND: 'DEMAND'
+  DEMAND: 'DEMAND',
+  GENERAL: 'GENERAL' // single-stream business functions (Onboarding, Collections, …)
 });
-var STREAMS = [STREAM.SUPPLY, STREAM.DEMAND];
+var STREAMS = [STREAM.SUPPLY, STREAM.DEMAND, STREAM.GENERAL];
+
+/**
+ * How a business function's KRAs are grouped into streams. SUPPLY_DEMAND is
+ * OMP's two-sided seller/buyer split; SINGLE is one undifferentiated stream
+ * (STREAM.GENERAL) for functions with no natural two-sided structure.
+ */
+var STREAM_MODE = Object.freeze({
+  SUPPLY_DEMAND: 'SUPPLY_DEMAND',
+  SINGLE: 'SINGLE'
+});
+
+/**
+ * How a business function's metrics are computed. LEGACY means Engine.metric()
+ * dispatches to the hand-written OMP switch (legacyMetric_); GENERIC means it
+ * dispatches to GenericEngine.metric(), which interprets DB_MetricDef rows —
+ * the config-only path a new business function uses with no engine code.
+ */
+var CALCULATOR_MODE = Object.freeze({
+  LEGACY: 'LEGACY',
+  GENERIC: 'GENERIC'
+});
+
+/** Aggregation kinds a GENERIC business function's DB_MetricDef row can declare. */
+var AGGREGATION = Object.freeze({
+  COUNT: 'COUNT',
+  SUM: 'SUM',
+  DISTINCT_COUNT: 'DISTINCT_COUNT',
+  RATIO: 'RATIO',
+  DERIVED: 'DERIVED'
+});
 
 /**
  * Roles, ordered by authority. Higher rank implies every capability of the

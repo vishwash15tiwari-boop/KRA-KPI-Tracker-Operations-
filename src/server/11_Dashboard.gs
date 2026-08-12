@@ -28,6 +28,14 @@ var Dashboard = (function () {
     options = options || {};
     var ctx = Reports.context(cycleIdValue, asOfValue);
     var sc = Auth.scope();
+
+    // The HEADLINE list below is OMP's hand-picked six metrics with OMP-specific
+    // target derivations (account plan sums, pulse rate, BALANCE_PLUS_MTD) — it
+    // has no meaning for a GENERIC business function. Build the executive tiles
+    // from the cycle's own KRA/KPI structure instead; no engine code is added
+    // for a new business function's dashboard, same as everywhere else.
+    if (BusinessFunction.isGeneric(ctx.cycle.category)) return genericExecutive_(ctx, sc, options);
+
     var stream = options.stream || STREAM.SUPPLY;
 
     // A POC's dashboard is scoped to their own book automatically; a Regional
@@ -95,6 +103,71 @@ var Dashboard = (function () {
         rateGstDivisor: Config.get('RATE_GST_DIVISOR'),
         reportingLagDays: Config.get('REPORTING_LAG_DAYS')
       }
+    };
+  }
+
+  /**
+   * The executive view for a GENERIC business function: one tile per KPI in
+   * the cycle (up to a sane display limit), each computed the same way the
+   * scorecard computes it — Engine.metric for the actual, Engine.target for
+   * the target, Engine.evaluate for pace and rating. No metric is hand-picked;
+   * whatever KRAs/KPIs a Team Lead configured are what shows here.
+   */
+  function genericExecutive_(ctx, sc, options) {
+    var scopedRegion = (sc.level === 'REGION' && sc.regionIds && sc.regionIds.length)
+      ? sc.regionIds[0] : null;
+    var baseScope = {
+      category: ctx.cycle.category, stream: STREAM.GENERAL,
+      regionId: options.regionId || scopedRegion,
+      pocUserId: options.pocUserId || (sc.level === 'SELF' ? sc.user.userId : null)
+    };
+    var engineScope = Engine.scope(baseScope);
+
+    var kpis = Repository.where(SHEET.KPI, { cycleId: ctx.cycle.cycleId })
+      .filter(function (p) { return p.active !== false; });
+
+    var tiles = Util.sortBy(kpis, [{ pick: function (k) { return Util.num(k.sequence, 99); } }])
+      .slice(0, 8).map(function (kpi, i) {
+        var actual = Engine.metric(kpi.metricKey, ctx.windows.mtd, engineScope, { trace: false });
+        var lmtd = Engine.metric(kpi.metricKey, ctx.windows.lmtd, engineScope, { trace: false });
+        var targetValue = Engine.target(kpi, ctx.cycle, engineScope, ctx.windows.mtd, null).value;
+        var evaluation = Engine.evaluate({
+          target: targetValue, actual: actual.value, lmtd: lmtd.value, weightage: 0,
+          direction: kpi.direction || DIRECTION.HIGHER_BETTER,
+          elapsedDays: ctx.elapsedDays, remainingDays: ctx.remainingDays
+        });
+        return {
+          metricKey: kpi.metricKey, label: kpi.kpiName, unit: Metrics.unit(kpi.metricKey), primary: i === 0,
+          target: Util.round(evaluation.target, 6), actual: Util.round(evaluation.actual, 6),
+          gap: Util.round(evaluation.gap, 6), achievement: evaluation.achievement,
+          lmtd: Util.round(evaluation.lmtd, 6), growthPct: evaluation.growthPct,
+          currentDrr: Util.round(evaluation.currentDrr, 6), requiredDrr: Util.round(evaluation.requiredDrr, 6),
+          paceStatus: evaluation.paceStatus, tone: evaluation.tone,
+          projected: Util.round(evaluation.projected, 6), projectedAchievement: evaluation.projectedAchievement,
+          drill: {
+            metricKey: kpi.metricKey, cycleId: ctx.cycle.cycleId,
+            regionId: baseScope.regionId, pocUserId: baseScope.pocUserId
+          }
+        };
+      });
+
+    return {
+      cycle: {
+        cycleId: ctx.cycle.cycleId, label: ctx.cycle.label,
+        status: ctx.cycle.status, category: ctx.cycle.category,
+        year: ctx.cycle.year, month: ctx.cycle.month
+      },
+      stream: STREAM.GENERAL,
+      asOf: DateUtil.isoDate(ctx.asOf),
+      asOfLabel: 'As Of ' + DateUtil.display(ctx.asOf),
+      progress: {
+        elapsedDays: ctx.elapsedDays, remainingDays: ctx.remainingDays, daysInMonth: ctx.daysInMonth,
+        monthProgressPct: Util.div(ctx.elapsedDays, ctx.daysInMonth, 0)
+      },
+      tiles: tiles,
+      scopeLabel: scopeLabel_(ctx, baseScope),
+      dataQuality: dataQuality(ctx.cycle.cycleId),
+      basis: { gmvBasis: null, rateGstDivisor: null, reportingLagDays: Config.get('REPORTING_LAG_DAYS') }
     };
   }
 

@@ -1,10 +1,16 @@
 # OMP Operations KRA/KPI Tracker
 
-The single operating platform for the OMP Supply & Demand teams (Plastic and Metal).
-It replaces a 25-sheet spreadsheet process with one application built around a single
-loop:
+A single operating platform for Operations KRA/KPI management, built around one loop:
 
 > **Plan → Execute → Track → Measure → Review → Improve**
+
+It shipped first for the OMP Supply & Demand teams (Plastic and Metal), replacing a
+25-sheet spreadsheet process. The platform now hosts any number of **Business
+Functions** on the same loop, each configuring its own KRAs, KPIs, activity types and
+metrics: **OMP-Metal** and **OMP-Plastic** (built-in, tested against the source
+workbook) plus **Onboarding** and **Collections** (config-driven — see
+[`ARCHITECTURE.md` §10](docs/ARCHITECTURE.md#10-the-business-function-layer)). A fifth
+function is a configuration act, not a code change.
 
 Built entirely on **Google Apps Script**, with Google Sheets as the backend data
 repository during the transition.
@@ -53,24 +59,48 @@ rate showing whether the gap is closing or widening.
 
 ---
 
+## Business Functions
+
+Every business function — OMP-Metal, OMP-Plastic, Onboarding, Collections, or one an
+admin adds — runs on the same six principles above. OMP's two functions compute their
+metrics from hand-written, tested engine code (`calculatorMode: LEGACY`); every other
+function computes purely from configuration (`calculatorMode: GENERIC`) — its activity
+types and metrics are rows in `DB_ActivityTypeDef`/`DB_MetricDef`, authored from
+**Administration → Business Functions** or seeded once at bootstrap. Its KRAs and KPIs
+are then built from the same Monthly Plan screen a Team Lead already uses for OMP.
+
+Onboarding a function beyond the first four needs no code: create it, give it activity
+types and metrics, and plan its first cycle — `tests/generic-engine.test.js` does
+exactly this for a fifth function end to end. See
+[`ARCHITECTURE.md` §10](docs/ARCHITECTURE.md#10-the-business-function-layer) for the
+full design.
+
+---
+
 ## Repository layout
 
 ```
 src/
   appsscript.json            manifest
-  server/                    16 .gs files, numeric prefixes set the load order
+  server/                    18 .gs files, numeric prefixes set the load order
+                              (03b_BusinessFunction, 06b_GenericEngine are the
+                               config-driven Business Function layer, see below)
   client/                    Index, Styles, ClientCore, ClientComponents,
                              ClientBoot + 9 view modules
 docs/
   WORKBOOK-ANALYSIS.md       the reverse-engineering record — read this first
-  ARCHITECTURE.md            system shape, engine design, request lifecycle
-  DATA-MODEL.md              all 23 tables, keys and relationships
-  CALCULATION-ENGINE.md      every formula, with its source cell
+  ARCHITECTURE.md            system shape, engine design, request lifecycle,
+                              §10 the Business Function layer
+  DATA-MODEL.md              all 26 tables, keys and relationships
+  CALCULATION-ENGINE.md      every OMP formula, with its source cell
   DEPLOYMENT.md              setup, configuration, operations, troubleshooting
 tests/
   gas-harness.js             in-memory Apps Script environment
-  engine.test.js             121 assertions against real workbook data
+  engine.test.js             126 assertions against real workbook data (OMP)
+  generic-engine.test.js     44 assertions against the config-driven layer
   fixtures/                  raw rows exported from the source workbook
+scripts/
+  generate-quickdeploy.js    regenerates dist/quickdeploy/ from src/
 ```
 
 ---
@@ -99,13 +129,17 @@ Of the 25 sheets in the source workbook, **15 become read-only outputs of the en
 
 ## Verification
 
-The engine is tested against the workbook's own computed values, not against
+The OMP engine is tested against the workbook's own computed values, not against
 invented numbers. `tests/engine.test.js` stages the raw `Overall Shipments` and
 `Seller Onboarding` rows, runs the real sync, and asserts the engine reproduces
-what the spreadsheet's formulas produced.
+what the spreadsheet's formulas produced. `tests/generic-engine.test.js` proves the
+config-driven Business Function layer — planning, executing and measuring a
+business function that has never had a line of engine code written for it.
 
 ```bash
-node tests/engine.test.js     # 121 passed, 0 failed
+npm test                            # both suites
+node tests/engine.test.js           # 126 passed, 0 failed — OMP (Plastic/Metal)
+node tests/generic-engine.test.js   # 44 passed, 0 failed — Onboarding/Collections/config-driven
 ```
 
 Covered: the window algebra (MTD, LMTD, FYTD, fiscal year), the scoring formulas

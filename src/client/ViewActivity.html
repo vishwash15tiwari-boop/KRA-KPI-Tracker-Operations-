@@ -109,6 +109,9 @@ Router.register('activity', {
                 if (r.quantityMT) bits.push(F.mt(r.quantityMT));
                 if (r.amountINR) bits.push(F.inr(r.amountINR));
                 if (r.ratePerKg) bits.push('₹' + F.num(r.ratePerKg, 2) + '/kg');
+                if (r.measureA) bits.push(F.num(r.measureA, 2));
+                if (r.measureB) bits.push(F.num(r.measureB, 2));
+                if (r.measureC) bits.push(F.num(r.measureC, 2));
                 if (!bits.length && r.count) bits.push(F.int(r.count));
                 return bits.length ? bits.join('<span class="cell-sub"></span>')
                   : '<span class="faint">—</span>';

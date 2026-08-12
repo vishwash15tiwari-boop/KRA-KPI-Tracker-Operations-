@@ -202,8 +202,23 @@ var Engine = (function () {
    * Compute one metric.
    * Returns { key, value, unit, count, contributors } where `contributors` is a
    * bounded sample of the underlying records with enough identity to drill down.
+   *
+   * Dispatches on the owning business function's calculator: LEGACY routes to
+   * the hand-written switch below (legacyMetric_ — OMP, unchanged); GENERIC
+   * routes to GenericEngine.metric(), which interprets a DB_MetricDef row. This
+   * is the one seam that lets a new business function compute its own metrics
+   * from configuration alone.
    */
   function metric(metricKey, window, sc, options) {
+    if (BusinessFunction.isGeneric(sc.category)) {
+      var def = MetricDef.get(metricKey);
+      if (!def) fail('UNKNOWN_METRIC', 'No calculation is defined for metric "' + metricKey + '".');
+      return GenericEngine.metric(def, window, sc, options);
+    }
+    return legacyMetric_(metricKey, window, sc, options);
+  }
+
+  function legacyMetric_(metricKey, window, sc, options) {
     options = options || {};
     var fs = facts(sc.category);
     var trace = options.trace !== false;
@@ -375,7 +390,7 @@ var Engine = (function () {
           dn += Util.num(r.debitNoteINR, 0);
           if (trace) drows.push(receivableTrace_(r));
         });
-        var gmvInrForDn = metric('GMV_CR', window, sc, { trace: false }).value *
+        var gmvInrForDn = legacyMetric_('GMV_CR', window, sc, { trace: false }).value *
           Config.get('GMV_CR_DIVISOR');
         out.value = Util.div(dn, gmvInrForDn, 0);
         out.count = drows.length;
@@ -396,7 +411,7 @@ var Engine = (function () {
           if (trace) rrows.push(receivableTrace_(r));
         });
         var avgReceivable = k ? (opening + closing) / 2 : 0;
-        var gmvInrForDso = metric('GMV_CR', window, sc, { trace: false }).value *
+        var gmvInrForDso = legacyMetric_('GMV_CR', window, sc, { trace: false }).value *
           Config.get('GMV_CR_DIVISOR');
         var days = DateUtil.daysInMonth(window.start);
         out.value = Util.div(avgReceivable, gmvInrForDso, 0) * days;
@@ -569,9 +584,10 @@ var Engine = (function () {
     return {
       id: a.activityId, type: a.activityType,
       date: DateUtil.isoDate(a.activityDate),
-      accountName: a.accountName, gstin: a.gstin,
+      accountName: a.accountName || a.subjectName || '', gstin: a.gstin,
       pocUserId: a.pocUserId, regionId: a.regionId,
       quantityMT: a.quantityMT, amountINR: a.amountINR, count: a.count,
+      measureA: a.measureA, measureB: a.measureB, measureC: a.measureC,
       remarks: a.remarks, evidence: a.evidenceUrl,
       verification: a.verificationStatus,
       createdBy: a.createdBy, createdAt: DateUtil.isoDateTime(a.createdAt),
@@ -637,8 +653,8 @@ var Engine = (function () {
         var pct = Util.num(kpi.basisPct, 0);
         return {
           value: base.value * pct, basis: 'PCT_OF_METRIC',
-          detail: Fmt.pct(pct, 0) + ' of ' + (METRICS[kpi.basisMetric] ?
-            METRICS[kpi.basisMetric].label : kpi.basisMetric) + ' (' + Util.round(base.value, 2) + ')',
+          detail: Fmt.pct(pct, 0) + ' of ' + Metrics.label(kpi.basisMetric) +
+            ' (' + Util.round(base.value, 2) + ')',
           baseValue: base.value, basePct: pct
         };
       }
@@ -863,6 +879,11 @@ var Engine = (function () {
     toneFor: toneFor,
     transactingSet: transactingSet_,
     onboardedAccountSet: onboardedAccountSet_,
-    accountPlansFor: accountPlansFor_
+    accountPlansFor: accountPlansFor_,
+    // Exposed for GenericEngine (06b_GenericEngine.gs), which reuses the same
+    // scope-matching and traceability-payload logic for GENERIC business
+    // functions rather than duplicating it.
+    rowInScope: rowInScope_,
+    activityTrace: activityTrace_
   };
 })();

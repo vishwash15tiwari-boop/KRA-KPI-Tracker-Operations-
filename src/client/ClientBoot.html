@@ -57,17 +57,37 @@ const Boot = (() => {
   function renderCycleContext() {
     const boot = State.boot;
     const cycles = boot.cycles || [];
+    const functions = (boot.reference && boot.reference.businessFunctions) || [];
+    const cyclesForFunction = cycles.filter(c => c.category === State.category);
     const active = State.cycle();
-    D.html(D.q('#cycleContext'), cycles.length ? `
-      <select class="select" id="topCyclePicker" aria-label="Planning cycle"
-              style="width:auto;max-width:230px;padding:5px 9px;font-size:12.5px">
-        ${cycles.map(c => `<option value="${F.esc(c.cycleId)}"${
-          c.cycleId === State.cycleId ? ' selected' : ''}>${F.esc(c.label)}</option>`).join('')}
-      </select>
-      ${active ? `<span class="pill" data-tone="${F.statusTone(active.status)}">${
-        F.esc(active.status)}</span>` : ''}
-      <span class="pill" title="Dashboards report through this date">
-        As of ${F.dateShort(boot.settings.asOf)}</span>` : '');
+
+    D.html(D.q('#cycleContext'), `
+      ${functions.length ? `
+        <select class="select" id="topFunctionPicker" aria-label="Business function"
+                style="width:auto;max-width:170px;padding:5px 9px;font-size:12.5px">
+          ${functions.map(f => `<option value="${F.esc(f.businessFunctionId)}"${
+            f.businessFunctionId === State.category ? ' selected' : ''}>${F.esc(f.name)}</option>`).join('')}
+        </select>` : ''}
+      ${cyclesForFunction.length ? `
+        <select class="select" id="topCyclePicker" aria-label="Planning cycle"
+                style="width:auto;max-width:230px;padding:5px 9px;font-size:12.5px">
+          ${cyclesForFunction.map(c => `<option value="${F.esc(c.cycleId)}"${
+            c.cycleId === State.cycleId ? ' selected' : ''}>${F.esc(c.label)}</option>`).join('')}
+        </select>
+        ${active ? `<span class="pill" data-tone="${F.statusTone(active.status)}">${
+          F.esc(active.status)}</span>` : ''}
+        <span class="pill" title="Dashboards report through this date">
+          As of ${F.dateShort(boot.settings.asOf)}</span>` : ''}`);
+
+    const functionPicker = D.q('#topFunctionPicker');
+    if (functionPicker) functionPicker.onchange = (e) => {
+      State.category = e.target.value;
+      const forFn = cycles.filter(c => c.category === State.category);
+      State.cycleId = forFn.length ? forFn[0].cycleId : null;
+      renderCycleContext();
+      Api.invalidate();
+      Router.render();
+    };
 
     const picker = D.q('#topCyclePicker');
     if (picker) picker.onchange = (e) => {

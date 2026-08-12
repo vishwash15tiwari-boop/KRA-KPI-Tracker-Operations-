@@ -8,6 +8,7 @@
 Router.register('accounts', {
   skeleton: () => Components.tableSkeleton(10),
   async render(host) {
+    if (!State.businessFunction().hasAccountPlan) { host.innerHTML = Components.notApplicable(); return; }
     const filters = {
       category: State.category,
       accountType: State.params.accountType || 'SELLER',
@@ -352,6 +353,7 @@ function accountModal(account, defaultType) {
 Router.register('pipeline', {
   skeleton: () => Components.tableSkeleton(8),
   async render(host) {
+    if (!State.businessFunction().hasAccountPlan) { host.innerHTML = Components.notApplicable(); return; }
     const filters = {
       category: State.category,
       accountType: State.params.accountType || 'BUYER',

@@ -19,6 +19,9 @@
 
 var SHEET = Object.freeze({
   CONFIG: 'DB_Config',
+  BUSINESS_FUNCTIONS: 'DB_BusinessFunctions',
+  ACTIVITY_TYPE_DEF: 'DB_ActivityTypeDef',
+  METRIC_DEF: 'DB_MetricDef',
   USERS: 'DB_Users',
   REGIONS: 'DB_Regions',
   CYCLES: 'DB_Cycles',
@@ -61,6 +64,90 @@ var SCHEMA = Object.freeze({
       { name: 'key', type: T.STR, width: 240 },
       { name: 'value', type: T.STR, width: 200 },
       { name: 'description', type: T.STR, width: 420 },
+      { name: 'updatedAt', type: T.DATETIME },
+      { name: 'updatedBy', type: T.STR }
+    ]
+  },
+
+  /**
+   * Business Function registry — the config-driven partition that replaced the
+   * hardcoded Plastic/Metal CATEGORY enum. `businessFunctionId` is the exact
+   * value stored in every table's `category` column; OMP's two functions keep
+   * their historical literal codes ('Plastic', 'Metal') so no existing install
+   * needs a data migration.
+   */
+  DB_BusinessFunctions: {
+    pk: 'businessFunctionId',
+    cols: [
+      { name: 'businessFunctionId', type: T.STR, note: 'stored as `category` on every fact/plan table' },
+      { name: 'name', type: T.STR, width: 200 },
+      { name: 'description', type: T.STR, width: 400 },
+      { name: 'icon', type: T.STR },
+      { name: 'color', type: T.STR },
+      { name: 'sequence', type: T.NUM },
+      { name: 'active', type: T.BOOL },
+      { name: 'calculatorMode', type: T.STR, note: 'LEGACY | GENERIC' },
+      { name: 'streamMode', type: T.STR, note: 'SUPPLY_DEMAND | SINGLE' },
+      { name: 'streamLabels', type: T.JSON, note: '{streamKey: label}' },
+      { name: 'hasAccountPlan', type: T.BOOL, note: 'true only for OMP — gates the tonnage/rate/GMV planning tabs' },
+      { name: 'createdAt', type: T.DATETIME },
+      { name: 'createdBy', type: T.STR },
+      { name: 'updatedAt', type: T.DATETIME },
+      { name: 'updatedBy', type: T.STR }
+    ]
+  },
+
+  /**
+   * Declarative activity taxonomy for GENERIC business functions — the
+   * config-only analog of the hardcoded ACTIVITY_TYPES array in 00_Config.gs.
+   * A LEGACY function (OMP) never has rows here; its taxonomy stays in code.
+   */
+  DB_ActivityTypeDef: {
+    pk: 'activityTypeId',
+    index: ['businessFunctionId'],
+    cols: [
+      { name: 'activityTypeId', type: T.STR, note: 'the key stored in DB_Activities.activityType' },
+      { name: 'businessFunctionId', type: T.STR },
+      { name: 'label', type: T.STR, width: 200 },
+      { name: 'icon', type: T.STR },
+      { name: 'measures', type: T.JSON, note: 'array of {key,label,unit,column,default}; column is count|measureA|measureB|measureC' },
+      { name: 'requiresAccount', type: T.BOOL },
+      { name: 'evidence', type: T.STR, note: 'NONE | OPTIONAL | REQUIRED' },
+      { name: 'systemOwned', type: T.BOOL },
+      { name: 'sequence', type: T.NUM },
+      { name: 'active', type: T.BOOL },
+      { name: 'help', type: T.STR, width: 400 },
+      { name: 'createdAt', type: T.DATETIME },
+      { name: 'createdBy', type: T.STR },
+      { name: 'updatedAt', type: T.DATETIME },
+      { name: 'updatedBy', type: T.STR }
+    ]
+  },
+
+  /**
+   * Declarative metric registry for GENERIC business functions — the
+   * config-only analog of the hardcoded METRICS object in 00_Config.gs. The
+   * generic engine (06b_GenericEngine.gs) is a pure interpreter of these rows.
+   */
+  DB_MetricDef: {
+    pk: 'metricKey',
+    index: ['businessFunctionId'],
+    cols: [
+      { name: 'metricKey', type: T.STR, note: 'globally unique; referenced by DB_KPI.metricKey' },
+      { name: 'businessFunctionId', type: T.STR },
+      { name: 'label', type: T.STR, width: 200 },
+      { name: 'unit', type: T.STR, note: 'COUNT | SUM | PCT | INR | DAYS | RATE' },
+      { name: 'direction', type: T.STR, enum: Object.keys(DIRECTION) },
+      { name: 'aggregation', type: T.STR, note: 'COUNT | SUM | DISTINCT_COUNT | RATIO | DERIVED' },
+      { name: 'sourceActivityType', type: T.STR, note: 'for COUNT | SUM | DISTINCT_COUNT' },
+      { name: 'measureField', type: T.STR, note: 'for SUM (measureA..C) and DISTINCT_COUNT (field to distinct on)' },
+      { name: 'numeratorMetric', type: T.STR, note: 'for RATIO' },
+      { name: 'denominatorMetric', type: T.STR, note: 'for RATIO' },
+      { name: 'multiplier', type: T.NUM, note: 'for RATIO; 100 for a percentage, 1 for a plain ratio' },
+      { name: 'expression', type: T.STR, width: 300, note: 'for DERIVED — arithmetic over other metric keys' },
+      { name: 'active', type: T.BOOL },
+      { name: 'createdAt', type: T.DATETIME },
+      { name: 'createdBy', type: T.STR },
       { name: 'updatedAt', type: T.DATETIME },
       { name: 'updatedBy', type: T.STR }
     ]
@@ -364,7 +451,13 @@ var SCHEMA = Object.freeze({
       { name: 'createdAt', type: T.DATETIME },
       { name: 'createdBy', type: T.STR },
       { name: 'updatedAt', type: T.DATETIME },
-      { name: 'updatedBy', type: T.STR }
+      { name: 'updatedBy', type: T.STR },
+      // -- Generic measures (GENERIC business functions; additive, OMP never
+      //    populates these — its three measures keep their named columns above) --
+      { name: 'subjectName', type: T.STR, width: 280, note: 'free-text subject for functions with no DB_Accounts counterpart' },
+      { name: 'measureA', type: T.NUM },
+      { name: 'measureB', type: T.NUM },
+      { name: 'measureC', type: T.NUM }
     ]
   },
 
@@ -713,7 +806,8 @@ var SCHEMA = Object.freeze({
 
 /** Ordered list of physical sheets, used by bootstrap. */
 var SCHEMA_ORDER = [
-  SHEET.CONFIG, SHEET.USERS, SHEET.REGIONS, SHEET.CYCLES, SHEET.KRA, SHEET.KPI,
+  SHEET.CONFIG, SHEET.BUSINESS_FUNCTIONS, SHEET.ACTIVITY_TYPE_DEF, SHEET.METRIC_DEF,
+  SHEET.USERS, SHEET.REGIONS, SHEET.CYCLES, SHEET.KRA, SHEET.KPI,
   SHEET.ASSIGNMENT, SHEET.ACCOUNTS, SHEET.ACCOUNT_PLAN, SHEET.ONBOARDING_PLAN,
   SHEET.WEEKLY_PLAN, SHEET.ACTIVITIES, SHEET.SHIPMENTS, SHEET.ONBOARDING,
   SHEET.PULSE, SHEET.RECEIVABLES, SHEET.PIPELINE, SHEET.DOCUMENTS,

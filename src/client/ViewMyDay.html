@@ -204,7 +204,14 @@ function greeting() {
 const ActivityForm = (() => {
 
   function open({ cycleId, pocUserId, activityDate, accountId, accounts, types, activity, onSaved }) {
-    const typeList = types || State.ref('activityTypes').filter(t => !t.systemOwned);
+    // Default to the active business function's own types (systemOwned ones are
+    // synced, not hand-entered) — callers may pass a pre-filtered list instead.
+    const typeList = types || State.ref('activityTypes').filter(t =>
+      !t.systemOwned && (!t.businessFunctionIds || t.businessFunctionIds.includes(State.category)));
+    if (!typeList.length) {
+      Toast.warn('Nothing to log', 'No activity types are configured for this business function yet.');
+      return;
+    }
     const initialType = (activity && activity.activityType) || typeList[0].key;
 
     Overlay.openModal({
@@ -246,6 +253,12 @@ const ActivityForm = (() => {
               </select>
               <div class="field__hint">Not listed? Add it under Accounts first.</div>
             </div>
+            ${Components.field({
+              name: 'subjectName', label: 'Who this concerns', wide: false,
+              value: (activity && activity.subjectName) || '',
+              placeholder: 'e.g. the applicant or account name',
+              hint: 'No account record for this business function yet — just name it.'
+            })}
           </div>
 
           <div class="formgrid" id="measureFields"></div>
@@ -292,6 +305,7 @@ const ActivityForm = (() => {
 
       D.q('#accountField').hidden = !def.requiresAccount;
       D.q('#f_accountId').required = !!def.requiresAccount;
+      D.q('#f_subjectName').closest('.field').hidden = !!def.requiresAccount;
 
       D.html(D.q('#measureFields'), (def.measures || []).map(m => Components.field({
         name: m.key, label: `${m.label} (${m.unit})`, type: 'number', step: 'any', min: 0,

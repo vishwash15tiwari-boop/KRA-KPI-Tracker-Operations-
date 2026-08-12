@@ -61,7 +61,7 @@ var Planning = (function () {
     var year = Util.num(payload.year, 0);
     var month = Util.num(payload.month, 0);
     assert(year > 2000 && month >= 1 && month <= 12, 'VALIDATION', 'A valid year and month are required.');
-    assert(CATEGORIES.indexOf(category) >= 0, 'VALIDATION', 'Unknown category: ' + category);
+    assert(BusinessFunction.codes().indexOf(category) >= 0, 'VALIDATION', 'Unknown business function: ' + category);
 
     var id = cycleId(category, year, month);
     assert(!Repository.findById(SHEET.CYCLES, id), 'DUPLICATE',
@@ -282,7 +282,7 @@ var Planning = (function () {
     }
 
     kpis.forEach(function (p) {
-      if (!p.metricKey || !(p.metricKey in METRICS)) {
+      if (!p.metricKey || !Metrics.exists(p.metricKey)) {
         errors.push({
           code: 'BAD_METRIC',
           message: 'KPI "' + p.kpiName + '" is not linked to a measurable metric.'
@@ -400,7 +400,7 @@ var Planning = (function () {
           return {
             kpiId: p.kpiId, kraId: p.kraId, kpiName: p.kpiName, definition: p.definition,
             weightage: p.weightage, unitOfMeasure: p.unitOfMeasure,
-            metricKey: p.metricKey, metricLabel: METRICS[p.metricKey] ? METRICS[p.metricKey].label : p.metricKey,
+            metricKey: p.metricKey, metricLabel: Metrics.label(p.metricKey),
             direction: p.direction, targetBasis: p.targetBasis,
             basisMetric: p.basisMetric, basisPct: p.basisPct,
             targets: [p.target1, p.target2, p.target3, p.target4, p.target5],
@@ -416,7 +416,9 @@ var Planning = (function () {
     var cycle = getCycle(payload.cycleId);
     assertEditable_(cycle);
     assert(!Util.isBlank(payload.kraName), 'VALIDATION', 'A KRA name is required.');
-    assert(STREAMS.indexOf(payload.stream) >= 0, 'VALIDATION', 'Select Supply or Demand.');
+    var allowedStreams = BusinessFunction.streamsFor(cycle.category);
+    assert(allowedStreams.indexOf(payload.stream) >= 0, 'VALIDATION',
+      'Select a valid stream for this business function (' + allowedStreams.join(' or ') + ').');
 
     var row = {
       kraId: payload.kraId || Id.next('KRA'),
@@ -453,7 +455,7 @@ var Planning = (function () {
     assertEditable_(cycle);
 
     assert(!Util.isBlank(payload.kpiName), 'VALIDATION', 'A KPI name is required.');
-    assert(payload.metricKey in METRICS, 'VALIDATION',
+    assert(Metrics.exists(payload.metricKey), 'VALIDATION',
       'Choose how this KPI is measured — "' + payload.metricKey + '" is not a known metric.');
     var weightage = Util.num(payload.weightage, 0);
     assert(weightage > 0 && weightage <= 100, 'VALIDATION',
@@ -467,7 +469,7 @@ var Planning = (function () {
       weightage: weightage,
       unitOfMeasure: Util.str(payload.unitOfMeasure) || 'Percentage',
       metricKey: payload.metricKey,
-      direction: payload.direction || (METRICS[payload.metricKey].direction || DIRECTION.HIGHER_BETTER),
+      direction: payload.direction || Metrics.direction(payload.metricKey),
       targetBasis: payload.targetBasis || TARGET_BASIS.MANUAL,
       basisMetric: Util.str(payload.basisMetric),
       basisPct: payload.basisPct === '' || payload.basisPct === undefined ? null : Util.num(payload.basisPct, 0),

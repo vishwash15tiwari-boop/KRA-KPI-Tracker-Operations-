@@ -31,6 +31,18 @@ const Components = (() => {
       </div>`;
   }
 
+  /** Shown instead of an OMP-only screen (accounts, pipeline, receivables, …)
+   *  when the active business function has no per-account book to show. */
+  function notApplicable() {
+    const name = (State.businessFunction() && State.businessFunction().name) || State.category;
+    return emptyState({
+      icon: '⬡',
+      title: `Not used by ${name}`,
+      message: 'This screen is part of OMP\'s seller/buyer marketplace model and has no equivalent ' +
+        'here yet. My Day, Dashboard, Activity Log, Scorecard and Leaderboard all work normally.'
+    });
+  }
+
   function errorState(err) {
     const code = (err && err.code) || 'ERROR';
     return `
@@ -500,7 +512,7 @@ const Components = (() => {
   }
 
   return {
-    loading, tableSkeleton, emptyState, errorState, banner,
+    loading, tableSkeleton, emptyState, notApplicable, errorState, banner,
     pageHead, section, card, pill,
     metricTile, statTile,
     table, tva, achievementCell, growthCell,

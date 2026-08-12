@@ -86,6 +86,15 @@ const State = {
   },
   isPoc() { return this.user && this.user.role === 'POC'; },
   ref(key) { return (this.boot && this.boot.reference && this.boot.reference[key]) || []; },
+  /** The active Business Function's config — streams, calculator, whether it plans accounts. */
+  businessFunction(code) {
+    const list = this.ref('businessFunctions');
+    return list.find(b => b.businessFunctionId === (code || this.category)) || {
+      businessFunctionId: code || this.category, name: code || this.category,
+      calculatorMode: 'LEGACY', streamMode: 'SUPPLY_DEMAND',
+      streamLabels: { SUPPLY: 'Supply', DEMAND: 'Demand' }, hasAccountPlan: true
+    };
+  },
   setting(key) { return this.boot && this.boot.settings ? this.boot.settings[key] : undefined; },
   userName(userId) {
     const u = this.ref('users').find(x => x.userId === userId);
@@ -514,6 +523,7 @@ const Nav = (() => {
       permission: 'USER_MANAGE',
       items: [
         { route: 'users', icon: '👥', label: 'Users & Regions', permission: 'USER_MANAGE' },
+        { route: 'functions', icon: '⬡', label: 'Business Functions', permission: 'CONFIG_MANAGE' },
         { route: 'sync', icon: '⇄', label: 'Data Sync', permission: 'SYNC_RUN' },
         { route: 'settings', icon: '⚙', label: 'Settings', permission: 'CONFIG_MANAGE' },
         { route: 'audit', icon: '❑', label: 'Audit Trail', permission: 'AUDIT_VIEW' }

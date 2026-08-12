@@ -44,7 +44,10 @@ var Bootstrap = (function () {
 
     seedConfig_();
     if (options.seedReference !== false) {
+      seedBusinessFunctions_();
       seedRegions_();
+      seedActivityTypeDefs_();
+      seedMetricDefs_();
       seedKraLibrary_();
     }
 
@@ -160,10 +163,13 @@ var Bootstrap = (function () {
     return { inserted: rows.length };
   }
 
-  /** Regions observed in the source workbook, plus an explicit unassigned bucket. */
+  /**
+   * Regions observed in the source workbook, plus an explicit unassigned
+   * bucket, cross-multiplied across every business function. Skips per
+   * function so a function added after initial setup still gets seeded.
+   */
   function seedRegions_() {
-    var existing = Repository.readAll(SHEET.REGIONS);
-    if (existing.length) return { skipped: true };
+    var existingByCode = Util.groupBy(Repository.readAll(SHEET.REGIONS), function (r) { return r.category; });
     var seed = [
       { regionName: 'North', sequence: 1 },
       { regionName: 'South', sequence: 2 },
@@ -173,27 +179,44 @@ var Bootstrap = (function () {
       { regionName: 'Unassigned', sequence: 99 }
     ];
     var rows = [];
-    CATEGORIES.forEach(function (cat) {
+    BusinessFunction.codes().forEach(function (code) {
+      if (existingByCode[code] && existingByCode[code].length) return;
       seed.forEach(function (r) {
         rows.push({
-          regionId: Id.natural('RGN', cat, r.regionName),
+          regionId: Id.natural('RGN', code, r.regionName),
           regionName: r.regionName,
-          category: cat,
+          category: code,
           active: true,
           sequence: r.sequence,
           createdAt: new Date()
         });
       });
     });
-    Repository.insertMany(SHEET.REGIONS, rows);
+    if (rows.length) Repository.insertMany(SHEET.REGIONS, rows);
     return { inserted: rows.length };
   }
 
   /**
-   * The KRA/KPI library, transcribed from the workbook. This is the template a
-   * Team Lead clones into each new cycle; `cycleId` is blank on library rows.
+   * The KRA/KPI library for a business function — the template a Team Lead
+   * clones into each new cycle (`cycleId` is blank on library rows). LEGACY
+   * functions (OMP) get their exact historical content, unchanged. GENERIC
+   * functions get starter content that exercises every aggregation kind the
+   * generic engine supports; a genuinely new (5th+) function with no library
+   * here starts from an empty list — a Team Lead builds it from scratch via
+   * the existing "Add KRA" flow in Planning, no seed required.
    */
-  function kraLibrary() {
+  function kraLibraryFor(code) {
+    if (BusinessFunction.get(code).calculatorMode === CALCULATOR_MODE.LEGACY) return omKraLibrary_();
+    if (code === 'ONBOARDING') return onboardingKraLibrary_();
+    if (code === 'COLLECTIONS') return collectionsKraLibrary_();
+    return [];
+  }
+
+  /** Backward-compatible alias — the OMP library, unqualified by category. */
+  function kraLibrary() { return omKraLibrary_(); }
+
+  /** The KRA/KPI library, transcribed from the workbook. Unchanged. */
+  function omKraLibrary_() {
     return [
       // ---- SUPPLY (seller side) — weights sum to 100 -----------------------
       {
@@ -351,32 +374,129 @@ var Bootstrap = (function () {
   }
 
   /**
+   * Onboarding — starter KRA/KPI content proving COUNT, SUM-backed RATIO and
+   * MANUAL/RATE_PER_DAY target bases all work with zero engine code. Single
+   * stream (GENERAL); weights sum to 100. A Team Lead edits or replaces this
+   * exactly as they would an OMP KRA — nothing here is special-cased.
+   */
+  function onboardingKraLibrary_() {
+    return [
+      {
+        stream: STREAM.GENERAL, perspective: 'Scale',
+        kraName: 'Onboarding Volume', sourceOfTracking: 'Activity Log', sequence: 1,
+        kpis: [{
+          kpiName: 'Onboardings Completed',
+          definition: 'Applications approved and onboarded this month, against the monthly target.',
+          weightage: 40, unitOfMeasure: 'Count',
+          metricKey: 'ONBOARDINGS_APPROVED', direction: DIRECTION.HIGHER_BETTER,
+          targetBasis: TARGET_BASIS.MANUAL,
+          targets: [6, 8, 9, 10, 11], sequence: 1
+        }]
+      },
+      {
+        stream: STREAM.GENERAL, perspective: 'Process',
+        kraName: 'Onboarding Quality', sourceOfTracking: 'Activity Log', sequence: 2,
+        kpis: [{
+          kpiName: 'Approval Rate %',
+          definition: 'Share of received applications that were approved and onboarded.',
+          weightage: 30, unitOfMeasure: 'Percentage',
+          metricKey: 'APPROVAL_RATE_PCT', direction: DIRECTION.HIGHER_BETTER,
+          targetBasis: TARGET_BASIS.MANUAL,
+          targets: [60, 70, 80, 85, 90], sequence: 1
+        }]
+      },
+      {
+        stream: STREAM.GENERAL, perspective: 'Customer',
+        kraName: 'Turnaround Time', sourceOfTracking: 'Activity Log', sequence: 3,
+        kpis: [{
+          kpiName: 'Average Onboarding TAT (Days)',
+          definition: 'Average days from application received to onboarding approval.',
+          weightage: 30, unitOfMeasure: 'Days',
+          metricKey: 'AVG_TAT_DAYS', direction: DIRECTION.LOWER_BETTER,
+          targetBasis: TARGET_BASIS.MANUAL,
+          targets: [10, 8, 6, 5, 4], sequence: 1
+        }]
+      }
+    ];
+  }
+
+  /**
+   * Collections — starter KRA/KPI content, additionally exercising the
+   * RATE_PER_DAY target basis (follow-ups expected per working day). Single
+   * stream (GENERAL); weights sum to 100.
+   */
+  function collectionsKraLibrary_() {
+    return [
+      {
+        stream: STREAM.GENERAL, perspective: 'Sales',
+        kraName: 'Collection Efficiency', sourceOfTracking: 'Activity Log', sequence: 1,
+        kpis: [{
+          kpiName: 'Amount Collected (₹)',
+          definition: 'Payments collected this month, against the monthly target.',
+          weightage: 40, unitOfMeasure: 'INR',
+          metricKey: 'AMOUNT_COLLECTED_INR', direction: DIRECTION.HIGHER_BETTER,
+          targetBasis: TARGET_BASIS.MANUAL,
+          targets: [300000, 400000, 450000, 500000, 550000], sequence: 1
+        }]
+      },
+      {
+        stream: STREAM.GENERAL, perspective: 'Process',
+        kraName: 'Collection Outreach', sourceOfTracking: 'Activity Log', sequence: 2,
+        kpis: [{
+          kpiName: 'Follow-ups Completed',
+          definition: 'Two follow-up calls per working day per POC.',
+          weightage: 30, unitOfMeasure: 'Count',
+          metricKey: 'FOLLOW_UPS_MADE', direction: DIRECTION.HIGHER_BETTER,
+          targetBasis: TARGET_BASIS.RATE_PER_DAY, basisPct: 2,
+          targets: [0.6, 0.75, 0.9, 1.0, 1.05], sequence: 1
+        }]
+      },
+      {
+        stream: STREAM.GENERAL, perspective: 'Customer',
+        kraName: 'Dispute Management', sourceOfTracking: 'Activity Log', sequence: 3,
+        kpis: [{
+          kpiName: 'Dispute Resolution Rate %',
+          definition: 'Share of logged disputes resolved and closed this month.',
+          weightage: 30, unitOfMeasure: 'Percentage',
+          metricKey: 'DISPUTE_RESOLUTION_RATE_PCT', direction: DIRECTION.HIGHER_BETTER,
+          targetBasis: TARGET_BASIS.MANUAL,
+          targets: [60, 70, 80, 90, 95], sequence: 1
+        }]
+      }
+    ];
+  }
+
+  /**
    * Install the library as template rows (cycleId = 'LIBRARY'). Cloning a
-   * library KRA into a cycle copies the row and rewrites cycleId.
+   * library KRA into a cycle copies the row and rewrites cycleId. Skips
+   * per-function, not globally, so seeding a new function later (Onboarding,
+   * Collections, or a 5th) never gets blocked by OMP's library already existing.
    */
   function seedKraLibrary_() {
-    var existing = Repository.where(SHEET.KRA, { cycleId: 'LIBRARY' });
-    if (existing.length) return { skipped: true };
-
+    var existingByCode = Util.groupBy(
+      Repository.where(SHEET.KRA, { cycleId: 'LIBRARY' }),
+      function (r) { return r.category; }
+    );
     var kraRows = [], kpiRows = [];
-    CATEGORIES.forEach(function (category) {
-      kraLibrary().forEach(function (k) {
-        var kraId = Id.natural('KRA', 'LIB', category, k.stream, k.kraName);
+    BusinessFunction.codes().forEach(function (code) {
+      if (existingByCode[code] && existingByCode[code].length) return;
+      kraLibraryFor(code).forEach(function (k) {
+        var kraId = Id.natural('KRA', 'LIB', code, k.stream, k.kraName);
         kraRows.push({
-          kraId: kraId, cycleId: 'LIBRARY', category: category, stream: k.stream,
+          kraId: kraId, cycleId: 'LIBRARY', category: code, stream: k.stream,
           perspective: k.perspective, kraName: k.kraName,
           sourceOfTracking: k.sourceOfTracking, sequence: k.sequence,
           active: true, createdAt: new Date(), createdBy: 'bootstrap'
         });
         k.kpis.forEach(function (p) {
           kpiRows.push({
-            kpiId: Id.natural('KPI', 'LIB', category, k.stream, p.kpiName),
+            kpiId: Id.natural('KPI', 'LIB', code, k.stream, p.kpiName),
             kraId: kraId, cycleId: 'LIBRARY',
             kpiName: p.kpiName, definition: p.definition,
             weightage: p.weightage, unitOfMeasure: p.unitOfMeasure,
             metricKey: p.metricKey, direction: p.direction,
             targetBasis: p.targetBasis,
-            basisMetric: p.basisMetric || '', basisPct: p.basisPct || null,
+            basisMetric: p.basisMetric || '', basisPct: p.basisPct === undefined ? null : p.basisPct,
             target1: p.targets[0], target2: p.targets[1], target3: p.targets[2],
             target4: p.targets[3], target5: p.targets[4],
             sequence: p.sequence, active: true,
@@ -385,9 +505,163 @@ var Bootstrap = (function () {
         });
       });
     });
-    Repository.insertMany(SHEET.KRA, kraRows);
-    Repository.insertMany(SHEET.KPI, kpiRows);
+    if (kraRows.length) Repository.insertMany(SHEET.KRA, kraRows);
+    if (kpiRows.length) Repository.insertMany(SHEET.KPI, kpiRows);
     return { kras: kraRows.length, kpis: kpiRows.length };
+  }
+
+  /** The Business Function registry itself — seeded once, per code. */
+  function seedBusinessFunctions_() {
+    var existingCodes = Repository.readAll(SHEET.BUSINESS_FUNCTIONS)
+      .map(function (r) { return r.businessFunctionId; });
+    var rows = BusinessFunction.DEFAULTS
+      .filter(function (d) { return existingCodes.indexOf(d.businessFunctionId) < 0; })
+      .map(function (d) {
+        return {
+          businessFunctionId: d.businessFunctionId, name: d.name, description: d.description,
+          icon: d.icon, color: d.color, sequence: d.sequence, active: d.active,
+          calculatorMode: d.calculatorMode, streamMode: d.streamMode, streamLabels: d.streamLabels,
+          hasAccountPlan: d.hasAccountPlan, createdAt: new Date(), createdBy: 'bootstrap'
+        };
+      });
+    if (rows.length) Repository.insertMany(SHEET.BUSINESS_FUNCTIONS, rows);
+    BusinessFunction.invalidate();
+    return { inserted: rows.length };
+  }
+
+  /** Declarative activity taxonomy for Onboarding and Collections. */
+  function onboardingActivityTypes_() {
+    var bf = 'ONBOARDING';
+    return [
+      { activityTypeId: 'APPLICATION_RECEIVED', businessFunctionId: bf, label: 'Application Received',
+        icon: 'inbox', measures: [], requiresAccount: false, evidence: 'NONE', sequence: 1,
+        help: 'A new onboarding application received.' },
+      { activityTypeId: 'DOCUMENT_VERIFIED', businessFunctionId: bf, label: 'Document Verified',
+        icon: 'file', measures: [], requiresAccount: false, evidence: 'OPTIONAL', sequence: 2,
+        help: 'A required document was checked and verified.' },
+      { activityTypeId: 'ONBOARDING_APPROVED', businessFunctionId: bf, label: 'Onboarding Approved',
+        icon: 'check', measures: [{ key: 'tatDays', label: 'Turnaround Time', unit: 'days', column: 'measureA' }],
+        requiresAccount: false, evidence: 'REQUIRED', sequence: 3,
+        help: 'Onboarding approved and activated. Record the days from application to approval.' },
+      { activityTypeId: 'ONBOARDING_REJECTED', businessFunctionId: bf, label: 'Onboarding Rejected',
+        icon: 'x', measures: [], requiresAccount: false, evidence: 'REQUIRED', sequence: 4,
+        help: 'Application rejected — record the reason in remarks.' },
+      { activityTypeId: 'ONBOARDING_FOLLOW_UP', businessFunctionId: bf, label: 'Follow-up',
+        icon: 'phone', measures: [], requiresAccount: false, evidence: 'OPTIONAL', sequence: 5,
+        help: 'A call, message or meeting to move an application forward.' }
+    ];
+  }
+
+  function collectionsActivityTypes_() {
+    var bf = 'COLLECTIONS';
+    return [
+      { activityTypeId: 'PAYMENT_RECEIVED', businessFunctionId: bf, label: 'Payment Received',
+        icon: 'rupee', measures: [{ key: 'amount', label: 'Amount Collected', unit: '₹', column: 'measureA' }],
+        requiresAccount: false, evidence: 'REQUIRED', sequence: 1,
+        help: 'A payment received from a debtor account.' },
+      { activityTypeId: 'FOLLOW_UP_CALL', businessFunctionId: bf, label: 'Follow-up Call',
+        icon: 'phone', measures: [], requiresAccount: false, evidence: 'OPTIONAL', sequence: 2,
+        help: 'A call made to a debtor to request payment.' },
+      { activityTypeId: 'REMINDER_SENT', businessFunctionId: bf, label: 'Reminder Sent',
+        icon: 'mail', measures: [], requiresAccount: false, evidence: 'OPTIONAL', sequence: 3,
+        help: 'A payment reminder sent — email, message or notice.' },
+      { activityTypeId: 'DISPUTE_LOGGED', businessFunctionId: bf, label: 'Dispute Logged',
+        icon: 'alert', measures: [], requiresAccount: false, evidence: 'REQUIRED', sequence: 4,
+        help: 'A payment dispute raised by the debtor, logged for resolution.' },
+      { activityTypeId: 'DISPUTE_RESOLVED', businessFunctionId: bf, label: 'Dispute Resolved',
+        icon: 'check', measures: [], requiresAccount: false, evidence: 'REQUIRED', sequence: 5,
+        help: 'A logged dispute resolved and closed.' }
+    ];
+  }
+
+  function seedActivityTypeDefs_() {
+    var existingIds = Repository.readAll(SHEET.ACTIVITY_TYPE_DEF).map(function (r) { return r.activityTypeId; });
+    var defs = onboardingActivityTypes_().concat(collectionsActivityTypes_());
+    var rows = defs
+      .filter(function (d) { return existingIds.indexOf(d.activityTypeId) < 0; })
+      .map(function (d) {
+        return {
+          activityTypeId: d.activityTypeId, businessFunctionId: d.businessFunctionId,
+          label: d.label, icon: d.icon, measures: d.measures, requiresAccount: d.requiresAccount,
+          evidence: d.evidence, systemOwned: false, sequence: d.sequence, active: true, help: d.help,
+          createdAt: new Date(), createdBy: 'bootstrap'
+        };
+      });
+    if (rows.length) Repository.insertMany(SHEET.ACTIVITY_TYPE_DEF, rows);
+    ActivityTypeDef.invalidate();
+    return { inserted: rows.length };
+  }
+
+  /** Declarative metric registry for Onboarding and Collections. */
+  function onboardingMetricDefs_() {
+    var bf = 'ONBOARDING';
+    return [
+      { metricKey: 'APPLICATIONS_RECEIVED', businessFunctionId: bf, label: 'Applications Received',
+        unit: 'COUNT', direction: DIRECTION.HIGHER_BETTER, aggregation: AGGREGATION.COUNT,
+        sourceActivityType: 'APPLICATION_RECEIVED' },
+      { metricKey: 'DOCS_VERIFIED', businessFunctionId: bf, label: 'Documents Verified',
+        unit: 'COUNT', direction: DIRECTION.HIGHER_BETTER, aggregation: AGGREGATION.COUNT,
+        sourceActivityType: 'DOCUMENT_VERIFIED' },
+      { metricKey: 'ONBOARDINGS_APPROVED', businessFunctionId: bf, label: 'Onboardings Approved',
+        unit: 'COUNT', direction: DIRECTION.HIGHER_BETTER, aggregation: AGGREGATION.COUNT,
+        sourceActivityType: 'ONBOARDING_APPROVED' },
+      { metricKey: 'ONBOARDINGS_REJECTED', businessFunctionId: bf, label: 'Onboardings Rejected',
+        unit: 'COUNT', direction: DIRECTION.LOWER_BETTER, aggregation: AGGREGATION.COUNT,
+        sourceActivityType: 'ONBOARDING_REJECTED' },
+      { metricKey: 'TOTAL_TAT_DAYS', businessFunctionId: bf, label: 'Total Turnaround Days',
+        unit: 'DAYS', direction: DIRECTION.LOWER_BETTER, aggregation: AGGREGATION.SUM,
+        sourceActivityType: 'ONBOARDING_APPROVED', measureField: 'measureA' },
+      { metricKey: 'AVG_TAT_DAYS', businessFunctionId: bf, label: 'Average Turnaround (Days)',
+        unit: 'DAYS', direction: DIRECTION.LOWER_BETTER, aggregation: AGGREGATION.RATIO,
+        numeratorMetric: 'TOTAL_TAT_DAYS', denominatorMetric: 'ONBOARDINGS_APPROVED', multiplier: 1 },
+      { metricKey: 'APPROVAL_RATE_PCT', businessFunctionId: bf, label: 'Approval Rate %',
+        unit: 'PCT', direction: DIRECTION.HIGHER_BETTER, aggregation: AGGREGATION.RATIO,
+        numeratorMetric: 'ONBOARDINGS_APPROVED', denominatorMetric: 'APPLICATIONS_RECEIVED', multiplier: 100 }
+    ];
+  }
+
+  function collectionsMetricDefs_() {
+    var bf = 'COLLECTIONS';
+    return [
+      { metricKey: 'AMOUNT_COLLECTED_INR', businessFunctionId: bf, label: 'Amount Collected',
+        unit: 'INR', direction: DIRECTION.HIGHER_BETTER, aggregation: AGGREGATION.SUM,
+        sourceActivityType: 'PAYMENT_RECEIVED', measureField: 'measureA' },
+      { metricKey: 'FOLLOW_UPS_MADE', businessFunctionId: bf, label: 'Follow-ups Made',
+        unit: 'COUNT', direction: DIRECTION.HIGHER_BETTER, aggregation: AGGREGATION.COUNT,
+        sourceActivityType: 'FOLLOW_UP_CALL' },
+      { metricKey: 'REMINDERS_SENT', businessFunctionId: bf, label: 'Reminders Sent',
+        unit: 'COUNT', direction: DIRECTION.HIGHER_BETTER, aggregation: AGGREGATION.COUNT,
+        sourceActivityType: 'REMINDER_SENT' },
+      { metricKey: 'DISPUTES_LOGGED', businessFunctionId: bf, label: 'Disputes Logged',
+        unit: 'COUNT', direction: DIRECTION.LOWER_BETTER, aggregation: AGGREGATION.COUNT,
+        sourceActivityType: 'DISPUTE_LOGGED' },
+      { metricKey: 'DISPUTES_RESOLVED', businessFunctionId: bf, label: 'Disputes Resolved',
+        unit: 'COUNT', direction: DIRECTION.HIGHER_BETTER, aggregation: AGGREGATION.COUNT,
+        sourceActivityType: 'DISPUTE_RESOLVED' },
+      { metricKey: 'DISPUTE_RESOLUTION_RATE_PCT', businessFunctionId: bf, label: 'Dispute Resolution Rate %',
+        unit: 'PCT', direction: DIRECTION.HIGHER_BETTER, aggregation: AGGREGATION.RATIO,
+        numeratorMetric: 'DISPUTES_RESOLVED', denominatorMetric: 'DISPUTES_LOGGED', multiplier: 100 }
+    ];
+  }
+
+  function seedMetricDefs_() {
+    var existingKeys = Repository.readAll(SHEET.METRIC_DEF).map(function (r) { return r.metricKey; });
+    var defs = onboardingMetricDefs_().concat(collectionsMetricDefs_());
+    var rows = defs
+      .filter(function (d) { return existingKeys.indexOf(d.metricKey) < 0; })
+      .map(function (d) {
+        return {
+          metricKey: d.metricKey, businessFunctionId: d.businessFunctionId, label: d.label,
+          unit: d.unit, direction: d.direction, aggregation: d.aggregation,
+          sourceActivityType: d.sourceActivityType || '', measureField: d.measureField || '',
+          numeratorMetric: d.numeratorMetric || '', denominatorMetric: d.denominatorMetric || '',
+          multiplier: d.multiplier === undefined ? 1 : d.multiplier, expression: d.expression || '',
+          active: true, createdAt: new Date(), createdBy: 'bootstrap'
+        };
+      });
+    if (rows.length) Repository.insertMany(SHEET.METRIC_DEF, rows);
+    MetricDef.invalidate();
+    return { inserted: rows.length };
   }
 
   // -- Health ---------------------------------------------------------------
@@ -442,9 +716,13 @@ var Bootstrap = (function () {
     setup: setup,
     health: health,
     kraLibrary: kraLibrary,
+    kraLibraryFor: kraLibraryFor,
     installTriggers: installTriggers,
     seedConfig: seedConfig_,
+    seedBusinessFunctions: seedBusinessFunctions_,
     seedRegions: seedRegions_,
+    seedActivityTypeDefs: seedActivityTypeDefs_,
+    seedMetricDefs: seedMetricDefs_,
     seedKraLibrary: seedKraLibrary_
   };
 })();

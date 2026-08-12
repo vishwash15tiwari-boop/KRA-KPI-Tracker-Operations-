@@ -8,6 +8,7 @@
 Router.register('daily-review', {
   skeleton: () => Components.tableSkeleton(10),
   async render(host) {
+    if (!State.businessFunction().hasAccountPlan) { host.innerHTML = Components.notApplicable(); return; }
     if (!State.cycleId) { SetupView.renderNoCycle(host); return; }
     const stream = State.params.stream || State.stream;
     const dr = await Api.call('report.dailyReview', { cycleId: State.cycleId, stream });
@@ -314,6 +315,7 @@ Router.register('leaderboard', {
 Router.register('performance', {
   skeleton: () => Components.tableSkeleton(10),
   async render(host) {
+    if (!State.businessFunction().hasAccountPlan) { host.innerHTML = Components.notApplicable(); return; }
     if (!State.cycleId) { SetupView.renderNoCycle(host); return; }
     const level = State.params.level || 'poc';
     const stream = State.params.stream || State.stream;
@@ -517,6 +519,7 @@ function regionTable(data) {
 Router.register('coverage', {
   skeleton: () => Components.tableSkeleton(10),
   async render(host) {
+    if (!State.businessFunction().hasAccountPlan) { host.innerHTML = Components.notApplicable(); return; }
     if (!State.cycleId) { SetupView.renderNoCycle(host); return; }
     const accountType = State.params.accountType || 'SELLER';
     const cov = await Api.call('report.coverage', { cycleId: State.cycleId, accountType });

@@ -16,21 +16,39 @@
 
 var Activity = (function () {
 
+  /**
+   * Look up an activity type's definition. Static OMP types (ACTIVITY_TYPES,
+   * 00_Config.gs) are checked first; a GENERIC business function's types come
+   * from DB_ActivityTypeDef, coerced to the same shape — the rest of this file
+   * never needs to know which source a definition came from.
+   */
   function typeDef(key) {
     var t = ACTIVITY_TYPES.filter(function (x) { return x.key === key; })[0];
-    assert(t, 'VALIDATION', 'Unknown activity type: ' + key);
-    return t;
+    if (t) return t;
+    var row = ActivityTypeDef.get(key);
+    assert(row, 'VALIDATION', 'Unknown activity type: ' + key);
+    return ActivityTypeDef.toDef(row);
   }
 
   function types() {
-    return ACTIVITY_TYPES.map(function (t) {
+    var omp = ACTIVITY_TYPES.map(function (t) {
       return {
         key: t.key, label: t.label, icon: t.icon, stream: t.stream,
         measures: t.measures, requiresAccount: t.requiresAccount,
         evidence: t.evidence, systemOwned: t.systemOwned, help: t.help,
-        metrics: t.metrics
+        metrics: t.metrics, businessFunctionIds: [CATEGORY.PLASTIC, CATEGORY.METAL]
       };
     });
+    var generic = ActivityTypeDef.all().map(function (row) {
+      var d = ActivityTypeDef.toDef(row);
+      return {
+        key: d.key, label: d.label, icon: d.icon, stream: d.stream,
+        measures: d.measures, requiresAccount: d.requiresAccount,
+        evidence: d.evidence, systemOwned: d.systemOwned, help: d.help,
+        metrics: d.metrics, businessFunctionIds: [d.businessFunctionId]
+      };
+    });
+    return omp.concat(generic);
   }
 
   // =========================================================================
@@ -76,27 +94,34 @@ var Activity = (function () {
 
   function shape_(a, users) {
     var t = ACTIVITY_TYPES.filter(function (x) { return x.key === a.activityType; })[0];
+    var tRow = t ? null : ActivityTypeDef.get(a.activityType);
+    var label = t ? t.label : (tRow ? tRow.label : a.activityType);
+    var systemOwnedType = t ? t.systemOwned : (tRow ? Util.bool(tRow.systemOwned) : false);
     return {
       activityId: a.activityId, cycleId: a.cycleId, category: a.category, stream: a.stream,
       activityType: a.activityType,
-      activityTypeLabel: t ? t.label : a.activityType,
+      activityTypeLabel: label,
       activityDate: DateUtil.isoDate(a.activityDate),
       pocUserId: a.pocUserId,
       pocName: users && users[a.pocUserId] ? users[a.pocUserId].fullName : a.pocUserId,
       regionId: a.regionId,
       accountId: a.accountId, accountType: a.accountType,
-      gstin: a.gstin, accountName: a.accountName,
+      gstin: a.gstin, accountName: a.accountName || a.subjectName,
+      subjectName: a.subjectName,
       kraId: a.kraId, kpiId: a.kpiId, metricKey: a.metricKey,
       count: Util.num(a.count, 0),
       quantityMT: Util.num(a.quantityMT, 0),
       ratePerKg: Util.num(a.ratePerKg, 0),
       amountINR: Util.num(a.amountINR, 0),
+      measureA: Util.num(a.measureA, 0),
+      measureB: Util.num(a.measureB, 0),
+      measureC: Util.num(a.measureC, 0),
       status: a.status, blockerReason: a.blockerReason,
       remarks: a.remarks, evidenceUrl: a.evidenceUrl, evidenceType: a.evidenceType,
       verificationStatus: a.verificationStatus, verifiedBy: a.verifiedBy,
       verifiedAt: DateUtil.isoDateTime(a.verifiedAt), verifyNote: a.verifyNote,
       sourceSystem: a.sourceSystem, sourceRef: a.sourceRef,
-      systemOwned: !!(t && t.systemOwned) || String(a.sourceSystem || '').indexOf('SYNC') === 0,
+      systemOwned: systemOwnedType || String(a.sourceSystem || '').indexOf('SYNC') === 0,
       voided: !!a.voided, voidReason: a.voidReason,
       createdBy: a.createdBy, createdAt: DateUtil.isoDateTime(a.createdAt),
       updatedBy: a.updatedBy, updatedAt: DateUtil.isoDateTime(a.updatedAt)
@@ -148,6 +173,11 @@ var Activity = (function () {
       assert(account, 'VALIDATION',
         'Select the seller or buyer this ' + def.label.toLowerCase() + ' relates to.');
     }
+    if (!account && !Util.isBlank(payload.subjectName)) {
+      // A GENERIC business function may have no seller/buyer account at all —
+      // subjectName is the free-text stand-in (e.g. an applicant, a debtor).
+      assert(payload.subjectName.length <= 280, 'VALIDATION', 'Subject name is too long.');
+    }
 
     if (def.evidence === 'REQUIRED') {
       assert(!Util.isBlank(payload.evidenceUrl), 'VALIDATION',
@@ -181,11 +211,13 @@ var Activity = (function () {
       accountType: account ? account.accountType : '',
       gstin: account ? account.gstin : '',
       accountName: account ? account.businessName : Util.str(payload.accountName),
+      subjectName: account ? '' : Util.str(payload.subjectName),
       kraId: link.kraId, kpiId: link.kpiId, metricKey: link.metricKey,
       count: Util.num(payload.count, def.measures.length ? 0 : 1) || (def.measures.length ? 0 : 1),
       quantityMT: Util.num(payload.quantityMT, 0),
       ratePerKg: Util.num(payload.ratePerKg, 0),
       amountINR: Util.num(payload.amountINR, 0),
+      measureA: 0, measureB: 0, measureC: 0,
       status: Util.str(payload.status) || 'RECORDED',
       blockerReason: Util.str(payload.blockerReason),
       remarks: Util.str(payload.remarks),
@@ -196,6 +228,18 @@ var Activity = (function () {
       sourceRef: Util.str(payload.sourceRef),
       voided: false
     };
+
+    // A GENERIC business function's measures name their own logical key (e.g.
+    // "amount") but must land in one of the schema's generic numeric slots —
+    // each measure declares which one via `column`. OMP's measures already
+    // name a real column directly (quantityMT, ratePerKg, amountINR, count),
+    // so they fall through here unchanged (col === m.key, already set above).
+    def.measures.forEach(function (m) {
+      var col = m.column || m.key;
+      if (['measureA', 'measureB', 'measureC', 'count'].indexOf(col) < 0) return;
+      var fallback = m.default === undefined ? row[col] : Util.num(m.default, 0);
+      row[col] = Util.num(payload[m.key], fallback);
+    });
 
     if (payload.activityId) {
       var existing = Repository.findById(SHEET.ACTIVITIES, payload.activityId);
@@ -261,7 +305,7 @@ var Activity = (function () {
     for (var i = 0; i < assignments.length; i++) {
       var kpi = Repository.findById(SHEET.KPI, assignments[i].kpiId);
       if (!kpi || kpi.active === false) continue;
-      if (def.metrics.indexOf(kpi.metricKey) < 0) continue;
+      if (!metricFedByActivityType_(kpi.metricKey, def)) continue;
       var kra = Repository.findById(SHEET.KRA, kpi.kraId);
       return {
         kpiId: kpi.kpiId, kraId: kpi.kraId,
@@ -270,7 +314,26 @@ var Activity = (function () {
     }
     // Not every activity maps to an assigned KPI (a follow-up may simply be
     // context). Record the primary metric so it is still traceable.
-    return { kpiId: '', kraId: '', metricKey: def.metrics[0] || '', stream: '' };
+    return { kpiId: '', kraId: '', metricKey: primaryMetricFor_(def), stream: '' };
+  }
+
+  /**
+   * True when recording an activity of `def`'s type should move `metricKey`.
+   * OMP declares the mapping forward, on the activity type (def.metrics);
+   * a GENERIC business function declares it backward, on the metric itself
+   * (DB_MetricDef.sourceActivityType) — both directions are checked here so
+   * callers never need to know which one applies.
+   */
+  function metricFedByActivityType_(metricKey, def) {
+    if (def.metrics && def.metrics.indexOf(metricKey) >= 0) return true;
+    var mdef = MetricDef.get(metricKey);
+    return !!(mdef && mdef.sourceActivityType === def.key);
+  }
+
+  function primaryMetricFor_(def) {
+    if (def.metrics && def.metrics.length) return def.metrics[0];
+    var mdef = MetricDef.all().filter(function (m) { return m.sourceActivityType === def.key; })[0];
+    return mdef ? mdef.metricKey : '';
   }
 
   function touchAccount_(account, def, activityDate) {
@@ -484,7 +547,9 @@ var Activity = (function () {
       }),
       accounts: accounts,
       attention: attention.slice(0, 25),
-      activityTypes: types().filter(function (t) { return !t.systemOwned; })
+      activityTypes: types().filter(function (t) {
+        return !t.systemOwned && t.businessFunctionIds.indexOf(cycle.category) >= 0;
+      })
     };
   }
 
@@ -514,8 +579,8 @@ var Activity = (function () {
 
     return {
       metricKey: request.metricKey,
-      metricLabel: METRICS[request.metricKey] ? METRICS[request.metricKey].label : request.metricKey,
-      unit: METRICS[request.metricKey] ? METRICS[request.metricKey].unit : '',
+      metricLabel: Metrics.label(request.metricKey),
+      unit: Metrics.unit(request.metricKey),
       window: {
         kind: window.kind,
         from: DateUtil.isoDate(window.start),

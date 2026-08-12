@@ -10,6 +10,7 @@
 Router.register('account-performance', {
   skeleton: () => Components.tableSkeleton(10),
   async render(host) {
+    if (!State.businessFunction().hasAccountPlan) { host.innerHTML = Components.notApplicable(); return; }
     if (!State.cycleId) { SetupView.renderNoCycle(host); return; }
     const accountType = State.params.accountType || 'SELLER';
     const data = await Api.call('report.accountPerformance', {
@@ -153,6 +154,7 @@ Router.register('receivables', {
   permission: 'PLAN_MANAGE',
   skeleton: () => Components.tableSkeleton(8),
   async render(host) {
+    if (!State.businessFunction().hasAccountPlan) { host.innerHTML = Components.notApplicable(); return; }
     if (!State.cycleId) { SetupView.renderNoCycle(host); return; }
     const [rows, buyers] = await Promise.all([
       Api.call('receivable.list', { cycleId: State.cycleId }),

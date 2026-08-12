@@ -53,9 +53,11 @@ the dependency order.
 | `01_Schema.gs` | Every table's columns and types. The schema is declared, not implied. |
 | `02_Util.gs` | Typed errors, identifiers, numeric helpers, and **the window algebra** — the only place that decides what MTD, LMTD or FYTD mean. |
 | `03_Repository.gs` | The data access layer. One read per table per execution, batched writes, document-level locking for read-modify-write. |
+| `03b_BusinessFunction.gs` | The Business Function registry — replaces the hardcoded Plastic/Metal `CATEGORY` enum as the source of truth for what business functions exist and how each is calculated. |
 | `04_Auth.gs` | Identity, permissions and data scope — two separate questions, answered separately. Plus the audit trail. |
-| `05_Bootstrap.gs` | Schema creation and forward-only migration; seeds the KRA/KPI library transcribed from the workbook. |
-| `06_Engine.gs` | **The calculation engine.** The only code in the product that produces a KPI number. |
+| `05_Bootstrap.gs` | Schema creation and forward-only migration; seeds the KRA/KPI library transcribed from the workbook, plus the Business Function registry and the Onboarding/Collections starter taxonomies. |
+| `06_Engine.gs` | **The calculation engine.** Dispatches to `legacyMetric_` (OMP, hand-written) or `GenericEngine` (everything else) — see §10. |
+| `06b_GenericEngine.gs` | **The generic calculation engine.** Interprets `DB_MetricDef`/`DB_ActivityTypeDef` rows so a business function beyond OMP computes its metrics from configuration alone. |
 | `07_Planning.gs` | Cycles, KRA/KPI structure, assignments, account plan, annual plan, weekly plan. Enforces the publish gate. |
 | `08_Accounts.gs` | Sellers, buyers, the onboarding pipeline, the document checklist, receivables. |
 | `09_Activity.gs` | The "Update Once" surface, evidence rules, verification, voiding, `myDay`, and the drill-down resolver. |
@@ -196,8 +198,110 @@ runs the real sync, and asserts the engine reproduces the workbook's own compute
 values.
 
 ```
-node tests/engine.test.js     # 121 assertions
+npm test                            # engine.test.js + generic-engine.test.js
+node tests/engine.test.js           # the LEGACY (OMP) engine — 126 assertions
+node tests/generic-engine.test.js   # the GENERIC engine and Business Function layer — 44 assertions
 ```
 
-The fixtures are the actual August 2026 data, so the tests are a regression suite
-against the business process rather than against invented numbers.
+The `engine.test.js` fixtures are the actual August 2026 data, so those tests are a
+regression suite against the business process rather than against invented numbers.
+`generic-engine.test.js` proves the config-driven layer described in §10 below —
+including that creating a business function beyond OMP, planning it and operating
+it end to end requires no engine code, only API calls.
+
+## 10. The Business Function layer
+
+The first nine sections describe an architecture built for one domain — OMP's
+Plastic/Metal marketplace. The product vision calls for a platform where any
+number of business functions (OMP-Metal, OMP-Plastic, Onboarding, Collections,
+and whatever comes after) each configure their own KRAs, KPIs, activity types
+and metrics, and where adding a new one is a configuration act, not a code
+change. This section is the seam that makes that true without touching the
+tested OMP engine.
+
+### The registry
+
+`DB_BusinessFunctions` (read through `BusinessFunction`, `03b_BusinessFunction.gs`)
+replaces the hardcoded `CATEGORY` enum as the source of truth for what values the
+`category` column may hold and what each one means: its `calculatorMode`
+(`LEGACY` | `GENERIC`), its `streamMode` (`SUPPLY_DEMAND` | `SINGLE`) and stream
+labels, and whether it plans against a per-account book (`hasAccountPlan`, true
+only for OMP). The `category` column itself is untouched everywhere it already
+exists — it was already an unconstrained string on 18 tables with no special
+handling in `Repository`, so nothing needed to change there. OMP's two functions
+keep their literal historical values (`Plastic`, `Metal`).
+
+### Two calculators behind one dispatcher
+
+```
+Engine.metric(metricKey, window, scope)
+        │
+        ├─ scope.category is LEGACY  → legacyMetric_()        (06_Engine.gs, unchanged)
+        └─ scope.category is GENERIC → GenericEngine.metric()  (06b_GenericEngine.gs)
+```
+
+`legacyMetric_` is the exact hand-written switch statement the engine has always
+had — same code, same tests, same 126 assertions. `GenericEngine.metric()`
+interprets a `DB_MetricDef` row instead of running hand-written code:
+
+| Aggregation | Meaning |
+|---|---|
+| `COUNT` | Number of `DB_Activities` rows of a given `activityType`, in window and scope. |
+| `SUM` | Σ of a measure field (`count` \| `measureA` \| `measureB` \| `measureC`) on those rows. |
+| `DISTINCT_COUNT` | Distinct values of a chosen row field among matching rows. |
+| `RATIO` | `numeratorMetric ÷ denominatorMetric × multiplier`, both resolved recursively through the same `Engine.metric()` dispatcher — a ratio may reference a LEGACY metric too. |
+| `DERIVED` | A small hand-written recursive-descent arithmetic evaluator (`+ - * / ( )`, metric keys as variables) — no `eval`/`Function`, so an admin-authored expression is parsed, never executed as code. |
+
+Every branch returns the same `{ value, count, contributors, meta }` shape,
+built from the same `activityTrace_()` traceability payload the legacy engine
+uses (exposed from `06_Engine.gs` for `06b_GenericEngine.gs` to reuse), so
+drill-down works identically regardless of which calculator produced a number.
+`Engine.target()`'s `MANUAL`, `PCT_OF_METRIC` and `RATE_PER_DAY` bases are
+already metric-agnostic and work unchanged for GENERIC KPIs; `ACCOUNT_PLAN` and
+`BALANCE_PLUS_MTD` stay LEGACY-only and are simply never offered to a function
+where `hasAccountPlan` is false. `Dashboard.executive()` follows the same
+dispatch shape: a GENERIC business function's tiles are built from its own
+cycle's KPIs (`genericExecutive_`, `11_Dashboard.gs`) rather than OMP's
+hand-picked six headline metrics.
+
+### Config-only taxonomy
+
+`DB_ActivityTypeDef` and `DB_MetricDef` are the config-only analogs of the
+hardcoded `ACTIVITY_TYPES` array and `METRICS` object in `00_Config.gs`. A
+GENERIC business function's entire activity taxonomy and metric set are rows in
+these tables — authored through the `businessFunction.*` / `activityTypeDef.*`
+/ `metricDef.*` API actions (routed straight to `BusinessFunction` /
+`ActivityTypeDef` / `MetricDef` in `15_Api.gs`, no `14_Admin.gs` indirection)
+and the Administration → Business Functions screen, or seeded once at
+bootstrap for Onboarding and Collections. Every key an admin authors is
+checked against the static OMP arrays so it cannot collide with a built-in
+key (`ActivityTypeDef.save` / `MetricDef.save`).
+
+`DB_Activities` gained four trailing columns to support this — `subjectName`
+(a free-text stand-in for functions with no `DB_Accounts` counterpart) and
+three generic numeric slots, `measureA`/`measureB`/`measureC`. A GENERIC
+activity type's `measures` declare which physical column each logical field
+(e.g. `amount`) writes to; OMP's measures already name a real column directly
+(`quantityMT`, `ratePerKg`, `amountINR`) and are unaffected.
+
+### What "no code change" actually means
+
+Proven end to end in `tests/generic-engine.test.js`: creating a fifth business
+function, giving it an activity type and a metric, planning a cycle for it
+(with no seed library — a Team Lead builds its first KRA from scratch through
+the same "Add KRA" flow OMP uses), assigning it, publishing it, recording
+activity against it and reading its scorecard and dashboard back — all through
+`api()` calls, none through a `.gs` file edit.
+
+### What is still OMP-only
+
+`DB_Accounts` (sellers/buyers/GSTIN), the account plan, the annual onboarding
+plan, and the deeper report suite (`Reports.pocWise`, `regionWise`,
+`coverage`, `accountPerformance`, `dailyReview`, the weekly plan) are OMP's
+marketplace model and have no GENERIC equivalent yet. The client hides the
+screens built on them (`Components.notApplicable()`) for a business function
+where `hasAccountPlan` is false, rather than letting them error against data
+that cannot exist. A GENERIC business function's operating loop — plan,
+execute, measure, review via the scorecard, dashboard and drill-down — works
+in full; the OMP-specific reporting layer is a natural follow-up once a real
+GENERIC function needs it.

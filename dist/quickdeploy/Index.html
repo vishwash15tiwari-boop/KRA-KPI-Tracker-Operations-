@@ -877,6 +877,15 @@ const State = {
   },
   isPoc() { return this.user && this.user.role === 'POC'; },
   ref(key) { return (this.boot && this.boot.reference && this.boot.reference[key]) || []; },
+  /** The active Business Function's config — streams, calculator, whether it plans accounts. */
+  businessFunction(code) {
+    const list = this.ref('businessFunctions');
+    return list.find(b => b.businessFunctionId === (code || this.category)) || {
+      businessFunctionId: code || this.category, name: code || this.category,
+      calculatorMode: 'LEGACY', streamMode: 'SUPPLY_DEMAND',
+      streamLabels: { SUPPLY: 'Supply', DEMAND: 'Demand' }, hasAccountPlan: true
+    };
+  },
   setting(key) { return this.boot && this.boot.settings ? this.boot.settings[key] : undefined; },
   userName(userId) {
     const u = this.ref('users').find(x => x.userId === userId);
@@ -1305,6 +1314,7 @@ const Nav = (() => {
       permission: 'USER_MANAGE',
       items: [
         { route: 'users', icon: '👥', label: 'Users & Regions', permission: 'USER_MANAGE' },
+        { route: 'functions', icon: '⬡', label: 'Business Functions', permission: 'CONFIG_MANAGE' },
         { route: 'sync', icon: '⇄', label: 'Data Sync', permission: 'SYNC_RUN' },
         { route: 'settings', icon: '⚙', label: 'Settings', permission: 'CONFIG_MANAGE' },
         { route: 'audit', icon: '❑', label: 'Audit Trail', permission: 'AUDIT_VIEW' }
@@ -1425,6 +1435,18 @@ const Components = (() => {
           ${action ? `<div style="margin-top:14px">${action}</div>` : ''}
         </div>
       </div>`;
+  }
+
+  /** Shown instead of an OMP-only screen (accounts, pipeline, receivables, …)
+   *  when the active business function has no per-account book to show. */
+  function notApplicable() {
+    const name = (State.businessFunction() && State.businessFunction().name) || State.category;
+    return emptyState({
+      icon: '⬡',
+      title: `Not used by ${name}`,
+      message: 'This screen is part of OMP\'s seller/buyer marketplace model and has no equivalent ' +
+        'here yet. My Day, Dashboard, Activity Log, Scorecard and Leaderboard all work normally.'
+    });
   }
 
   function errorState(err) {
@@ -1896,7 +1918,7 @@ const Components = (() => {
   }
 
   return {
-    loading, tableSkeleton, emptyState, errorState, banner,
+    loading, tableSkeleton, emptyState, notApplicable, errorState, banner,
     pageHead, section, card, pill,
     metricTile, statTile,
     table, tva, achievementCell, growthCell,
@@ -2586,7 +2608,14 @@ function greeting() {
 const ActivityForm = (() => {
 
   function open({ cycleId, pocUserId, activityDate, accountId, accounts, types, activity, onSaved }) {
-    const typeList = types || State.ref('activityTypes').filter(t => !t.systemOwned);
+    // Default to the active business function's own types (systemOwned ones are
+    // synced, not hand-entered) — callers may pass a pre-filtered list instead.
+    const typeList = types || State.ref('activityTypes').filter(t =>
+      !t.systemOwned && (!t.businessFunctionIds || t.businessFunctionIds.includes(State.category)));
+    if (!typeList.length) {
+      Toast.warn('Nothing to log', 'No activity types are configured for this business function yet.');
+      return;
+    }
     const initialType = (activity && activity.activityType) || typeList[0].key;
 
     Overlay.openModal({
@@ -2628,6 +2657,12 @@ const ActivityForm = (() => {
               </select>
               <div class="field__hint">Not listed? Add it under Accounts first.</div>
             </div>
+            ${Components.field({
+              name: 'subjectName', label: 'Who this concerns', wide: false,
+              value: (activity && activity.subjectName) || '',
+              placeholder: 'e.g. the applicant or account name',
+              hint: 'No account record for this business function yet — just name it.'
+            })}
           </div>
 
           <div class="formgrid" id="measureFields"></div>
@@ -2674,6 +2709,7 @@ const ActivityForm = (() => {
 
       D.q('#accountField').hidden = !def.requiresAccount;
       D.q('#f_accountId').required = !!def.requiresAccount;
+      D.q('#f_subjectName').closest('.field').hidden = !!def.requiresAccount;
 
       D.html(D.q('#measureFields'), (def.measures || []).map(m => Components.field({
         name: m.key, label: `${m.label} (${m.unit})`, type: 'number', step: 'any', min: 0,
@@ -2738,6 +2774,19 @@ Router.register('planning', {
     const cycle = await Api.call('cycle.get', { cycleId });
     const canEdit = State.can('KRA_MANAGE') || State.can('PLAN_MANAGE');
     const editable = cycle.status === 'DRAFT' || cycle.status === 'PUBLISHED';
+    const bizFn = State.businessFunction(cycle.category);
+
+    const tabs = [
+      ['structure', 'KRAs & KPIs'],
+      ['assignments', 'Assignments']
+    ];
+    // Account-level planning (tonnage/rate/GMV) is an OMP concept — a GENERIC
+    // business function has no per-account book, so these tabs simply don't
+    // appear rather than being rewritten for a model that doesn't apply.
+    if (bizFn.hasAccountPlan) {
+      tabs.push(['accounts', 'Account Plan'], ['annual', 'Annual Onboarding Plan']);
+    }
+    tabs.push(['validate', 'Readiness']);
 
     host.innerHTML = `
       ${Components.pageHead({
@@ -2749,13 +2798,7 @@ Router.register('planning', {
       })}
 
       <div class="tabs" role="tablist">
-        ${[
-          ['structure', 'KRAs & KPIs'],
-          ['assignments', 'Assignments'],
-          ['accounts', 'Account Plan'],
-          ['annual', 'Annual Onboarding Plan'],
-          ['validate', 'Readiness']
-        ].map(([key, label]) => `
+        ${tabs.map(([key, label]) => `
           <button class="tab" role="tab" data-tab="${key}"
                   aria-selected="${tab === key}">${F.esc(label)}</button>`).join('')}
       </div>
@@ -2772,16 +2815,23 @@ Router.register('planning', {
 
     if (tab === 'structure') await renderStructure(body, cycle, canEdit && editable);
     else if (tab === 'assignments') await renderAssignments(body, cycle, canEdit && editable);
-    else if (tab === 'accounts') await renderAccountPlan(body, cycle, State.can('PLAN_MANAGE') && editable);
-    else if (tab === 'annual') await renderAnnualPlan(body, cycle, State.can('PLAN_MANAGE'));
-    else await renderValidation(body, cycle);
+    else if (tab === 'accounts' && bizFn.hasAccountPlan) {
+      await renderAccountPlan(body, cycle, State.can('PLAN_MANAGE') && editable);
+    } else if (tab === 'annual' && bizFn.hasAccountPlan) {
+      await renderAnnualPlan(body, cycle, State.can('PLAN_MANAGE'));
+    } else if (tab === 'validate') await renderValidation(body, cycle);
+    else await renderStructure(body, cycle, canEdit && editable);
   }
 });
 
 /* ------------------------------------------------------------- structure --- */
 async function renderStructure(host, cycle, canEdit) {
   const tree = await Api.call('kra.tree', { cycleId: cycle.cycleId });
-  const byStream = { SUPPLY: [], DEMAND: [] };
+  const bizFn = State.businessFunction(cycle.category);
+  const streamLabels = bizFn.streamLabels || { SUPPLY: 'Supply', DEMAND: 'Demand' };
+  const streamKeys = bizFn.streamMode === 'SINGLE' ? ['GENERAL'] : ['SUPPLY', 'DEMAND'];
+  const byStream = {};
+  streamKeys.forEach(s => { byStream[s] = []; });
   tree.forEach(k => (byStream[k.stream] || (byStream[k.stream] = [])).push(k));
 
   const streamBlock = (stream, label) => {
@@ -2845,8 +2895,7 @@ async function renderStructure(host, cycle, canEdit) {
     });
   };
 
-  host.innerHTML = streamBlock('SUPPLY', 'Supply — Sellers') +
-    streamBlock('DEMAND', 'Demand — Buyers');
+  host.innerHTML = streamKeys.map(s => streamBlock(s, streamLabels[s] || s)).join('');
 
   if (!canEdit) return;
 
@@ -2879,6 +2928,11 @@ async function renderStructure(host, cycle, canEdit) {
 }
 
 function kraModal(cycle, kra) {
+  const bizFn = State.businessFunction(cycle.category);
+  const streamLabels = bizFn.streamLabels || { SUPPLY: 'Supply', DEMAND: 'Demand' };
+  const streamKeys = bizFn.streamMode === 'SINGLE' ? ['GENERAL'] : ['SUPPLY', 'DEMAND'];
+  const streamOptions = streamKeys.map(s => ({ value: s, label: streamLabels[s] || s }));
+
   Overlay.openModal({
     title: kra && kra.kraId ? 'Edit KRA' : 'New KRA',
     body: `<form id="kraForm">
@@ -2887,8 +2941,8 @@ function kraModal(cycle, kra) {
       <div class="formgrid">
         ${Components.field({
           name: 'stream', label: 'Stream', type: 'select', required: true,
-          value: (kra && kra.stream) || 'SUPPLY',
-          options: [{ value: 'SUPPLY', label: 'Supply — Sellers' }, { value: 'DEMAND', label: 'Demand — Buyers' }]
+          value: (kra && kra.stream) || streamKeys[0],
+          options: streamOptions
         })}
         ${Components.field({
           name: 'perspective', label: 'Perspective', type: 'select',
@@ -2929,7 +2983,15 @@ function kraModal(cycle, kra) {
 }
 
 function kpiModal(cycle, kpi) {
-  const metrics = State.ref('metrics');
+  const bizFn = State.businessFunction(cycle.category);
+  const allMetrics = State.ref('metrics');
+  // A GENERIC business function's own metrics first, then everything else —
+  // so the picker leads with what actually applies to this cycle.
+  const ownMetrics = allMetrics.filter(m => m.businessFunctionId === cycle.category);
+  const metrics = ownMetrics.length
+    ? ownMetrics.concat(allMetrics.filter(m => m.businessFunctionId !== cycle.category))
+    : allMetrics;
+  const defaultMetricKey = ownMetrics.length ? ownMetrics[0].key : 'GMV_CR';
   const targets = kpi.targets || [0.6, 0.75, 0.9, 1.0, 1.05];
 
   Overlay.openModal({
@@ -2958,7 +3020,7 @@ function kpiModal(cycle, kpi) {
         })}
         ${Components.field({
           name: 'metricKey', label: 'Measured by', type: 'select', required: true,
-          value: kpi.metricKey || 'GMV_CR',
+          value: kpi.metricKey || defaultMetricKey,
           options: metrics.map(m => ({ value: m.key, label: `${m.label} (${m.unit})` })),
           hint: 'The engine computes this from operational records.'
         })}
@@ -2973,13 +3035,14 @@ function kpiModal(cycle, kpi) {
         ${Components.field({
           name: 'targetBasis', label: 'Target comes from', type: 'select',
           value: kpi.targetBasis || 'MANUAL',
-          options: [
+          options: (bizFn.hasAccountPlan ? [
             { value: 'ACCOUNT_PLAN', label: 'Sum of the account plan' },
+            { value: 'BALANCE_PLUS_MTD', label: 'Annual balance + month to date' }
+          ] : []).concat([
             { value: 'PCT_OF_METRIC', label: 'Percentage of another metric' },
-            { value: 'BALANCE_PLUS_MTD', label: 'Annual balance + month to date' },
             { value: 'RATE_PER_DAY', label: 'Working days × rate' },
             { value: 'MANUAL', label: 'Entered manually' }
-          ]
+          ])
         })}
         ${Components.field({
           name: 'basisMetric', label: 'Base metric', type: 'select',
@@ -3792,6 +3855,7 @@ Router.register('weekly', {
   permission: 'PLAN_VIEW',
   skeleton: () => Components.tableSkeleton(6),
   async render(host) {
+    if (!State.businessFunction().hasAccountPlan) { host.innerHTML = Components.notApplicable(); return; }
     if (!State.cycleId) { SetupView.renderNoCycle(host); return; }
     const weekStart = State.params.weekStart || '';
     const review = await Api.call('weeklyPlan.review', { cycleId: State.cycleId, weekStart });
@@ -4036,6 +4100,9 @@ Router.register('activity', {
                 if (r.quantityMT) bits.push(F.mt(r.quantityMT));
                 if (r.amountINR) bits.push(F.inr(r.amountINR));
                 if (r.ratePerKg) bits.push('₹' + F.num(r.ratePerKg, 2) + '/kg');
+                if (r.measureA) bits.push(F.num(r.measureA, 2));
+                if (r.measureB) bits.push(F.num(r.measureB, 2));
+                if (r.measureC) bits.push(F.num(r.measureC, 2));
                 if (!bits.length && r.count) bits.push(F.int(r.count));
                 return bits.length ? bits.join('<span class="cell-sub"></span>')
                   : '<span class="faint">—</span>';
@@ -4188,6 +4255,7 @@ function verifyModal(activityId, rows) {
 Router.register('accounts', {
   skeleton: () => Components.tableSkeleton(10),
   async render(host) {
+    if (!State.businessFunction().hasAccountPlan) { host.innerHTML = Components.notApplicable(); return; }
     const filters = {
       category: State.category,
       accountType: State.params.accountType || 'SELLER',
@@ -4532,6 +4600,7 @@ function accountModal(account, defaultType) {
 Router.register('pipeline', {
   skeleton: () => Components.tableSkeleton(8),
   async render(host) {
+    if (!State.businessFunction().hasAccountPlan) { host.innerHTML = Components.notApplicable(); return; }
     const filters = {
       category: State.category,
       accountType: State.params.accountType || 'BUYER',
@@ -4783,6 +4852,7 @@ function documentModal(row, doc) {
 Router.register('daily-review', {
   skeleton: () => Components.tableSkeleton(10),
   async render(host) {
+    if (!State.businessFunction().hasAccountPlan) { host.innerHTML = Components.notApplicable(); return; }
     if (!State.cycleId) { SetupView.renderNoCycle(host); return; }
     const stream = State.params.stream || State.stream;
     const dr = await Api.call('report.dailyReview', { cycleId: State.cycleId, stream });
@@ -5089,6 +5159,7 @@ Router.register('leaderboard', {
 Router.register('performance', {
   skeleton: () => Components.tableSkeleton(10),
   async render(host) {
+    if (!State.businessFunction().hasAccountPlan) { host.innerHTML = Components.notApplicable(); return; }
     if (!State.cycleId) { SetupView.renderNoCycle(host); return; }
     const level = State.params.level || 'poc';
     const stream = State.params.stream || State.stream;
@@ -5292,6 +5363,7 @@ function regionTable(data) {
 Router.register('coverage', {
   skeleton: () => Components.tableSkeleton(10),
   async render(host) {
+    if (!State.businessFunction().hasAccountPlan) { host.innerHTML = Components.notApplicable(); return; }
     if (!State.cycleId) { SetupView.renderNoCycle(host); return; }
     const accountType = State.params.accountType || 'SELLER';
     const cov = await Api.call('report.coverage', { cycleId: State.cycleId, accountType });
@@ -5382,6 +5454,7 @@ Router.register('coverage', {
 Router.register('account-performance', {
   skeleton: () => Components.tableSkeleton(10),
   async render(host) {
+    if (!State.businessFunction().hasAccountPlan) { host.innerHTML = Components.notApplicable(); return; }
     if (!State.cycleId) { SetupView.renderNoCycle(host); return; }
     const accountType = State.params.accountType || 'SELLER';
     const data = await Api.call('report.accountPerformance', {
@@ -5525,6 +5598,7 @@ Router.register('receivables', {
   permission: 'PLAN_MANAGE',
   skeleton: () => Components.tableSkeleton(8),
   async render(host) {
+    if (!State.businessFunction().hasAccountPlan) { host.innerHTML = Components.notApplicable(); return; }
     if (!State.cycleId) { SetupView.renderNoCycle(host); return; }
     const [rows, buyers] = await Promise.all([
       Api.call('receivable.list', { cycleId: State.cycleId }),
@@ -6732,6 +6806,396 @@ Router.register('settings', {
   }
 });
 
+/* ------------------------------------------------------- business functions --- */
+/**
+ * The config-driven platform layer. OMP-Metal/Plastic are built in (LEGACY);
+ * every other business function (Onboarding, Collections, or a new one
+ * created here) is entirely configuration — its activity types and metrics
+ * are rows an admin defines below, then a Team Lead builds its KRAs/KPIs
+ * from the Monthly Plan screen exactly as they would for OMP. No code.
+ */
+Router.register('functions', {
+  permission: 'CONFIG_MANAGE',
+  skeleton: () => Components.tableSkeleton(6),
+  async render(host) {
+    const tab = State.params.tab || 'types';
+    const [functions, activityTypes, metricDefs] = await Promise.all([
+      Api.call('businessFunction.list', { includeInactive: true }),
+      Api.call('activityTypeDef.list', {}),
+      Api.call('metricDef.list', {})
+    ]);
+    const genericFns = functions.filter(f => f.calculatorMode === 'GENERIC');
+    const scopeFn = genericFns.find(f => f.businessFunctionId === State.params.fn) || genericFns[0] || null;
+    const ownTypes = scopeFn ? activityTypes.filter(a => a.businessFunctionId === scopeFn.businessFunctionId) : [];
+    const ownMetrics = scopeFn ? metricDefs.filter(m => m.businessFunctionId === scopeFn.businessFunctionId) : [];
+
+    host.innerHTML = `
+      ${Components.pageHead({
+        title: 'Business Functions',
+        subtitle: `${functions.length} business function(s) configured on this platform`,
+        actions: `<button class="btn btn--primary" id="newFunction">＋ Business Function</button>`
+      })}
+
+      ${Components.banner('info', 'Onboarding a new business function is configuration, not code',
+        'OMP-Metal and OMP-Plastic compute their metrics from built-in engine code. Every other ' +
+        'function — Onboarding, Collections, or one you add here — computes its metrics purely from ' +
+        'the activity types and metric definitions below. Build its KRAs and KPIs from the Monthly ' +
+        'Plan screen once its taxonomy is defined.')}
+
+      ${Components.card({
+        title: 'All business functions', flush: true,
+        body: Components.table({
+          columns: [
+            {
+              label: 'Name', format: f => `<span class="strong">${F.esc(f.name)}</span>
+                <span class="cell-sub mono">${F.esc(f.businessFunctionId)}</span>`
+            },
+            {
+              label: 'Calculator', width: '110px', format: f =>
+                Components.pill(F.titleCase(f.calculatorMode), f.calculatorMode === 'LEGACY' ? 'brand' : 'good')
+            },
+            {
+              label: 'Streams', width: '170px', format: f => F.esc(
+                f.streamMode === 'SINGLE' ? ((f.streamLabels && f.streamLabels.GENERAL) || 'General')
+                  : Object.values(f.streamLabels || {}).join(' / '))
+            },
+            { label: 'Status', width: '90px', format: f => f.active ? Components.pill('Active', 'good') : Components.pill('Inactive', '') },
+            {
+              label: '', width: '220px', format: f => `
+                <button class="btn btn--sm" data-edit-fn="${F.esc(f.businessFunctionId)}">Edit</button>
+                ${f.calculatorMode === 'GENERIC' ? `<button class="btn btn--sm" data-scope-fn="${F.esc(f.businessFunctionId)}">
+                  Activity types & metrics</button>` : ''}`
+            }
+          ],
+          rows: functions,
+          empty: 'No business functions yet.'
+        })
+      })}
+
+      <div style="height:16px"></div>
+
+      ${scopeFn ? `
+        ${Components.pageHead({
+          title: `${F.esc(scopeFn.name)} — taxonomy`,
+          subtitle: 'The activity types a POC can log, and the metrics the engine computes from them.'
+        })}
+        <div class="tabs" role="tablist">
+          <button class="tab" role="tab" data-tab="types" aria-selected="${tab !== 'metrics'}">Activity Types</button>
+          <button class="tab" role="tab" data-tab="metrics" aria-selected="${tab === 'metrics'}">Metrics</button>
+        </div>
+        ${tab === 'metrics' ? `
+          ${Components.card({
+            flush: true,
+            actions: `<button class="btn btn--sm" data-new-metric>＋ Metric</button>`,
+            body: Components.table({
+              compact: true,
+              columns: [
+                {
+                  label: 'Metric', format: m => `<span class="strong">${F.esc(m.label)}</span>
+                    <span class="cell-sub mono">${F.esc(m.metricKey)}</span>`
+                },
+                { label: 'Aggregation', width: '120px', format: m => F.titleCase(m.aggregation) },
+                {
+                  label: 'Computed from', format: m => {
+                    if (m.aggregation === 'RATIO') return `${F.esc(m.numeratorMetric)} ÷ ${F.esc(m.denominatorMetric)}`
+                      + (m.multiplier && m.multiplier !== 1 ? ` × ${F.esc(m.multiplier)}` : '');
+                    if (m.aggregation === 'DERIVED') return `<span class="mono">${F.esc(m.expression)}</span>`;
+                    return `${F.esc(m.sourceActivityType)}${m.measureField ? ' · ' + F.esc(m.measureField) : ''}`;
+                  }
+                },
+                { label: 'Unit', width: '80px', format: m => F.esc(m.unit) },
+                { label: '', width: '70px', format: m => `<button class="btn btn--sm" data-edit-metric="${F.esc(m.metricKey)}">Edit</button>` }
+              ],
+              rows: ownMetrics,
+              empty: 'No metrics defined yet.'
+            })
+          })}
+        ` : `
+          ${Components.card({
+            flush: true,
+            actions: `<button class="btn btn--sm" data-new-type>＋ Activity Type</button>`,
+            body: Components.table({
+              compact: true,
+              columns: [
+                {
+                  label: 'Activity type', format: t => `<span class="strong">${F.esc(t.label)}</span>
+                    <span class="cell-sub mono">${F.esc(t.activityTypeId)}</span>`
+                },
+                { label: 'Evidence', width: '100px', format: t => F.titleCase(t.evidence) },
+                { label: 'Account required', width: '130px', format: t => t.requiresAccount ? 'Yes' : 'No' },
+                {
+                  label: 'Measures', format: t => (t.measures || []).length
+                    ? t.measures.map(m => `<span class="mono">${F.esc(m.key)}</span>`).join(', ')
+                    : '<span class="faint">count only</span>'
+                },
+                { label: '', width: '70px', format: t => `<button class="btn btn--sm" data-edit-type="${F.esc(t.activityTypeId)}">Edit</button>` }
+              ],
+              rows: ownTypes,
+              empty: 'No activity types defined yet.'
+            })
+          })}
+        `}
+      ` : Components.emptyState({
+        title: 'No configurable business function selected',
+        message: 'Create one above, or select an existing GENERIC business function to manage its taxonomy.'
+      })}`;
+
+    D.q('#newFunction', host).onclick = () => businessFunctionModal(null);
+    D.on(host, 'click', '[data-edit-fn]', (e, el) =>
+      businessFunctionModal(functions.find(f => f.businessFunctionId === el.dataset.editFn)));
+    D.on(host, 'click', '[data-scope-fn]', (e, el) => Router.go('functions', { fn: el.dataset.scopeFn, tab: 'types' }));
+    D.on(host, 'click', '[data-tab]', (e, el) =>
+      Router.go('functions', { fn: scopeFn && scopeFn.businessFunctionId, tab: el.dataset.tab }));
+
+    const newType = D.q('[data-new-type]', host);
+    if (newType) newType.onclick = () => activityTypeDefModal(scopeFn, null);
+    D.on(host, 'click', '[data-edit-type]', (e, el) =>
+      activityTypeDefModal(scopeFn, ownTypes.find(t => t.activityTypeId === el.dataset.editType)));
+
+    const newMetric = D.q('[data-new-metric]', host);
+    if (newMetric) newMetric.onclick = () => metricDefModal(scopeFn, null, ownTypes, metricDefs);
+    D.on(host, 'click', '[data-edit-metric]', (e, el) =>
+      metricDefModal(scopeFn, ownMetrics.find(m => m.metricKey === el.dataset.editMetric), ownTypes, metricDefs));
+  }
+});
+
+function businessFunctionModal(fn) {
+  const streamMode = (fn && fn.streamMode) || 'SINGLE';
+  Overlay.openModal({
+    title: fn ? 'Edit business function' : 'New business function',
+    body: `<form id="fnForm">
+      ${fn ? `<input type="hidden" name="businessFunctionId" value="${F.esc(fn.businessFunctionId)}">` : ''}
+      <div class="formgrid">
+        ${!fn ? Components.field({
+          name: 'businessFunctionId', label: 'Code', required: true,
+          placeholder: 'e.g. RETURNS', hint: 'Letters, numbers, underscores. Cannot be changed later.'
+        }) : ''}
+        ${Components.field({ name: 'name', label: 'Name', required: true, value: (fn && fn.name) || '' })}
+        ${Components.field({
+          name: 'description', label: 'Description', wide: true, value: (fn && fn.description) || ''
+        })}
+        ${Components.field({
+          name: 'streamMode', label: 'Stream shape', type: 'select', value: streamMode,
+          options: [
+            { value: 'SINGLE', label: 'Single stream — most operations teams' },
+            { value: 'SUPPLY_DEMAND', label: 'Two-sided (Supply / Demand) — marketplace-style' }
+          ]
+        })}
+        ${Components.field({
+          name: 'generalLabel', label: 'Stream label (single)', value: (fn && fn.streamLabels && fn.streamLabels.GENERAL) || (fn && fn.name) || ''
+        })}
+        ${Components.field({
+          name: 'supplyLabel', label: 'Supply-side label', value: (fn && fn.streamLabels && fn.streamLabels.SUPPLY) || 'Supply'
+        })}
+        ${Components.field({
+          name: 'demandLabel', label: 'Demand-side label', value: (fn && fn.streamLabels && fn.streamLabels.DEMAND) || 'Demand'
+        })}
+        ${Components.field({
+          name: 'sequence', label: 'Display order', type: 'number', value: (fn && fn.sequence) || 50
+        })}
+        ${Components.field({ name: 'active', label: 'Active', type: 'checkbox', value: fn ? fn.active : true })}
+      </div>
+      ${!fn ? Components.banner('info', 'What happens next',
+        'This creates the business function only. Add its activity types and metrics from the ' +
+        '"Activity types & metrics" screen, then build its first month\'s KRAs and KPIs from Monthly Plan.') : ''}
+    </form>`,
+    footer: `<button class="btn" data-close-modal>Cancel</button>
+             <button class="btn btn--primary" id="saveFn">Save</button>`
+  });
+
+  D.q('#saveFn').onclick = async (e) => {
+    e.currentTarget.disabled = true;
+    try {
+      await Api.call('businessFunction.save', D.formData(D.q('#fnForm')));
+      Toast.success('Business function saved');
+      Overlay.closeModal();
+      await Boot.reload();
+      Router.render();
+    } catch (err) {
+      e.currentTarget.disabled = false;
+      D.markInvalid(D.q('#fnForm'), err.message);
+    }
+  };
+}
+
+function activityTypeDefModal(fn, def) {
+  const measuresJson = JSON.stringify((def && def.measures) || [], null, 0);
+  Overlay.openModal({
+    title: def ? 'Edit activity type' : 'New activity type',
+    wide: true,
+    body: `<form id="typeForm">
+      <input type="hidden" name="businessFunctionId" value="${F.esc(fn.businessFunctionId)}">
+      <div class="formgrid">
+        ${!def ? Components.field({
+          name: 'activityTypeId', label: 'Key', required: true,
+          placeholder: 'e.g. APPLICATION_RECEIVED', hint: 'Must be globally unique across every business function.'
+        }) : `<input type="hidden" name="activityTypeId" value="${F.esc(def.activityTypeId)}">`}
+        ${Components.field({ name: 'label', label: 'Label', required: true, value: (def && def.label) || '' })}
+        ${Components.field({
+          name: 'evidence', label: 'Evidence', type: 'select', value: (def && def.evidence) || 'NONE',
+          options: [
+            { value: 'NONE', label: 'Not needed' },
+            { value: 'OPTIONAL', label: 'Optional' },
+            { value: 'REQUIRED', label: 'Required' }
+          ]
+        })}
+        ${Components.field({
+          name: 'requiresAccount', label: 'Requires a linked account', type: 'checkbox',
+          value: def ? def.requiresAccount : false
+        })}
+        ${Components.field({
+          name: 'sequence', label: 'Display order', type: 'number', value: (def && def.sequence) || 50
+        })}
+        ${Components.field({ name: 'active', label: 'Active', type: 'checkbox', value: def ? def.active : true })}
+        ${Components.field({
+          name: 'help', label: 'Help text', wide: true, value: (def && def.help) || ''
+        })}
+      </div>
+      <div class="field formgrid--wide">
+        <label class="field__label" for="f_measures">Measures (JSON)</label>
+        <textarea class="textarea mono" id="f_measures" name="measuresRaw" rows="3">${F.esc(measuresJson)}</textarea>
+        <div class="field__hint">
+          An array of fields captured when this activity is logged, e.g.
+          <span class="mono">[{"key":"amount","label":"Amount","unit":"₹","column":"measureA"}]</span>.
+          <b>column</b> must be one of count, measureA, measureB, measureC. Leave as
+          <span class="mono">[]</span> for a simple occurrence with no numeric field.
+        </div>
+      </div>
+    </form>`,
+    footer: `<button class="btn" data-close-modal>Cancel</button>
+             <button class="btn btn--primary" id="saveType">Save</button>`
+  });
+
+  D.q('#saveType').onclick = async (e) => {
+    e.currentTarget.disabled = true;
+    const data = D.formData(D.q('#typeForm'));
+    try {
+      data.measures = JSON.parse(data.measuresRaw || '[]');
+      if (!Array.isArray(data.measures)) throw new Error('not an array');
+    } catch (err) {
+      e.currentTarget.disabled = false;
+      D.markInvalid(D.q('#typeForm'), 'Measures must be valid JSON — an array of {key,label,unit,column}.');
+      return;
+    }
+    delete data.measuresRaw;
+    try {
+      await Api.call('activityTypeDef.save', data);
+      Toast.success('Activity type saved');
+      Overlay.closeModal();
+      Api.invalidate();
+      Router.render();
+    } catch (err) {
+      e.currentTarget.disabled = false;
+      D.markInvalid(D.q('#typeForm'), err.message);
+    }
+  };
+}
+
+function metricDefModal(fn, def, ownTypes, allMetricDefs) {
+  const aggregation = (def && def.aggregation) || 'COUNT';
+  const metricOptions = () => [{ value: '', label: '— Select —' }].concat(
+    allMetricDefs.map(m => ({ value: m.metricKey, label: `${m.label} (${m.businessFunctionId})` })));
+
+  Overlay.openModal({
+    title: def ? 'Edit metric' : 'New metric',
+    wide: true,
+    body: `<form id="metricForm">
+      <input type="hidden" name="businessFunctionId" value="${F.esc(fn.businessFunctionId)}">
+      <div class="formgrid">
+        ${!def ? Components.field({
+          name: 'metricKey', label: 'Key', required: true,
+          placeholder: 'e.g. APPLICATIONS_RECEIVED', hint: 'Must be globally unique — this is what a KPI links to.'
+        }) : `<input type="hidden" name="metricKey" value="${F.esc(def.metricKey)}">`}
+        ${Components.field({ name: 'label', label: 'Label', required: true, value: (def && def.label) || '' })}
+        ${Components.field({
+          name: 'unit', label: 'Unit', type: 'select', value: (def && def.unit) || 'COUNT',
+          options: ['COUNT', 'SUM', 'PCT', 'INR', 'DAYS', 'RATE']
+        })}
+        ${Components.field({
+          name: 'direction', label: 'Direction', type: 'select', value: (def && def.direction) || 'HIGHER_BETTER',
+          options: [
+            { value: 'HIGHER_BETTER', label: 'Higher is better' },
+            { value: 'LOWER_BETTER', label: 'Lower is better' }
+          ]
+        })}
+        ${Components.field({
+          name: 'aggregation', label: 'Computed as', type: 'select', value: aggregation,
+          options: [
+            { value: 'COUNT', label: 'Count of activities' },
+            { value: 'SUM', label: 'Sum of a measure' },
+            { value: 'DISTINCT_COUNT', label: 'Distinct count' },
+            { value: 'RATIO', label: 'Ratio of two metrics' },
+            { value: 'DERIVED', label: 'Formula over other metrics' }
+          ]
+        })}
+      </div>
+      <div class="formgrid" id="aggFields"></div>
+    </form>`,
+    footer: `<button class="btn" data-close-modal>Cancel</button>
+             <button class="btn btn--primary" id="saveMetric">Save</button>`
+  });
+
+  function renderAggFields(agg) {
+    const box = D.q('#aggFields');
+    if (agg === 'RATIO') {
+      box.innerHTML = `
+        ${Components.field({
+          name: 'numeratorMetric', label: 'Numerator metric', type: 'select', required: true,
+          value: (def && def.numeratorMetric) || '', options: metricOptions()
+        })}
+        ${Components.field({
+          name: 'denominatorMetric', label: 'Denominator metric', type: 'select', required: true,
+          value: (def && def.denominatorMetric) || '', options: metricOptions()
+        })}
+        ${Components.field({
+          name: 'multiplier', label: 'Multiplier', type: 'number', step: 'any',
+          value: (def && def.multiplier) || 100,
+          hint: '100 for a percentage, 1 for a plain ratio.'
+        })}`;
+    } else if (agg === 'DERIVED') {
+      box.innerHTML = Components.field({
+        name: 'expression', label: 'Expression', wide: true, required: true,
+        value: (def && def.expression) || '',
+        placeholder: 'e.g. (RECEIVED - REJECTED) / RECEIVED * 100',
+        hint: 'Arithmetic (+ - * / and parentheses) over other metric keys.'
+      });
+    } else {
+      box.innerHTML = `
+        ${Components.field({
+          name: 'sourceActivityType', label: 'Activity type', type: 'select', required: true,
+          value: (def && def.sourceActivityType) || '',
+          options: [{ value: '', label: '— Select —' }].concat(
+            ownTypes.map(t => ({ value: t.activityTypeId, label: t.label })))
+        })}
+        ${agg !== 'COUNT' ? Components.field({
+          name: 'measureField', label: agg === 'SUM' ? 'Measure field' : 'Distinct-on field',
+          type: 'select', required: agg === 'SUM',
+          value: (def && def.measureField) || (agg === 'SUM' ? 'measureA' : 'pocUserId'),
+          options: agg === 'SUM'
+            ? ['count', 'measureA', 'measureB', 'measureC']
+            : ['pocUserId', 'accountId', 'subjectName', 'regionId']
+        }) : ''}`;
+    }
+  }
+
+  renderAggFields(aggregation);
+  D.q('[name=aggregation]', document.getElementById('metricForm')).onchange = (e) => renderAggFields(e.target.value);
+
+  D.q('#saveMetric').onclick = async (e) => {
+    e.currentTarget.disabled = true;
+    try {
+      await Api.call('metricDef.save', D.formData(D.q('#metricForm')));
+      Toast.success('Metric saved');
+      Overlay.closeModal();
+      Api.invalidate();
+      Router.render();
+    } catch (err) {
+      e.currentTarget.disabled = false;
+      D.markInvalid(D.q('#metricForm'), err.message);
+    }
+  };
+}
+
 /* ------------------------------------------------------------------ audit --- */
 Router.register('audit', {
   permission: 'AUDIT_VIEW',
@@ -6852,17 +7316,37 @@ const Boot = (() => {
   function renderCycleContext() {
     const boot = State.boot;
     const cycles = boot.cycles || [];
+    const functions = (boot.reference && boot.reference.businessFunctions) || [];
+    const cyclesForFunction = cycles.filter(c => c.category === State.category);
     const active = State.cycle();
-    D.html(D.q('#cycleContext'), cycles.length ? `
-      <select class="select" id="topCyclePicker" aria-label="Planning cycle"
-              style="width:auto;max-width:230px;padding:5px 9px;font-size:12.5px">
-        ${cycles.map(c => `<option value="${F.esc(c.cycleId)}"${
-          c.cycleId === State.cycleId ? ' selected' : ''}>${F.esc(c.label)}</option>`).join('')}
-      </select>
-      ${active ? `<span class="pill" data-tone="${F.statusTone(active.status)}">${
-        F.esc(active.status)}</span>` : ''}
-      <span class="pill" title="Dashboards report through this date">
-        As of ${F.dateShort(boot.settings.asOf)}</span>` : '');
+
+    D.html(D.q('#cycleContext'), `
+      ${functions.length ? `
+        <select class="select" id="topFunctionPicker" aria-label="Business function"
+                style="width:auto;max-width:170px;padding:5px 9px;font-size:12.5px">
+          ${functions.map(f => `<option value="${F.esc(f.businessFunctionId)}"${
+            f.businessFunctionId === State.category ? ' selected' : ''}>${F.esc(f.name)}</option>`).join('')}
+        </select>` : ''}
+      ${cyclesForFunction.length ? `
+        <select class="select" id="topCyclePicker" aria-label="Planning cycle"
+                style="width:auto;max-width:230px;padding:5px 9px;font-size:12.5px">
+          ${cyclesForFunction.map(c => `<option value="${F.esc(c.cycleId)}"${
+            c.cycleId === State.cycleId ? ' selected' : ''}>${F.esc(c.label)}</option>`).join('')}
+        </select>
+        ${active ? `<span class="pill" data-tone="${F.statusTone(active.status)}">${
+          F.esc(active.status)}</span>` : ''}
+        <span class="pill" title="Dashboards report through this date">
+          As of ${F.dateShort(boot.settings.asOf)}</span>` : ''}`);
+
+    const functionPicker = D.q('#topFunctionPicker');
+    if (functionPicker) functionPicker.onchange = (e) => {
+      State.category = e.target.value;
+      const forFn = cycles.filter(c => c.category === State.category);
+      State.cycleId = forFn.length ? forFn[0].cycleId : null;
+      renderCycleContext();
+      Api.invalidate();
+      Router.render();
+    };
 
     const picker = D.q('#topCyclePicker');
     if (picker) picker.onchange = (e) => {

@@ -43,7 +43,7 @@ var API_ROUTES = {
   'kra.delete': function (p) { return Planning.deleteKra(p.kraId); },
   'kpi.save': function (p) { return Planning.saveKpi(p); },
   'kpi.delete': function (p) { return Planning.deleteKpi(p.kpiId); },
-  'kpi.library': function () { return Bootstrap.kraLibrary(); },
+  'kpi.library': function (p) { return Bootstrap.kraLibraryFor((p && p.category) || Config.get('DEFAULT_CATEGORY')); },
 
   // ---- Planning: assignments ---------------------------------------------
   'assignment.list': function (p) { return Planning.listAssignments(p.cycleId); },
@@ -122,6 +122,22 @@ var API_ROUTES = {
   'action.list': function (p) { return Review.listActions(p); },
   'action.save': function (p) { return Review.saveAction(p); },
   'action.fromAlert': function (p) { return Review.actionFromAlert(p.alert); },
+
+  // ---- Business Functions (the config-driven platform layer) -------------
+  // Adding a business function beyond OMP-Metal/Plastic is these three
+  // actions plus Planning's existing KRA/KPI editor — no engine code.
+  'businessFunction.list': function (p) {
+    return (p && p.includeInactive) ? BusinessFunction.all() : BusinessFunction.list();
+  },
+  'businessFunction.save': function (p) { return BusinessFunction.save(p); },
+  'activityTypeDef.list': function (p) {
+    return (p && p.businessFunctionId) ? ActivityTypeDef.forFunction(p.businessFunctionId) : ActivityTypeDef.all();
+  },
+  'activityTypeDef.save': function (p) { return ActivityTypeDef.save(p); },
+  'metricDef.list': function (p) {
+    return (p && p.businessFunctionId) ? MetricDef.forFunction(p.businessFunctionId) : MetricDef.all();
+  },
+  'metricDef.save': function (p) { return MetricDef.save(p); },
 
   // ---- Administration -----------------------------------------------------
   'user.list': function (p) { return Admin.listUsers(p); },
@@ -233,7 +249,11 @@ function bootstrapPayload_() {
       };
     }),
     reference: {
-      categories: CATEGORIES,
+      // Every active business function's code — OMP's two plus any GENERIC
+      // ones an admin has configured. Existing <select> bindings (User,
+      // Region, Sync forms) keep working unchanged; they just gain options.
+      categories: BusinessFunction.codes(),
+      businessFunctions: BusinessFunction.list(),
       streams: STREAMS,
       roles: Object.keys(ROLE),
       cycleStatuses: Object.keys(CYCLE_STATUS),
@@ -244,13 +264,9 @@ function bootstrapPayload_() {
       pipelineStages: Object.keys(PIPELINE_STAGE),
       documentSlots: DOCUMENT_SLOTS,
       activityTypes: Activity.types(),
-      metrics: Object.keys(METRICS).map(function (k) {
-        return {
-          key: k, label: METRICS[k].label, unit: METRICS[k].unit,
-          stream: METRICS[k].stream, direction: METRICS[k].direction || DIRECTION.HIGHER_BETTER
-        };
-      }),
+      metrics: Metrics.registry(),
       targetBases: Object.keys(TARGET_BASIS),
+      aggregations: Object.keys(AGGREGATION),
       ratingScale: RATING_SCALE,
       regions: Admin.listRegions(),
       users: Admin.listUsers({}),

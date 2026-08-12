@@ -16,6 +16,19 @@ Router.register('planning', {
     const cycle = await Api.call('cycle.get', { cycleId });
     const canEdit = State.can('KRA_MANAGE') || State.can('PLAN_MANAGE');
     const editable = cycle.status === 'DRAFT' || cycle.status === 'PUBLISHED';
+    const bizFn = State.businessFunction(cycle.category);
+
+    const tabs = [
+      ['structure', 'KRAs & KPIs'],
+      ['assignments', 'Assignments']
+    ];
+    // Account-level planning (tonnage/rate/GMV) is an OMP concept — a GENERIC
+    // business function has no per-account book, so these tabs simply don't
+    // appear rather than being rewritten for a model that doesn't apply.
+    if (bizFn.hasAccountPlan) {
+      tabs.push(['accounts', 'Account Plan'], ['annual', 'Annual Onboarding Plan']);
+    }
+    tabs.push(['validate', 'Readiness']);
 
     host.innerHTML = `
       ${Components.pageHead({
@@ -27,13 +40,7 @@ Router.register('planning', {
       })}
 
       <div class="tabs" role="tablist">
-        ${[
-          ['structure', 'KRAs & KPIs'],
-          ['assignments', 'Assignments'],
-          ['accounts', 'Account Plan'],
-          ['annual', 'Annual Onboarding Plan'],
-          ['validate', 'Readiness']
-        ].map(([key, label]) => `
+        ${tabs.map(([key, label]) => `
           <button class="tab" role="tab" data-tab="${key}"
                   aria-selected="${tab === key}">${F.esc(label)}</button>`).join('')}
       </div>
@@ -50,16 +57,23 @@ Router.register('planning', {
 
     if (tab === 'structure') await renderStructure(body, cycle, canEdit && editable);
     else if (tab === 'assignments') await renderAssignments(body, cycle, canEdit && editable);
-    else if (tab === 'accounts') await renderAccountPlan(body, cycle, State.can('PLAN_MANAGE') && editable);
-    else if (tab === 'annual') await renderAnnualPlan(body, cycle, State.can('PLAN_MANAGE'));
-    else await renderValidation(body, cycle);
+    else if (tab === 'accounts' && bizFn.hasAccountPlan) {
+      await renderAccountPlan(body, cycle, State.can('PLAN_MANAGE') && editable);
+    } else if (tab === 'annual' && bizFn.hasAccountPlan) {
+      await renderAnnualPlan(body, cycle, State.can('PLAN_MANAGE'));
+    } else if (tab === 'validate') await renderValidation(body, cycle);
+    else await renderStructure(body, cycle, canEdit && editable);
   }
 });
 
 /* ------------------------------------------------------------- structure --- */
 async function renderStructure(host, cycle, canEdit) {
   const tree = await Api.call('kra.tree', { cycleId: cycle.cycleId });
-  const byStream = { SUPPLY: [], DEMAND: [] };
+  const bizFn = State.businessFunction(cycle.category);
+  const streamLabels = bizFn.streamLabels || { SUPPLY: 'Supply', DEMAND: 'Demand' };
+  const streamKeys = bizFn.streamMode === 'SINGLE' ? ['GENERAL'] : ['SUPPLY', 'DEMAND'];
+  const byStream = {};
+  streamKeys.forEach(s => { byStream[s] = []; });
   tree.forEach(k => (byStream[k.stream] || (byStream[k.stream] = [])).push(k));
 
   const streamBlock = (stream, label) => {
@@ -123,8 +137,7 @@ async function renderStructure(host, cycle, canEdit) {
     });
   };
 
-  host.innerHTML = streamBlock('SUPPLY', 'Supply — Sellers') +
-    streamBlock('DEMAND', 'Demand — Buyers');
+  host.innerHTML = streamKeys.map(s => streamBlock(s, streamLabels[s] || s)).join('');
 
   if (!canEdit) return;
 
@@ -157,6 +170,11 @@ async function renderStructure(host, cycle, canEdit) {
 }
 
 function kraModal(cycle, kra) {
+  const bizFn = State.businessFunction(cycle.category);
+  const streamLabels = bizFn.streamLabels || { SUPPLY: 'Supply', DEMAND: 'Demand' };
+  const streamKeys = bizFn.streamMode === 'SINGLE' ? ['GENERAL'] : ['SUPPLY', 'DEMAND'];
+  const streamOptions = streamKeys.map(s => ({ value: s, label: streamLabels[s] || s }));
+
   Overlay.openModal({
     title: kra && kra.kraId ? 'Edit KRA' : 'New KRA',
     body: `<form id="kraForm">
@@ -165,8 +183,8 @@ function kraModal(cycle, kra) {
       <div class="formgrid">
         ${Components.field({
           name: 'stream', label: 'Stream', type: 'select', required: true,
-          value: (kra && kra.stream) || 'SUPPLY',
-          options: [{ value: 'SUPPLY', label: 'Supply — Sellers' }, { value: 'DEMAND', label: 'Demand — Buyers' }]
+          value: (kra && kra.stream) || streamKeys[0],
+          options: streamOptions
         })}
         ${Components.field({
           name: 'perspective', label: 'Perspective', type: 'select',
@@ -207,7 +225,15 @@ function kraModal(cycle, kra) {
 }
 
 function kpiModal(cycle, kpi) {
-  const metrics = State.ref('metrics');
+  const bizFn = State.businessFunction(cycle.category);
+  const allMetrics = State.ref('metrics');
+  // A GENERIC business function's own metrics first, then everything else —
+  // so the picker leads with what actually applies to this cycle.
+  const ownMetrics = allMetrics.filter(m => m.businessFunctionId === cycle.category);
+  const metrics = ownMetrics.length
+    ? ownMetrics.concat(allMetrics.filter(m => m.businessFunctionId !== cycle.category))
+    : allMetrics;
+  const defaultMetricKey = ownMetrics.length ? ownMetrics[0].key : 'GMV_CR';
   const targets = kpi.targets || [0.6, 0.75, 0.9, 1.0, 1.05];
 
   Overlay.openModal({
@@ -236,7 +262,7 @@ function kpiModal(cycle, kpi) {
         })}
         ${Components.field({
           name: 'metricKey', label: 'Measured by', type: 'select', required: true,
-          value: kpi.metricKey || 'GMV_CR',
+          value: kpi.metricKey || defaultMetricKey,
           options: metrics.map(m => ({ value: m.key, label: `${m.label} (${m.unit})` })),
           hint: 'The engine computes this from operational records.'
         })}
@@ -251,13 +277,14 @@ function kpiModal(cycle, kpi) {
         ${Components.field({
           name: 'targetBasis', label: 'Target comes from', type: 'select',
           value: kpi.targetBasis || 'MANUAL',
-          options: [
+          options: (bizFn.hasAccountPlan ? [
             { value: 'ACCOUNT_PLAN', label: 'Sum of the account plan' },
+            { value: 'BALANCE_PLUS_MTD', label: 'Annual balance + month to date' }
+          ] : []).concat([
             { value: 'PCT_OF_METRIC', label: 'Percentage of another metric' },
-            { value: 'BALANCE_PLUS_MTD', label: 'Annual balance + month to date' },
             { value: 'RATE_PER_DAY', label: 'Working days × rate' },
             { value: 'MANUAL', label: 'Entered manually' }
-          ]
+          ])
         })}
         ${Components.field({
           name: 'basisMetric', label: 'Base metric', type: 'select',
@@ -1070,6 +1097,7 @@ Router.register('weekly', {
   permission: 'PLAN_VIEW',
   skeleton: () => Components.tableSkeleton(6),
   async render(host) {
+    if (!State.businessFunction().hasAccountPlan) { host.innerHTML = Components.notApplicable(); return; }
     if (!State.cycleId) { SetupView.renderNoCycle(host); return; }
     const weekStart = State.params.weekStart || '';
     const review = await Api.call('weeklyPlan.review', { cycleId: State.cycleId, weekStart });
