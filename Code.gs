@@ -3,9 +3,9 @@
  *
  * Single-file server build. This is a straight concatenation of the modular
  * source in src/server/ (00_Config.gs .. 16_Code.gs), in the same load order,
- * for projects that prefer one Code.gs over sixteen files in the Apps Script
- * editor. Behaviour is identical either way. The section markers below name
- * the original file each block came from.
+ * for projects that prefer one Code.gs over 19 files in the Apps
+ * Script editor. Behaviour is identical either way. The section markers below
+ * name the original file each block came from.
  */
 
 // ============================================================================
@@ -55,9 +55,40 @@ var CATEGORIES = [CATEGORY.PLASTIC, CATEGORY.METAL];
 /** Supply serves sellers; Demand serves buyers. Each carries its own KRA set. */
 var STREAM = Object.freeze({
   SUPPLY: 'SUPPLY',
-  DEMAND: 'DEMAND'
+  DEMAND: 'DEMAND',
+  GENERAL: 'GENERAL' // single-stream business functions (Onboarding, Collections, …)
 });
-var STREAMS = [STREAM.SUPPLY, STREAM.DEMAND];
+var STREAMS = [STREAM.SUPPLY, STREAM.DEMAND, STREAM.GENERAL];
+
+/**
+ * How a business function's KRAs are grouped into streams. SUPPLY_DEMAND is
+ * OMP's two-sided seller/buyer split; SINGLE is one undifferentiated stream
+ * (STREAM.GENERAL) for functions with no natural two-sided structure.
+ */
+var STREAM_MODE = Object.freeze({
+  SUPPLY_DEMAND: 'SUPPLY_DEMAND',
+  SINGLE: 'SINGLE'
+});
+
+/**
+ * How a business function's metrics are computed. LEGACY means Engine.metric()
+ * dispatches to the hand-written OMP switch (legacyMetric_); GENERIC means it
+ * dispatches to GenericEngine.metric(), which interprets DB_MetricDef rows —
+ * the config-only path a new business function uses with no engine code.
+ */
+var CALCULATOR_MODE = Object.freeze({
+  LEGACY: 'LEGACY',
+  GENERIC: 'GENERIC'
+});
+
+/** Aggregation kinds a GENERIC business function's DB_MetricDef row can declare. */
+var AGGREGATION = Object.freeze({
+  COUNT: 'COUNT',
+  SUM: 'SUM',
+  DISTINCT_COUNT: 'DISTINCT_COUNT',
+  RATIO: 'RATIO',
+  DERIVED: 'DERIVED'
+});
 
 /**
  * Roles, ordered by authority. Higher rank implies every capability of the
@@ -552,6 +583,9 @@ var Config = (function () {
 
 var SHEET = Object.freeze({
   CONFIG: 'DB_Config',
+  BUSINESS_FUNCTIONS: 'DB_BusinessFunctions',
+  ACTIVITY_TYPE_DEF: 'DB_ActivityTypeDef',
+  METRIC_DEF: 'DB_MetricDef',
   USERS: 'DB_Users',
   REGIONS: 'DB_Regions',
   CYCLES: 'DB_Cycles',
@@ -594,6 +628,90 @@ var SCHEMA = Object.freeze({
       { name: 'key', type: T.STR, width: 240 },
       { name: 'value', type: T.STR, width: 200 },
       { name: 'description', type: T.STR, width: 420 },
+      { name: 'updatedAt', type: T.DATETIME },
+      { name: 'updatedBy', type: T.STR }
+    ]
+  },
+
+  /**
+   * Business Function registry — the config-driven partition that replaced the
+   * hardcoded Plastic/Metal CATEGORY enum. `businessFunctionId` is the exact
+   * value stored in every table's `category` column; OMP's two functions keep
+   * their historical literal codes ('Plastic', 'Metal') so no existing install
+   * needs a data migration.
+   */
+  DB_BusinessFunctions: {
+    pk: 'businessFunctionId',
+    cols: [
+      { name: 'businessFunctionId', type: T.STR, note: 'stored as `category` on every fact/plan table' },
+      { name: 'name', type: T.STR, width: 200 },
+      { name: 'description', type: T.STR, width: 400 },
+      { name: 'icon', type: T.STR },
+      { name: 'color', type: T.STR },
+      { name: 'sequence', type: T.NUM },
+      { name: 'active', type: T.BOOL },
+      { name: 'calculatorMode', type: T.STR, note: 'LEGACY | GENERIC' },
+      { name: 'streamMode', type: T.STR, note: 'SUPPLY_DEMAND | SINGLE' },
+      { name: 'streamLabels', type: T.JSON, note: '{streamKey: label}' },
+      { name: 'hasAccountPlan', type: T.BOOL, note: 'true only for OMP — gates the tonnage/rate/GMV planning tabs' },
+      { name: 'createdAt', type: T.DATETIME },
+      { name: 'createdBy', type: T.STR },
+      { name: 'updatedAt', type: T.DATETIME },
+      { name: 'updatedBy', type: T.STR }
+    ]
+  },
+
+  /**
+   * Declarative activity taxonomy for GENERIC business functions — the
+   * config-only analog of the hardcoded ACTIVITY_TYPES array in 00_Config.gs.
+   * A LEGACY function (OMP) never has rows here; its taxonomy stays in code.
+   */
+  DB_ActivityTypeDef: {
+    pk: 'activityTypeId',
+    index: ['businessFunctionId'],
+    cols: [
+      { name: 'activityTypeId', type: T.STR, note: 'the key stored in DB_Activities.activityType' },
+      { name: 'businessFunctionId', type: T.STR },
+      { name: 'label', type: T.STR, width: 200 },
+      { name: 'icon', type: T.STR },
+      { name: 'measures', type: T.JSON, note: 'array of {key,label,unit,column,default}; column is count|measureA|measureB|measureC' },
+      { name: 'requiresAccount', type: T.BOOL },
+      { name: 'evidence', type: T.STR, note: 'NONE | OPTIONAL | REQUIRED' },
+      { name: 'systemOwned', type: T.BOOL },
+      { name: 'sequence', type: T.NUM },
+      { name: 'active', type: T.BOOL },
+      { name: 'help', type: T.STR, width: 400 },
+      { name: 'createdAt', type: T.DATETIME },
+      { name: 'createdBy', type: T.STR },
+      { name: 'updatedAt', type: T.DATETIME },
+      { name: 'updatedBy', type: T.STR }
+    ]
+  },
+
+  /**
+   * Declarative metric registry for GENERIC business functions — the
+   * config-only analog of the hardcoded METRICS object in 00_Config.gs. The
+   * generic engine (06b_GenericEngine.gs) is a pure interpreter of these rows.
+   */
+  DB_MetricDef: {
+    pk: 'metricKey',
+    index: ['businessFunctionId'],
+    cols: [
+      { name: 'metricKey', type: T.STR, note: 'globally unique; referenced by DB_KPI.metricKey' },
+      { name: 'businessFunctionId', type: T.STR },
+      { name: 'label', type: T.STR, width: 200 },
+      { name: 'unit', type: T.STR, note: 'COUNT | SUM | PCT | INR | DAYS | RATE' },
+      { name: 'direction', type: T.STR, enum: Object.keys(DIRECTION) },
+      { name: 'aggregation', type: T.STR, note: 'COUNT | SUM | DISTINCT_COUNT | RATIO | DERIVED' },
+      { name: 'sourceActivityType', type: T.STR, note: 'for COUNT | SUM | DISTINCT_COUNT' },
+      { name: 'measureField', type: T.STR, note: 'for SUM (measureA..C) and DISTINCT_COUNT (field to distinct on)' },
+      { name: 'numeratorMetric', type: T.STR, note: 'for RATIO' },
+      { name: 'denominatorMetric', type: T.STR, note: 'for RATIO' },
+      { name: 'multiplier', type: T.NUM, note: 'for RATIO; 100 for a percentage, 1 for a plain ratio' },
+      { name: 'expression', type: T.STR, width: 300, note: 'for DERIVED — arithmetic over other metric keys' },
+      { name: 'active', type: T.BOOL },
+      { name: 'createdAt', type: T.DATETIME },
+      { name: 'createdBy', type: T.STR },
       { name: 'updatedAt', type: T.DATETIME },
       { name: 'updatedBy', type: T.STR }
     ]
@@ -897,7 +1015,13 @@ var SCHEMA = Object.freeze({
       { name: 'createdAt', type: T.DATETIME },
       { name: 'createdBy', type: T.STR },
       { name: 'updatedAt', type: T.DATETIME },
-      { name: 'updatedBy', type: T.STR }
+      { name: 'updatedBy', type: T.STR },
+      // -- Generic measures (GENERIC business functions; additive, OMP never
+      //    populates these — its three measures keep their named columns above) --
+      { name: 'subjectName', type: T.STR, width: 280, note: 'free-text subject for functions with no DB_Accounts counterpart' },
+      { name: 'measureA', type: T.NUM },
+      { name: 'measureB', type: T.NUM },
+      { name: 'measureC', type: T.NUM }
     ]
   },
 
@@ -1246,7 +1370,8 @@ var SCHEMA = Object.freeze({
 
 /** Ordered list of physical sheets, used by bootstrap. */
 var SCHEMA_ORDER = [
-  SHEET.CONFIG, SHEET.USERS, SHEET.REGIONS, SHEET.CYCLES, SHEET.KRA, SHEET.KPI,
+  SHEET.CONFIG, SHEET.BUSINESS_FUNCTIONS, SHEET.ACTIVITY_TYPE_DEF, SHEET.METRIC_DEF,
+  SHEET.USERS, SHEET.REGIONS, SHEET.CYCLES, SHEET.KRA, SHEET.KPI,
   SHEET.ASSIGNMENT, SHEET.ACCOUNTS, SHEET.ACCOUNT_PLAN, SHEET.ONBOARDING_PLAN,
   SHEET.WEEKLY_PLAN, SHEET.ACTIVITIES, SHEET.SHIPMENTS, SHEET.ONBOARDING,
   SHEET.PULSE, SHEET.RECEIVABLES, SHEET.PIPELINE, SHEET.DOCUMENTS,
@@ -2057,6 +2182,174 @@ var Repository = (function () {
 })();
 
 // ============================================================================
+// 03b_BusinessFunction.gs
+// ============================================================================
+
+/**
+ * 03b_BusinessFunction.gs — The Business Function registry.
+ *
+ * Replaces the hardcoded Plastic/Metal CATEGORY enum as the source of truth for
+ * what business functions exist and how each is calculated. The physical
+ * `category` column is untouched — it stays the field name on all 18 tables that
+ * already carry it — this registry only governs which values are valid today and
+ * what each one means (its calculator, its stream shape, whether it plans an
+ * account-level target).
+ *
+ * A LEGACY function's metrics are computed by hand-written code in 06_Engine.gs
+ * (Plastic and Metal — unchanged). A GENERIC function's metrics are computed by
+ * GenericEngine.metric() purely from DB_MetricDef rows — adding a function of
+ * this kind is a configuration act, not a code change.
+ */
+
+var BusinessFunction = (function () {
+
+  /**
+   * Shipped defaults, used both to seed DB_BusinessFunctions on first run and as
+   * a fallback before that seeding has happened (a fresh bootstrap, or a test
+   * harness that reads the engine without running Bootstrap.setup() first) so
+   * nothing downstream has to special-case "the table doesn't exist yet."
+   */
+  var DEFAULTS_ = Object.freeze([
+    {
+      businessFunctionId: CATEGORY.PLASTIC, name: 'OMP — Plastic',
+      description: 'Plastic recycling materials marketplace — sellers and buyers.',
+      icon: 'recycle', color: '#2f7a52', sequence: 1, active: true,
+      calculatorMode: CALCULATOR_MODE.LEGACY, streamMode: STREAM_MODE.SUPPLY_DEMAND,
+      streamLabels: { SUPPLY: 'Supply — Sellers', DEMAND: 'Demand — Buyers' },
+      hasAccountPlan: true
+    },
+    {
+      businessFunctionId: CATEGORY.METAL, name: 'OMP — Metal',
+      description: 'Metal recycling materials marketplace — sellers and buyers.',
+      icon: 'recycle', color: '#4a6a95', sequence: 2, active: true,
+      calculatorMode: CALCULATOR_MODE.LEGACY, streamMode: STREAM_MODE.SUPPLY_DEMAND,
+      streamLabels: { SUPPLY: 'Supply — Sellers', DEMAND: 'Demand — Buyers' },
+      hasAccountPlan: true
+    },
+    {
+      businessFunctionId: 'ONBOARDING', name: 'Onboarding',
+      description: 'Partner and account onboarding operations.',
+      icon: 'user-plus', color: '#7d5aa6', sequence: 3, active: true,
+      calculatorMode: CALCULATOR_MODE.GENERIC, streamMode: STREAM_MODE.SINGLE,
+      streamLabels: { GENERAL: 'Onboarding' },
+      hasAccountPlan: false
+    },
+    {
+      businessFunctionId: 'COLLECTIONS', name: 'Collections',
+      description: 'Receivables follow-up and collection operations.',
+      icon: 'wallet', color: '#a06a3f', sequence: 4, active: true,
+      calculatorMode: CALCULATOR_MODE.GENERIC, streamMode: STREAM_MODE.SINGLE,
+      streamLabels: { GENERAL: 'Collections' },
+      hasAccountPlan: false
+    }
+  ]);
+
+  var cache_ = null;
+
+  /** Every row currently in the registry — DB rows if seeded, defaults otherwise. */
+  function all() {
+    if (cache_) return cache_;
+    var rows;
+    try { rows = Repository.readAll(SHEET.BUSINESS_FUNCTIONS); } catch (e) { rows = []; }
+    cache_ = rows.length ? rows : DEFAULTS_;
+    return cache_;
+  }
+
+  /** Active business functions, in display order — the normal read path. */
+  function list() {
+    return Util.sortBy(
+      all().filter(function (r) { return r.active !== false; }),
+      [{ pick: function (r) { return Util.num(r.sequence, 50); } }]
+    );
+  }
+
+  /**
+   * A single function's config, by code. Never throws: an unknown or
+   * not-yet-seeded code degrades to a LEGACY-shaped default (matching the two
+   * OMP categories' actual behavior today) rather than breaking a read.
+   */
+  function get(code) {
+    var found = all().filter(function (r) { return r.businessFunctionId === code; })[0];
+    if (found) return found;
+    return {
+      businessFunctionId: code, name: code, active: true,
+      calculatorMode: CALCULATOR_MODE.LEGACY, streamMode: STREAM_MODE.SUPPLY_DEMAND,
+      streamLabels: { SUPPLY: 'Supply', DEMAND: 'Demand' }, hasAccountPlan: true
+    };
+  }
+
+  function codes() {
+    return list().map(function (r) { return r.businessFunctionId; });
+  }
+
+  /** True when the function's metrics are computed by DB_MetricDef, not code. */
+  function isGeneric(code) {
+    return get(code).calculatorMode === CALCULATOR_MODE.GENERIC;
+  }
+
+  /** The stream keys a KRA may declare for this function. */
+  function streamsFor(code) {
+    var bf = get(code);
+    return bf.streamMode === STREAM_MODE.SINGLE ? [STREAM.GENERAL] : [STREAM.SUPPLY, STREAM.DEMAND];
+  }
+
+  /**
+   * Create or update a business function. Only ADMIN may configure the
+   * platform's structure. New functions are always GENERIC — LEGACY is reserved
+   * for the two OMP functions whose calculator is hand-written code, not
+   * something an admin screen can grant.
+   */
+  function save(payload) {
+    Auth.require(PERM.CONFIG_MANAGE);
+    var code = Util.str(payload.businessFunctionId).toUpperCase();
+    assert(!Util.isBlank(code), 'VALIDATION', 'A code is required.');
+    assert(/^[A-Z][A-Z0-9_]*$/.test(code), 'VALIDATION',
+      'The code must start with a letter and contain only letters, numbers and underscores.');
+    assert(!Util.isBlank(payload.name), 'VALIDATION', 'A name is required.');
+
+    var existing = Repository.findById(SHEET.BUSINESS_FUNCTIONS, code);
+    var isNew = !existing;
+    if (isNew) {
+      assert(CATEGORIES.indexOf(code) < 0, 'VALIDATION',
+        code + ' is reserved for an OMP category.');
+    }
+
+    var streamMode = payload.streamMode === STREAM_MODE.SUPPLY_DEMAND
+      ? STREAM_MODE.SUPPLY_DEMAND : STREAM_MODE.SINGLE;
+    var streamLabels = streamMode === STREAM_MODE.SUPPLY_DEMAND
+      ? { SUPPLY: Util.str(payload.supplyLabel) || 'Supply', DEMAND: Util.str(payload.demandLabel) || 'Demand' }
+      : { GENERAL: Util.str(payload.generalLabel) || Util.str(payload.name) };
+
+    var row = {
+      businessFunctionId: code,
+      name: Util.str(payload.name),
+      description: Util.str(payload.description),
+      icon: Util.str(payload.icon) || 'briefcase',
+      color: Util.str(payload.color) || '#4f6f8f',
+      sequence: Util.num(payload.sequence, 50),
+      active: payload.active === undefined ? true : !!payload.active,
+      calculatorMode: existing ? existing.calculatorMode : CALCULATOR_MODE.GENERIC,
+      streamMode: streamMode,
+      streamLabels: streamLabels,
+      hasAccountPlan: existing ? Util.bool(existing.hasAccountPlan) : false
+    };
+    var saved = Repository.upsert(SHEET.BUSINESS_FUNCTIONS, row);
+    invalidate();
+    Audit.log(isNew ? 'BUSINESS_FUNCTION_CREATE' : 'BUSINESS_FUNCTION_UPDATE',
+      SHEET.BUSINESS_FUNCTIONS, saved.businessFunctionId, saved.name, existing || null, saved);
+    return saved;
+  }
+
+  function invalidate() { cache_ = null; }
+
+  return {
+    all: all, list: list, get: get, codes: codes, isGeneric: isGeneric,
+    streamsFor: streamsFor, save: save, invalidate: invalidate,
+    DEFAULTS: DEFAULTS_
+  };
+})();
+
+// ============================================================================
 // 04_Auth.gs
 // ============================================================================
 
@@ -2419,7 +2712,10 @@ var Bootstrap = (function () {
 
     seedConfig_();
     if (options.seedReference !== false) {
+      seedBusinessFunctions_();
       seedRegions_();
+      seedActivityTypeDefs_();
+      seedMetricDefs_();
       seedKraLibrary_();
     }
 
@@ -2535,10 +2831,13 @@ var Bootstrap = (function () {
     return { inserted: rows.length };
   }
 
-  /** Regions observed in the source workbook, plus an explicit unassigned bucket. */
+  /**
+   * Regions observed in the source workbook, plus an explicit unassigned
+   * bucket, cross-multiplied across every business function. Skips per
+   * function so a function added after initial setup still gets seeded.
+   */
   function seedRegions_() {
-    var existing = Repository.readAll(SHEET.REGIONS);
-    if (existing.length) return { skipped: true };
+    var existingByCode = Util.groupBy(Repository.readAll(SHEET.REGIONS), function (r) { return r.category; });
     var seed = [
       { regionName: 'North', sequence: 1 },
       { regionName: 'South', sequence: 2 },
@@ -2548,27 +2847,44 @@ var Bootstrap = (function () {
       { regionName: 'Unassigned', sequence: 99 }
     ];
     var rows = [];
-    CATEGORIES.forEach(function (cat) {
+    BusinessFunction.codes().forEach(function (code) {
+      if (existingByCode[code] && existingByCode[code].length) return;
       seed.forEach(function (r) {
         rows.push({
-          regionId: Id.natural('RGN', cat, r.regionName),
+          regionId: Id.natural('RGN', code, r.regionName),
           regionName: r.regionName,
-          category: cat,
+          category: code,
           active: true,
           sequence: r.sequence,
           createdAt: new Date()
         });
       });
     });
-    Repository.insertMany(SHEET.REGIONS, rows);
+    if (rows.length) Repository.insertMany(SHEET.REGIONS, rows);
     return { inserted: rows.length };
   }
 
   /**
-   * The KRA/KPI library, transcribed from the workbook. This is the template a
-   * Team Lead clones into each new cycle; `cycleId` is blank on library rows.
+   * The KRA/KPI library for a business function — the template a Team Lead
+   * clones into each new cycle (`cycleId` is blank on library rows). LEGACY
+   * functions (OMP) get their exact historical content, unchanged. GENERIC
+   * functions get starter content that exercises every aggregation kind the
+   * generic engine supports; a genuinely new (5th+) function with no library
+   * here starts from an empty list — a Team Lead builds it from scratch via
+   * the existing "Add KRA" flow in Planning, no seed required.
    */
-  function kraLibrary() {
+  function kraLibraryFor(code) {
+    if (BusinessFunction.get(code).calculatorMode === CALCULATOR_MODE.LEGACY) return omKraLibrary_();
+    if (code === 'ONBOARDING') return onboardingKraLibrary_();
+    if (code === 'COLLECTIONS') return collectionsKraLibrary_();
+    return [];
+  }
+
+  /** Backward-compatible alias — the OMP library, unqualified by category. */
+  function kraLibrary() { return omKraLibrary_(); }
+
+  /** The KRA/KPI library, transcribed from the workbook. Unchanged. */
+  function omKraLibrary_() {
     return [
       // ---- SUPPLY (seller side) — weights sum to 100 -----------------------
       {
@@ -2726,32 +3042,129 @@ var Bootstrap = (function () {
   }
 
   /**
+   * Onboarding — starter KRA/KPI content proving COUNT, SUM-backed RATIO and
+   * MANUAL/RATE_PER_DAY target bases all work with zero engine code. Single
+   * stream (GENERAL); weights sum to 100. A Team Lead edits or replaces this
+   * exactly as they would an OMP KRA — nothing here is special-cased.
+   */
+  function onboardingKraLibrary_() {
+    return [
+      {
+        stream: STREAM.GENERAL, perspective: 'Scale',
+        kraName: 'Onboarding Volume', sourceOfTracking: 'Activity Log', sequence: 1,
+        kpis: [{
+          kpiName: 'Onboardings Completed',
+          definition: 'Applications approved and onboarded this month, against the monthly target.',
+          weightage: 40, unitOfMeasure: 'Count',
+          metricKey: 'ONBOARDINGS_APPROVED', direction: DIRECTION.HIGHER_BETTER,
+          targetBasis: TARGET_BASIS.MANUAL,
+          targets: [6, 8, 9, 10, 11], sequence: 1
+        }]
+      },
+      {
+        stream: STREAM.GENERAL, perspective: 'Process',
+        kraName: 'Onboarding Quality', sourceOfTracking: 'Activity Log', sequence: 2,
+        kpis: [{
+          kpiName: 'Approval Rate %',
+          definition: 'Share of received applications that were approved and onboarded.',
+          weightage: 30, unitOfMeasure: 'Percentage',
+          metricKey: 'APPROVAL_RATE_PCT', direction: DIRECTION.HIGHER_BETTER,
+          targetBasis: TARGET_BASIS.MANUAL,
+          targets: [60, 70, 80, 85, 90], sequence: 1
+        }]
+      },
+      {
+        stream: STREAM.GENERAL, perspective: 'Customer',
+        kraName: 'Turnaround Time', sourceOfTracking: 'Activity Log', sequence: 3,
+        kpis: [{
+          kpiName: 'Average Onboarding TAT (Days)',
+          definition: 'Average days from application received to onboarding approval.',
+          weightage: 30, unitOfMeasure: 'Days',
+          metricKey: 'AVG_TAT_DAYS', direction: DIRECTION.LOWER_BETTER,
+          targetBasis: TARGET_BASIS.MANUAL,
+          targets: [10, 8, 6, 5, 4], sequence: 1
+        }]
+      }
+    ];
+  }
+
+  /**
+   * Collections — starter KRA/KPI content, additionally exercising the
+   * RATE_PER_DAY target basis (follow-ups expected per working day). Single
+   * stream (GENERAL); weights sum to 100.
+   */
+  function collectionsKraLibrary_() {
+    return [
+      {
+        stream: STREAM.GENERAL, perspective: 'Sales',
+        kraName: 'Collection Efficiency', sourceOfTracking: 'Activity Log', sequence: 1,
+        kpis: [{
+          kpiName: 'Amount Collected (₹)',
+          definition: 'Payments collected this month, against the monthly target.',
+          weightage: 40, unitOfMeasure: 'INR',
+          metricKey: 'AMOUNT_COLLECTED_INR', direction: DIRECTION.HIGHER_BETTER,
+          targetBasis: TARGET_BASIS.MANUAL,
+          targets: [300000, 400000, 450000, 500000, 550000], sequence: 1
+        }]
+      },
+      {
+        stream: STREAM.GENERAL, perspective: 'Process',
+        kraName: 'Collection Outreach', sourceOfTracking: 'Activity Log', sequence: 2,
+        kpis: [{
+          kpiName: 'Follow-ups Completed',
+          definition: 'Two follow-up calls per working day per POC.',
+          weightage: 30, unitOfMeasure: 'Count',
+          metricKey: 'FOLLOW_UPS_MADE', direction: DIRECTION.HIGHER_BETTER,
+          targetBasis: TARGET_BASIS.RATE_PER_DAY, basisPct: 2,
+          targets: [0.6, 0.75, 0.9, 1.0, 1.05], sequence: 1
+        }]
+      },
+      {
+        stream: STREAM.GENERAL, perspective: 'Customer',
+        kraName: 'Dispute Management', sourceOfTracking: 'Activity Log', sequence: 3,
+        kpis: [{
+          kpiName: 'Dispute Resolution Rate %',
+          definition: 'Share of logged disputes resolved and closed this month.',
+          weightage: 30, unitOfMeasure: 'Percentage',
+          metricKey: 'DISPUTE_RESOLUTION_RATE_PCT', direction: DIRECTION.HIGHER_BETTER,
+          targetBasis: TARGET_BASIS.MANUAL,
+          targets: [60, 70, 80, 90, 95], sequence: 1
+        }]
+      }
+    ];
+  }
+
+  /**
    * Install the library as template rows (cycleId = 'LIBRARY'). Cloning a
-   * library KRA into a cycle copies the row and rewrites cycleId.
+   * library KRA into a cycle copies the row and rewrites cycleId. Skips
+   * per-function, not globally, so seeding a new function later (Onboarding,
+   * Collections, or a 5th) never gets blocked by OMP's library already existing.
    */
   function seedKraLibrary_() {
-    var existing = Repository.where(SHEET.KRA, { cycleId: 'LIBRARY' });
-    if (existing.length) return { skipped: true };
-
+    var existingByCode = Util.groupBy(
+      Repository.where(SHEET.KRA, { cycleId: 'LIBRARY' }),
+      function (r) { return r.category; }
+    );
     var kraRows = [], kpiRows = [];
-    CATEGORIES.forEach(function (category) {
-      kraLibrary().forEach(function (k) {
-        var kraId = Id.natural('KRA', 'LIB', category, k.stream, k.kraName);
+    BusinessFunction.codes().forEach(function (code) {
+      if (existingByCode[code] && existingByCode[code].length) return;
+      kraLibraryFor(code).forEach(function (k) {
+        var kraId = Id.natural('KRA', 'LIB', code, k.stream, k.kraName);
         kraRows.push({
-          kraId: kraId, cycleId: 'LIBRARY', category: category, stream: k.stream,
+          kraId: kraId, cycleId: 'LIBRARY', category: code, stream: k.stream,
           perspective: k.perspective, kraName: k.kraName,
           sourceOfTracking: k.sourceOfTracking, sequence: k.sequence,
           active: true, createdAt: new Date(), createdBy: 'bootstrap'
         });
         k.kpis.forEach(function (p) {
           kpiRows.push({
-            kpiId: Id.natural('KPI', 'LIB', category, k.stream, p.kpiName),
+            kpiId: Id.natural('KPI', 'LIB', code, k.stream, p.kpiName),
             kraId: kraId, cycleId: 'LIBRARY',
             kpiName: p.kpiName, definition: p.definition,
             weightage: p.weightage, unitOfMeasure: p.unitOfMeasure,
             metricKey: p.metricKey, direction: p.direction,
             targetBasis: p.targetBasis,
-            basisMetric: p.basisMetric || '', basisPct: p.basisPct || null,
+            basisMetric: p.basisMetric || '', basisPct: p.basisPct === undefined ? null : p.basisPct,
             target1: p.targets[0], target2: p.targets[1], target3: p.targets[2],
             target4: p.targets[3], target5: p.targets[4],
             sequence: p.sequence, active: true,
@@ -2760,9 +3173,163 @@ var Bootstrap = (function () {
         });
       });
     });
-    Repository.insertMany(SHEET.KRA, kraRows);
-    Repository.insertMany(SHEET.KPI, kpiRows);
+    if (kraRows.length) Repository.insertMany(SHEET.KRA, kraRows);
+    if (kpiRows.length) Repository.insertMany(SHEET.KPI, kpiRows);
     return { kras: kraRows.length, kpis: kpiRows.length };
+  }
+
+  /** The Business Function registry itself — seeded once, per code. */
+  function seedBusinessFunctions_() {
+    var existingCodes = Repository.readAll(SHEET.BUSINESS_FUNCTIONS)
+      .map(function (r) { return r.businessFunctionId; });
+    var rows = BusinessFunction.DEFAULTS
+      .filter(function (d) { return existingCodes.indexOf(d.businessFunctionId) < 0; })
+      .map(function (d) {
+        return {
+          businessFunctionId: d.businessFunctionId, name: d.name, description: d.description,
+          icon: d.icon, color: d.color, sequence: d.sequence, active: d.active,
+          calculatorMode: d.calculatorMode, streamMode: d.streamMode, streamLabels: d.streamLabels,
+          hasAccountPlan: d.hasAccountPlan, createdAt: new Date(), createdBy: 'bootstrap'
+        };
+      });
+    if (rows.length) Repository.insertMany(SHEET.BUSINESS_FUNCTIONS, rows);
+    BusinessFunction.invalidate();
+    return { inserted: rows.length };
+  }
+
+  /** Declarative activity taxonomy for Onboarding and Collections. */
+  function onboardingActivityTypes_() {
+    var bf = 'ONBOARDING';
+    return [
+      { activityTypeId: 'APPLICATION_RECEIVED', businessFunctionId: bf, label: 'Application Received',
+        icon: 'inbox', measures: [], requiresAccount: false, evidence: 'NONE', sequence: 1,
+        help: 'A new onboarding application received.' },
+      { activityTypeId: 'DOCUMENT_VERIFIED', businessFunctionId: bf, label: 'Document Verified',
+        icon: 'file', measures: [], requiresAccount: false, evidence: 'OPTIONAL', sequence: 2,
+        help: 'A required document was checked and verified.' },
+      { activityTypeId: 'ONBOARDING_APPROVED', businessFunctionId: bf, label: 'Onboarding Approved',
+        icon: 'check', measures: [{ key: 'tatDays', label: 'Turnaround Time', unit: 'days', column: 'measureA' }],
+        requiresAccount: false, evidence: 'REQUIRED', sequence: 3,
+        help: 'Onboarding approved and activated. Record the days from application to approval.' },
+      { activityTypeId: 'ONBOARDING_REJECTED', businessFunctionId: bf, label: 'Onboarding Rejected',
+        icon: 'x', measures: [], requiresAccount: false, evidence: 'REQUIRED', sequence: 4,
+        help: 'Application rejected — record the reason in remarks.' },
+      { activityTypeId: 'ONBOARDING_FOLLOW_UP', businessFunctionId: bf, label: 'Follow-up',
+        icon: 'phone', measures: [], requiresAccount: false, evidence: 'OPTIONAL', sequence: 5,
+        help: 'A call, message or meeting to move an application forward.' }
+    ];
+  }
+
+  function collectionsActivityTypes_() {
+    var bf = 'COLLECTIONS';
+    return [
+      { activityTypeId: 'PAYMENT_RECEIVED', businessFunctionId: bf, label: 'Payment Received',
+        icon: 'rupee', measures: [{ key: 'amount', label: 'Amount Collected', unit: '₹', column: 'measureA' }],
+        requiresAccount: false, evidence: 'REQUIRED', sequence: 1,
+        help: 'A payment received from a debtor account.' },
+      { activityTypeId: 'FOLLOW_UP_CALL', businessFunctionId: bf, label: 'Follow-up Call',
+        icon: 'phone', measures: [], requiresAccount: false, evidence: 'OPTIONAL', sequence: 2,
+        help: 'A call made to a debtor to request payment.' },
+      { activityTypeId: 'REMINDER_SENT', businessFunctionId: bf, label: 'Reminder Sent',
+        icon: 'mail', measures: [], requiresAccount: false, evidence: 'OPTIONAL', sequence: 3,
+        help: 'A payment reminder sent — email, message or notice.' },
+      { activityTypeId: 'DISPUTE_LOGGED', businessFunctionId: bf, label: 'Dispute Logged',
+        icon: 'alert', measures: [], requiresAccount: false, evidence: 'REQUIRED', sequence: 4,
+        help: 'A payment dispute raised by the debtor, logged for resolution.' },
+      { activityTypeId: 'DISPUTE_RESOLVED', businessFunctionId: bf, label: 'Dispute Resolved',
+        icon: 'check', measures: [], requiresAccount: false, evidence: 'REQUIRED', sequence: 5,
+        help: 'A logged dispute resolved and closed.' }
+    ];
+  }
+
+  function seedActivityTypeDefs_() {
+    var existingIds = Repository.readAll(SHEET.ACTIVITY_TYPE_DEF).map(function (r) { return r.activityTypeId; });
+    var defs = onboardingActivityTypes_().concat(collectionsActivityTypes_());
+    var rows = defs
+      .filter(function (d) { return existingIds.indexOf(d.activityTypeId) < 0; })
+      .map(function (d) {
+        return {
+          activityTypeId: d.activityTypeId, businessFunctionId: d.businessFunctionId,
+          label: d.label, icon: d.icon, measures: d.measures, requiresAccount: d.requiresAccount,
+          evidence: d.evidence, systemOwned: false, sequence: d.sequence, active: true, help: d.help,
+          createdAt: new Date(), createdBy: 'bootstrap'
+        };
+      });
+    if (rows.length) Repository.insertMany(SHEET.ACTIVITY_TYPE_DEF, rows);
+    ActivityTypeDef.invalidate();
+    return { inserted: rows.length };
+  }
+
+  /** Declarative metric registry for Onboarding and Collections. */
+  function onboardingMetricDefs_() {
+    var bf = 'ONBOARDING';
+    return [
+      { metricKey: 'APPLICATIONS_RECEIVED', businessFunctionId: bf, label: 'Applications Received',
+        unit: 'COUNT', direction: DIRECTION.HIGHER_BETTER, aggregation: AGGREGATION.COUNT,
+        sourceActivityType: 'APPLICATION_RECEIVED' },
+      { metricKey: 'DOCS_VERIFIED', businessFunctionId: bf, label: 'Documents Verified',
+        unit: 'COUNT', direction: DIRECTION.HIGHER_BETTER, aggregation: AGGREGATION.COUNT,
+        sourceActivityType: 'DOCUMENT_VERIFIED' },
+      { metricKey: 'ONBOARDINGS_APPROVED', businessFunctionId: bf, label: 'Onboardings Approved',
+        unit: 'COUNT', direction: DIRECTION.HIGHER_BETTER, aggregation: AGGREGATION.COUNT,
+        sourceActivityType: 'ONBOARDING_APPROVED' },
+      { metricKey: 'ONBOARDINGS_REJECTED', businessFunctionId: bf, label: 'Onboardings Rejected',
+        unit: 'COUNT', direction: DIRECTION.LOWER_BETTER, aggregation: AGGREGATION.COUNT,
+        sourceActivityType: 'ONBOARDING_REJECTED' },
+      { metricKey: 'TOTAL_TAT_DAYS', businessFunctionId: bf, label: 'Total Turnaround Days',
+        unit: 'DAYS', direction: DIRECTION.LOWER_BETTER, aggregation: AGGREGATION.SUM,
+        sourceActivityType: 'ONBOARDING_APPROVED', measureField: 'measureA' },
+      { metricKey: 'AVG_TAT_DAYS', businessFunctionId: bf, label: 'Average Turnaround (Days)',
+        unit: 'DAYS', direction: DIRECTION.LOWER_BETTER, aggregation: AGGREGATION.RATIO,
+        numeratorMetric: 'TOTAL_TAT_DAYS', denominatorMetric: 'ONBOARDINGS_APPROVED', multiplier: 1 },
+      { metricKey: 'APPROVAL_RATE_PCT', businessFunctionId: bf, label: 'Approval Rate %',
+        unit: 'PCT', direction: DIRECTION.HIGHER_BETTER, aggregation: AGGREGATION.RATIO,
+        numeratorMetric: 'ONBOARDINGS_APPROVED', denominatorMetric: 'APPLICATIONS_RECEIVED', multiplier: 100 }
+    ];
+  }
+
+  function collectionsMetricDefs_() {
+    var bf = 'COLLECTIONS';
+    return [
+      { metricKey: 'AMOUNT_COLLECTED_INR', businessFunctionId: bf, label: 'Amount Collected',
+        unit: 'INR', direction: DIRECTION.HIGHER_BETTER, aggregation: AGGREGATION.SUM,
+        sourceActivityType: 'PAYMENT_RECEIVED', measureField: 'measureA' },
+      { metricKey: 'FOLLOW_UPS_MADE', businessFunctionId: bf, label: 'Follow-ups Made',
+        unit: 'COUNT', direction: DIRECTION.HIGHER_BETTER, aggregation: AGGREGATION.COUNT,
+        sourceActivityType: 'FOLLOW_UP_CALL' },
+      { metricKey: 'REMINDERS_SENT', businessFunctionId: bf, label: 'Reminders Sent',
+        unit: 'COUNT', direction: DIRECTION.HIGHER_BETTER, aggregation: AGGREGATION.COUNT,
+        sourceActivityType: 'REMINDER_SENT' },
+      { metricKey: 'DISPUTES_LOGGED', businessFunctionId: bf, label: 'Disputes Logged',
+        unit: 'COUNT', direction: DIRECTION.LOWER_BETTER, aggregation: AGGREGATION.COUNT,
+        sourceActivityType: 'DISPUTE_LOGGED' },
+      { metricKey: 'DISPUTES_RESOLVED', businessFunctionId: bf, label: 'Disputes Resolved',
+        unit: 'COUNT', direction: DIRECTION.HIGHER_BETTER, aggregation: AGGREGATION.COUNT,
+        sourceActivityType: 'DISPUTE_RESOLVED' },
+      { metricKey: 'DISPUTE_RESOLUTION_RATE_PCT', businessFunctionId: bf, label: 'Dispute Resolution Rate %',
+        unit: 'PCT', direction: DIRECTION.HIGHER_BETTER, aggregation: AGGREGATION.RATIO,
+        numeratorMetric: 'DISPUTES_RESOLVED', denominatorMetric: 'DISPUTES_LOGGED', multiplier: 100 }
+    ];
+  }
+
+  function seedMetricDefs_() {
+    var existingKeys = Repository.readAll(SHEET.METRIC_DEF).map(function (r) { return r.metricKey; });
+    var defs = onboardingMetricDefs_().concat(collectionsMetricDefs_());
+    var rows = defs
+      .filter(function (d) { return existingKeys.indexOf(d.metricKey) < 0; })
+      .map(function (d) {
+        return {
+          metricKey: d.metricKey, businessFunctionId: d.businessFunctionId, label: d.label,
+          unit: d.unit, direction: d.direction, aggregation: d.aggregation,
+          sourceActivityType: d.sourceActivityType || '', measureField: d.measureField || '',
+          numeratorMetric: d.numeratorMetric || '', denominatorMetric: d.denominatorMetric || '',
+          multiplier: d.multiplier === undefined ? 1 : d.multiplier, expression: d.expression || '',
+          active: true, createdAt: new Date(), createdBy: 'bootstrap'
+        };
+      });
+    if (rows.length) Repository.insertMany(SHEET.METRIC_DEF, rows);
+    MetricDef.invalidate();
+    return { inserted: rows.length };
   }
 
   // -- Health ---------------------------------------------------------------
@@ -2817,9 +3384,13 @@ var Bootstrap = (function () {
     setup: setup,
     health: health,
     kraLibrary: kraLibrary,
+    kraLibraryFor: kraLibraryFor,
     installTriggers: installTriggers,
     seedConfig: seedConfig_,
+    seedBusinessFunctions: seedBusinessFunctions_,
     seedRegions: seedRegions_,
+    seedActivityTypeDefs: seedActivityTypeDefs_,
+    seedMetricDefs: seedMetricDefs_,
     seedKraLibrary: seedKraLibrary_
   };
 })();
@@ -3032,8 +3603,23 @@ var Engine = (function () {
    * Compute one metric.
    * Returns { key, value, unit, count, contributors } where `contributors` is a
    * bounded sample of the underlying records with enough identity to drill down.
+   *
+   * Dispatches on the owning business function's calculator: LEGACY routes to
+   * the hand-written switch below (legacyMetric_ — OMP, unchanged); GENERIC
+   * routes to GenericEngine.metric(), which interprets a DB_MetricDef row. This
+   * is the one seam that lets a new business function compute its own metrics
+   * from configuration alone.
    */
   function metric(metricKey, window, sc, options) {
+    if (BusinessFunction.isGeneric(sc.category)) {
+      var def = MetricDef.get(metricKey);
+      if (!def) fail('UNKNOWN_METRIC', 'No calculation is defined for metric "' + metricKey + '".');
+      return GenericEngine.metric(def, window, sc, options);
+    }
+    return legacyMetric_(metricKey, window, sc, options);
+  }
+
+  function legacyMetric_(metricKey, window, sc, options) {
     options = options || {};
     var fs = facts(sc.category);
     var trace = options.trace !== false;
@@ -3205,7 +3791,7 @@ var Engine = (function () {
           dn += Util.num(r.debitNoteINR, 0);
           if (trace) drows.push(receivableTrace_(r));
         });
-        var gmvInrForDn = metric('GMV_CR', window, sc, { trace: false }).value *
+        var gmvInrForDn = legacyMetric_('GMV_CR', window, sc, { trace: false }).value *
           Config.get('GMV_CR_DIVISOR');
         out.value = Util.div(dn, gmvInrForDn, 0);
         out.count = drows.length;
@@ -3226,7 +3812,7 @@ var Engine = (function () {
           if (trace) rrows.push(receivableTrace_(r));
         });
         var avgReceivable = k ? (opening + closing) / 2 : 0;
-        var gmvInrForDso = metric('GMV_CR', window, sc, { trace: false }).value *
+        var gmvInrForDso = legacyMetric_('GMV_CR', window, sc, { trace: false }).value *
           Config.get('GMV_CR_DIVISOR');
         var days = DateUtil.daysInMonth(window.start);
         out.value = Util.div(avgReceivable, gmvInrForDso, 0) * days;
@@ -3399,9 +3985,10 @@ var Engine = (function () {
     return {
       id: a.activityId, type: a.activityType,
       date: DateUtil.isoDate(a.activityDate),
-      accountName: a.accountName, gstin: a.gstin,
+      accountName: a.accountName || a.subjectName || '', gstin: a.gstin,
       pocUserId: a.pocUserId, regionId: a.regionId,
       quantityMT: a.quantityMT, amountINR: a.amountINR, count: a.count,
+      measureA: a.measureA, measureB: a.measureB, measureC: a.measureC,
       remarks: a.remarks, evidence: a.evidenceUrl,
       verification: a.verificationStatus,
       createdBy: a.createdBy, createdAt: DateUtil.isoDateTime(a.createdAt),
@@ -3467,8 +4054,8 @@ var Engine = (function () {
         var pct = Util.num(kpi.basisPct, 0);
         return {
           value: base.value * pct, basis: 'PCT_OF_METRIC',
-          detail: Fmt.pct(pct, 0) + ' of ' + (METRICS[kpi.basisMetric] ?
-            METRICS[kpi.basisMetric].label : kpi.basisMetric) + ' (' + Util.round(base.value, 2) + ')',
+          detail: Fmt.pct(pct, 0) + ' of ' + Metrics.label(kpi.basisMetric) +
+            ' (' + Util.round(base.value, 2) + ')',
           baseValue: base.value, basePct: pct
         };
       }
@@ -3693,8 +4280,460 @@ var Engine = (function () {
     toneFor: toneFor,
     transactingSet: transactingSet_,
     onboardedAccountSet: onboardedAccountSet_,
-    accountPlansFor: accountPlansFor_
+    accountPlansFor: accountPlansFor_,
+    // Exposed for GenericEngine (06b_GenericEngine.gs), which reuses the same
+    // scope-matching and traceability-payload logic for GENERIC business
+    // functions rather than duplicating it.
+    rowInScope: rowInScope_,
+    activityTrace: activityTrace_
   };
+})();
+
+// ============================================================================
+// 06b_GenericEngine.gs
+// ============================================================================
+
+/**
+ * 06b_GenericEngine.gs — Declarative metric calculator for GENERIC business
+ * functions.
+ *
+ * Where 06_Engine.gs hand-computes each OMP metric in a switch statement, this
+ * file *interprets* a DB_MetricDef row. A business function on this path
+ * (BusinessFunction.isGeneric(code) === true — Onboarding and Collections today)
+ * never needs a line of engine code for a new metric: only a new DB_MetricDef
+ * row, authored through the Admin UI or seeded once at bootstrap. This is what
+ * makes onboarding a fifth business function later a configuration act.
+ *
+ * Supported aggregations, each a pure function of (metricDef, window, scope):
+ *   COUNT           number of DB_Activities rows of a given activityType
+ *   SUM             Σ of a measure field (count | measureA | measureB | measureC)
+ *   DISTINCT_COUNT  distinct values of a row field among matching rows
+ *   RATIO           numeratorMetric ÷ denominatorMetric × multiplier, both
+ *                   resolved recursively through Engine.metric() — so a ratio
+ *                   may reference a LEGACY metric too (e.g. a Collections KPI
+ *                   expressed against an OMP figure)
+ *   DERIVED         a small arithmetic expression over other metric keys
+ *
+ * Every branch returns the same { key, value, count, contributors, meta } shape
+ * the legacy engine returns, reusing its activityTrace_ payload builder
+ * (exposed as Engine.activityTrace), so drill-down works identically regardless
+ * of which engine produced the number.
+ */
+
+// =============================================================================
+// Declarative activity-type registry (config-only analog of ACTIVITY_TYPES)
+// =============================================================================
+
+var ActivityTypeDef = (function () {
+  var cache_ = null;
+
+  function all() {
+    if (cache_) return cache_;
+    try {
+      cache_ = Repository.readAll(SHEET.ACTIVITY_TYPE_DEF).filter(function (r) { return r.active !== false; });
+    } catch (e) {
+      cache_ = [];
+    }
+    return cache_;
+  }
+
+  function forFunction(businessFunctionId) {
+    return Util.sortBy(
+      all().filter(function (r) { return r.businessFunctionId === businessFunctionId; }),
+      [{ pick: function (r) { return Util.num(r.sequence, 50); } }]
+    );
+  }
+
+  function get(activityTypeId) {
+    return all().filter(function (r) { return r.activityTypeId === activityTypeId; })[0] || null;
+  }
+
+  /** Coerce a stored row into the same shape a static ACTIVITY_TYPES entry has. */
+  function toDef(row) {
+    var measures = row.measures;
+    if (typeof measures === 'string') {
+      try { measures = JSON.parse(measures); } catch (e) { measures = []; }
+    }
+    return {
+      key: row.activityTypeId,
+      label: row.label,
+      icon: row.icon || 'circle',
+      stream: STREAM.GENERAL,
+      businessFunctionId: row.businessFunctionId,
+      metrics: [],
+      measures: measures || [],
+      requiresAccount: Util.bool(row.requiresAccount),
+      evidence: row.evidence || 'NONE',
+      systemOwned: Util.bool(row.systemOwned),
+      help: row.help || ''
+    };
+  }
+
+  function save(payload) {
+    Auth.require(PERM.CONFIG_MANAGE);
+    assert(!Util.isBlank(payload.businessFunctionId), 'VALIDATION', 'Choose a business function.');
+    assert(BusinessFunction.isGeneric(payload.businessFunctionId), 'VALIDATION',
+      'Activity types can only be authored for a GENERIC business function.');
+    assert(!Util.isBlank(payload.label), 'VALIDATION', 'A label is required.');
+
+    var key = Util.str(payload.activityTypeId).toUpperCase() ||
+      Id.natural('AT', payload.businessFunctionId, payload.label);
+    assert(/^[A-Z][A-Z0-9_]*$/.test(key), 'VALIDATION',
+      'The activity type key must start with a letter and contain only letters, numbers and underscores.');
+    assert(!ACTIVITY_TYPES.some(function (t) { return t.key === key; }), 'VALIDATION',
+      key + ' collides with a built-in OMP activity type key.');
+
+    var measures = payload.measures;
+    if (typeof measures === 'string') { try { measures = JSON.parse(measures); } catch (e) { measures = []; } }
+    measures = (measures || []).filter(function (m) { return m && m.key; }).map(function (m) {
+      return {
+        key: m.key, label: Util.str(m.label) || m.key, unit: Util.str(m.unit),
+        column: ['count', 'measureA', 'measureB', 'measureC'].indexOf(m.column) >= 0 ? m.column : 'measureA',
+        default: m.default === undefined ? undefined : Util.num(m.default, undefined)
+      };
+    });
+
+    var row = {
+      activityTypeId: key,
+      businessFunctionId: payload.businessFunctionId,
+      label: Util.str(payload.label),
+      icon: Util.str(payload.icon) || 'circle',
+      measures: measures,
+      requiresAccount: !!payload.requiresAccount,
+      evidence: ['NONE', 'OPTIONAL', 'REQUIRED'].indexOf(payload.evidence) >= 0 ? payload.evidence : 'NONE',
+      systemOwned: false,
+      sequence: Util.num(payload.sequence, 50),
+      active: payload.active === undefined ? true : !!payload.active,
+      help: Util.str(payload.help)
+    };
+    var saved = Repository.upsert(SHEET.ACTIVITY_TYPE_DEF, row);
+    invalidate();
+    Audit.log(payload.activityTypeId ? 'ACTIVITY_TYPE_DEF_UPDATE' : 'ACTIVITY_TYPE_DEF_CREATE',
+      SHEET.ACTIVITY_TYPE_DEF, saved.activityTypeId, saved.label, null, saved);
+    return saved;
+  }
+
+  function invalidate() { cache_ = null; }
+
+  return { all: all, forFunction: forFunction, get: get, toDef: toDef, save: save, invalidate: invalidate };
+})();
+
+// =============================================================================
+// Declarative metric registry (config-only analog of METRICS)
+// =============================================================================
+
+var MetricDef = (function () {
+  var cache_ = null;
+
+  function all() {
+    if (cache_) return cache_;
+    try {
+      cache_ = Repository.readAll(SHEET.METRIC_DEF).filter(function (r) { return r.active !== false; });
+    } catch (e) {
+      cache_ = [];
+    }
+    return cache_;
+  }
+
+  function forFunction(businessFunctionId) {
+    return all().filter(function (r) { return r.businessFunctionId === businessFunctionId; });
+  }
+
+  function get(metricKey) {
+    return all().filter(function (r) { return r.metricKey === metricKey; })[0] || null;
+  }
+
+  function exists(metricKey) { return !!get(metricKey); }
+
+  function save(payload) {
+    Auth.require(PERM.CONFIG_MANAGE);
+    assert(!Util.isBlank(payload.businessFunctionId), 'VALIDATION', 'Choose a business function.');
+    assert(BusinessFunction.isGeneric(payload.businessFunctionId), 'VALIDATION',
+      'Metrics can only be authored for a GENERIC business function.');
+    assert(!Util.isBlank(payload.label), 'VALIDATION', 'A label is required.');
+    assert(Object.keys(AGGREGATION).indexOf(payload.aggregation) >= 0, 'VALIDATION',
+      'Choose how this metric is aggregated.');
+
+    var key = Util.str(payload.metricKey).toUpperCase() ||
+      Id.natural('MET', payload.businessFunctionId, payload.label);
+    assert(/^[A-Z][A-Z0-9_]*$/.test(key), 'VALIDATION',
+      'The metric key must start with a letter and contain only letters, numbers and underscores.');
+    assert(!(key in METRICS), 'VALIDATION', key + ' collides with a built-in OMP metric key.');
+
+    if (payload.aggregation === AGGREGATION.COUNT || payload.aggregation === AGGREGATION.SUM ||
+      payload.aggregation === AGGREGATION.DISTINCT_COUNT) {
+      assert(!Util.isBlank(payload.sourceActivityType), 'VALIDATION',
+        'Choose the activity type this metric counts or sums.');
+    }
+    if (payload.aggregation === AGGREGATION.RATIO) {
+      assert(!Util.isBlank(payload.numeratorMetric) && !Util.isBlank(payload.denominatorMetric), 'VALIDATION',
+        'A ratio metric needs both a numerator and a denominator metric.');
+    }
+    if (payload.aggregation === AGGREGATION.DERIVED) {
+      assert(!Util.isBlank(payload.expression), 'VALIDATION', 'A derived metric needs an expression.');
+      GenericEngine.validateExpression(payload.expression); // throws BAD_EXPRESSION on a malformed formula
+    }
+
+    var row = {
+      metricKey: key,
+      businessFunctionId: payload.businessFunctionId,
+      label: Util.str(payload.label),
+      unit: Util.str(payload.unit) || 'COUNT',
+      direction: Object.keys(DIRECTION).indexOf(payload.direction) >= 0 ? payload.direction : DIRECTION.HIGHER_BETTER,
+      aggregation: payload.aggregation,
+      sourceActivityType: Util.str(payload.sourceActivityType),
+      measureField: Util.str(payload.measureField),
+      numeratorMetric: Util.str(payload.numeratorMetric),
+      denominatorMetric: Util.str(payload.denominatorMetric),
+      multiplier: payload.multiplier === '' || payload.multiplier === undefined ? 1 : Util.num(payload.multiplier, 1),
+      expression: Util.str(payload.expression),
+      active: payload.active === undefined ? true : !!payload.active
+    };
+    var saved = Repository.upsert(SHEET.METRIC_DEF, row);
+    invalidate();
+    Audit.log(payload.metricKey ? 'METRIC_DEF_UPDATE' : 'METRIC_DEF_CREATE',
+      SHEET.METRIC_DEF, saved.metricKey, saved.label, null, saved);
+    return saved;
+  }
+
+  function invalidate() { cache_ = null; }
+
+  return { all: all, forFunction: forFunction, get: get, exists: exists, save: save, invalidate: invalidate };
+})();
+
+// =============================================================================
+// Merged metric reference (static METRICS ∪ DB_MetricDef) — used by Planning
+// validation and the client's KPI metric picker.
+// =============================================================================
+
+var Metrics = (function () {
+  function exists(key) { return !!METRICS[key] || MetricDef.exists(key); }
+
+  function label(key) {
+    if (METRICS[key]) return METRICS[key].label;
+    var d = MetricDef.get(key);
+    return d ? d.label : key;
+  }
+
+  function unit(key) {
+    if (METRICS[key]) return METRICS[key].unit;
+    var d = MetricDef.get(key);
+    return d ? d.unit : '';
+  }
+
+  function direction(key) {
+    if (METRICS[key]) return METRICS[key].direction || DIRECTION.HIGHER_BETTER;
+    var d = MetricDef.get(key);
+    return (d && d.direction) || DIRECTION.HIGHER_BETTER;
+  }
+
+  function registry() {
+    var out = Object.keys(METRICS).map(function (k) {
+      return {
+        key: k, label: METRICS[k].label, unit: METRICS[k].unit,
+        stream: METRICS[k].stream || 'BOTH',
+        direction: METRICS[k].direction || DIRECTION.HIGHER_BETTER
+      };
+    });
+    MetricDef.all().forEach(function (m) {
+      out.push({
+        key: m.metricKey, label: m.label, unit: m.unit, stream: STREAM.GENERAL,
+        direction: m.direction || DIRECTION.HIGHER_BETTER,
+        businessFunctionId: m.businessFunctionId
+      });
+    });
+    return out;
+  }
+
+  return { exists: exists, label: label, unit: unit, direction: direction, registry: registry };
+})();
+
+// =============================================================================
+// The generic calculator
+// =============================================================================
+
+var GenericEngine = (function () {
+
+  var MAX_METRIC_DEPTH = 6;
+
+  function metric(def, window, sc, options, depth) {
+    options = options || {};
+    depth = depth || 0;
+    assert(depth < MAX_METRIC_DEPTH, 'METRIC_CYCLE',
+      'Metric "' + def.metricKey + '" is defined in terms of itself — check its RATIO/DERIVED configuration.');
+
+    var trace = options.trace !== false;
+    var out = { key: def.metricKey, value: 0, count: 0, contributors: [] };
+
+    switch (def.aggregation) {
+      case AGGREGATION.COUNT: return countMetric_(def, window, sc, trace, out);
+      case AGGREGATION.SUM: return sumMetric_(def, window, sc, trace, out);
+      case AGGREGATION.DISTINCT_COUNT: return distinctCountMetric_(def, window, sc, trace, out);
+      case AGGREGATION.RATIO: return ratioMetric_(def, window, sc, options, out, depth);
+      case AGGREGATION.DERIVED: return derivedMetric_(def, window, sc, options, out, depth);
+      default:
+        fail('BAD_METRIC_DEF', 'Metric "' + def.metricKey + '" has an unrecognised aggregation "' + def.aggregation + '".');
+    }
+  }
+
+  function activityRows_(def, window, sc) {
+    return Repository.readAll(SHEET.ACTIVITIES).filter(function (a) {
+      if (a.voided) return false;
+      if (a.category !== sc.category) return false;
+      if (a.activityType !== def.sourceActivityType) return false;
+      if (!DateUtil.inWindow(a.activityDate, window)) return false;
+      return Engine.rowInScope(a, sc);
+    });
+  }
+
+  function countMetric_(def, window, sc, trace, out) {
+    var rows = activityRows_(def, window, sc);
+    out.value = rows.length;
+    out.count = rows.length;
+    out.contributors = trace ? rows.map(Engine.activityTrace) : [];
+    return out;
+  }
+
+  function sumMetric_(def, window, sc, trace, out) {
+    var rows = activityRows_(def, window, sc);
+    var field = def.measureField || 'count';
+    var total = 0;
+    rows.forEach(function (a) { total += Util.num(a[field], 0); });
+    out.value = total;
+    out.count = rows.length;
+    out.contributors = trace ? rows.map(Engine.activityTrace) : [];
+    return out;
+  }
+
+  function distinctCountMetric_(def, window, sc, trace, out) {
+    var rows = activityRows_(def, window, sc);
+    var field = def.measureField || 'pocUserId';
+    var seen = {}, unique = [];
+    rows.forEach(function (a) {
+      var k = Util.key(a[field]);
+      if (!k || seen[k]) return;
+      seen[k] = 1;
+      unique.push(a);
+    });
+    out.value = unique.length;
+    out.count = unique.length;
+    out.contributors = trace ? unique.map(Engine.activityTrace) : [];
+    return out;
+  }
+
+  function ratioMetric_(def, window, sc, options, out, depth) {
+    var num = resolveMetric_(def.numeratorMetric, window, sc, options, depth + 1);
+    var den = resolveMetric_(def.denominatorMetric, window, sc, options, depth + 1);
+    var multiplier = (def.multiplier === '' || def.multiplier === null || def.multiplier === undefined)
+      ? 1 : Util.num(def.multiplier, 1);
+    out.value = Util.div(num.value, den.value, 0) * multiplier;
+    out.count = num.count;
+    out.contributors = num.contributors;
+    out.meta = {
+      numerator: { key: def.numeratorMetric, value: num.value },
+      denominator: { key: def.denominatorMetric, value: den.value }
+    };
+    return out;
+  }
+
+  function derivedMetric_(def, window, sc, options, out, depth) {
+    var refs = referencedKeys_(def.expression);
+    var values = {};
+    refs.forEach(function (key) {
+      values[key] = resolveMetric_(key, window, sc, options, depth + 1).value;
+    });
+    out.value = evalExpr_(def.expression, values);
+    out.meta = { expression: def.expression, values: values };
+    return out;
+  }
+
+  /** Resolve any metric key through the same dispatcher Engine.metric() uses. */
+  function resolveMetric_(metricKey, window, sc, options, depth) {
+    assert(!Util.isBlank(metricKey), 'BAD_METRIC_DEF', 'A RATIO/DERIVED metric is missing a referenced metric key.');
+    var def = MetricDef.get(metricKey);
+    if (def) return metric(def, window, sc, options, depth);
+    // A generic metric may legitimately reference a LEGACY (OMP) metric.
+    return Engine.metric(metricKey, window, sc, options);
+  }
+
+  // -- A small, safe arithmetic evaluator for DERIVED metrics ---------------
+  // Grammar: expr := term (('+'|'-') term)* ; term := factor (('*'|'/') factor)*
+  //          factor := NUMBER | IDENT | '(' expr ')' | '-' factor
+  // No eval()/Function() — admin-authored expressions are parsed, not executed.
+
+  function referencedKeys_(expression) {
+    var m = String(expression || '').match(/[A-Za-z_][A-Za-z0-9_]*/g) || [];
+    return Util.unique(m);
+  }
+
+  function tokenize_(expression) {
+    var s = String(expression || '');
+    var re = /\s*(\d+(?:\.\d+)?|[A-Za-z_][A-Za-z0-9_]*|[+\-*/()])/g;
+    var tokens = [], m, i = 0;
+    while ((m = re.exec(s))) {
+      if (m.index !== i) fail('BAD_EXPRESSION', 'Unrecognised character near "' + s.slice(i) + '" in: ' + s);
+      tokens.push(m[1]);
+      i = re.lastIndex;
+    }
+    if (i !== s.length) fail('BAD_EXPRESSION', 'Unrecognised character near "' + s.slice(i) + '" in: ' + s);
+    assert(tokens.length > 0, 'BAD_EXPRESSION', 'Expression is empty.');
+    return tokens;
+  }
+
+  function parseExpr_(tokens, pos, values) {
+    var v = parseTerm_(tokens, pos, values);
+    while (tokens[pos.i] === '+' || tokens[pos.i] === '-') {
+      var op = tokens[pos.i++];
+      var rhs = parseTerm_(tokens, pos, values);
+      v = op === '+' ? v + rhs : v - rhs;
+    }
+    return v;
+  }
+
+  function parseTerm_(tokens, pos, values) {
+    var v = parseFactor_(tokens, pos, values);
+    while (tokens[pos.i] === '*' || tokens[pos.i] === '/') {
+      var op = tokens[pos.i++];
+      var rhs = parseFactor_(tokens, pos, values);
+      v = op === '*' ? v * rhs : Util.div(v, rhs, 0);
+    }
+    return v;
+  }
+
+  function parseFactor_(tokens, pos, values) {
+    var t = tokens[pos.i];
+    assert(t !== undefined, 'BAD_EXPRESSION', 'Expression ended unexpectedly.');
+    if (t === '(') {
+      pos.i++;
+      var v = parseExpr_(tokens, pos, values);
+      assert(tokens[pos.i] === ')', 'BAD_EXPRESSION', 'Missing closing parenthesis.');
+      pos.i++;
+      return v;
+    }
+    if (t === '-') { pos.i++; return -parseFactor_(tokens, pos, values); }
+    pos.i++;
+    if (/^[0-9]/.test(t)) return Number(t);
+    if (values && (t in values)) return Util.num(values[t], 0);
+    fail('BAD_EXPRESSION', 'Unknown metric key "' + t + '" in expression.');
+  }
+
+  function evalExpr_(expression, values) {
+    var tokens = tokenize_(expression);
+    var pos = { i: 0 };
+    var value = parseExpr_(tokens, pos, values);
+    assert(pos.i === tokens.length, 'BAD_EXPRESSION', 'Unexpected token in expression: ' + expression);
+    return value;
+  }
+
+  /** Syntax-only check used when an admin saves a DERIVED metric definition. */
+  function validateExpression(expression) {
+    var values = {};
+    referencedKeys_(expression).forEach(function (k) { values[k] = 0; });
+    evalExpr_(expression, values);
+    return true;
+  }
+
+  return { metric: metric, validateExpression: validateExpression };
 })();
 
 // ============================================================================
@@ -3764,7 +4803,7 @@ var Planning = (function () {
     var year = Util.num(payload.year, 0);
     var month = Util.num(payload.month, 0);
     assert(year > 2000 && month >= 1 && month <= 12, 'VALIDATION', 'A valid year and month are required.');
-    assert(CATEGORIES.indexOf(category) >= 0, 'VALIDATION', 'Unknown category: ' + category);
+    assert(BusinessFunction.codes().indexOf(category) >= 0, 'VALIDATION', 'Unknown business function: ' + category);
 
     var id = cycleId(category, year, month);
     assert(!Repository.findById(SHEET.CYCLES, id), 'DUPLICATE',
@@ -3985,7 +5024,7 @@ var Planning = (function () {
     }
 
     kpis.forEach(function (p) {
-      if (!p.metricKey || !(p.metricKey in METRICS)) {
+      if (!p.metricKey || !Metrics.exists(p.metricKey)) {
         errors.push({
           code: 'BAD_METRIC',
           message: 'KPI "' + p.kpiName + '" is not linked to a measurable metric.'
@@ -4103,7 +5142,7 @@ var Planning = (function () {
           return {
             kpiId: p.kpiId, kraId: p.kraId, kpiName: p.kpiName, definition: p.definition,
             weightage: p.weightage, unitOfMeasure: p.unitOfMeasure,
-            metricKey: p.metricKey, metricLabel: METRICS[p.metricKey] ? METRICS[p.metricKey].label : p.metricKey,
+            metricKey: p.metricKey, metricLabel: Metrics.label(p.metricKey),
             direction: p.direction, targetBasis: p.targetBasis,
             basisMetric: p.basisMetric, basisPct: p.basisPct,
             targets: [p.target1, p.target2, p.target3, p.target4, p.target5],
@@ -4119,7 +5158,9 @@ var Planning = (function () {
     var cycle = getCycle(payload.cycleId);
     assertEditable_(cycle);
     assert(!Util.isBlank(payload.kraName), 'VALIDATION', 'A KRA name is required.');
-    assert(STREAMS.indexOf(payload.stream) >= 0, 'VALIDATION', 'Select Supply or Demand.');
+    var allowedStreams = BusinessFunction.streamsFor(cycle.category);
+    assert(allowedStreams.indexOf(payload.stream) >= 0, 'VALIDATION',
+      'Select a valid stream for this business function (' + allowedStreams.join(' or ') + ').');
 
     var row = {
       kraId: payload.kraId || Id.next('KRA'),
@@ -4156,7 +5197,7 @@ var Planning = (function () {
     assertEditable_(cycle);
 
     assert(!Util.isBlank(payload.kpiName), 'VALIDATION', 'A KPI name is required.');
-    assert(payload.metricKey in METRICS, 'VALIDATION',
+    assert(Metrics.exists(payload.metricKey), 'VALIDATION',
       'Choose how this KPI is measured — "' + payload.metricKey + '" is not a known metric.');
     var weightage = Util.num(payload.weightage, 0);
     assert(weightage > 0 && weightage <= 100, 'VALIDATION',
@@ -4170,7 +5211,7 @@ var Planning = (function () {
       weightage: weightage,
       unitOfMeasure: Util.str(payload.unitOfMeasure) || 'Percentage',
       metricKey: payload.metricKey,
-      direction: payload.direction || (METRICS[payload.metricKey].direction || DIRECTION.HIGHER_BETTER),
+      direction: payload.direction || Metrics.direction(payload.metricKey),
       targetBasis: payload.targetBasis || TARGET_BASIS.MANUAL,
       basisMetric: Util.str(payload.basisMetric),
       basisPct: payload.basisPct === '' || payload.basisPct === undefined ? null : Util.num(payload.basisPct, 0),
@@ -5071,21 +6112,39 @@ var Accounts = (function () {
 
 var Activity = (function () {
 
+  /**
+   * Look up an activity type's definition. Static OMP types (ACTIVITY_TYPES,
+   * 00_Config.gs) are checked first; a GENERIC business function's types come
+   * from DB_ActivityTypeDef, coerced to the same shape — the rest of this file
+   * never needs to know which source a definition came from.
+   */
   function typeDef(key) {
     var t = ACTIVITY_TYPES.filter(function (x) { return x.key === key; })[0];
-    assert(t, 'VALIDATION', 'Unknown activity type: ' + key);
-    return t;
+    if (t) return t;
+    var row = ActivityTypeDef.get(key);
+    assert(row, 'VALIDATION', 'Unknown activity type: ' + key);
+    return ActivityTypeDef.toDef(row);
   }
 
   function types() {
-    return ACTIVITY_TYPES.map(function (t) {
+    var omp = ACTIVITY_TYPES.map(function (t) {
       return {
         key: t.key, label: t.label, icon: t.icon, stream: t.stream,
         measures: t.measures, requiresAccount: t.requiresAccount,
         evidence: t.evidence, systemOwned: t.systemOwned, help: t.help,
-        metrics: t.metrics
+        metrics: t.metrics, businessFunctionIds: [CATEGORY.PLASTIC, CATEGORY.METAL]
       };
     });
+    var generic = ActivityTypeDef.all().map(function (row) {
+      var d = ActivityTypeDef.toDef(row);
+      return {
+        key: d.key, label: d.label, icon: d.icon, stream: d.stream,
+        measures: d.measures, requiresAccount: d.requiresAccount,
+        evidence: d.evidence, systemOwned: d.systemOwned, help: d.help,
+        metrics: d.metrics, businessFunctionIds: [d.businessFunctionId]
+      };
+    });
+    return omp.concat(generic);
   }
 
   // =========================================================================
@@ -5131,27 +6190,34 @@ var Activity = (function () {
 
   function shape_(a, users) {
     var t = ACTIVITY_TYPES.filter(function (x) { return x.key === a.activityType; })[0];
+    var tRow = t ? null : ActivityTypeDef.get(a.activityType);
+    var label = t ? t.label : (tRow ? tRow.label : a.activityType);
+    var systemOwnedType = t ? t.systemOwned : (tRow ? Util.bool(tRow.systemOwned) : false);
     return {
       activityId: a.activityId, cycleId: a.cycleId, category: a.category, stream: a.stream,
       activityType: a.activityType,
-      activityTypeLabel: t ? t.label : a.activityType,
+      activityTypeLabel: label,
       activityDate: DateUtil.isoDate(a.activityDate),
       pocUserId: a.pocUserId,
       pocName: users && users[a.pocUserId] ? users[a.pocUserId].fullName : a.pocUserId,
       regionId: a.regionId,
       accountId: a.accountId, accountType: a.accountType,
-      gstin: a.gstin, accountName: a.accountName,
+      gstin: a.gstin, accountName: a.accountName || a.subjectName,
+      subjectName: a.subjectName,
       kraId: a.kraId, kpiId: a.kpiId, metricKey: a.metricKey,
       count: Util.num(a.count, 0),
       quantityMT: Util.num(a.quantityMT, 0),
       ratePerKg: Util.num(a.ratePerKg, 0),
       amountINR: Util.num(a.amountINR, 0),
+      measureA: Util.num(a.measureA, 0),
+      measureB: Util.num(a.measureB, 0),
+      measureC: Util.num(a.measureC, 0),
       status: a.status, blockerReason: a.blockerReason,
       remarks: a.remarks, evidenceUrl: a.evidenceUrl, evidenceType: a.evidenceType,
       verificationStatus: a.verificationStatus, verifiedBy: a.verifiedBy,
       verifiedAt: DateUtil.isoDateTime(a.verifiedAt), verifyNote: a.verifyNote,
       sourceSystem: a.sourceSystem, sourceRef: a.sourceRef,
-      systemOwned: !!(t && t.systemOwned) || String(a.sourceSystem || '').indexOf('SYNC') === 0,
+      systemOwned: systemOwnedType || String(a.sourceSystem || '').indexOf('SYNC') === 0,
       voided: !!a.voided, voidReason: a.voidReason,
       createdBy: a.createdBy, createdAt: DateUtil.isoDateTime(a.createdAt),
       updatedBy: a.updatedBy, updatedAt: DateUtil.isoDateTime(a.updatedAt)
@@ -5203,6 +6269,11 @@ var Activity = (function () {
       assert(account, 'VALIDATION',
         'Select the seller or buyer this ' + def.label.toLowerCase() + ' relates to.');
     }
+    if (!account && !Util.isBlank(payload.subjectName)) {
+      // A GENERIC business function may have no seller/buyer account at all —
+      // subjectName is the free-text stand-in (e.g. an applicant, a debtor).
+      assert(payload.subjectName.length <= 280, 'VALIDATION', 'Subject name is too long.');
+    }
 
     if (def.evidence === 'REQUIRED') {
       assert(!Util.isBlank(payload.evidenceUrl), 'VALIDATION',
@@ -5236,11 +6307,13 @@ var Activity = (function () {
       accountType: account ? account.accountType : '',
       gstin: account ? account.gstin : '',
       accountName: account ? account.businessName : Util.str(payload.accountName),
+      subjectName: account ? '' : Util.str(payload.subjectName),
       kraId: link.kraId, kpiId: link.kpiId, metricKey: link.metricKey,
       count: Util.num(payload.count, def.measures.length ? 0 : 1) || (def.measures.length ? 0 : 1),
       quantityMT: Util.num(payload.quantityMT, 0),
       ratePerKg: Util.num(payload.ratePerKg, 0),
       amountINR: Util.num(payload.amountINR, 0),
+      measureA: 0, measureB: 0, measureC: 0,
       status: Util.str(payload.status) || 'RECORDED',
       blockerReason: Util.str(payload.blockerReason),
       remarks: Util.str(payload.remarks),
@@ -5251,6 +6324,18 @@ var Activity = (function () {
       sourceRef: Util.str(payload.sourceRef),
       voided: false
     };
+
+    // A GENERIC business function's measures name their own logical key (e.g.
+    // "amount") but must land in one of the schema's generic numeric slots —
+    // each measure declares which one via `column`. OMP's measures already
+    // name a real column directly (quantityMT, ratePerKg, amountINR, count),
+    // so they fall through here unchanged (col === m.key, already set above).
+    def.measures.forEach(function (m) {
+      var col = m.column || m.key;
+      if (['measureA', 'measureB', 'measureC', 'count'].indexOf(col) < 0) return;
+      var fallback = m.default === undefined ? row[col] : Util.num(m.default, 0);
+      row[col] = Util.num(payload[m.key], fallback);
+    });
 
     if (payload.activityId) {
       var existing = Repository.findById(SHEET.ACTIVITIES, payload.activityId);
@@ -5316,7 +6401,7 @@ var Activity = (function () {
     for (var i = 0; i < assignments.length; i++) {
       var kpi = Repository.findById(SHEET.KPI, assignments[i].kpiId);
       if (!kpi || kpi.active === false) continue;
-      if (def.metrics.indexOf(kpi.metricKey) < 0) continue;
+      if (!metricFedByActivityType_(kpi.metricKey, def)) continue;
       var kra = Repository.findById(SHEET.KRA, kpi.kraId);
       return {
         kpiId: kpi.kpiId, kraId: kpi.kraId,
@@ -5325,7 +6410,26 @@ var Activity = (function () {
     }
     // Not every activity maps to an assigned KPI (a follow-up may simply be
     // context). Record the primary metric so it is still traceable.
-    return { kpiId: '', kraId: '', metricKey: def.metrics[0] || '', stream: '' };
+    return { kpiId: '', kraId: '', metricKey: primaryMetricFor_(def), stream: '' };
+  }
+
+  /**
+   * True when recording an activity of `def`'s type should move `metricKey`.
+   * OMP declares the mapping forward, on the activity type (def.metrics);
+   * a GENERIC business function declares it backward, on the metric itself
+   * (DB_MetricDef.sourceActivityType) — both directions are checked here so
+   * callers never need to know which one applies.
+   */
+  function metricFedByActivityType_(metricKey, def) {
+    if (def.metrics && def.metrics.indexOf(metricKey) >= 0) return true;
+    var mdef = MetricDef.get(metricKey);
+    return !!(mdef && mdef.sourceActivityType === def.key);
+  }
+
+  function primaryMetricFor_(def) {
+    if (def.metrics && def.metrics.length) return def.metrics[0];
+    var mdef = MetricDef.all().filter(function (m) { return m.sourceActivityType === def.key; })[0];
+    return mdef ? mdef.metricKey : '';
   }
 
   function touchAccount_(account, def, activityDate) {
@@ -5539,7 +6643,9 @@ var Activity = (function () {
       }),
       accounts: accounts,
       attention: attention.slice(0, 25),
-      activityTypes: types().filter(function (t) { return !t.systemOwned; })
+      activityTypes: types().filter(function (t) {
+        return !t.systemOwned && t.businessFunctionIds.indexOf(cycle.category) >= 0;
+      })
     };
   }
 
@@ -5569,8 +6675,8 @@ var Activity = (function () {
 
     return {
       metricKey: request.metricKey,
-      metricLabel: METRICS[request.metricKey] ? METRICS[request.metricKey].label : request.metricKey,
-      unit: METRICS[request.metricKey] ? METRICS[request.metricKey].unit : '',
+      metricLabel: Metrics.label(request.metricKey),
+      unit: Metrics.unit(request.metricKey),
       window: {
         kind: window.kind,
         from: DateUtil.isoDate(window.start),
@@ -6525,6 +7631,14 @@ var Dashboard = (function () {
     options = options || {};
     var ctx = Reports.context(cycleIdValue, asOfValue);
     var sc = Auth.scope();
+
+    // The HEADLINE list below is OMP's hand-picked six metrics with OMP-specific
+    // target derivations (account plan sums, pulse rate, BALANCE_PLUS_MTD) — it
+    // has no meaning for a GENERIC business function. Build the executive tiles
+    // from the cycle's own KRA/KPI structure instead; no engine code is added
+    // for a new business function's dashboard, same as everywhere else.
+    if (BusinessFunction.isGeneric(ctx.cycle.category)) return genericExecutive_(ctx, sc, options);
+
     var stream = options.stream || STREAM.SUPPLY;
 
     // A POC's dashboard is scoped to their own book automatically; a Regional
@@ -6592,6 +7706,71 @@ var Dashboard = (function () {
         rateGstDivisor: Config.get('RATE_GST_DIVISOR'),
         reportingLagDays: Config.get('REPORTING_LAG_DAYS')
       }
+    };
+  }
+
+  /**
+   * The executive view for a GENERIC business function: one tile per KPI in
+   * the cycle (up to a sane display limit), each computed the same way the
+   * scorecard computes it — Engine.metric for the actual, Engine.target for
+   * the target, Engine.evaluate for pace and rating. No metric is hand-picked;
+   * whatever KRAs/KPIs a Team Lead configured are what shows here.
+   */
+  function genericExecutive_(ctx, sc, options) {
+    var scopedRegion = (sc.level === 'REGION' && sc.regionIds && sc.regionIds.length)
+      ? sc.regionIds[0] : null;
+    var baseScope = {
+      category: ctx.cycle.category, stream: STREAM.GENERAL,
+      regionId: options.regionId || scopedRegion,
+      pocUserId: options.pocUserId || (sc.level === 'SELF' ? sc.user.userId : null)
+    };
+    var engineScope = Engine.scope(baseScope);
+
+    var kpis = Repository.where(SHEET.KPI, { cycleId: ctx.cycle.cycleId })
+      .filter(function (p) { return p.active !== false; });
+
+    var tiles = Util.sortBy(kpis, [{ pick: function (k) { return Util.num(k.sequence, 99); } }])
+      .slice(0, 8).map(function (kpi, i) {
+        var actual = Engine.metric(kpi.metricKey, ctx.windows.mtd, engineScope, { trace: false });
+        var lmtd = Engine.metric(kpi.metricKey, ctx.windows.lmtd, engineScope, { trace: false });
+        var targetValue = Engine.target(kpi, ctx.cycle, engineScope, ctx.windows.mtd, null).value;
+        var evaluation = Engine.evaluate({
+          target: targetValue, actual: actual.value, lmtd: lmtd.value, weightage: 0,
+          direction: kpi.direction || DIRECTION.HIGHER_BETTER,
+          elapsedDays: ctx.elapsedDays, remainingDays: ctx.remainingDays
+        });
+        return {
+          metricKey: kpi.metricKey, label: kpi.kpiName, unit: Metrics.unit(kpi.metricKey), primary: i === 0,
+          target: Util.round(evaluation.target, 6), actual: Util.round(evaluation.actual, 6),
+          gap: Util.round(evaluation.gap, 6), achievement: evaluation.achievement,
+          lmtd: Util.round(evaluation.lmtd, 6), growthPct: evaluation.growthPct,
+          currentDrr: Util.round(evaluation.currentDrr, 6), requiredDrr: Util.round(evaluation.requiredDrr, 6),
+          paceStatus: evaluation.paceStatus, tone: evaluation.tone,
+          projected: Util.round(evaluation.projected, 6), projectedAchievement: evaluation.projectedAchievement,
+          drill: {
+            metricKey: kpi.metricKey, cycleId: ctx.cycle.cycleId,
+            regionId: baseScope.regionId, pocUserId: baseScope.pocUserId
+          }
+        };
+      });
+
+    return {
+      cycle: {
+        cycleId: ctx.cycle.cycleId, label: ctx.cycle.label,
+        status: ctx.cycle.status, category: ctx.cycle.category,
+        year: ctx.cycle.year, month: ctx.cycle.month
+      },
+      stream: STREAM.GENERAL,
+      asOf: DateUtil.isoDate(ctx.asOf),
+      asOfLabel: 'As Of ' + DateUtil.display(ctx.asOf),
+      progress: {
+        elapsedDays: ctx.elapsedDays, remainingDays: ctx.remainingDays, daysInMonth: ctx.daysInMonth,
+        monthProgressPct: Util.div(ctx.elapsedDays, ctx.daysInMonth, 0)
+      },
+      tiles: tiles,
+      scopeLabel: scopeLabel_(ctx, baseScope),
+      dataQuality: dataQuality(ctx.cycle.cycleId),
+      basis: { gmvBasis: null, rateGstDivisor: null, reportingLagDays: Config.get('REPORTING_LAG_DAYS') }
     };
   }
 
@@ -8717,7 +9896,7 @@ var API_ROUTES = {
   'kra.delete': function (p) { return Planning.deleteKra(p.kraId); },
   'kpi.save': function (p) { return Planning.saveKpi(p); },
   'kpi.delete': function (p) { return Planning.deleteKpi(p.kpiId); },
-  'kpi.library': function () { return Bootstrap.kraLibrary(); },
+  'kpi.library': function (p) { return Bootstrap.kraLibraryFor((p && p.category) || Config.get('DEFAULT_CATEGORY')); },
 
   // ---- Planning: assignments ---------------------------------------------
   'assignment.list': function (p) { return Planning.listAssignments(p.cycleId); },
@@ -8796,6 +9975,22 @@ var API_ROUTES = {
   'action.list': function (p) { return Review.listActions(p); },
   'action.save': function (p) { return Review.saveAction(p); },
   'action.fromAlert': function (p) { return Review.actionFromAlert(p.alert); },
+
+  // ---- Business Functions (the config-driven platform layer) -------------
+  // Adding a business function beyond OMP-Metal/Plastic is these three
+  // actions plus Planning's existing KRA/KPI editor — no engine code.
+  'businessFunction.list': function (p) {
+    return (p && p.includeInactive) ? BusinessFunction.all() : BusinessFunction.list();
+  },
+  'businessFunction.save': function (p) { return BusinessFunction.save(p); },
+  'activityTypeDef.list': function (p) {
+    return (p && p.businessFunctionId) ? ActivityTypeDef.forFunction(p.businessFunctionId) : ActivityTypeDef.all();
+  },
+  'activityTypeDef.save': function (p) { return ActivityTypeDef.save(p); },
+  'metricDef.list': function (p) {
+    return (p && p.businessFunctionId) ? MetricDef.forFunction(p.businessFunctionId) : MetricDef.all();
+  },
+  'metricDef.save': function (p) { return MetricDef.save(p); },
 
   // ---- Administration -----------------------------------------------------
   'user.list': function (p) { return Admin.listUsers(p); },
@@ -8907,7 +10102,11 @@ function bootstrapPayload_() {
       };
     }),
     reference: {
-      categories: CATEGORIES,
+      // Every active business function's code — OMP's two plus any GENERIC
+      // ones an admin has configured. Existing <select> bindings (User,
+      // Region, Sync forms) keep working unchanged; they just gain options.
+      categories: BusinessFunction.codes(),
+      businessFunctions: BusinessFunction.list(),
       streams: STREAMS,
       roles: Object.keys(ROLE),
       cycleStatuses: Object.keys(CYCLE_STATUS),
@@ -8918,13 +10117,9 @@ function bootstrapPayload_() {
       pipelineStages: Object.keys(PIPELINE_STAGE),
       documentSlots: DOCUMENT_SLOTS,
       activityTypes: Activity.types(),
-      metrics: Object.keys(METRICS).map(function (k) {
-        return {
-          key: k, label: METRICS[k].label, unit: METRICS[k].unit,
-          stream: METRICS[k].stream, direction: METRICS[k].direction || DIRECTION.HIGHER_BETTER
-        };
-      }),
+      metrics: Metrics.registry(),
       targetBases: Object.keys(TARGET_BASIS),
+      aggregations: Object.keys(AGGREGATION),
       ratingScale: RATING_SCALE,
       regions: Admin.listRegions(),
       users: Admin.listUsers({}),
@@ -8953,11 +10148,18 @@ function bootstrapPayload_() {
 
 /** Serve the single-page application. */
 function doGet(e) {
-  return HtmlService.createHtmlOutputFromFile('Index')
+  var template = HtmlService.createTemplateFromFile('Index');
+  template.initialRoute = (e && e.parameter && e.parameter.route) || '';
+  return template.evaluate()
     .setTitle(APP.NAME)
     .setFaviconUrl('https://ssl.gstatic.com/docs/spreadsheets/forms/favicon_qp2.png')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+/** Server-side partial include, used to compose the client bundle. */
+function include(filename) {
+  return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
 /** Menu inside the backend spreadsheet, for administrators. */
