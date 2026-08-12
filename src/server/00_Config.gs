@@ -453,6 +453,12 @@ var CONFIG_DEFAULTS = Object.freeze({
   ACTIVITY_BACKDATE_DAYS: 7,          // how far back a POC may log work
   EVIDENCE_URL_PATTERN: '^https://',
 
+  // -- Data source -----------------------------------------------------------
+  // The operational workbook Sync reads from when a call does not name a
+  // spreadsheet explicitly. Leave '' to have Sync read from this same
+  // spreadsheet instead (source tabs living alongside the DB_* tables).
+  SOURCE_SPREADSHEET_ID: '1h0MGbmtOriH-T-cxQOGgcXBeydcNqv-bqT2AlLnWDdU',
+
   // -- Presentation --------------------------------------------------------
   DEFAULT_CATEGORY: CATEGORY.PLASTIC,
   CURRENCY_SYMBOL: '₹'

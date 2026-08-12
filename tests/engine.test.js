@@ -41,7 +41,15 @@ function section(title) { console.log('\n' + title); }
 
 /* ------------------------------------------------------------------ setup --- */
 section('Bootstrapping the application');
-const env = createEnvironment({ now: AS_OF, userEmail: 'lead@omp.test' });
+// SOURCE_SPREADSHEET_ID now defaults to the connected operational workbook, so
+// the mock "backend" spreadsheet is given that same id — Sync calls made with
+// no explicit spreadsheetId (as production leaves it, reading its default)
+// then resolve to this harness's mock spreadsheet, same as real deployments
+// resolve to the connected workbook.
+const env = createEnvironment({
+  now: AS_OF, userEmail: 'lead@omp.test',
+  spreadsheetId: '1h0MGbmtOriH-T-cxQOGgcXBeydcNqv-bqT2AlLnWDdU'
+});
 const S = env.sandbox;
 
 S.PropertiesService.getScriptProperties().setProperty('OMP_BOOTSTRAP_ADMIN', 'lead@omp.test');

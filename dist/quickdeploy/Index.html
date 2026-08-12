@@ -6521,7 +6521,8 @@ Router.register('sync', {
             <div class="formgrid">
               ${Components.field({
                 name: 'spreadsheetId', label: 'Source spreadsheet ID', wide: true, value: sourceId,
-                hint: 'Leave blank when the source tabs are in this same spreadsheet.'
+                hint: 'Leave blank to use the configured default (Settings → Data source), or the ' +
+                  'source tabs in this same spreadsheet if none is set.'
               })}
               ${Components.field({
                 name: 'category', label: 'Category', type: 'select',
@@ -6646,6 +6647,7 @@ Router.register('settings', {
         'SLA_DELIVERY_DAYS', 'DORMANCY_DAYS', 'PACE_WARN_RATIO', 'PACE_CRITICAL_RATIO'],
       'Operational limits': ['MAX_ROWS_PER_READ', 'CACHE_TTL_SECONDS', 'ACTIVITY_BACKDATE_DAYS',
         'EVIDENCE_URL_PATTERN'],
+      'Data source': ['SOURCE_SPREADSHEET_ID'],
       'Presentation': ['DEFAULT_CATEGORY', 'CURRENCY_SYMBOL']
     };
     const byKey = {};

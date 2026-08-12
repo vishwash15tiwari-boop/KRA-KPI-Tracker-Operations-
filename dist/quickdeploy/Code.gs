@@ -467,6 +467,12 @@ var CONFIG_DEFAULTS = Object.freeze({
   ACTIVITY_BACKDATE_DAYS: 7,          // how far back a POC may log work
   EVIDENCE_URL_PATTERN: '^https://',
 
+  // -- Data source -----------------------------------------------------------
+  // The operational workbook Sync reads from when a call does not name a
+  // spreadsheet explicitly. Leave '' to have Sync read from this same
+  // spreadsheet instead (source tabs living alongside the DB_* tables).
+  SOURCE_SPREADSHEET_ID: '1h0MGbmtOriH-T-cxQOGgcXBeydcNqv-bqT2AlLnWDdU',
+
   // -- Presentation --------------------------------------------------------
   DEFAULT_CATEGORY: CATEGORY.PLASTIC,
   CURRENCY_SYMBOL: '₹'
@@ -7544,13 +7550,14 @@ var Sync = (function () {
   // =========================================================================
 
   function openSource_(spreadsheetId, sheetName) {
+    var id = spreadsheetId || Config.get('SOURCE_SPREADSHEET_ID');
     var ss;
     try {
-      ss = spreadsheetId ? SpreadsheetApp.openById(spreadsheetId) : Repository.db();
+      ss = id ? SpreadsheetApp.openById(id) : Repository.db();
     } catch (e) {
       fail('SOURCE_UNREACHABLE',
         'The source spreadsheet could not be opened. Check the ID and that you have access.',
-        { spreadsheetId: spreadsheetId, cause: String(e) });
+        { spreadsheetId: id, cause: String(e) });
     }
     var sh = ss.getSheetByName(sheetName);
     if (!sh) {
@@ -7711,6 +7718,7 @@ var Sync = (function () {
   function syncShipments(options) {
     Auth.require(PERM.SYNC_RUN);
     options = options || {};
+    options.spreadsheetId = options.spreadsheetId || Config.get('SOURCE_SPREADSHEET_ID');
     var batch = Id.next('SYNC');
     var started = new Date();
     var warnings = [];
@@ -7820,6 +7828,7 @@ var Sync = (function () {
   function syncOnboarding(options) {
     Auth.require(PERM.SYNC_RUN);
     options = options || {};
+    options.spreadsheetId = options.spreadsheetId || Config.get('SOURCE_SPREADSHEET_ID');
     var batch = Id.next('SYNC');
     var started = new Date();
     var warnings = [];
@@ -7916,6 +7925,7 @@ var Sync = (function () {
   function syncPulse(options) {
     Auth.require(PERM.SYNC_RUN);
     options = options || {};
+    options.spreadsheetId = options.spreadsheetId || Config.get('SOURCE_SPREADSHEET_ID');
     var batch = Id.next('SYNC');
     var started = new Date();
     var warnings = [];
@@ -8037,6 +8047,7 @@ var Sync = (function () {
   function importAccountPlan(options) {
     Auth.require(PERM.PLAN_MANAGE);
     options = options || {};
+    options.spreadsheetId = options.spreadsheetId || Config.get('SOURCE_SPREADSHEET_ID');
     var cycle = Planning.getCycle(options.cycleId);
     var batch = Id.next('SYNC');
     var started = new Date();
@@ -8189,8 +8200,13 @@ var Sync = (function () {
   /** Read a source spreadsheet's tab list — used by the setup wizard. */
   function inspectSource(spreadsheetId) {
     Auth.require(PERM.SYNC_RUN);
+    var id = spreadsheetId || Config.get('SOURCE_SPREADSHEET_ID');
+    if (!id) {
+      fail('VALIDATION',
+        'No spreadsheet ID given and no SOURCE_SPREADSHEET_ID is configured under Settings.');
+    }
     var ss;
-    try { ss = SpreadsheetApp.openById(spreadsheetId); }
+    try { ss = SpreadsheetApp.openById(id); }
     catch (e) {
       fail('SOURCE_UNREACHABLE', 'Could not open that spreadsheet. Check the ID and your access.');
     }

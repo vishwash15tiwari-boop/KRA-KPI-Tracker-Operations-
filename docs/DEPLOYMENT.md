@@ -140,10 +140,15 @@ assignment across, and keeps the old name as an alias.
 
 **Administration → Data Sync.**
 
-1. Paste the source spreadsheet ID (the segment between `/d/` and `/edit`).
-   Leave blank if the source tabs are in the same spreadsheet as the backend.
+1. Paste the source spreadsheet ID (the segment between `/d/` and `/edit`), or
+   leave it blank to use the configured default — see `SOURCE_SPREADSHEET_ID`
+   under **Settings → Data source** — or, if that is also unset, the source
+   tabs in this same spreadsheet.
 2. **Check access** confirms the connection and lists the tabs it found.
 3. **Sync everything.**
+
+Whichever account the Apps Script project runs as needs at least view access
+to the source spreadsheet.
 
 The sync reads:
 
