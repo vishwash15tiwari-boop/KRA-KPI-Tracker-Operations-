@@ -91,7 +91,7 @@ schema is missing, otherwise on the dashboard.
 
 > Re-deploy after every code change: **Deploy → Manage deployments → Edit → New
 > version**. The `/dev` URL always runs the latest code and is useful while
-> iterating.
+> iterating. Section 13 covers doing this step automatically from GitHub.
 
 ---
 
@@ -250,10 +250,68 @@ Google Sheets keeps full version history. For a point-in-time copy:
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | *"Your account has not been granted access"* | No `DB_Users` row for that email | Add the user under Administration |
-| *"No backend spreadsheet is configured"* | Standalone script without `OMP_DB_SPREADSHEET_ID` | Set the script property |
+| *"No backend spreadsheet is configured"* | Standalone script, no `OMP_DB_SPREADSHEET_ID` yet, and `DEFAULT_DB_SPREADSHEET_ID` in `00_Config.gs` could not be opened | Reload — the Setup wizard should now appear instead; if it still fails, set the script property manually or fix the default constant |
 | Setup wizard appears repeatedly | `Bootstrap.setup()` failing partway | Run `Bootstrap.health()` in the editor and read `missingSheets` |
 | Numbers differ from the spreadsheet | A filter is applied to the source sheet, or GMV basis differs | Check the dashboard footnote; see analysis §8 defects 1 and 13 |
 | Sync creates provisional users | A name in the source has no matching user | Merge them under Administration → Users |
 | *"Another update is in progress"* | Two writes collided on the document lock | Retry; it clears in seconds |
 | Dashboard reports yesterday | By design — `REPORTING_LAG_DAYS = 1`, matching the source import lag | Set to `0` if your sync becomes same-day |
 | Execution timeout during sync | More than ~20,000 source rows | Raise `MAX_ROWS_PER_READ`, or sync each source separately |
+
+---
+
+## 13. Continuous deployment (optional)
+
+`.github/workflows/deploy.yml` pushes `src/` to your Apps Script project with
+`clasp` on every commit — tests run first, and a failing suite blocks the
+push. It needs the project to already exist (step 1) and, for a stable
+production URL, an initial deployment to already exist (step 4). CI then
+only pushes new *versions* into that same project and deployment; it never
+creates the project or changes who the deployment executes as.
+
+### One-time setup
+
+1. **Create the project and deploy it once, by hand** — steps 1–4 above.
+   Note the **script ID** (Project Settings, or the `.clasp.json` you get
+   from `clasp clone`) and the **deployment ID** (Deploy → Manage
+   deployments — the ID under the deployment you want CI to keep updating).
+
+2. **Get clasp credentials for CI.** From any machine with Node:
+
+   ```bash
+   npm install -g @google/clasp
+   clasp login
+   cat ~/.clasprc.json
+   ```
+
+   `clasp login` opens a browser sign-in once; `~/.clasprc.json` is the
+   resulting token. Copy its full contents — this is a credential, so treat
+   it like a password and only ever paste it into the GitHub secret below,
+   never into a file that gets committed.
+
+3. **Add three repository secrets** — GitHub repo → **Settings → Secrets and
+   variables → Actions → New repository secret**:
+
+   | Secret | Value |
+   |--------|-------|
+   | `CLASP_CREDENTIALS` | The full contents of `~/.clasprc.json` from step 2 |
+   | `CLASP_SCRIPT_ID` | The script ID from step 1 |
+   | `CLASP_DEPLOYMENT_ID` | The deployment ID from step 1 (optional — see below) |
+
+4. Push a commit. **Actions** tab shows the run: tests, syntax check, `clasp
+   push`, then `clasp deploy -i` against your deployment ID.
+
+### If `CLASP_DEPLOYMENT_ID` is left out
+
+The workflow still runs and still pushes code, but only to the project's
+*head* version — visible at the `/dev` URL to people with editor access, not
+at the production web app URL. This is a reasonable choice while iterating
+alone; add the secret once you want every push to go live automatically.
+
+### Rotating or revoking access
+
+`clasp login` credentials are a standing grant. Rotate them the same way as
+any leaked secret: run `clasp logout` on the machine you generated them
+from (or revoke the app under your Google Account's **Third-party access**
+settings), generate a fresh `~/.clasprc.json`, and update the
+`CLASP_CREDENTIALS` secret.

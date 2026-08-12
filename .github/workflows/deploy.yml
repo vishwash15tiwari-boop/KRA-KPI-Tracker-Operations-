@@ -1,0 +1,64 @@
+name: Deploy to Apps Script
+
+on:
+  push:
+    branches: [claude/operations-kra-kpi-tracker-4c02x4, main]
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run the test suite
+        run: node tests/engine.test.js
+
+      - name: Check .gs syntax
+        run: npm run check
+
+      - name: Install clasp
+        run: npm install -g @google/clasp
+
+      - name: Authenticate clasp
+        env:
+          CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
+        run: |
+          if [ -z "$CLASP_CREDENTIALS" ]; then
+            echo "::error::Secret CLASP_CREDENTIALS is not set. See docs/DEPLOYMENT.md § Continuous deployment."
+            exit 1
+          fi
+          echo "$CLASP_CREDENTIALS" > "$HOME/.clasprc.json"
+
+      - name: Write .clasp.json
+        env:
+          CLASP_SCRIPT_ID: ${{ secrets.CLASP_SCRIPT_ID }}
+        run: |
+          if [ -z "$CLASP_SCRIPT_ID" ]; then
+            echo "::error::Secret CLASP_SCRIPT_ID is not set. See docs/DEPLOYMENT.md § Continuous deployment."
+            exit 1
+          fi
+          cat > .clasp.json <<EOF
+          {
+            "scriptId": "$CLASP_SCRIPT_ID",
+            "rootDir": "src",
+            "fileExtension": "gs"
+          }
+          EOF
+
+      - name: Push source to the Apps Script project
+        run: clasp push -f
+
+      - name: Update the live deployment
+        env:
+          CLASP_DEPLOYMENT_ID: ${{ secrets.CLASP_DEPLOYMENT_ID }}
+        run: |
+          if [ -z "$CLASP_DEPLOYMENT_ID" ]; then
+            echo "::warning::Secret CLASP_DEPLOYMENT_ID is not set — pushed the code (visible at the /dev URL to editors) but did not roll the production web app URL forward. See docs/DEPLOYMENT.md § Continuous deployment."
+            exit 0
+          fi
+          clasp deploy -i "$CLASP_DEPLOYMENT_ID" -d "GitHub Actions — ${GITHUB_SHA::7}"

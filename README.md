@@ -166,6 +166,11 @@ Then in the Apps Script editor run **`setupFirstRun`**, deploy as a web app
 The application walks you through connecting the source workbook and creating the
 first cycle.
 
+To have every push deploy automatically instead of running `clasp push` by
+hand, see [`docs/DEPLOYMENT.md` § 13](docs/DEPLOYMENT.md#13-continuous-deployment-optional)
+— a GitHub Actions workflow is already in `.github/workflows/deploy.yml`,
+it just needs your script ID and credentials as repository secrets.
+
 ---
 
 ## Targets this product is built to
