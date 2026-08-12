@@ -152,8 +152,11 @@ function api(action, payload) {
     var handler = API_ROUTES[action];
     if (!handler) fail('UNKNOWN_ACTION', 'Unknown action: ' + action);
 
-    // Every action except the bootstrap requires a provisioned identity.
-    if (action !== 'setup.run') Auth.current();
+    // session.bootstrap checks Bootstrap.health() itself and returns
+    // { needsSetup: true } instead of an identity when the schema does not
+    // exist yet — it must run before any identity lookup is possible.
+    // setup.run is how that schema gets created in the first place.
+    if (action !== 'setup.run' && action !== 'session.bootstrap') Auth.current();
 
     var data = handler(payload || {});
     return {

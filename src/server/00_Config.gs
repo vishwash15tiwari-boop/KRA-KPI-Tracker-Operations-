@@ -27,6 +27,17 @@ var PROP = Object.freeze({
   BOOTSTRAP_ADMIN: 'OMP_BOOTSTRAP_ADMIN'
 });
 
+/**
+ * Backend spreadsheet, used only when nothing else identifies one: no
+ * OMP_DB_SPREADSHEET_ID script property yet, and (for a standalone project,
+ * i.e. one not bound to a container spreadsheet) no active spreadsheet
+ * either. A fresh standalone deployment would otherwise have no spreadsheet
+ * to create the schema in until someone opens the script editor and sets
+ * one manually. Read directly by Repository.db(), never through Config, so
+ * it is available before the backend — and therefore Config — exists.
+ */
+var DEFAULT_DB_SPREADSHEET_ID = '1h0MGbmtOriH-T-cxQOGgcXBeydcNqv-bqT2AlLnWDdU';
+
 // ---------------------------------------------------------------------------
 // Dimensions
 // ---------------------------------------------------------------------------

@@ -52,6 +52,18 @@ const env = createEnvironment({
 });
 const S = env.sandbox;
 
+// Before setup has ever run, the RPC entry point must hand back a normal
+// { needsSetup: true } response so the client can render the in-app Setup
+// wizard — not throw, which would strand the user on the fatal boot-error
+// screen with no way to proceed short of the Apps Script editor.
+const freshEnv = createEnvironment({ now: AS_OF, userEmail: 'lead@omp.test' });
+const preSetup = freshEnv.sandbox.api('session.bootstrap', {});
+ok('session.bootstrap succeeds before setup has run', preSetup.ok === true,
+  JSON.stringify(preSetup));
+ok('session.bootstrap reports needsSetup before setup has run',
+  preSetup.ok && preSetup.data && preSetup.data.needsSetup === true,
+  JSON.stringify(preSetup));
+
 S.PropertiesService.getScriptProperties().setProperty('OMP_BOOTSTRAP_ADMIN', 'lead@omp.test');
 const setup = S.Bootstrap.setup({});
 ok('schema created', setup.created.length >= 20, 'created: ' + setup.created.length);

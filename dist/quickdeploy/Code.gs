@@ -41,6 +41,17 @@ var PROP = Object.freeze({
   BOOTSTRAP_ADMIN: 'OMP_BOOTSTRAP_ADMIN'
 });
 
+/**
+ * Backend spreadsheet, used only when nothing else identifies one: no
+ * OMP_DB_SPREADSHEET_ID script property yet, and (for a standalone project,
+ * i.e. one not bound to a container spreadsheet) no active spreadsheet
+ * either. A fresh standalone deployment would otherwise have no spreadsheet
+ * to create the schema in until someone opens the script editor and sets
+ * one manually. Read directly by Repository.db(), never through Config, so
+ * it is available before the backend — and therefore Config — exists.
+ */
+var DEFAULT_DB_SPREADSHEET_ID = '1h0MGbmtOriH-T-cxQOGgcXBeydcNqv-bqT2AlLnWDdU';
+
 // ---------------------------------------------------------------------------
 // Dimensions
 // ---------------------------------------------------------------------------
@@ -1718,13 +1729,29 @@ var Repository = (function () {
       }
     }
     var active = SpreadsheetApp.getActiveSpreadsheet();
-    if (!active) {
-      fail('DB_NOT_CONFIGURED',
-        'No backend spreadsheet is configured. Run Bootstrap.setup() first.');
+    if (active) {
+      ssCache_ = active;
+      PropertiesService.getScriptProperties().setProperty(PROP.DB_ID, active.getId());
+      return ssCache_;
     }
-    ssCache_ = active;
-    PropertiesService.getScriptProperties().setProperty(PROP.DB_ID, active.getId());
-    return ssCache_;
+
+    // Standalone deployment (not bound to a container spreadsheet): fall back
+    // to the connected workbook rather than failing outright, so the in-app
+    // Setup wizard's "Run setup" button works on first load with no editor visit.
+    if (DEFAULT_DB_SPREADSHEET_ID) {
+      try {
+        ssCache_ = SpreadsheetApp.openById(DEFAULT_DB_SPREADSHEET_ID);
+        PropertiesService.getScriptProperties().setProperty(PROP.DB_ID, ssCache_.getId());
+        return ssCache_;
+      } catch (e2) {
+        fail('DB_NOT_CONFIGURED',
+          'No backend spreadsheet is configured, and the default could not be opened. ' +
+          'Run Bootstrap.setup() first.', { cause: String(e2) });
+      }
+    }
+
+    fail('DB_NOT_CONFIGURED',
+      'No backend spreadsheet is configured. Run Bootstrap.setup() first.');
   }
 
   function sheet(name) {
@@ -8818,8 +8845,11 @@ function api(action, payload) {
     var handler = API_ROUTES[action];
     if (!handler) fail('UNKNOWN_ACTION', 'Unknown action: ' + action);
 
-    // Every action except the bootstrap requires a provisioned identity.
-    if (action !== 'setup.run') Auth.current();
+    // session.bootstrap checks Bootstrap.health() itself and returns
+    // { needsSetup: true } instead of an identity when the schema does not
+    // exist yet — it must run before any identity lookup is possible.
+    // setup.run is how that schema gets created in the first place.
+    if (action !== 'setup.run' && action !== 'session.bootstrap') Auth.current();
 
     var data = handler(payload || {});
     return {

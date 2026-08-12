@@ -32,13 +32,29 @@ var Repository = (function () {
       }
     }
     var active = SpreadsheetApp.getActiveSpreadsheet();
-    if (!active) {
-      fail('DB_NOT_CONFIGURED',
-        'No backend spreadsheet is configured. Run Bootstrap.setup() first.');
+    if (active) {
+      ssCache_ = active;
+      PropertiesService.getScriptProperties().setProperty(PROP.DB_ID, active.getId());
+      return ssCache_;
     }
-    ssCache_ = active;
-    PropertiesService.getScriptProperties().setProperty(PROP.DB_ID, active.getId());
-    return ssCache_;
+
+    // Standalone deployment (not bound to a container spreadsheet): fall back
+    // to the connected workbook rather than failing outright, so the in-app
+    // Setup wizard's "Run setup" button works on first load with no editor visit.
+    if (DEFAULT_DB_SPREADSHEET_ID) {
+      try {
+        ssCache_ = SpreadsheetApp.openById(DEFAULT_DB_SPREADSHEET_ID);
+        PropertiesService.getScriptProperties().setProperty(PROP.DB_ID, ssCache_.getId());
+        return ssCache_;
+      } catch (e2) {
+        fail('DB_NOT_CONFIGURED',
+          'No backend spreadsheet is configured, and the default could not be opened. ' +
+          'Run Bootstrap.setup() first.', { cause: String(e2) });
+      }
+    }
+
+    fail('DB_NOT_CONFIGURED',
+      'No backend spreadsheet is configured. Run Bootstrap.setup() first.');
   }
 
   function sheet(name) {
