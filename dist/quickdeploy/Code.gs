@@ -41,17 +41,6 @@ var PROP = Object.freeze({
   BOOTSTRAP_ADMIN: 'OMP_BOOTSTRAP_ADMIN'
 });
 
-/**
- * Backend spreadsheet, used only when nothing else identifies one: no
- * OMP_DB_SPREADSHEET_ID script property yet, and (for a standalone project,
- * i.e. one not bound to a container spreadsheet) no active spreadsheet
- * either. A fresh standalone deployment would otherwise have no spreadsheet
- * to create the schema in until someone opens the script editor and sets
- * one manually. Read directly by Repository.db(), never through Config, so
- * it is available before the backend — and therefore Config — exists.
- */
-var DEFAULT_DB_SPREADSHEET_ID = '1h0MGbmtOriH-T-cxQOGgcXBeydcNqv-bqT2AlLnWDdU';
-
 // ---------------------------------------------------------------------------
 // Dimensions
 // ---------------------------------------------------------------------------
@@ -1735,23 +1724,15 @@ var Repository = (function () {
       return ssCache_;
     }
 
-    // Standalone deployment (not bound to a container spreadsheet): fall back
-    // to the connected workbook rather than failing outright, so the in-app
-    // Setup wizard's "Run setup" button works on first load with no editor visit.
-    if (DEFAULT_DB_SPREADSHEET_ID) {
-      try {
-        ssCache_ = SpreadsheetApp.openById(DEFAULT_DB_SPREADSHEET_ID);
-        PropertiesService.getScriptProperties().setProperty(PROP.DB_ID, ssCache_.getId());
-        return ssCache_;
-      } catch (e2) {
-        fail('DB_NOT_CONFIGURED',
-          'No backend spreadsheet is configured, and the default could not be opened. ' +
-          'Run Bootstrap.setup() first.', { cause: String(e2) });
-      }
-    }
-
-    fail('DB_NOT_CONFIGURED',
-      'No backend spreadsheet is configured. Run Bootstrap.setup() first.');
+    // Standalone deployment (not bound to a container spreadsheet) with
+    // nothing configured yet: create a dedicated backend spreadsheet rather
+    // than failing outright, so the in-app Setup wizard's "Run setup" button
+    // works on first load with no editor visit. It is owned by whoever the
+    // script executes as, so — unlike opening someone else's existing sheet
+    // — this never runs into a sharing/permission wall.
+    ssCache_ = SpreadsheetApp.create(APP.NAME + ' — Backend');
+    PropertiesService.getScriptProperties().setProperty(PROP.DB_ID, ssCache_.getId());
+    return ssCache_;
   }
 
   function sheet(name) {

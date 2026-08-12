@@ -109,9 +109,9 @@ class MockSheet {
 }
 
 class MockSpreadsheet {
-  constructor(id) { this.id = id; this.sheets = []; }
+  constructor(id, name) { this.id = id; this.name_ = name; this.sheets = []; }
   getId() { return this.id; }
-  getName() { return 'OMP Tracker (test)'; }
+  getName() { return this.name_ || 'OMP Tracker (test)'; }
   getUrl() { return 'https://docs.google.com/spreadsheets/d/' + this.id + '/edit'; }
   getSheets() { return this.sheets; }
   getSheetByName(name) { return this.sheets.find(s => s.name === name) || null; }
@@ -126,6 +126,7 @@ class MockSpreadsheet {
 
 function createEnvironment(options = {}) {
   const spreadsheet = new MockSpreadsheet(options.spreadsheetId || 'TEST_DB');
+  const createdSpreadsheets = [];   // spreadsheets made via SpreadsheetApp.create()
   const properties = new Map();
   const userEmail = options.userEmail || 'lead@omp.test';
   const now = options.now ? new Date(options.now) : new Date();
@@ -147,10 +148,19 @@ function createEnvironment(options = {}) {
 
     SpreadsheetApp: {
       openById: (id) => {
-        if (id !== spreadsheet.id) throw new Error('No spreadsheet with id ' + id);
-        return spreadsheet;
+        const found = [spreadsheet, ...createdSpreadsheets].find(s => s.id === id);
+        if (!found) throw new Error('No spreadsheet with id ' + id);
+        return found;
       },
-      getActiveSpreadsheet: () => spreadsheet,
+      // options.standalone simulates a script with no bound container — the
+      // situation a fresh standalone web app deployment is in before its
+      // first Setup run.
+      getActiveSpreadsheet: () => (options.standalone ? null : spreadsheet),
+      create: (name) => {
+        const created = new MockSpreadsheet('CREATED_' + (createdSpreadsheets.length + 1), name);
+        createdSpreadsheets.push(created);
+        return created;
+      },
       flush: () => { },
       ProtectionType: { RANGE: 'RANGE' },
       getUi: () => { throw new Error('No UI in the harness'); }
@@ -230,7 +240,7 @@ function createEnvironment(options = {}) {
       }
     });
 
-  return { sandbox, spreadsheet, properties };
+  return { sandbox, spreadsheet, properties, createdSpreadsheets };
 }
 
 module.exports = { createEnvironment, MockSpreadsheet, MockSheet };

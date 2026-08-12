@@ -64,6 +64,23 @@ ok('session.bootstrap reports needsSetup before setup has run',
   preSetup.ok && preSetup.data && preSetup.data.needsSetup === true,
   JSON.stringify(preSetup));
 
+// A standalone deployment (not bound to any container spreadsheet) has no
+// active spreadsheet to fall back to either. Setup must still succeed —
+// by creating its own dedicated backend spreadsheet — rather than failing
+// with a sharing/permission error against some other, unrelated sheet.
+const standaloneEnv = createEnvironment({
+  now: AS_OF, userEmail: 'lead@omp.test', standalone: true
+});
+const SA = standaloneEnv.sandbox;
+SA.PropertiesService.getScriptProperties().setProperty('OMP_BOOTSTRAP_ADMIN', 'lead@omp.test');
+const standaloneSetup = SA.api('setup.run', {});
+ok('setup succeeds on a standalone deployment with nothing configured',
+  standaloneSetup.ok === true, JSON.stringify(standaloneSetup));
+eq('a dedicated backend spreadsheet was created', standaloneEnv.createdSpreadsheets.length, 1);
+eq('the created spreadsheet is what Repository now uses',
+  SA.PropertiesService.getScriptProperties().getProperty('OMP_DB_SPREADSHEET_ID'),
+  standaloneEnv.createdSpreadsheets[0].getId());
+
 S.PropertiesService.getScriptProperties().setProperty('OMP_BOOTSTRAP_ADMIN', 'lead@omp.test');
 const setup = S.Bootstrap.setup({});
 ok('schema created', setup.created.length >= 20, 'created: ' + setup.created.length);

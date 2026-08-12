@@ -25,9 +25,15 @@ the administration menu appears inside the sheet.
 ### Option B — standalone
 
 1. Create a standalone script at <https://script.google.com>.
-2. Create the backend spreadsheet separately.
-3. After deploying, set the script property `OMP_DB_SPREADSHEET_ID` to its ID
-   (**Project Settings → Script Properties**).
+2. Copy the files in as described in step 2 below, then deploy.
+
+No spreadsheet needs to be created ahead of time: the first time nothing is
+configured, `Repository.db()` creates its own dedicated backend spreadsheet
+(named "*<App name> — Backend*", owned by whoever the script executes as)
+and remembers its ID in the `OMP_DB_SPREADSHEET_ID` script property from
+then on. To use a specific existing spreadsheet instead, set that property
+yourself first (**Project Settings → Script Properties**) — it always takes
+priority.
 
 ---
 
@@ -250,7 +256,8 @@ Google Sheets keeps full version history. For a point-in-time copy:
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | *"Your account has not been granted access"* | No `DB_Users` row for that email | Add the user under Administration |
-| *"No backend spreadsheet is configured"* | Standalone script, no `OMP_DB_SPREADSHEET_ID` yet, and `DEFAULT_DB_SPREADSHEET_ID` in `00_Config.gs` could not be opened | Reload — the Setup wizard should now appear instead; if it still fails, set the script property manually or fix the default constant |
+| *"No backend spreadsheet is configured"* | Should no longer occur — a standalone script with no `OMP_DB_SPREADSHEET_ID` yet now creates its own backend spreadsheet on first load | If it still appears, `SpreadsheetApp.create()` itself failed (e.g. Drive storage full); check the Apps Script execution log |
+| *"You do not have permission to access the requested document"* on Run setup | The account the script runs as lacks edit access to a hardcoded/previously-configured backend spreadsheet ID | Share that sheet as Editor with the executing account, or clear the `OMP_DB_SPREADSHEET_ID` script property so a fresh one is auto-created |
 | Setup wizard appears repeatedly | `Bootstrap.setup()` failing partway | Run `Bootstrap.health()` in the editor and read `missingSheets` |
 | Numbers differ from the spreadsheet | A filter is applied to the source sheet, or GMV basis differs | Check the dashboard footnote; see analysis §8 defects 1 and 13 |
 | Sync creates provisional users | A name in the source has no matching user | Merge them under Administration → Users |
