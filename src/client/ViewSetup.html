@@ -1,0 +1,155 @@
+<script>
+/* ==========================================================================
+   Setup — first-run wizard. Creates the schema, seeds reference data and
+   points the sync at the team's existing operational workbook.
+   ========================================================================== */
+
+const SetupView = (() => {
+
+  function renderNeedsSetup(host, health) {
+    host.innerHTML = `
+      ${Components.pageHead({
+        title: 'Set up the Operations Tracker',
+        subtitle: 'One-time configuration. Nothing in your existing spreadsheets is modified.'
+      })}
+      ${Components.banner('info', 'Backend not initialised',
+        'The database sheets do not exist yet. Running setup creates them and installs the ' +
+        'KRA/KPI library taken from the Supply &amp; Demand definition sheet.')}
+
+      ${Components.card({
+        title: 'Step 1 — Create the database',
+        body: `
+          <p class="muted">Creates ${health.missingSheets.length || 23} backend sheets with their
+          schema, seeds regions, configuration defaults and the KRA/KPI template library.</p>
+          <div class="btnrow">
+            <button class="btn btn--primary" id="runSetup">Run setup</button>
+          </div>
+          <div id="setupResult" style="margin-top:14px"></div>`
+      })}
+
+      <div style="height:14px"></div>
+
+      ${Components.card({
+        title: 'Step 2 — Connect your operational workbook (optional)',
+        body: `
+          <p class="muted">Paste the ID of the spreadsheet that holds
+          <span class="mono">Overall Shipments</span>, <span class="mono">Seller Onboarding</span>
+          and <span class="mono">MTD Pulse Summary</span>. Leave blank if those tabs live in this
+          same spreadsheet.</p>
+          <div class="formgrid">
+            ${Components.field({
+              name: 'sourceId', label: 'Source spreadsheet ID', wide: true,
+              placeholder: '1Nm_6yL74UOlJ-MycU9x0kgOxnAdqP38YMeLSMnxdYrY',
+              hint: 'The long identifier in the sheet URL between /d/ and /edit.'
+            })}
+          </div>
+          <div class="btnrow">
+            <button class="btn" id="inspectSource">Check access</button>
+          </div>
+          <div id="inspectResult" style="margin-top:14px"></div>`
+      })}`;
+
+    D.q('#runSetup').onclick = async (e) => {
+      const btn = e.currentTarget;
+      btn.disabled = true;
+      btn.textContent = 'Creating…';
+      try {
+        const res = await Api.call('setup.run', {});
+        D.html(D.q('#setupResult'), Components.banner('good', 'Database ready',
+          `Schema version ${res.schemaVersion}. Created ${res.created.length} sheet(s), ` +
+          `migrated ${res.migrated.length}.`));
+        Toast.success('Setup complete', 'Reloading the application…');
+        setTimeout(() => location.reload(), 1400);
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = 'Run setup';
+        D.html(D.q('#setupResult'), Components.errorState(err));
+      }
+    };
+
+    D.q('#inspectSource').onclick = async () => {
+      const id = D.q('#f_sourceId').value.trim();
+      if (!id) { Toast.warn('Enter an ID', 'Paste the source spreadsheet ID first.'); return; }
+      const out = D.q('#inspectResult');
+      out.innerHTML = '<div class="skeleton skeleton--row"></div>';
+      try {
+        const info = await Api.call('sync.inspect', { spreadsheetId: id });
+        out.innerHTML = Components.banner('good', 'Access confirmed — ' + F.esc(info.name),
+          `${info.sheets.length} tab(s) found.`) +
+          Components.table({
+            compact: true,
+            columns: [
+              { label: 'Tab', key: 'name', format: r => `<span class="mono">${F.esc(r.name)}</span>` },
+              { label: 'Rows', key: 'rows', align: 'right', format: r => F.int(r.rows) },
+              { label: 'Columns', key: 'cols', align: 'right', format: r => F.int(r.cols) },
+              { label: '', format: r => r.hidden ? Components.pill('hidden', '') : '' }
+            ],
+            rows: info.sheets
+          });
+        try { localStorage.setItem('omp.sourceId', id); } catch (e) { /* ignore */ }
+      } catch (err) {
+        out.innerHTML = Components.errorState(err);
+      }
+    };
+  }
+
+  /** Shown when the schema exists but no cycle has been created yet. */
+  function renderNoCycle(host) {
+    const now = new Date();
+    host.innerHTML = `
+      ${Components.pageHead({
+        title: 'Create your first planning cycle',
+        subtitle: 'A cycle is one month for one category. It holds the KRAs, KPIs, weightages and targets.'
+      })}
+      ${Components.card({
+        title: 'New cycle',
+        body: `
+          <form id="firstCycleForm">
+            <div class="formgrid">
+              ${Components.field({
+                name: 'category', label: 'Category', type: 'select', required: true,
+                options: State.ref('categories')
+              })}
+              ${Components.field({
+                name: 'year', label: 'Year', type: 'number', required: true,
+                value: now.getFullYear(), min: 2020, max: 2100
+              })}
+              ${Components.field({
+                name: 'month', label: 'Month', type: 'select', required: true,
+                value: now.getMonth() + 1,
+                options: Array.from({ length: 12 }, (_, i) => ({
+                  value: i + 1,
+                  label: new Date(2000, i, 1).toLocaleString('en-IN', { month: 'long' })
+                }))
+              })}
+              ${Components.field({
+                name: 'workingDays', label: 'Working days', type: 'number',
+                value: 25, min: 1, max: 31,
+                hint: 'Drives the field-visit target.'
+              })}
+            </div>
+            <div class="btnrow">
+              <button class="btn btn--primary" type="submit">Create cycle from the KRA library</button>
+            </div>
+          </form>`
+      })}`;
+
+    D.q('#firstCycleForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const btn = e.target.querySelector('button[type=submit]');
+      btn.disabled = true;
+      try {
+        const cycle = await Api.call('cycle.create', D.formData(e.target));
+        Toast.success('Cycle created', cycle.label + ' is in draft.');
+        await Boot.reload();
+        Router.go('planning', { cycleId: cycle.cycleId });
+      } catch (err) {
+        btn.disabled = false;
+        Toast.fromError(err, 'Could not create the cycle');
+      }
+    };
+  }
+
+  return { renderNeedsSetup, renderNoCycle };
+})();
+</script>

@@ -1,0 +1,595 @@
+<script>
+/* ==========================================================================
+   Accounts and the onboarding pipeline.
+   The account master is the join key for every fact in the system, so this
+   screen carries the coverage, dormancy and never-transacted signals directly.
+   ========================================================================== */
+
+Router.register('accounts', {
+  skeleton: () => Components.tableSkeleton(10),
+  async render(host) {
+    const filters = {
+      category: State.category,
+      accountType: State.params.accountType || 'SELLER',
+      pocUserId: State.params.pocUserId || '',
+      regionId: State.params.regionId || '',
+      onboardingStatus: State.params.onboardingStatus || '',
+      search: State.params.search || ''
+    };
+    const rows = await Api.call('account.list', filters);
+
+    const stats = {
+      total: rows.length,
+      onboarded: rows.filter(r => r.onboardingStatus === 'COMPLETED').length,
+      dormant: rows.filter(r => r.dormant).length,
+      never: rows.filter(r => r.neverTransacted && r.onboardingStatus === 'COMPLETED').length
+    };
+
+    host.innerHTML = `
+      ${Components.pageHead({
+        title: 'Accounts',
+        subtitle: `${stats.total} ${filters.accountType === 'BUYER' ? 'buyer' : 'seller'}(s) in scope`,
+        actions: State.can('PIPELINE_MANAGE')
+          ? `<button class="btn btn--primary" id="newAccount">＋ Add account</button>` : ''
+      })}
+
+      <div class="grid grid--3" style="margin-bottom:16px">
+        ${Components.statTile({ label: 'Total', value: F.int(stats.total) })}
+        ${Components.statTile({ label: 'Onboarded', value: F.int(stats.onboarded), tone: 'good' })}
+        ${Components.statTile({
+          label: 'Dormant', value: F.int(stats.dormant), tone: stats.dormant ? 'warn' : '',
+          sub: 'No transaction or visit recently'
+        })}
+        ${Components.statTile({
+          label: 'Never transacted', value: F.int(stats.never), tone: stats.never ? 'bad' : '',
+          sub: 'Onboarded but no shipment yet'
+        })}
+      </div>
+
+      <div class="filters">
+        <div class="field">
+          <label class="field__label" for="aType">Type</label>
+          <select class="select" id="aType">
+            <option value="SELLER"${filters.accountType === 'SELLER' ? ' selected' : ''}>Sellers</option>
+            <option value="BUYER"${filters.accountType === 'BUYER' ? ' selected' : ''}>Buyers</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field__label" for="aRegion">Region</label>
+          <select class="select" id="aRegion">
+            ${Components.regionOptions(true, State.category).map(o =>
+              `<option value="${F.esc(o.value)}"${o.value === filters.regionId ? ' selected' : ''}>${
+                F.esc(o.label)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label class="field__label" for="aPoc">POC</label>
+          <select class="select" id="aPoc"${State.isPoc() ? ' disabled' : ''}>
+            <option value="">All</option>
+            ${State.ref('users').filter(u => u.active).map(u =>
+              `<option value="${F.esc(u.userId)}"${u.userId === filters.pocUserId ? ' selected' : ''}>${
+                F.esc(u.fullName)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label class="field__label" for="aStatus">Status</label>
+          <select class="select" id="aStatus">
+            <option value="">Any</option>
+            ${['DRAFT', 'IN_REVIEW', 'COMPLETED', 'REJECTED'].map(s =>
+              `<option value="${s}"${s === filters.onboardingStatus ? ' selected' : ''}>${
+                F.titleCase(s)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field" style="flex:1;min-width:180px">
+          <label class="field__label" for="aSearch">Search</label>
+          <input class="input" type="search" id="aSearch" value="${F.esc(filters.search)}"
+                 placeholder="Name, GSTIN or city">
+        </div>
+        <button class="btn" id="applyA">Apply</button>
+      </div>
+
+      ${Components.card({
+        flush: true,
+        body: Components.table({
+          compact: true, clickable: true,
+          rowAttrs: r => `data-account="${F.esc(r.accountId)}"`,
+          columns: [
+            {
+              label: 'Account', format: r => `<span class="strong">${F.esc(r.businessName)}</span>
+                <span class="cell-sub mono">${F.esc(r.gstin || 'no GSTIN')}</span>`
+            },
+            {
+              label: 'Location', width: '150px',
+              format: r => `${F.esc(r.city || '—')}<span class="cell-sub">${F.esc(r.state || '')}</span>`
+            },
+            { label: 'POC', width: '140px', format: r => F.esc(r.pocName || '—') },
+            { label: 'Region', width: '100px', format: r => F.esc(r.regionName || '—') },
+            { label: 'Material', width: '100px', format: r => F.esc(r.materialType || '—') },
+            {
+              label: 'Status', width: '120px',
+              format: r => Components.pill(F.titleCase(r.onboardingStatus), F.statusTone(r.onboardingStatus))
+            },
+            {
+              label: 'Last activity', width: '140px', format: r => {
+                if (r.lastTxnDate) return `Txn ${F.relative(r.lastTxnDate)}`;
+                if (r.lastVisitDate) return `Visit ${F.relative(r.lastVisitDate)}`;
+                return '<span class="faint">—</span>';
+              }
+            },
+            {
+              label: 'Signals', width: '160px', format: r => {
+                const bits = [];
+                if (r.dormant) bits.push(Components.pill(`Dormant ${r.idleDays}d`, 'warn'));
+                if (r.neverTransacted && r.onboardingStatus === 'COMPLETED') {
+                  bits.push(Components.pill('No txn', 'bad'));
+                }
+                if (!r.pocUserId) bits.push(Components.pill('No POC', 'bad'));
+                return bits.join(' ') || '<span class="faint">—</span>';
+              }
+            }
+          ],
+          rows,
+          empty: 'No accounts match these filters.'
+        })
+      })}`;
+
+    const apply = () => Router.go('accounts', {
+      accountType: D.q('#aType', host).value,
+      regionId: D.q('#aRegion', host).value,
+      pocUserId: D.q('#aPoc', host).value,
+      onboardingStatus: D.q('#aStatus', host).value,
+      search: D.q('#aSearch', host).value
+    });
+    D.q('#applyA', host).onclick = apply;
+    ['#aType', '#aRegion', '#aPoc', '#aStatus'].forEach(s => { D.q(s, host).onchange = apply; });
+    D.q('#aSearch', host).onkeydown = (e) => { if (e.key === 'Enter') apply(); };
+
+    const newBtn = D.q('#newAccount', host);
+    if (newBtn) newBtn.onclick = () => accountModal(null, filters.accountType);
+
+    D.on(host, 'click', '[data-account]', (e, el) => {
+      if (e.target.closest('button, a')) return;
+      accountDrawer(el.dataset.account);
+    });
+  }
+});
+
+async function accountDrawer(accountId) {
+  Overlay.openDrawer({
+    title: 'Loading account…',
+    body: '<div class="skeleton skeleton--tile"></div>'
+  });
+  try {
+    const [account, activities] = await Promise.all([
+      Api.call('account.get', { accountId }),
+      Api.call('activity.list', { accountId, limit: 40 })
+    ]);
+
+    D.q('#drawerTitle').textContent = account.businessName;
+    D.html(D.q('#drawerBody'), `
+      <div class="grid grid--3" style="margin-bottom:16px">
+        ${Components.statTile({
+          label: 'Status', value: `<span style="font-size:16px">${F.titleCase(account.onboardingStatus)}</span>`,
+          sub: account.onboardedDate ? 'Onboarded ' + F.date(account.onboardedDate) : 'Not onboarded'
+        })}
+        ${Components.statTile({
+          label: 'Last transaction',
+          value: `<span style="font-size:16px">${account.lastTxnDate ? F.relative(account.lastTxnDate) : 'Never'}</span>`,
+          tone: account.neverTransacted ? 'bad' : ''
+        })}
+        ${Components.statTile({
+          label: 'Last visit',
+          value: `<span style="font-size:16px">${account.lastVisitDate ? F.relative(account.lastVisitDate) : 'Never'}</span>`,
+          tone: account.dormant ? 'warn' : ''
+        })}
+      </div>
+
+      <dl class="formgrid" style="margin:0 0 18px">
+        ${[
+          ['GSTIN', account.gstin], ['Type', F.titleCase(account.accountType)],
+          ['Sub-type', account.accountSubType], ['Material', account.materialType],
+          ['POC', account.pocName], ['Region', account.regionName],
+          ['Contact', account.contactPerson], ['Mobile', account.mobile],
+          ['Email', account.email], ['Location', [account.city, account.state].filter(Boolean).join(', ')],
+          ['Payment terms', account.paymentTerms], ['Vintage', account.businessVintage],
+          ['Linked counterparty', account.counterpartyName], ['Blocker', account.blockerReason]
+        ].filter(([, v]) => v).map(([k, v]) => `
+          <div><dt class="faint" style="font-size:11px;text-transform:uppercase;letter-spacing:.05em">${
+            F.esc(k)}</dt><dd style="margin:2px 0 10px">${F.esc(v)}</dd></div>`).join('')}
+      </dl>
+
+      ${account.remarks ? Components.banner('info', 'Remarks', F.esc(account.remarks)) : ''}
+
+      <h3 style="font-size:14px;margin-bottom:8px">Recent activity</h3>
+      ${activities.length ? Components.table({
+        compact: true,
+        columns: [
+          { label: 'Date', width: '90px', format: r => F.dateShort(r.activityDate) },
+          { label: 'Type', format: r => F.esc(r.activityTypeLabel) },
+          { label: 'POC', format: r => F.esc(r.pocName) },
+          { label: 'Remarks', format: r => F.esc(r.remarks) },
+          {
+            label: '', width: '70px', format: r => r.evidenceUrl
+              ? `<a href="${F.esc(r.evidenceUrl)}" target="_blank" rel="noopener">Evidence ↗</a>` : ''
+          }
+        ],
+        rows: activities
+      }) : '<p class="muted">Nothing recorded against this account yet.</p>'}`);
+
+    D.html(D.q('#drawerFoot'), `
+      <button class="btn" data-close-drawer>Close</button>
+      ${State.can('ACTIVITY_WRITE') ? `<button class="btn" id="logForAccount">Log work</button>` : ''}
+      ${State.can('PIPELINE_MANAGE') ? `<button class="btn btn--primary" id="editAccount">Edit</button>` : ''}`);
+
+    const logBtn = D.q('#logForAccount');
+    if (logBtn) logBtn.onclick = async () => {
+      const accounts = await Api.call('account.list',
+        { category: State.category, pocUserId: State.isPoc() ? State.user.userId : '' });
+      Overlay.closeDrawer();
+      ActivityForm.open({
+        cycleId: State.cycleId, pocUserId: State.user.userId,
+        accountId: account.accountId, accounts, onSaved: () => Router.render()
+      });
+    };
+
+    const editBtn = D.q('#editAccount');
+    if (editBtn) editBtn.onclick = () => { Overlay.closeDrawer(); accountModal(account); };
+  } catch (err) {
+    D.html(D.q('#drawerBody'), Components.errorState(err));
+  }
+}
+
+function accountModal(account, defaultType) {
+  Overlay.openModal({
+    title: account ? 'Edit account' : 'New account',
+    wide: true,
+    body: `<form id="accountForm">
+      ${account ? `<input type="hidden" name="accountId" value="${F.esc(account.accountId)}">` : ''}
+      <div class="formgrid">
+        ${Components.field({
+          name: 'accountType', label: 'Type', type: 'select', required: true,
+          value: (account && account.accountType) || defaultType || 'SELLER',
+          options: [{ value: 'SELLER', label: 'Seller (Supply)' }, { value: 'BUYER', label: 'Buyer (Demand)' }]
+        })}
+        ${Components.field({
+          name: 'category', label: 'Category', type: 'select',
+          value: (account && account.category) || State.category, options: State.ref('categories')
+        })}
+        ${Components.field({
+          name: 'businessName', label: 'Business name', required: true, wide: true,
+          value: (account && account.businessName) || ''
+        })}
+        ${Components.field({
+          name: 'gstin', label: 'GSTIN', value: (account && account.gstin) || '',
+          placeholder: '27AAKCA0967H1ZI',
+          hint: 'The join key to shipments. 15 characters.'
+        })}
+        ${Components.field({
+          name: 'externalId', label: 'Source system ID', value: (account && account.externalId) || ''
+        })}
+        ${Components.field({
+          name: 'pocUserId', label: 'POC', type: 'select',
+          value: (account && account.pocUserId) || State.user.userId,
+          options: Components.userOptions(true, u => ['POC', 'RH', 'TEAM_LEAD'].includes(u.role)),
+          disabled: State.isPoc()
+        })}
+        ${Components.field({
+          name: 'regionId', label: 'Region', type: 'select',
+          value: (account && account.regionId) || State.user.regionId,
+          options: Components.regionOptions(true, State.category)
+        })}
+        ${Components.field({
+          name: 'materialType', label: 'Material', type: 'select',
+          value: (account && account.materialType) || '',
+          options: [{ value: '', label: '— Not set —' }].concat(State.ref('materialTypes'))
+        })}
+        ${Components.field({
+          name: 'accountSubType', label: 'Sub-type', type: 'select',
+          value: (account && account.accountSubType) || '',
+          options: [{ value: '', label: '— Not set —' }].concat(State.ref('sellerTypes'))
+        })}
+        ${Components.field({
+          name: 'paymentTerms', label: 'Payment terms', type: 'select',
+          value: (account && account.paymentTerms) || '',
+          options: [{ value: '', label: '— Not set —' }].concat(State.ref('paymentTerms'))
+        })}
+        ${Components.field({
+          name: 'contactPerson', label: 'Contact person', value: (account && account.contactPerson) || ''
+        })}
+        ${Components.field({
+          name: 'mobile', label: 'Mobile', value: (account && account.mobile) || ''
+        })}
+        ${Components.field({
+          name: 'email', label: 'Email', type: 'email', value: (account && account.email) || ''
+        })}
+        ${Components.field({ name: 'state', label: 'State', value: (account && account.state) || '' })}
+        ${Components.field({ name: 'city', label: 'City', value: (account && account.city) || '' })}
+        ${Components.field({
+          name: 'counterpartyName', label: 'Linked counterparty',
+          value: (account && account.counterpartyName) || ''
+        })}
+        ${Components.field({
+          name: 'onboardingStatus', label: 'Onboarding status', type: 'select',
+          value: (account && account.onboardingStatus) || 'DRAFT',
+          options: ['DRAFT', 'IN_REVIEW', 'COMPLETED', 'REJECTED']
+        })}
+        ${Components.field({
+          name: 'onboardedDate', label: 'Onboarded date', type: 'date',
+          value: (account && account.onboardedDate) || ''
+        })}
+        ${Components.field({
+          name: 'blockerReason', label: 'Blocker', type: 'select',
+          value: (account && account.blockerReason) || '',
+          options: [{ value: '', label: 'None' }].concat(State.ref('blockerReasons'))
+        })}
+        ${Components.field({
+          name: 'remarks', label: 'Remarks', type: 'textarea', wide: true, rows: 2,
+          value: (account && account.remarks) || ''
+        })}
+      </div>
+    </form>`,
+    footer: `<button class="btn" data-close-modal>Cancel</button>
+             <button class="btn btn--primary" id="saveAccount">Save account</button>`
+  });
+
+  D.q('#saveAccount').onclick = async (e) => {
+    e.currentTarget.disabled = true;
+    try {
+      await Api.call('account.save', D.formData(D.q('#accountForm')));
+      Toast.success('Account saved');
+      Overlay.closeModal();
+      Router.render();
+    } catch (err) {
+      e.currentTarget.disabled = false;
+      D.markInvalid(D.q('#accountForm'), err.message);
+    }
+  };
+}
+
+/* ==========================================================================
+   Onboarding pipeline — stage-gated, with a real document checklist.
+   ========================================================================== */
+Router.register('pipeline', {
+  skeleton: () => Components.tableSkeleton(8),
+  async render(host) {
+    const filters = {
+      category: State.category,
+      accountType: State.params.accountType || 'BUYER',
+      stage: State.params.stage || '',
+      pocUserId: State.isPoc() ? State.user.userId : (State.params.pocUserId || '')
+    };
+    const rows = await Api.call('pipeline.list', filters);
+
+    const STAGES = ['PROSPECT', 'FOLLOWUP', 'DOCS_PENDING', 'UNDER_PROCESS', 'ONBOARDED', 'DROPPED'];
+    const byStage = {};
+    STAGES.forEach(s => { byStage[s] = rows.filter(r => r.stage === s); });
+
+    host.innerHTML = `
+      ${Components.pageHead({
+        title: 'Onboarding Pipeline',
+        subtitle: `${rows.length} ${filters.accountType === 'BUYER' ? 'buyer' : 'seller'}(s) in flight ·
+          onboarding is gated on the document checklist`,
+        actions: `
+          <select class="select btn--sm" id="pType" style="width:auto">
+            <option value="BUYER"${filters.accountType === 'BUYER' ? ' selected' : ''}>Buyers</option>
+            <option value="SELLER"${filters.accountType === 'SELLER' ? ' selected' : ''}>Sellers</option>
+          </select>
+          ${State.can('PIPELINE_MANAGE')
+            ? `<button class="btn btn--primary" id="newPipeline">＋ Add prospect</button>` : ''}`
+      })}
+
+      <div class="grid grid--3" style="margin-bottom:16px">
+        ${STAGES.map(s => `
+          <button class="tile" data-stage-filter="${s}" style="cursor:pointer"
+                  ${filters.stage === s ? 'data-tone="brand"' : ''}>
+            <div class="tile__label">${F.titleCase(s)}</div>
+            <div class="tile__value">${F.int(byStage[s].length)}</div>
+            <div class="tile__target">${
+              byStage[s].filter(r => r.overdue).length
+                ? `<span class="pill" data-tone="bad">${byStage[s].filter(r => r.overdue).length} overdue</span>`
+                : '&nbsp;'}</div>
+          </button>`).join('')}
+      </div>
+
+      ${Components.card({
+        flush: true,
+        body: Components.table({
+          compact: true,
+          columns: [
+            {
+              label: 'Business', format: r => `<span class="strong">${F.esc(r.businessName)}</span>
+                <span class="cell-sub">${F.esc([r.city, r.state].filter(Boolean).join(', '))}</span>`
+            },
+            { label: 'Commodity', width: '110px', format: r => F.esc(r.commodity || '—') },
+            { label: 'POC', width: '140px', format: r => F.esc(r.pocName) },
+            { label: 'Terms', width: '100px', format: r => F.esc(r.paymentTerms || '—') },
+            {
+              label: 'Stage', width: '130px',
+              format: r => Components.pill(F.titleCase(r.stage), F.statusTone(r.stage))
+            },
+            {
+              label: 'Documents', width: '220px', format: r => `
+                <div class="doc-slots">${r.documents.map(d => `
+                  <span class="doc-slot" data-collected="${d.collected}"
+                        data-doc="${F.esc(r.pipelineId)}|${F.esc(d.slotKey)}"
+                        title="${F.esc(d.slotLabel)}${d.collectedDate ? ' · ' + d.collectedDate : ''}">
+                    ${d.collected ? '✓' : '○'} ${F.esc(d.slotLabel.split(' ')[0])}
+                  </span>`).join('')}</div>
+                <span class="cell-sub">${r.documentsCollected}/${r.documentsRequired} collected</span>`
+            },
+            {
+              label: 'Next action', width: '130px', format: r => r.nextActionDate
+                ? `<span class="${r.overdue ? '' : 'muted'}">${F.dateShort(r.nextActionDate)}</span>
+                   ${r.overdue ? Components.pill('Overdue', 'bad') : ''}`
+                : '<span class="faint">—</span>'
+            },
+            {
+              label: '', width: '70px', format: r => State.can('PIPELINE_MANAGE')
+                ? `<button class="btn btn--sm" data-edit-pipe="${F.esc(r.pipelineId)}">Edit</button>` : ''
+            }
+          ],
+          rows,
+          empty: 'No prospects in the pipeline.'
+        })
+      })}`;
+
+    D.q('#pType', host).onchange = (e) =>
+      Router.go('pipeline', { accountType: e.target.value, stage: filters.stage });
+
+    D.on(host, 'click', '[data-stage-filter]', (e, el) =>
+      Router.go('pipeline', {
+        accountType: filters.accountType,
+        stage: filters.stage === el.dataset.stageFilter ? '' : el.dataset.stageFilter
+      }));
+
+    const newBtn = D.q('#newPipeline', host);
+    if (newBtn) newBtn.onclick = () => pipelineModal(null, filters.accountType);
+
+    D.on(host, 'click', '[data-edit-pipe]', (e, el) =>
+      pipelineModal(rows.find(r => r.pipelineId === el.dataset.editPipe)));
+
+    if (State.can('PIPELINE_MANAGE')) {
+      D.on(host, 'click', '[data-doc]', (e, el) => {
+        e.stopPropagation();
+        const [pipelineId, slotKey] = el.dataset.doc.split('|');
+        const row = rows.find(r => r.pipelineId === pipelineId);
+        documentModal(row, row.documents.find(d => d.slotKey === slotKey));
+      });
+    }
+  }
+});
+
+function pipelineModal(row, defaultType) {
+  Overlay.openModal({
+    title: row ? 'Edit pipeline entry' : 'Add prospect',
+    wide: true,
+    body: `<form id="pipeForm">
+      ${row ? `<input type="hidden" name="pipelineId" value="${F.esc(row.pipelineId)}">` : ''}
+      <div class="formgrid">
+        ${Components.field({
+          name: 'accountType', label: 'Type', type: 'select',
+          value: (row && row.accountType) || defaultType || 'BUYER',
+          options: [{ value: 'BUYER', label: 'Buyer' }, { value: 'SELLER', label: 'Seller' }]
+        })}
+        ${Components.field({
+          name: 'category', label: 'Category', type: 'select',
+          value: (row && row.category) || State.category, options: State.ref('categories')
+        })}
+        ${Components.field({
+          name: 'businessName', label: 'Business name', required: true, wide: true,
+          value: (row && row.businessName) || ''
+        })}
+        ${Components.field({ name: 'gstin', label: 'GSTIN', value: (row && row.gstin) || '' })}
+        ${Components.field({
+          name: 'commodity', label: 'Commodity', value: (row && row.commodity) || '',
+          placeholder: 'PET (Bottle)'
+        })}
+        ${Components.field({
+          name: 'regionId', label: 'Region', type: 'select',
+          value: (row && row.regionId) || State.user.regionId,
+          options: Components.regionOptions(true, State.category)
+        })}
+        ${Components.field({ name: 'state', label: 'State', value: (row && row.state) || '' })}
+        ${Components.field({ name: 'city', label: 'City', value: (row && row.city) || '' })}
+        ${Components.field({
+          name: 'contactPerson', label: 'Contact', value: (row && row.contactPerson) || ''
+        })}
+        ${Components.field({ name: 'mobile', label: 'Mobile', value: (row && row.mobile) || '' })}
+        ${Components.field({
+          name: 'pocUserId', label: 'POC', type: 'select',
+          value: (row && row.pocUserId) || State.user.userId,
+          options: Components.userOptions(true, u => ['POC', 'RH', 'TEAM_LEAD'].includes(u.role)),
+          disabled: State.isPoc()
+        })}
+        ${Components.field({
+          name: 'paymentTerms', label: 'Payment terms', type: 'select',
+          value: (row && row.paymentTerms) || '',
+          options: [{ value: '', label: '— Not set —' }].concat(State.ref('paymentTerms'))
+        })}
+        ${Components.field({
+          name: 'stage', label: 'Stage', type: 'select', required: true,
+          value: (row && row.stage) || 'PROSPECT',
+          options: State.ref('pipelineStages').map(s => ({ value: s, label: F.titleCase(s) })),
+          hint: 'Onboarded is blocked until every required document is collected.'
+        })}
+        ${Components.field({
+          name: 'expectedTonnageMT', label: 'Expected tonnage (MT)', type: 'number', min: 0, step: 'any',
+          value: (row && row.expectedTonnageMT) || 0
+        })}
+        ${Components.field({
+          name: 'expectedOnboardDate', label: 'Expected onboarding', type: 'date',
+          value: (row && row.expectedOnboardDate) || ''
+        })}
+        ${Components.field({
+          name: 'nextActionDate', label: 'Next action due', type: 'date',
+          value: (row && row.nextActionDate) || ''
+        })}
+        ${Components.field({
+          name: 'blockerReason', label: 'Blocker', type: 'select',
+          value: (row && row.blockerReason) || '',
+          options: [{ value: '', label: 'None' }].concat(State.ref('blockerReasons'))
+        })}
+        ${Components.field({
+          name: 'remarks', label: 'Remarks', type: 'textarea', wide: true, rows: 2,
+          value: (row && row.remarks) || ''
+        })}
+      </div>
+    </form>`,
+    footer: `<button class="btn" data-close-modal>Cancel</button>
+             <button class="btn btn--primary" id="savePipe">Save</button>`
+  });
+
+  D.q('#savePipe').onclick = async (e) => {
+    e.currentTarget.disabled = true;
+    try {
+      await Api.call('pipeline.save', D.formData(D.q('#pipeForm')));
+      Toast.success('Pipeline updated');
+      Overlay.closeModal();
+      Router.render();
+    } catch (err) {
+      e.currentTarget.disabled = false;
+      D.markInvalid(D.q('#pipeForm'), err.message);
+    }
+  };
+}
+
+function documentModal(row, doc) {
+  Overlay.openModal({
+    title: doc.slotLabel,
+    body: `<form id="docForm">
+      <p class="muted">${F.esc(row.businessName)}</p>
+      <input type="hidden" name="pipelineId" value="${F.esc(row.pipelineId)}">
+      <input type="hidden" name="slotKey" value="${F.esc(doc.slotKey)}">
+      ${doc.documentId ? `<input type="hidden" name="documentId" value="${F.esc(doc.documentId)}">` : ''}
+      ${Components.field({
+        name: 'collected', label: 'Document collected', type: 'checkbox', value: doc.collected
+      })}
+      ${Components.field({
+        name: 'evidenceUrl', label: 'Link to the document', type: 'url', value: doc.evidenceUrl,
+        placeholder: 'https://drive.google.com/…',
+        hint: 'Required when marking it collected.'
+      })}
+      ${Components.field({
+        name: 'collectedDate', label: 'Collected on', type: 'date', value: doc.collectedDate
+      })}
+      ${Components.field({ name: 'expiryDate', label: 'Expires on', type: 'date' })}
+      ${Components.field({ name: 'remarks', label: 'Notes', wide: true })}
+    </form>`,
+    footer: `<button class="btn" data-close-modal>Cancel</button>
+             <button class="btn btn--primary" id="saveDoc">Save</button>`
+  });
+
+  D.q('#saveDoc').onclick = async (e) => {
+    e.currentTarget.disabled = true;
+    try {
+      await Api.call('pipeline.setDocument', D.formData(D.q('#docForm')));
+      Toast.success('Checklist updated');
+      Overlay.closeModal();
+      Router.render();
+    } catch (err) {
+      e.currentTarget.disabled = false;
+      D.markInvalid(D.q('#docForm'), err.message);
+    }
+  };
+}
+</script>

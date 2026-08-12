@@ -1,0 +1,14 @@
+{
+  "scriptId": "PASTE_YOUR_APPS_SCRIPT_ID_HERE",
+  "rootDir": "src",
+  "fileExtension": "gs",
+  "filePushOrder": [
+    "server/00_Config.gs",
+    "server/01_Schema.gs",
+    "server/02_Util.gs",
+    "server/03_Repository.gs",
+    "server/04_Auth.gs",
+    "server/05_Bootstrap.gs",
+    "server/06_Engine.gs"
+  ]
+}

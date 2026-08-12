@@ -1,0 +1,565 @@
+<script>
+/* ==========================================================================
+   Administration — users and regions, data sync, settings, audit trail.
+   ========================================================================== */
+
+/* -------------------------------------------------------- users & regions --- */
+Router.register('users', {
+  permission: 'USER_MANAGE',
+  skeleton: () => Components.tableSkeleton(8),
+  async render(host) {
+    const tab = State.params.tab || 'users';
+    const [users, regions] = await Promise.all([
+      Api.call('user.list', { includeInactive: true }),
+      Api.call('region.list', {})
+    ]);
+    const provisional = users.filter(u => u.provisional && u.active);
+
+    host.innerHTML = `
+      ${Components.pageHead({
+        title: 'Users & Regions',
+        subtitle: `${users.filter(u => u.active).length} active user(s) · ${regions.length} region(s)`,
+        actions: `
+          <button class="btn" id="newRegion">＋ Region</button>
+          <button class="btn btn--primary" id="newUser">＋ User</button>`
+      })}
+
+      ${provisional.length ? Components.banner('warn',
+        `${provisional.length} provisional user(s) created by the data sync`,
+        'The sync met a name it did not recognise and created a placeholder so the transaction ' +
+        'was not orphaned. Add an email and region, or merge each into an existing account.') : ''}
+
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" data-tab="users" aria-selected="${tab === 'users'}">Users</button>
+        <button class="tab" role="tab" data-tab="regions" aria-selected="${tab === 'regions'}">Regions</button>
+      </div>
+
+      ${tab === 'users' ? Components.card({
+        flush: true,
+        body: Components.table({
+          columns: [
+            {
+              label: 'Name', format: u => `<span class="strong">${F.esc(u.fullName)}</span>
+                <span class="cell-sub">${F.esc(u.email || 'no email — provisional')}</span>`
+            },
+            { label: 'Code', width: '110px', format: u => `<span class="mono">${F.esc(u.employeeCode || '—')}</span>` },
+            { label: 'Role', width: '120px', format: u => Components.pill(F.titleCase(u.role), u.role === 'ADMIN' ? 'brand' : '') },
+            { label: 'Category', width: '100px', format: u => F.esc(u.category) },
+            { label: 'Region', width: '120px', format: u => F.esc(u.regionName || '—') },
+            { label: 'Reports to', width: '150px', format: u => F.esc(u.reportsToName || '—') },
+            {
+              label: 'Status', width: '110px', format: u => u.active
+                ? (u.provisional ? Components.pill('Provisional', 'warn') : Components.pill('Active', 'good'))
+                : Components.pill('Disabled', '')
+            },
+            {
+              label: '', width: '130px', format: u => `
+                <button class="btn btn--sm" data-edit-user="${F.esc(u.userId)}">Edit</button>
+                ${u.provisional ? `<button class="btn btn--sm" data-merge-user="${F.esc(u.userId)}">Merge</button>` : ''}`
+            }
+          ],
+          rows: users,
+          empty: 'No users yet.'
+        })
+      }) : Components.card({
+        flush: true,
+        body: Components.table({
+          columns: [
+            { label: 'Region', format: r => `<span class="strong">${F.esc(r.regionName)}</span>` },
+            { label: 'Category', width: '110px', format: r => F.esc(r.category) },
+            { label: 'Regional Head', width: '180px', format: r => F.esc(r.rhName || '—') },
+            { label: 'States', format: r => F.esc(r.states || '—') },
+            { label: 'Order', align: 'right', width: '70px', format: r => r.sequence },
+            {
+              label: '', width: '70px',
+              format: r => `<button class="btn btn--sm" data-edit-region="${F.esc(r.regionId)}">Edit</button>`
+            }
+          ],
+          rows: regions,
+          empty: 'No regions defined.'
+        })
+      })}`;
+
+    D.on(host, 'click', '[data-tab]', (e, el) => Router.go('users', { tab: el.dataset.tab }));
+    D.q('#newUser', host).onclick = () => userModal(null);
+    D.q('#newRegion', host).onclick = () => regionModal(null);
+    D.on(host, 'click', '[data-edit-user]', (e, el) =>
+      userModal(users.find(u => u.userId === el.dataset.editUser)));
+    D.on(host, 'click', '[data-edit-region]', (e, el) =>
+      regionModal(regions.find(r => r.regionId === el.dataset.editRegion)));
+    D.on(host, 'click', '[data-merge-user]', (e, el) =>
+      mergeUserModal(users.find(u => u.userId === el.dataset.mergeUser), users));
+  }
+});
+
+function userModal(user) {
+  Overlay.openModal({
+    title: user ? 'Edit user' : 'New user',
+    wide: true,
+    body: `<form id="userForm">
+      ${user ? `<input type="hidden" name="userId" value="${F.esc(user.userId)}">` : ''}
+      <div class="formgrid">
+        ${Components.field({
+          name: 'fullName', label: 'Full name', required: true,
+          value: (user && user.fullName) || '',
+          hint: 'Must match the name used in the source spreadsheets so the sync links up.'
+        })}
+        ${Components.field({
+          name: 'email', label: 'Work email', type: 'email',
+          value: (user && user.email) || '',
+          hint: 'Their Google account. Without it they cannot sign in.'
+        })}
+        ${Components.field({
+          name: 'employeeCode', label: 'Employee code', value: (user && user.employeeCode) || '',
+          placeholder: 'FFIRT00328'
+        })}
+        ${Components.field({
+          name: 'role', label: 'Role', type: 'select', required: true,
+          value: (user && user.role) || 'POC',
+          options: [
+            { value: 'POC', label: 'POC — records their own work' },
+            { value: 'RH', label: 'Regional Head — plans and reviews a region' },
+            { value: 'TEAM_LEAD', label: 'Team Lead — owns planning for a category' },
+            { value: 'LEADERSHIP', label: 'Leadership — read all, review' },
+            { value: 'VIEWER', label: 'Viewer — read only' },
+            { value: 'ADMIN', label: 'Administrator — full control' }
+          ]
+        })}
+        ${Components.field({
+          name: 'category', label: 'Category', type: 'select',
+          value: (user && user.category) || 'ALL',
+          options: [{ value: 'ALL', label: 'All categories' }]
+            .concat(State.ref('categories').map(c => ({ value: c, label: c })))
+        })}
+        ${Components.field({
+          name: 'regionId', label: 'Region', type: 'select',
+          value: (user && user.regionId) || '',
+          options: Components.regionOptions(true)
+        })}
+        ${Components.field({
+          name: 'stream', label: 'Stream', type: 'select',
+          value: (user && user.stream) || 'BOTH',
+          options: [
+            { value: 'BOTH', label: 'Both' },
+            { value: 'SUPPLY', label: 'Supply — sellers' },
+            { value: 'DEMAND', label: 'Demand — buyers' }
+          ]
+        })}
+        ${Components.field({
+          name: 'reportsTo', label: 'Reports to', type: 'select',
+          value: (user && user.reportsTo) || '', options: Components.userOptions(true)
+        })}
+        ${Components.field({ name: 'phone', label: 'Phone', value: (user && user.phone) || '' })}
+        ${Components.field({
+          name: 'aliases', label: 'Name aliases', wide: true, value: (user && user.aliases) || '',
+          hint: 'Pipe-separated alternative spellings used in the source sheets, e.g. Joy Deep|Joydeep D.'
+        })}
+        ${Components.field({
+          name: 'active', label: 'Active', type: 'checkbox',
+          value: user ? user.active : true
+        })}
+      </div>
+    </form>`,
+    footer: `<button class="btn" data-close-modal>Cancel</button>
+             <button class="btn btn--primary" id="saveUser">Save user</button>`
+  });
+
+  D.q('#saveUser').onclick = async (e) => {
+    e.currentTarget.disabled = true;
+    try {
+      await Api.call('user.save', D.formData(D.q('#userForm')));
+      Toast.success('User saved');
+      Overlay.closeModal();
+      await Boot.reload();
+      Router.render();
+    } catch (err) {
+      e.currentTarget.disabled = false;
+      D.markInvalid(D.q('#userForm'), err.message);
+    }
+  };
+}
+
+function mergeUserModal(source, users) {
+  Overlay.openModal({
+    title: 'Merge provisional user',
+    body: `<form id="mergeForm">
+      <p class="muted">Everything owned by <b>${F.esc(source.fullName)}</b> — accounts, activities,
+      shipments, onboarding, visits and assignments — moves to the target user. The source name is
+      kept as an alias so future syncs resolve correctly.</p>
+      <input type="hidden" name="sourceUserId" value="${F.esc(source.userId)}">
+      ${Components.field({
+        name: 'targetUserId', label: 'Merge into', type: 'select', required: true, wide: true,
+        options: [{ value: '', label: '— Select the real user —' }].concat(
+          users.filter(u => u.active && u.email && u.userId !== source.userId)
+            .map(u => ({ value: u.userId, label: `${u.fullName} · ${u.email}` })))
+      })}
+    </form>`,
+    footer: `<button class="btn" data-close-modal>Cancel</button>
+             <button class="btn btn--primary" id="doMerge">Merge</button>`
+  });
+
+  D.q('#doMerge').onclick = async (e) => {
+    const data = D.formData(D.q('#mergeForm'));
+    if (!data.targetUserId) { Toast.warn('Select a target', 'Choose which user to merge into.'); return; }
+    e.currentTarget.disabled = true;
+    try {
+      const res = await Api.call('user.merge', data);
+      Toast.success('Merged', Object.entries(res.moved)
+        .filter(([, v]) => v).map(([k, v]) => `${v} ${k}`).join(', ') || 'nothing to move');
+      Overlay.closeModal();
+      await Boot.reload();
+      Router.render();
+    } catch (err) {
+      e.currentTarget.disabled = false;
+      Toast.fromError(err);
+    }
+  };
+}
+
+function regionModal(region) {
+  Overlay.openModal({
+    title: region ? 'Edit region' : 'New region',
+    body: `<form id="regionForm">
+      ${region ? `<input type="hidden" name="regionId" value="${F.esc(region.regionId)}">` : ''}
+      <div class="formgrid">
+        ${Components.field({
+          name: 'regionName', label: 'Region name', required: true,
+          value: (region && region.regionName) || ''
+        })}
+        ${Components.field({
+          name: 'category', label: 'Category', type: 'select',
+          value: (region && region.category) || State.category, options: State.ref('categories')
+        })}
+        ${Components.field({
+          name: 'rhUserId', label: 'Regional Head', type: 'select',
+          value: (region && region.rhUserId) || '',
+          options: Components.userOptions(true, u => ['RH', 'TEAM_LEAD'].includes(u.role))
+        })}
+        ${Components.field({
+          name: 'states', label: 'States covered', wide: true,
+          value: (region && region.states) || '',
+          placeholder: 'Uttar Pradesh, Bihar, Jharkhand'
+        })}
+        ${Components.field({
+          name: 'sequence', label: 'Display order', type: 'number',
+          value: (region && region.sequence) || 50
+        })}
+      </div>
+    </form>`,
+    footer: `<button class="btn" data-close-modal>Cancel</button>
+             <button class="btn btn--primary" id="saveRegion">Save region</button>`
+  });
+
+  D.q('#saveRegion').onclick = async (e) => {
+    e.currentTarget.disabled = true;
+    try {
+      await Api.call('region.save', D.formData(D.q('#regionForm')));
+      Toast.success('Region saved');
+      Overlay.closeModal();
+      await Boot.reload();
+      Router.render();
+    } catch (err) {
+      e.currentTarget.disabled = false;
+      D.markInvalid(D.q('#regionForm'), err.message);
+    }
+  };
+}
+
+/* ------------------------------------------------------------------- sync --- */
+Router.register('sync', {
+  permission: 'SYNC_RUN',
+  skeleton: () => Components.tableSkeleton(6),
+  async render(host) {
+    const history = await Api.call('sync.history', { limit: 25 });
+    let sourceId = '';
+    try { sourceId = localStorage.getItem('omp.sourceId') || ''; } catch (e) { /* ignore */ }
+
+    host.innerHTML = `
+      ${Components.pageHead({
+        title: 'Data Sync',
+        subtitle: 'Pulls shipments, onboarding and field visits from the operational workbook. ' +
+          'Re-running corrects rather than duplicates.'
+      })}
+
+      ${Components.banner('info', 'How the sync behaves',
+        'Rows are matched on their natural key — Shipment ID, Seller ID, employee and date — so ' +
+        'the job is safe to re-run. Unknown sellers, buyers, regions and POCs are created ' +
+        'automatically and flagged for you to complete.')}
+
+      ${Components.card({
+        title: 'Run a sync',
+        body: `
+          <form id="syncForm">
+            <div class="formgrid">
+              ${Components.field({
+                name: 'spreadsheetId', label: 'Source spreadsheet ID', wide: true, value: sourceId,
+                hint: 'Leave blank when the source tabs are in this same spreadsheet.'
+              })}
+              ${Components.field({
+                name: 'category', label: 'Category', type: 'select',
+                value: State.category, options: State.ref('categories')
+              })}
+            </div>
+            <div class="btnrow" style="margin-top:6px">
+              <button type="button" class="btn btn--primary" data-sync="all">Sync everything</button>
+              <button type="button" class="btn" data-sync="onboarding">Onboarding only</button>
+              <button type="button" class="btn" data-sync="shipments">Shipments only</button>
+              <button type="button" class="btn" data-sync="pulse">Field visits only</button>
+              <button type="button" class="btn btn--ghost" id="inspectBtn">Check access</button>
+            </div>
+            <div id="syncOut" style="margin-top:14px"></div>
+          </form>`
+      })}
+
+      <div style="height:16px"></div>
+
+      ${Components.card({
+        title: 'Sync history',
+        flush: true,
+        body: Components.table({
+          compact: true,
+          columns: [
+            { label: 'Started', width: '150px', format: r => F.dateTime(r.startedAt) },
+            { label: 'Source', width: '120px', format: r => F.titleCase(r.source) },
+            {
+              label: 'Status', width: '100px',
+              format: r => Components.pill(r.status, r.status === 'SUCCESS' ? 'good' : 'bad')
+            },
+            { label: 'Read', align: 'right', width: '70px', format: r => F.int(r.rowsRead) },
+            { label: 'Added', align: 'right', width: '70px', format: r => F.int(r.rowsInserted) },
+            { label: 'Updated', align: 'right', width: '80px', format: r => F.int(r.rowsUpdated) },
+            { label: 'Skipped', align: 'right', width: '80px', format: r => F.int(r.rowsSkipped) },
+            {
+              label: 'Notes', format: r => r.errorMessage
+                ? `<span style="color:var(--bad)">${F.esc(r.errorMessage)}</span>`
+                : (r.warnings ? `<span class="faint">${F.esc(String(r.warnings).slice(0, 180))}</span>` : '')
+            },
+            { label: 'By', width: '150px', format: r => `<span class="faint">${F.esc(r.triggeredBy)}</span>` }
+          ],
+          rows: history,
+          empty: 'No sync has run yet.'
+        })
+      })}`;
+
+    const out = D.q('#syncOut', host);
+
+    D.on(host, 'click', '[data-sync]', async (e, el) => {
+      const kind = el.dataset.sync;
+      const data = D.formData(D.q('#syncForm'));
+      try { localStorage.setItem('omp.sourceId', data.spreadsheetId || ''); } catch (x) { /* ignore */ }
+
+      D.qa('[data-sync]', host).forEach(b => { b.disabled = true; });
+      out.innerHTML = '<div class="skeleton skeleton--row"></div>';
+      try {
+        const res = await Api.call('sync.' + kind, data);
+        const results = kind === 'all'
+          ? ['onboarding', 'shipments', 'pulse'].map(k => res[k])
+          : [res];
+        out.innerHTML = results.map(r => Components.banner(
+          r.status === 'SUCCESS' ? 'good' : 'bad',
+          `${F.titleCase(r.source)} — ${r.status}`,
+          `Read ${F.int(r.rowsRead)}, added ${F.int(r.rowsInserted)}, ` +
+          `updated ${F.int(r.rowsUpdated)}, skipped ${F.int(r.rowsSkipped)}.` +
+          (r.errorMessage ? `<br><b>${F.esc(r.errorMessage)}</b>` : '') +
+          (r.warnings && r.warnings.length
+            ? `<details style="margin-top:6px"><summary style="cursor:pointer">
+                ${r.warnings.length} warning(s)</summary>
+                <ul style="margin:6px 0 0 16px">${r.warnings.map(w =>
+                  `<li>${F.esc(w)}</li>`).join('')}</ul></details>` : '')
+        )).join('');
+        Toast.success('Sync finished', 'Dashboards already reflect the new data.');
+      } catch (err) {
+        out.innerHTML = Components.errorState(err);
+        Toast.fromError(err, 'Sync failed');
+      } finally {
+        D.qa('[data-sync]', host).forEach(b => { b.disabled = false; });
+      }
+    });
+
+    D.q('#inspectBtn', host).onclick = async () => {
+      const id = D.q('#f_spreadsheetId', host).value.trim();
+      if (!id) { Toast.warn('Enter an ID', 'Paste the source spreadsheet ID first.'); return; }
+      out.innerHTML = '<div class="skeleton skeleton--row"></div>';
+      try {
+        const info = await Api.call('sync.inspect', { spreadsheetId: id });
+        out.innerHTML = Components.banner('good', F.esc(info.name), `${info.sheets.length} tab(s).`) +
+          Components.table({
+            compact: true,
+            columns: [
+              { label: 'Tab', format: r => `<span class="mono">${F.esc(r.name)}</span>` },
+              { label: 'Rows', align: 'right', format: r => F.int(r.rows) },
+              { label: 'Cols', align: 'right', format: r => F.int(r.cols) }
+            ],
+            rows: info.sheets
+          });
+      } catch (err) { out.innerHTML = Components.errorState(err); }
+    };
+  }
+});
+
+/* --------------------------------------------------------------- settings --- */
+Router.register('settings', {
+  permission: 'CONFIG_MANAGE',
+  skeleton: () => Components.tableSkeleton(10),
+  async render(host) {
+    const [config, health] = await Promise.all([
+      Api.call('config.list', {}),
+      Api.call('session.health', {})
+    ]);
+
+    const GROUPS = {
+      'Fiscal calendar & reporting': ['FY_START_MONTH', 'REPORTING_LAG_DAYS'],
+      'Value basis': ['GMV_BASIS', 'GMV_CR_DIVISOR', 'RATE_GST_DIVISOR', 'GST_RATE'],
+      'Scoring': ['ACHIEVEMENT_CAP', 'REQUIRE_WEIGHTAGE_100', 'WEIGHTAGE_TOTAL'],
+      'Derived KPI targets': ['EXISTING_TXN_TARGET_PCT', 'NEW_TXN_TARGET_PCT',
+        'RETENTION_TARGET_PCT', 'DN_TARGET_PCT_OF_GMV'],
+      'Field visits': ['PULSE_VISITS_PER_DAY', 'PULSE_DEFAULT_WORKING_DAYS', 'PULSE_DEDUCT_LEAVE'],
+      'SLAs & alerts': ['SLA_ONBOARDING_DAYS', 'SLA_REVIEW_SUBMISSION_DAYS', 'SLA_DISPATCH_DAYS',
+        'SLA_DELIVERY_DAYS', 'DORMANCY_DAYS', 'PACE_WARN_RATIO', 'PACE_CRITICAL_RATIO'],
+      'Operational limits': ['MAX_ROWS_PER_READ', 'CACHE_TTL_SECONDS', 'ACTIVITY_BACKDATE_DAYS',
+        'EVIDENCE_URL_PATTERN'],
+      'Presentation': ['DEFAULT_CATEGORY', 'CURRENCY_SYMBOL']
+    };
+    const byKey = {};
+    config.forEach(c => { byKey[c.key] = c; });
+
+    host.innerHTML = `
+      ${Components.pageHead({
+        title: 'Settings',
+        subtitle: `Schema version ${health.schemaVersion} · ` +
+          `${Object.values(health.rowCounts || {}).reduce((a, b) => a + Math.max(0, b), 0)} rows stored`,
+        actions: `<a class="btn" href="${F.esc(health.spreadsheetUrl)}" target="_blank" rel="noopener">
+          Open backend sheet ↗</a>`
+      })}
+
+      ${Components.banner('warn', 'These values change reported numbers',
+        'GMV basis and the realised-rate divisor exist because the source workbook was internally ' +
+        'inconsistent. The defaults are the corrected behaviour; the alternates reproduce the ' +
+        'legacy spreadsheet figures exactly.')}
+
+      ${Object.entries(GROUPS).map(([group, keys]) => Components.card({
+        title: group,
+        flush: true,
+        body: Components.table({
+          compact: true,
+          columns: [
+            {
+              label: 'Setting', format: c => `<span class="strong mono">${F.esc(c.key)}</span>
+                <span class="cell-sub">${F.esc(c.description || '')}</span>`
+            },
+            {
+              label: 'Value', width: '220px', format: c => c.type === 'boolean'
+                ? `<label class="check"><input type="checkbox" data-config="${F.esc(c.key)}"
+                     ${String(c.value) === 'true' ? 'checked' : ''}><span>${
+                     String(c.value) === 'true' ? 'Enabled' : 'Disabled'}</span></label>`
+                : `<input class="input${c.type === 'number' ? ' input--num' : ''}"
+                     type="${c.type === 'number' ? 'number' : 'text'}" step="any"
+                     data-config="${F.esc(c.key)}" value="${F.esc(c.value)}">`
+            },
+            {
+              label: 'Default', width: '120px',
+              format: c => `<span class="faint mono">${F.esc(c.defaultValue)}</span>`
+            },
+            {
+              label: '', width: '100px',
+              format: c => c.modified ? Components.pill('Modified', 'warn') : ''
+            }
+          ],
+          rows: keys.map(k => byKey[k]).filter(Boolean)
+        })
+      })).join('<div style="height:14px"></div>')}
+
+      <div style="height:16px"></div>
+
+      ${Components.card({
+        title: 'Backend tables',
+        flush: true,
+        body: Components.table({
+          compact: true,
+          columns: [
+            { label: 'Table', format: r => `<span class="mono">${F.esc(r.name)}</span>` },
+            { label: 'Rows', align: 'right', format: r => r.count < 0 ? '—' : F.int(r.count) }
+          ],
+          rows: Object.entries(health.rowCounts || {}).map(([name, count]) => ({ name, count }))
+        })
+      })}`;
+
+    D.on(host, 'change', '[data-config]', async (e, el) => {
+      const key = el.dataset.config;
+      const value = el.type === 'checkbox' ? el.checked : el.value;
+      el.disabled = true;
+      try {
+        const res = await Api.call('config.set', { key, value });
+        Toast.success('Setting updated', `${key}: ${res.previous} → ${res.value}`);
+        Api.invalidate();
+        await Boot.reload();
+      } catch (err) {
+        Toast.fromError(err, 'Could not save the setting');
+      } finally {
+        el.disabled = false;
+      }
+    });
+  }
+});
+
+/* ------------------------------------------------------------------ audit --- */
+Router.register('audit', {
+  permission: 'AUDIT_VIEW',
+  skeleton: () => Components.tableSkeleton(12),
+  async render(host) {
+    const entries = await Api.call('audit.recent', { limit: 300 });
+
+    host.innerHTML = `
+      ${Components.pageHead({
+        title: 'Audit Trail',
+        subtitle: 'Every change: who, when, what, and the before/after state',
+        actions: State.can('REPORT_EXPORT')
+          ? `<button class="btn" id="exportAudit">Export</button>` : ''
+      })}
+
+      <div class="filters">
+        <div class="field" style="flex:1;min-width:200px">
+          <label class="field__label" for="auSearch">Filter</label>
+          <input class="input" id="auSearch" type="search" placeholder="Action, user or entity">
+        </div>
+      </div>
+
+      ${Components.card({
+        flush: true,
+        body: Components.table({
+          compact: true,
+          columns: [
+            { label: 'When', width: '150px', format: r => F.dateTime(r.timestamp) },
+            {
+              label: 'Who', width: '190px', format: r => `${F.esc(r.userEmail || '—')}
+                <span class="cell-sub">${F.esc(r.role || '')}</span>`
+            },
+            { label: 'Action', width: '180px', format: r => `<span class="mono">${F.esc(r.action)}</span>` },
+            {
+              label: 'Entity', width: '160px', format: r => `${F.esc(r.entity || '—')}
+                <span class="cell-sub mono">${F.esc(String(r.entityId || '').slice(0, 24))}</span>`
+            },
+            { label: 'Summary', format: r => F.esc(r.summary) },
+            {
+              label: '', width: '80px', format: r => r.success
+                ? Components.pill('OK', 'good')
+                : `${Components.pill('Failed', 'bad')}<span class="cell-sub">${F.esc(r.errorMessage || '')}</span>`
+            }
+          ],
+          rows: entries,
+          empty: 'No audit entries yet.'
+        })
+      })}`;
+
+    D.q('#auSearch', host).oninput = (e) => {
+      const q = e.target.value.toLowerCase();
+      D.qa('.table tbody tr', host).forEach(tr => {
+        tr.hidden = q && !tr.textContent.toLowerCase().includes(q);
+      });
+    };
+
+    const exp = D.q('#exportAudit', host);
+    if (exp) exp.onclick = () => runExport('AUDIT', { limit: 2000 }, exp);
+  }
+});
+</script>

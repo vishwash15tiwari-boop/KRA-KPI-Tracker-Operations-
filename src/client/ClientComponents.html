@@ -1,0 +1,512 @@
+<script>
+/* ==========================================================================
+   Components — the shared visual vocabulary. Every view composes from here so
+   a metric tile, a table or a chart reads identically wherever it appears.
+   ========================================================================== */
+
+const Components = (() => {
+
+  /* ------------------------------------------------------------ states --- */
+  function loading(rows = 4) {
+    return `<div class="grid grid--tiles">${
+      Array.from({ length: rows }, () => '<div class="skeleton skeleton--tile"></div>').join('')
+    }</div>`;
+  }
+
+  function tableSkeleton(rows = 8) {
+    return `<div class="card card--pad">${
+      Array.from({ length: rows }, () => '<div class="skeleton skeleton--row"></div>').join('')
+    }</div>`;
+  }
+
+  function emptyState({ icon = '◌', title, message, action }) {
+    return `
+      <div class="card">
+        <div class="empty">
+          <div class="empty__icon" aria-hidden="true">${icon}</div>
+          <div class="empty__title">${F.esc(title)}</div>
+          <div>${F.esc(message || '')}</div>
+          ${action ? `<div style="margin-top:14px">${action}</div>` : ''}
+        </div>
+      </div>`;
+  }
+
+  function errorState(err) {
+    const code = (err && err.code) || 'ERROR';
+    return `
+      <div class="banner" data-tone="bad">
+        <span aria-hidden="true">⚠</span>
+        <div class="banner__body">
+          <div class="banner__title">Could not load this page</div>
+          <div>${F.esc((err && err.message) || String(err))}</div>
+          <div class="faint mono" style="margin-top:6px">${F.esc(code)}</div>
+        </div>
+        <button class="btn btn--sm" data-retry>Retry</button>
+      </div>`;
+  }
+
+  function banner(tone, title, message, actionHtml) {
+    return `
+      <div class="banner" data-tone="${tone}">
+        <span aria-hidden="true">${
+          tone === 'good' ? '✓' : tone === 'info' ? 'ℹ' : '⚠'}</span>
+        <div class="banner__body">
+          ${title ? `<div class="banner__title">${F.esc(title)}</div>` : ''}
+          <div>${message}</div>
+        </div>
+        ${actionHtml || ''}
+      </div>`;
+  }
+
+  /* ------------------------------------------------------------ layout --- */
+  function pageHead({ title, subtitle, actions }) {
+    return `
+      <div class="page-head">
+        <div class="page-head__text">
+          <h1>${F.esc(title)}</h1>
+          ${subtitle ? `<p class="page-head__sub">${subtitle}</p>` : ''}
+        </div>
+        ${actions ? `<div class="page-head__actions">${actions}</div>` : ''}
+      </div>`;
+  }
+
+  function section({ title, hint, body, actions }) {
+    return `
+      <section class="section">
+        ${title ? `
+          <div class="section__head">
+            <h2>${F.esc(title)}</h2>
+            ${hint ? `<span class="section__hint">${hint}</span>` : ''}
+            ${actions || ''}
+          </div>` : ''}
+        ${body}
+      </section>`;
+  }
+
+  function card({ title, actions, body, foot, flush }) {
+    return `
+      <div class="card">
+        ${title ? `
+          <div class="card__head">
+            <div class="card__title">${F.esc(title)}</div>
+            ${actions ? `<div class="btnrow">${actions}</div>` : ''}
+          </div>` : ''}
+        <div class="card__body${flush ? ' card__body--flush' : ''}">${body}</div>
+        ${foot ? `<div class="card__foot">${foot}</div>` : ''}
+      </div>`;
+  }
+
+  function pill(text, tone) {
+    return `<span class="pill"${tone ? ` data-tone="${tone}"` : ''}>${F.esc(text)}</span>`;
+  }
+
+  /* ------------------------------------------------------------- tiles --- */
+  /**
+   * The metric tile. Shows the number, the target, the pace and the trend —
+   * the whole decision in one glance — and opens the drill-down on click.
+   */
+  function metricTile(t) {
+    const tone = F.tone(t.achievement);
+    const fill = Math.max(0, Math.min(1, t.achievement || 0)) * 100;
+    const growthTone = t.growthPct > 0 ? 'good' : t.growthPct < 0 ? 'bad' : '';
+    const drill = t.drill ? ` data-drill='${F.esc(JSON.stringify(t.drill))}'` : '';
+
+    return `
+      <button class="tile" data-tone="${tone}"${drill}
+              aria-label="${F.esc(t.label)}: ${F.esc(F.unit(t.actual, t.unit))} of ${F.esc(F.unit(t.target, t.unit))}">
+        <div class="tile__label">
+          <span>${F.esc(t.label)}</span>
+          ${t.paceStatus ? `<span class="pill" data-tone="${F.paceTone(t.paceStatus)}"
+            style="margin-left:auto">${F.paceLabel(t.paceStatus)}</span>` : ''}
+        </div>
+        <div class="tile__value">${F.unit(t.actual, t.unit)}</div>
+        <div class="tile__target">
+          of ${F.unit(t.target, t.unit)} target
+          <span class="pill" data-tone="${tone}" style="margin-left:6px">${F.pct(t.achievement)}</span>
+        </div>
+        <div class="meter"><div class="meter__fill" data-tone="${tone}" style="width:${fill.toFixed(1)}%"></div></div>
+        <div class="tile__foot">
+          <span class="tile__drr" title="Achieved per day so far">
+            Now <b>${F.num(t.currentDrr, 2)}</b>/d</span>
+          <span class="tile__drr" title="Required per day to hit the target">
+            Need <b>${F.num(t.requiredDrr, 2)}</b>/d</span>
+          ${t.growthPct !== null && t.growthPct !== undefined
+            ? `<span class="pill" data-tone="${growthTone}" style="margin-left:auto"
+                 title="Versus the same period last month">${F.signedPct(t.growthPct)}</span>` : ''}
+        </div>
+      </button>`;
+  }
+
+  function statTile({ label, value, sub, tone }) {
+    return `
+      <div class="tile" style="cursor:default"${tone ? ` data-tone="${tone}"` : ''}>
+        <div class="tile__label">${F.esc(label)}</div>
+        <div class="tile__value">${value}</div>
+        ${sub ? `<div class="tile__target">${sub}</div>` : ''}
+      </div>`;
+  }
+
+  /* ------------------------------------------------------------ tables --- */
+  /**
+   * columns: [{ key, label, align, width, format(row), cls }]
+   * The `format` callback must return already-escaped HTML.
+   */
+  function table({ columns, rows, footer, empty, rowAttrs, compact, clickable }) {
+    if (!rows || !rows.length) {
+      return `<div class="empty">${F.esc(empty || 'Nothing to show yet.')}</div>`;
+    }
+    const head = columns.map(c =>
+      `<th${c.align === 'right' ? ' class="num"' : ''}${c.width ? ` style="width:${c.width}"` : ''}>${F.esc(c.label)}</th>`
+    ).join('');
+
+    const body = rows.map(r => {
+      const attrs = rowAttrs ? rowAttrs(r) : '';
+      const cells = columns.map(c => {
+        const cls = [c.align === 'right' ? 'num' : '', c.cls || ''].filter(Boolean).join(' ');
+        const content = c.format ? c.format(r) : F.esc(r[c.key]);
+        return `<td${cls ? ` class="${cls}"` : ''}>${content}</td>`;
+      }).join('');
+      return `<tr ${attrs}>${cells}</tr>`;
+    }).join('');
+
+    return `
+      <div class="tablewrap">
+        <table class="table${compact ? ' table--compact' : ''}${clickable ? ' table--clickable' : ''}">
+          <thead><tr>${head}</tr></thead>
+          <tbody>${body}</tbody>
+          ${footer ? `<tfoot>${footer}</tfoot>` : ''}
+        </table>
+      </div>`;
+  }
+
+  /** Target / Achieved / Ach% triple — the workbook's core reading unit. */
+  function tva(target, actual, unit, places) {
+    const ach = target ? actual / target : 0;
+    return `<span class="tnum">${F.unit(actual, unit, places)}</span>
+            <span class="cell-sub">of ${F.unit(target, unit, places)} · ${F.pct(ach)}</span>`;
+  }
+
+  function achievementCell(value) {
+    const tone = F.tone(value);
+    return `<span class="pill" data-tone="${tone}">${F.pct(value)}</span>`;
+  }
+
+  function growthCell(value) {
+    if (value === null || value === undefined) return '<span class="faint">—</span>';
+    const tone = value > 0.001 ? 'good' : value < -0.001 ? 'bad' : '';
+    return `<span class="pill" data-tone="${tone}">${F.signedPct(value)}</span>`;
+  }
+
+  /* ------------------------------------------------------------ charts --- */
+  /**
+   * Cumulative line chart: actual vs straight-line plan vs last month, with the
+   * projection dashed beyond today. Pure inline SVG — no external libraries,
+   * which the artifact CSP would block anyway.
+   */
+  function lineChart(series, options = {}) {
+    const W = options.width || 720, H = options.height || 240;
+    const pad = { t: 12, r: 14, b: 26, l: 52 };
+    const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
+
+    const allValues = series.flatMap(s => s.points.map(p => p.y).filter(v => v !== null && isFinite(v)));
+    const maxY = Math.max(1, ...allValues) * 1.08;
+    const n = Math.max(1, Math.max(...series.map(s => s.points.length)) - 1);
+
+    const x = i => pad.l + (i / n) * iw;
+    const y = v => pad.t + ih - (Math.max(0, v) / maxY) * ih;
+
+    const gridCount = 4;
+    const grid = Array.from({ length: gridCount + 1 }, (_, i) => {
+      const v = (maxY / gridCount) * i;
+      const gy = y(v);
+      return `<line class="gridline" x1="${pad.l}" y1="${gy}" x2="${W - pad.r}" y2="${gy}"></line>
+              <text x="${pad.l - 8}" y="${gy + 3}" text-anchor="end">${
+                options.formatY ? options.formatY(v) : F.num(v, 0)}</text>`;
+    }).join('');
+
+    const paths = series.map(s => {
+      const pts = s.points.map((p, i) => ({ i, y: p.y })).filter(p => p.y !== null && isFinite(p.y));
+      if (!pts.length) return '';
+      const d = pts.map((p, k) => `${k ? 'L' : 'M'}${x(p.i).toFixed(1)},${y(p.y).toFixed(1)}`).join(' ');
+      return `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.width || 2}"
+              ${s.dash ? `stroke-dasharray="${s.dash}"` : ''} stroke-linejoin="round" stroke-linecap="round"></path>`;
+    }).join('');
+
+    const labelEvery = Math.max(1, Math.ceil((series[0] ? series[0].points.length : 1) / 10));
+    const xLabels = (series[0] ? series[0].points : []).map((p, i) =>
+      i % labelEvery === 0
+        ? `<text x="${x(i)}" y="${H - 8}" text-anchor="middle">${F.esc(p.label || (i + 1))}</text>`
+        : '').join('');
+
+    return `
+      <svg class="chart" viewBox="0 0 ${W} ${H}" role="img"
+           aria-label="${F.esc(options.ariaLabel || 'Trend chart')}"
+           preserveAspectRatio="xMidYMid meet">
+        ${grid}
+        <line class="axis" x1="${pad.l}" y1="${pad.t + ih}" x2="${W - pad.r}" y2="${pad.t + ih}"
+              stroke="currentColor" stroke-opacity=".2"></line>
+        ${paths}
+        ${xLabels}
+      </svg>
+      <div class="chart-legend">
+        ${series.map(s => `
+          <span class="chart-legend__key">
+            <span class="chart-legend__swatch" style="background:${s.color}${
+              s.dash ? ';opacity:.7' : ''}"></span>${F.esc(s.name)}
+          </span>`).join('')}
+      </div>`;
+  }
+
+  /** Horizontal target-vs-actual bars — a ranked comparison at a glance. */
+  function barChart(rows, options = {}) {
+    if (!rows.length) return `<div class="empty">${F.esc(options.empty || 'No data.')}</div>`;
+    const max = Math.max(1, ...rows.map(r => Math.max(r.target || 0, r.actual || 0)));
+    return `
+      <div class="stack">
+        ${rows.map(r => {
+          const tone = F.tone(r.target ? r.actual / r.target : 0);
+          return `
+            <div>
+              <div class="row row--between" style="margin-bottom:3px">
+                <span style="font-size:12.5px;font-weight:550">${F.esc(r.label)}</span>
+                <span class="tnum faint" style="font-size:12px">
+                  ${F.unit(r.actual, options.unit)} / ${F.unit(r.target, options.unit)}
+                  <span class="pill" data-tone="${tone}" style="margin-left:6px">${
+                    F.pct(r.target ? r.actual / r.target : 0)}</span>
+                </span>
+              </div>
+              <div style="position:relative;height:9px;background:var(--surface-3);border-radius:5px">
+                <div style="position:absolute;left:0;top:0;height:100%;border-radius:5px;
+                     width:${((r.actual || 0) / max * 100).toFixed(1)}%;
+                     background:var(--${tone || 'brand'})"></div>
+                <div style="position:absolute;top:-2px;height:13px;width:2px;background:var(--plan);
+                     left:${((r.target || 0) / max * 100).toFixed(1)}%" title="Target"></div>
+              </div>
+            </div>`;
+        }).join('')}
+      </div>`;
+  }
+
+  function sparkline(values, options = {}) {
+    const W = options.width || 88, H = options.height || 22;
+    const clean = (values || []).map(v => (v === null || !isFinite(v)) ? 0 : v);
+    if (!clean.length) return '';
+    const max = Math.max(1, ...clean), n = Math.max(1, clean.length - 1);
+    const d = clean.map((v, i) =>
+      `${i ? 'L' : 'M'}${(i / n * W).toFixed(1)},${(H - (v / max) * (H - 3) - 1.5).toFixed(1)}`).join(' ');
+    return `<svg class="sparkline" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"
+              role="img" aria-label="${F.esc(options.ariaLabel || 'Trend')}">
+      <path d="${d}" fill="none" stroke="var(--brand)" stroke-width="1.6"
+            stroke-linejoin="round" stroke-linecap="round"></path>
+    </svg>`;
+  }
+
+  function progressRing(pct, size = 54) {
+    const r = (size - 6) / 2, c = 2 * Math.PI * r;
+    const clamped = Math.max(0, Math.min(1.05, pct || 0));
+    const tone = F.tone(pct);
+    return `
+      <svg class="progress-ring" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"
+           role="img" aria-label="${F.pct(pct)} achieved">
+        <circle class="progress-ring__track" cx="${size / 2}" cy="${size / 2}" r="${r}"
+                fill="none" stroke-width="5"></circle>
+        <circle class="progress-ring__fill" cx="${size / 2}" cy="${size / 2}" r="${r}"
+                fill="none" stroke-width="5" stroke="var(--${tone || 'brand'})"
+                stroke-dasharray="${c.toFixed(1)}"
+                stroke-dashoffset="${(c * (1 - Math.min(1, clamped))).toFixed(1)}"></circle>
+      </svg>`;
+  }
+
+  /* ------------------------------------------------------------ inputs --- */
+  function field({ name, label, type = 'text', value = '', required, hint, options, rows,
+    placeholder, min, max, step, disabled, wide, readonly }) {
+    const id = 'f_' + name;
+    const common = `id="${id}" name="${name}"${required ? ' required' : ''}${
+      disabled ? ' disabled' : ''}${readonly ? ' readonly' : ''}${
+      placeholder ? ` placeholder="${F.esc(placeholder)}"` : ''}`;
+
+    let control;
+    if (type === 'select') {
+      control = `<select class="select" ${common}>${
+        (options || []).map(o => {
+          const val = typeof o === 'object' ? o.value : o;
+          const lab = typeof o === 'object' ? o.label : o;
+          return `<option value="${F.esc(val)}"${
+            String(val) === String(value) ? ' selected' : ''}>${F.esc(lab)}</option>`;
+        }).join('')}</select>`;
+    } else if (type === 'textarea') {
+      control = `<textarea class="textarea" ${common} rows="${rows || 3}">${F.esc(value)}</textarea>`;
+    } else if (type === 'checkbox') {
+      return `<div class="field${wide ? ' formgrid--wide' : ''}">
+        <label class="check"><input type="checkbox" ${common}${value ? ' checked' : ''}>
+        <span>${F.esc(label)}</span></label>
+        ${hint ? `<div class="field__hint">${F.esc(hint)}</div>` : ''}</div>`;
+    } else {
+      control = `<input class="input${type === 'number' ? ' input--num' : ''}" type="${type}" ${common}
+        value="${F.esc(value)}"${min !== undefined ? ` min="${min}"` : ''}${
+        max !== undefined ? ` max="${max}"` : ''}${step !== undefined ? ` step="${step}"` : ''}>`;
+    }
+
+    return `
+      <div class="field${wide ? ' formgrid--wide' : ''}">
+        <label class="field__label" for="${id}">${F.esc(label)}${
+          required ? ' <span class="req" aria-hidden="true">*</span>' : ''}</label>
+        ${control}
+        ${hint ? `<div class="field__hint">${F.esc(hint)}</div>` : ''}
+      </div>`;
+  }
+
+  function userOptions(includeBlank = true, filter) {
+    const users = State.ref('users').filter(u => u.active && (!filter || filter(u)));
+    const opts = users.map(u => ({
+      value: u.userId,
+      label: u.fullName + (u.regionName ? ' · ' + u.regionName : '')
+    }));
+    return includeBlank ? [{ value: '', label: '— Select —' }].concat(opts) : opts;
+  }
+
+  function regionOptions(includeBlank = true, category) {
+    const regions = State.ref('regions')
+      .filter(r => !category || r.category === category);
+    const opts = regions.map(r => ({ value: r.regionId, label: r.regionName }));
+    return includeBlank ? [{ value: '', label: 'All regions' }].concat(opts) : opts;
+  }
+
+  function cycleSelect(selectedId) {
+    const cycles = (State.boot && State.boot.cycles) || [];
+    return `<select class="select" id="cyclePicker" aria-label="Planning cycle">
+      ${cycles.map(c => `<option value="${F.esc(c.cycleId)}"${
+        c.cycleId === selectedId ? ' selected' : ''}>${F.esc(c.label)}</option>`).join('')}
+    </select>`;
+  }
+
+  /* -------------------------------------------------------- drill-down --- */
+  /**
+   * Open the operational records behind a number. This is the traceability
+   * promise made concrete: dashboard → KPI → activity → person → evidence.
+   */
+  async function openDrilldown(spec) {
+    const body = Overlay.openDrawer({
+      title: 'Loading records…',
+      body: '<div class="stack">' +
+        Array.from({ length: 6 }, () => '<div class="skeleton skeleton--row"></div>').join('') +
+        '</div>'
+    });
+
+    try {
+      const payload = Object.assign({ cycleId: State.cycleId, window: 'MTD' }, spec);
+      const res = await Api.call('activity.drilldown', payload);
+
+      D.q('#drawerTitle').textContent = res.metricLabel;
+
+      const scopeBits = [];
+      if (spec.pocUserId) scopeBits.push(State.userName(spec.pocUserId));
+      if (spec.regionId) scopeBits.push(State.regionName(spec.regionId));
+      if (spec.gstin) scopeBits.push(spec.gstin);
+
+      const summary = `
+        <div class="grid grid--3" style="margin-bottom:16px">
+          ${statTile({ label: 'Value', value: F.unit(res.value, res.unit) })}
+          ${statTile({ label: 'Records', value: F.int(res.recordCount) })}
+          ${statTile({
+            label: 'Window',
+            value: `<span style="font-size:15px">${F.dateShort(res.window.from)} – ${F.dateShort(res.window.to)}</span>`,
+            sub: res.window.kind
+          })}
+        </div>
+        ${scopeBits.length ? `<p class="muted" style="margin-top:-6px">Scope: ${F.esc(scopeBits.join(' · '))}</p>` : ''}
+        ${res.meta ? `<p class="faint mono" style="font-size:11.5px">${
+          F.esc(Object.entries(res.meta).map(([k, v]) =>
+            `${k}=${typeof v === 'number' ? Math.round(v * 100) / 100 : v}`).join('  '))}</p>` : ''}`;
+
+      const rows = res.records || [];
+      const list = rows.length ? table({
+        compact: true,
+        columns: [
+          { label: 'Date', width: '96px', format: r => F.dateShort(r.date) },
+          {
+            label: 'Record', format: r => `
+              <span class="strong">${F.esc(r.accountName || r.name || r.id)}</span>
+              <span class="cell-sub">${F.esc(r.gstin || '')}${
+                r.counterparty ? ' → ' + F.esc(r.counterparty) : ''}</span>`
+          },
+          { label: 'POC', format: r => F.esc(r.pocName || State.userName(r.pocUserId)) },
+          {
+            label: 'Measure', align: 'right', format: r => {
+              const bits = [];
+              if (r.tonnageMT) bits.push(F.mt(r.tonnageMT));
+              if (r.gmvCr) bits.push(F.cr(r.gmvCr));
+              if (r.quantityMT) bits.push(F.mt(r.quantityMT));
+              if (r.amountINR) bits.push(F.inr(r.amountINR));
+              if (r.visits) bits.push(F.int(r.visits) + ' visit(s)');
+              if (r.txnCount) bits.push(F.int(r.txnCount) + ' txn');
+              return bits.length ? bits.join('<span class="cell-sub"></span>') : '<span class="faint">—</span>';
+            }
+          },
+          {
+            label: 'Evidence & remarks', format: r => `
+              ${r.remarks ? `<span>${F.esc(r.remarks)}</span>` : ''}
+              ${r.evidence ? (String(r.evidence).startsWith('http')
+                ? `<a class="cell-sub" href="${F.esc(r.evidence)}" target="_blank" rel="noopener">Open evidence ↗</a>`
+                : `<span class="cell-sub">${F.esc(r.evidence)}</span>`) : ''}
+              ${r.status ? `<span class="cell-sub">${F.esc(F.titleCase(r.status))}</span>` : ''}
+              ${!r.remarks && !r.evidence && !r.status ? '<span class="faint">—</span>' : ''}`
+          },
+          { label: 'Source', width: '112px', format: r => `<span class="faint mono" style="font-size:11px">${F.esc(r.source || r.type)}</span>` }
+        ],
+        rows
+      }) : `<div class="empty">
+              <div class="empty__title">No underlying records</div>
+              <div>Nothing has been recorded for this metric in this window yet.</div>
+            </div>`;
+
+      D.html(D.q('#drawerBody'), summary + list +
+        (res.recordCount > rows.length
+          ? `<p class="faint" style="margin-top:10px">Showing the first ${rows.length} of ${
+            F.int(res.recordCount)} records.</p>` : ''));
+
+      D.html(D.q('#drawerFoot'), `
+        <button class="btn" data-close-drawer>Close</button>
+        ${State.can('REPORT_EXPORT')
+          ? `<button class="btn btn--primary" id="drillExport">Export activity log</button>` : ''}`);
+
+      const exportBtn = D.q('#drillExport');
+      if (exportBtn) {
+        exportBtn.onclick = async () => {
+          exportBtn.disabled = true;
+          try {
+            const out = await Api.call('report.export', {
+              reportKey: 'ACTIVITIES', cycleId: State.cycleId,
+              pocUserId: spec.pocUserId, regionId: spec.regionId
+            });
+            Toast.success('Exported', out.rows + ' rows written to ' + out.sheetName);
+            window.open(out.url, '_blank', 'noopener');
+          } catch (e) { Toast.fromError(e, 'Export failed'); }
+          finally { exportBtn.disabled = false; }
+        };
+      }
+    } catch (err) {
+      D.q('#drawerTitle').textContent = 'Could not load records';
+      D.html(D.q('#drawerBody'), errorState(err));
+    }
+  }
+
+  /** Wire tiles and links carrying data-drill to the drill-down drawer. */
+  function bindDrilldown(root) {
+    D.on(root, 'click', '[data-drill]', (e, el) => {
+      try { openDrilldown(JSON.parse(el.dataset.drill)); }
+      catch (err) { console.error('Bad drill payload', err); }
+    });
+  }
+
+  return {
+    loading, tableSkeleton, emptyState, errorState, banner,
+    pageHead, section, card, pill,
+    metricTile, statTile,
+    table, tva, achievementCell, growthCell,
+    lineChart, barChart, sparkline, progressRing,
+    field, userOptions, regionOptions, cycleSelect,
+    openDrilldown, bindDrilldown
+  };
+})();
+</script>

@@ -1,0 +1,485 @@
+<script>
+/* ==========================================================================
+   Review and action items — where measurement turns into improvement.
+   A review freezes the scorecard; the gaps it raises become owned actions that
+   reappear on the POC's My Day screen until they are closed.
+   ========================================================================== */
+
+Router.register('review', {
+  permission: 'REVIEW_MANAGE',
+  skeleton: () => Components.loading(4),
+  async render(host) {
+    if (!State.cycleId) { SetupView.renderNoCycle(host); return; }
+    const pack = await Api.call('review.pack', { cycleId: State.cycleId });
+    const c = pack.completion;
+
+    host.innerHTML = `
+      ${Components.pageHead({
+        title: 'Monthly Review',
+        subtitle: `${F.esc(pack.cycle.label)} · as of ${F.date(pack.asOf)} ·
+          everything needed for the meeting, already assembled`,
+        actions: `<button class="btn" onclick="window.print()">Print pack</button>`
+      })}
+
+      <div class="grid grid--tiles" style="margin-bottom:18px">
+        ${Components.statTile({
+          label: 'Reviews completed', value: `${c.reviewsDone} / ${c.reviewsExpected}`,
+          tone: c.reviewsDone === c.reviewsExpected ? 'good' : 'warn'
+        })}
+        ${Components.statTile({
+          label: 'Open actions', value: F.int(c.actionsOpen),
+          tone: c.actionsOverdue ? 'warn' : ''
+        })}
+        ${Components.statTile({
+          label: 'Overdue actions', value: F.int(c.actionsOverdue),
+          tone: c.actionsOverdue ? 'bad' : 'good'
+        })}
+        ${Components.statTile({
+          label: 'Items needing attention', value: F.int(pack.alerts.counts.total),
+          sub: `${pack.alerts.counts.p1} critical`,
+          tone: pack.alerts.counts.p1 ? 'bad' : ''
+        })}
+      </div>
+
+      ${Components.section({
+        title: 'Headline',
+        body: `<div class="grid grid--tiles">${pack.headline.map(Components.metricTile).join('')}</div>`
+      })}
+
+      <div class="grid grid--2">
+        ${Components.card({
+          title: 'Top performers',
+          flush: true,
+          body: leaderRows(pack.topPerformers)
+        })}
+        ${Components.card({
+          title: 'Needs support',
+          flush: true,
+          body: leaderRows(pack.needsSupport)
+        })}
+      </div>
+
+      <div style="height:16px"></div>
+
+      ${Components.section({
+        title: 'Individual reviews',
+        hint: 'The scorecard is frozen at the moment a review is opened',
+        body: Components.card({
+          flush: true,
+          body: Components.table({
+            columns: [
+              {
+                label: 'POC', format: r => `<span class="strong">${F.esc(r.pocName)}</span>
+                  <span class="cell-sub">${F.esc(r.regionName)}</span>`
+              },
+              { label: 'Rank', align: 'right', width: '60px', format: r => r.rank },
+              {
+                label: 'Overall', align: 'right', width: '140px',
+                format: r => `<span class="tnum strong">${F.pct(r.overallAchievement)}</span>
+                  ${Components.pill(r.ratingLabel, r.tone)}`
+              },
+              {
+                label: 'Review status', width: '150px', format: r => {
+                  const rev = pack.reviews.find(x => x.subjectUserId === r.pocUserId);
+                  return rev ? Components.pill(F.titleCase(rev.status), F.statusTone(rev.status))
+                    : Components.pill('Not started', '');
+                }
+              },
+              {
+                label: '', width: '170px', format: r => {
+                  const rev = pack.reviews.find(x => x.subjectUserId === r.pocUserId);
+                  return `
+                    <button class="btn btn--sm" data-scorecard="${F.esc(r.pocUserId)}">Scorecard</button>
+                    <button class="btn btn--sm btn--primary" data-review="${F.esc(r.pocUserId)}"
+                      ${rev ? `data-review-id="${F.esc(rev.reviewId)}"` : ''}>
+                      ${rev ? 'Open' : 'Start review'}</button>`;
+                }
+              }
+            ],
+            rows: pack.leaderboard.rows,
+            empty: 'No POCs assigned for this cycle.'
+          })
+        })
+      })}
+
+      ${Components.section({
+        title: 'Open actions',
+        hint: `${pack.openActions.length} item(s)`,
+        actions: `<button class="btn btn--sm" data-goto="actions">Manage</button>`,
+        body: Components.card({
+          flush: true,
+          body: pack.openActions.length ? Components.table({
+            compact: true,
+            columns: [
+              { label: 'Action', format: r => F.esc(r.title) },
+              { label: 'Owner', width: '150px', format: r => F.esc(r.ownerName) },
+              { label: 'Priority', width: '80px', format: r => Components.pill(r.priority, r.priority === 'P1' ? 'bad' : r.priority === 'P2' ? 'warn' : '') },
+              {
+                label: 'Due', width: '120px',
+                format: r => `${F.dateShort(r.dueDate)}${r.overdue ? ' ' + Components.pill('Overdue', 'bad') : ''}`
+              },
+              { label: 'Status', width: '120px', format: r => Components.pill(F.titleCase(r.status), F.statusTone(r.status)) }
+            ],
+            rows: pack.openActions
+          }) : '<div class="empty"><div class="empty__title">No open actions</div></div>'
+        })
+      })}`;
+
+    Components.bindDrilldown(host);
+    D.on(host, 'click', '[data-goto]', (e, el) => Router.go(el.dataset.goto));
+    D.on(host, 'click', '[data-scorecard]', (e, el) =>
+      Router.go('scorecard', { pocUserId: el.dataset.scorecard }));
+    D.on(host, 'click', '[data-review]', (e, el) =>
+      reviewModal(el.dataset.review, el.dataset.reviewId, pack));
+  }
+});
+
+function leaderRows(rows) {
+  if (!rows.length) return '<div class="empty">No data.</div>';
+  return `<ul class="itemlist">${rows.map(r => `
+    <li class="item">
+      <div class="item__body">
+        <div class="item__title">${F.esc(r.pocName)}
+          <span class="faint" style="font-weight:400"> · ${F.esc(r.regionName)}</span></div>
+        <div class="item__detail">
+          Weighted score ${F.num(r.weightedScore, 1)} ·
+          ${r.onPace} KPI(s) on pace${r.atRisk ? `, ${r.atRisk} at risk` : ''}</div>
+      </div>
+      <div class="item__actions">
+        <span class="pill" data-tone="${r.tone}">${F.pct(r.overallAchievement)}</span>
+      </div>
+    </li>`).join('')}</ul>`;
+}
+
+async function reviewModal(pocUserId, reviewId, pack) {
+  const existing = reviewId ? await Api.call('review.get', { reviewId }) : null;
+  const board = pack.leaderboard.rows.find(r => r.pocUserId === pocUserId);
+  const card = await Api.call('report.scorecard', { cycleId: State.cycleId, pocUserId });
+
+  const weakest = card.kpis.slice()
+    .sort((a, b) => a.evaluation.achievement - b.evaluation.achievement).slice(0, 3);
+  const strongest = card.kpis.slice()
+    .sort((a, b) => b.evaluation.achievement - a.evaluation.achievement).slice(0, 3);
+
+  Overlay.openModal({
+    title: `Review · ${card.poc.fullName}`,
+    wide: true,
+    body: `
+      <div class="row" style="gap:20px;margin-bottom:16px">
+        ${Components.progressRing(card.summary.overallAchievement, 64)}
+        <div>
+          <div style="font-size:22px;font-weight:700" class="tnum">
+            ${F.pct(card.summary.overallAchievement)}</div>
+          <div>${Components.pill(card.summary.ratingLabel, card.summary.tone)}
+            ${board ? Components.pill('Rank ' + board.rank, '') : ''}</div>
+        </div>
+        <div class="muted" style="font-size:12.5px">
+          Weighted score ${F.num(card.summary.weightedScore, 1)} of
+          ${F.num(card.summary.maxWeightedScore, 0)}<br>
+          ${card.summary.kpiCount} KPI(s) · as of ${F.date(card.asOf)}
+        </div>
+      </div>
+
+      ${Components.table({
+        compact: true,
+        columns: [
+          { label: 'KPI', format: k => F.esc(k.kpiName) },
+          { label: 'Weight', align: 'right', format: k => F.num(k.weightage, 0) + '%' },
+          { label: 'Target', align: 'right', format: k => F.unit(k.evaluation.target, k.unit) },
+          { label: 'Actual', align: 'right', format: k => F.unit(k.evaluation.actual, k.unit) },
+          { label: 'Ach %', align: 'right', format: k => Components.achievementCell(k.evaluation.achievement) },
+          { label: 'Weighted', align: 'right', format: k => F.num(k.evaluation.weightedScore, 2) }
+        ],
+        rows: card.kpis
+      })}
+
+      <form id="reviewForm" style="margin-top:16px">
+        <input type="hidden" name="cycleId" value="${F.esc(State.cycleId)}">
+        <input type="hidden" name="subjectUserId" value="${F.esc(pocUserId)}">
+        ${existing ? `<input type="hidden" name="reviewId" value="${F.esc(existing.reviewId)}">` : ''}
+        ${Components.field({
+          name: 'strengths', label: 'What went well', type: 'textarea', wide: true, rows: 2,
+          value: existing ? existing.strengths :
+            strongest.filter(k => k.evaluation.achievement >= 0.9)
+              .map(k => `${k.kpiName} at ${F.pct(k.evaluation.achievement)}`).join('; ')
+        })}
+        ${Components.field({
+          name: 'gaps', label: 'Where the gap is', type: 'textarea', wide: true, rows: 2,
+          value: existing ? existing.gaps :
+            weakest.filter(k => k.evaluation.achievement < 0.9)
+              .map(k => `${k.kpiName} at ${F.pct(k.evaluation.achievement)} ` +
+                `(${F.unit(k.evaluation.actual, k.unit)} of ${F.unit(k.evaluation.target, k.unit)})`).join('; ')
+        })}
+        ${Components.field({
+          name: 'leadershipNote', label: 'Leadership note', type: 'textarea', wide: true, rows: 2,
+          value: existing ? existing.leadershipNote : ''
+        })}
+        ${Components.field({
+          name: 'reviewDate', label: 'Review date', type: 'date',
+          value: (existing && existing.reviewDate) || State.setting('today')
+        })}
+      </form>
+
+      ${existing && existing.pocResponse ? Components.banner('info',
+        'Response from ' + card.poc.fullName, F.esc(existing.pocResponse)) : ''}
+
+      ${existing && existing.actions && existing.actions.length ? `
+        <h3 style="font-size:14px;margin:16px 0 8px">Actions from this review</h3>
+        ${Components.table({
+          compact: true,
+          columns: [
+            { label: 'Action', format: r => F.esc(r.title) },
+            { label: 'Due', format: r => F.dateShort(r.dueDate) },
+            { label: 'Status', format: r => Components.pill(F.titleCase(r.status), F.statusTone(r.status)) }
+          ],
+          rows: existing.actions
+        })}` : ''}`,
+    footer: `
+      <button class="btn" data-close-modal>Cancel</button>
+      <button class="btn" id="addReviewAction">＋ Add action</button>
+      <button class="btn btn--primary" id="saveReview">Save review</button>
+      ${existing && existing.status === 'DRAFT'
+        ? `<button class="btn btn--primary" id="shareReview">Save &amp; share</button>` : ''}
+      ${existing && ['SHARED', 'ACKNOWLEDGED'].includes(existing.status)
+        ? `<button class="btn btn--primary" id="signOffReview">Sign off</button>` : ''}`
+  });
+
+  const save = async () => Api.call('review.open', D.formData(D.q('#reviewForm')));
+
+  D.q('#saveReview').onclick = async (e) => {
+    e.currentTarget.disabled = true;
+    try {
+      await save();
+      Toast.success('Review saved');
+      Overlay.closeModal();
+      Router.render();
+    } catch (err) {
+      e.currentTarget.disabled = false;
+      Toast.fromError(err);
+    }
+  };
+
+  const shareBtn = D.q('#shareReview');
+  if (shareBtn) shareBtn.onclick = async (e) => {
+    e.currentTarget.disabled = true;
+    try {
+      const saved = await save();
+      await Api.call('review.share', { reviewId: saved.reviewId });
+      Toast.success('Shared', card.poc.fullName + ' can now see and acknowledge it.');
+      Overlay.closeModal();
+      Router.render();
+    } catch (err) {
+      e.currentTarget.disabled = false;
+      Toast.fromError(err);
+    }
+  };
+
+  const signBtn = D.q('#signOffReview');
+  if (signBtn) signBtn.onclick = async (e) => {
+    e.currentTarget.disabled = true;
+    try {
+      await save();
+      await Api.call('review.signOff', { reviewId: existing.reviewId });
+      Toast.success('Signed off');
+      Overlay.closeModal();
+      Router.render();
+    } catch (err) {
+      e.currentTarget.disabled = false;
+      Toast.fromError(err);
+    }
+  };
+
+  D.q('#addReviewAction').onclick = () => {
+    Overlay.closeModal();
+    actionModal(null, {
+      ownerUserId: pocUserId,
+      reviewId: existing ? existing.reviewId : '',
+      sourceType: 'REVIEW'
+    });
+  };
+}
+
+/* ==========================================================================
+   Action items
+   ========================================================================== */
+Router.register('actions', {
+  skeleton: () => Components.tableSkeleton(8),
+  async render(host) {
+    const filters = {
+      cycleId: State.cycleId,
+      ownerUserId: State.isPoc() ? State.user.userId : (State.params.ownerUserId || ''),
+      status: State.params.status || '',
+      openOnly: State.params.openOnly !== '0'
+    };
+    const rows = await Api.call('action.list', filters);
+    const canManage = State.can('ACTION_MANAGE');
+
+    host.innerHTML = `
+      ${Components.pageHead({
+        title: 'Action Items',
+        subtitle: `${rows.length} item(s) · ${rows.filter(r => r.overdue).length} overdue`,
+        actions: canManage ? `<button class="btn btn--primary" id="newAction">＋ New action</button>` : ''
+      })}
+
+      <div class="filters">
+        <div class="field">
+          <label class="field__label" for="acOwner">Owner</label>
+          <select class="select" id="acOwner"${State.isPoc() ? ' disabled' : ''}>
+            <option value="">Everyone</option>
+            ${State.ref('users').filter(u => u.active).map(u =>
+              `<option value="${F.esc(u.userId)}"${u.userId === filters.ownerUserId ? ' selected' : ''}>${
+                F.esc(u.fullName)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label class="field__label" for="acStatus">Status</label>
+          <select class="select" id="acStatus">
+            <option value="">Any open</option>
+            ${['OPEN', 'IN_PROGRESS', 'BLOCKED', 'DONE', 'CANCELLED'].map(s =>
+              `<option value="${s}"${s === filters.status ? ' selected' : ''}>${F.titleCase(s)}</option>`).join('')}
+          </select>
+        </div>
+        <label class="check" style="margin-bottom:2px">
+          <input type="checkbox" id="acAll"${!filters.openOnly ? ' checked' : ''}>
+          <span>Include closed</span>
+        </label>
+      </div>
+
+      ${Components.card({
+        flush: true,
+        body: Components.table({
+          columns: [
+            {
+              label: 'Action', format: r => `<span class="strong">${F.esc(r.title)}</span>
+                ${r.description ? `<span class="cell-sub">${F.esc(r.description)}</span>` : ''}`
+            },
+            { label: 'Owner', width: '150px', format: r => F.esc(r.ownerName) },
+            {
+              label: 'Priority', width: '80px',
+              format: r => Components.pill(r.priority,
+                r.priority === 'P1' ? 'bad' : r.priority === 'P2' ? 'warn' : '')
+            },
+            {
+              label: 'Due', width: '130px',
+              format: r => `${F.dateShort(r.dueDate)}
+                ${r.overdue ? Components.pill('Overdue', 'bad') : ''}`
+            },
+            {
+              label: 'Status', width: '130px',
+              format: r => Components.pill(F.titleCase(r.status), F.statusTone(r.status))
+            },
+            { label: 'Source', width: '100px', format: r => `<span class="faint">${F.titleCase(r.sourceType)}</span>` },
+            {
+              label: '', width: '80px',
+              format: r => `<button class="btn btn--sm" data-edit-action="${F.esc(r.actionId)}">Open</button>`
+            }
+          ],
+          rows,
+          empty: 'No action items. Convert an alert on the Needs Attention screen to create one.'
+        })
+      })}`;
+
+    const apply = () => Router.go('actions', {
+      ownerUserId: D.q('#acOwner', host).value,
+      status: D.q('#acStatus', host).value,
+      openOnly: D.q('#acAll', host).checked ? '0' : '1'
+    });
+    ['#acOwner', '#acStatus', '#acAll'].forEach(s => { D.q(s, host).onchange = apply; });
+
+    const newBtn = D.q('#newAction', host);
+    if (newBtn) newBtn.onclick = () => actionModal(null, {});
+
+    D.on(host, 'click', '[data-edit-action]', (e, el) =>
+      actionModal(rows.find(r => r.actionId === el.dataset.editAction), {}));
+  }
+});
+
+function actionModal(action, defaults) {
+  const canManage = State.can('ACTION_MANAGE');
+  const isOwner = action && action.ownerUserId === State.user.userId;
+  const ownerOnly = action && !canManage && isOwner;
+
+  Overlay.openModal({
+    title: action ? 'Action item' : 'New action item',
+    body: `<form id="actionForm">
+      ${action ? `<input type="hidden" name="actionId" value="${F.esc(action.actionId)}">` : ''}
+      <input type="hidden" name="cycleId" value="${F.esc(State.cycleId || '')}">
+      ${defaults.reviewId ? `<input type="hidden" name="reviewId" value="${F.esc(defaults.reviewId)}">` : ''}
+      ${defaults.sourceType ? `<input type="hidden" name="sourceType" value="${F.esc(defaults.sourceType)}">` : ''}
+
+      ${ownerOnly ? `
+        <div class="banner" data-tone="info">
+          <div class="banner__body">
+            <div class="banner__title">${F.esc(action.title)}</div>
+            <div>${F.esc(action.description || '')}</div>
+            <div class="faint" style="margin-top:6px">Due ${F.date(action.dueDate)} ·
+              ${F.esc(action.priority)}</div>
+          </div>
+        </div>
+        <input type="hidden" name="ownerUserId" value="${F.esc(action.ownerUserId)}">` : `
+        <div class="formgrid">
+          ${Components.field({
+            name: 'title', label: 'Action', required: true, wide: true,
+            value: (action && action.title) || '',
+            placeholder: 'What specifically needs to happen'
+          })}
+          ${Components.field({
+            name: 'description', label: 'Detail', type: 'textarea', wide: true, rows: 2,
+            value: (action && action.description) || ''
+          })}
+          ${Components.field({
+            name: 'ownerUserId', label: 'Owner', type: 'select', required: true,
+            value: (action && action.ownerUserId) || defaults.ownerUserId || '',
+            options: Components.userOptions(true)
+          })}
+          ${Components.field({
+            name: 'priority', label: 'Priority', type: 'select',
+            value: (action && action.priority) || 'P2',
+            options: [
+              { value: 'P1', label: 'P1 — this week' },
+              { value: 'P2', label: 'P2 — this cycle' },
+              { value: 'P3', label: 'P3 — watch' }
+            ]
+          })}
+          ${Components.field({
+            name: 'dueDate', label: 'Due date', type: 'date',
+            value: (action && action.dueDate) || ''
+          })}
+        </div>`}
+
+      <div class="formgrid">
+        ${Components.field({
+          name: 'status', label: 'Status', type: 'select',
+          value: (action && action.status) || 'OPEN',
+          options: ['OPEN', 'IN_PROGRESS', 'BLOCKED', 'DONE', 'CANCELLED']
+            .map(s => ({ value: s, label: F.titleCase(s) }))
+        })}
+        ${Components.field({
+          name: 'closureRemarks', label: 'Progress / closure note', type: 'textarea', wide: true, rows: 2,
+          value: (action && action.closureRemarks) || '',
+          hint: 'Required when marking the action done.'
+        })}
+        ${Components.field({
+          name: 'evidenceUrl', label: 'Evidence link', type: 'url',
+          value: (action && action.evidenceUrl) || ''
+        })}
+      </div>
+    </form>`,
+    footer: `<button class="btn" data-close-modal>Cancel</button>
+             <button class="btn btn--primary" id="saveAction">Save</button>`
+  });
+
+  D.q('#saveAction').onclick = async (e) => {
+    e.currentTarget.disabled = true;
+    try {
+      await Api.call('action.save', D.formData(D.q('#actionForm')));
+      Toast.success('Action saved');
+      Overlay.closeModal();
+      Router.render();
+    } catch (err) {
+      e.currentTarget.disabled = false;
+      D.markInvalid(D.q('#actionForm'), err.message);
+    }
+  };
+}
+</script>

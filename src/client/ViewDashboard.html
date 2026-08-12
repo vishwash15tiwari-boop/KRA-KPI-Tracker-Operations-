@@ -1,0 +1,319 @@
+<script>
+/* ==========================================================================
+   Dashboard — the executive view, and the alerts list it links to.
+   Answers, in order: what is achieved, what is pending, who owns it, why.
+   ========================================================================== */
+
+Router.register('dashboard', {
+  skeleton: () => Components.loading(6),
+  async render(host) {
+    const cycleId = State.cycleId;
+    if (!cycleId) { SetupView.renderNoCycle(host); return; }
+
+    const filters = {
+      cycleId,
+      stream: State.params.stream || State.stream,
+      regionId: State.params.regionId || '',
+      pocUserId: State.params.pocUserId || ''
+    };
+
+    const [exec, alerts, trendGmv, regions] = await Promise.all([
+      Api.call('dashboard.executive', filters),
+      Api.call('dashboard.alerts', { cycleId, limit: 8 }),
+      Api.call('dashboard.trend', Object.assign({ metricKey: 'GMV_CR' }, filters)),
+      Api.call('report.regionWise', filters)
+    ]);
+
+    State.alertCount = alerts.counts.total;
+    Nav.setBadge('alerts', alerts.counts.p1 + alerts.counts.p2);
+
+    const dq = exec.dataQuality;
+    const cycleTone = F.statusTone(exec.cycle.status);
+
+    host.innerHTML = `
+      ${Components.pageHead({
+        title: 'Operations Dashboard',
+        subtitle: `${F.esc(exec.scopeLabel)} · ${F.esc(exec.asOfLabel)} ·
+          Day ${exec.progress.elapsedDays} of ${exec.progress.daysInMonth}
+          <span class="pill" data-tone="${cycleTone}">${F.esc(exec.cycle.status)}</span>`,
+        actions: `
+          ${filterBar(filters)}
+          ${State.can('REPORT_EXPORT')
+            ? `<button class="btn btn--sm" id="exportDaily">Export</button>` : ''}`
+      })}
+
+      ${dq.ok ? '' : Components.banner(
+        dq.issues.some(i => i.severity === 'P1') ? 'bad' : 'warn',
+        'Data quality needs attention',
+        dq.issues.slice(0, 3).map(i => F.esc(i.message)).join('<br>'),
+        `<button class="btn btn--sm" data-route-to="alerts">Review</button>`)}
+
+      ${Components.section({
+        title: 'Month to date',
+        hint: `Target vs achieved, with the run rate needed to close the gap`,
+        body: `<div class="grid grid--tiles">${exec.tiles.map(Components.metricTile).join('')}</div>`
+      })}
+
+      <div class="grid grid--2">
+        ${Components.card({
+          title: 'GMV pace',
+          actions: `<span class="pill" data-tone="${F.tone(trendGmv.projectedAchievement)}">
+            Projected ${F.pct(trendGmv.projectedAchievement)}</span>`,
+          body: gmvTrend(trendGmv)
+        })}
+        ${Components.card({
+          title: 'Region performance',
+          actions: `<button class="btn btn--sm" data-route-to="performance">Details</button>`,
+          body: Components.barChart(regions.rows.map(r => ({
+            label: r.regionName,
+            target: r.totals.gmvTargetCr,
+            actual: r.totals.gmvAchievedCr
+          })), { unit: 'CR', empty: 'No regional plan yet.' })
+        })}
+      </div>
+
+      <div style="height:16px"></div>
+
+      ${Components.section({
+        title: 'Needs attention',
+        hint: `${alerts.counts.p1} critical · ${alerts.counts.p2} important · ${alerts.counts.p3} watch`,
+        actions: `<button class="btn btn--sm" data-route-to="alerts">See all ${alerts.counts.total}</button>`,
+        body: Components.card({
+          flush: true,
+          body: alerts.alerts.length
+            ? `<ul class="itemlist">${alerts.alerts.map(alertItem).join('')}</ul>`
+            : `<div class="empty">
+                 <div class="empty__icon" aria-hidden="true">✓</div>
+                 <div class="empty__title">Nothing needs attention</div>
+                 <div>Every KPI is on pace and no account is blocked.</div>
+               </div>`
+        })
+      })}
+
+      ${basisFootnote(exec.basis)}`;
+
+    Components.bindDrilldown(host);
+    bindFilterBar(host);
+
+    D.on(host, 'click', '[data-route-to]', (e, el) => Router.go(el.dataset.routeTo));
+
+    const exportBtn = D.q('#exportDaily', host);
+    if (exportBtn) exportBtn.onclick = () => runExport('DAILY_REVIEW', filters, exportBtn);
+  }
+});
+
+/* ---------------------------------------------------------------- alerts --- */
+Router.register('alerts', {
+  skeleton: () => Components.tableSkeleton(),
+  async render(host) {
+    const cycleId = State.cycleId;
+    if (!cycleId) { SetupView.renderNoCycle(host); return; }
+
+    const [alerts, quality] = await Promise.all([
+      Api.call('dashboard.alerts', { cycleId }),
+      Api.call('dashboard.dataQuality', { cycleId })
+    ]);
+
+    Nav.setBadge('alerts', alerts.counts.p1 + alerts.counts.p2);
+
+    const grouped = {};
+    alerts.alerts.forEach(a => { (grouped[a.kind] || (grouped[a.kind] = [])).push(a); });
+
+    const KIND_LABELS = {
+      KPI_OFF_PACE: 'KPIs behind pace',
+      PLANNED_NOT_TRANSACTED: 'Planned accounts with no transaction',
+      DORMANT_ACCOUNT: 'Dormant accounts',
+      ONBOARDING_SLA: 'Onboarding SLA breaches',
+      PIPELINE_OVERDUE: 'Overdue pipeline follow-ups',
+      EVIDENCE_PENDING: 'Evidence awaiting verification',
+      ACTION_OVERDUE: 'Overdue action items'
+    };
+
+    host.innerHTML = `
+      ${Components.pageHead({
+        title: 'Needs attention',
+        subtitle: `${alerts.counts.total} open item(s) as of ${F.date(alerts.asOf)}. ` +
+          `Each names an owner and the next step.`
+      })}
+
+      <div class="grid grid--3" style="margin-bottom:18px">
+        ${Components.statTile({ label: 'Critical (P1)', value: F.int(alerts.counts.p1), tone: 'bad' })}
+        ${Components.statTile({ label: 'Important (P2)', value: F.int(alerts.counts.p2), tone: 'warn' })}
+        ${Components.statTile({ label: 'Watch (P3)', value: F.int(alerts.counts.p3), tone: '' })}
+      </div>
+
+      ${quality.issues.length ? Components.section({
+        title: 'Data quality',
+        hint: 'Gaps that would otherwise distort a number silently',
+        body: Components.card({
+          flush: true,
+          body: `<ul class="itemlist">${quality.issues.map(i => `
+            <li class="item">
+              <span class="item__sev" data-sev="${F.esc(i.severity)}">${F.esc(i.severity)}</span>
+              <div class="item__body">
+                <div class="item__title">${F.esc(i.message)}</div>
+                ${i.sample && i.sample.length
+                  ? `<div class="item__detail">${F.esc(i.sample.join(' · '))}${
+                      i.count > i.sample.length ? ` and ${i.count - i.sample.length} more` : ''}</div>` : ''}
+                <div class="faint mono" style="font-size:11px;margin-top:4px">${F.esc(i.code)}</div>
+              </div>
+            </li>`).join('')}</ul>`
+        })
+      }) : ''}
+
+      ${Object.keys(grouped).length
+        ? Object.keys(grouped).map(kind => Components.section({
+            title: KIND_LABELS[kind] || F.titleCase(kind),
+            hint: `${grouped[kind].length} item(s)`,
+            body: Components.card({
+              flush: true,
+              body: `<ul class="itemlist">${grouped[kind].map(a => alertItem(a, true)).join('')}</ul>`
+            })
+          })).join('')
+        : Components.emptyState({
+            icon: '✓', title: 'All clear',
+            message: 'No KPI is behind pace and nothing is blocked.'
+          })}`;
+
+    Components.bindDrilldown(host);
+
+    D.on(host, 'click', '[data-alert-action]', async (e, el) => {
+      const alert = JSON.parse(el.dataset.alertAction);
+      el.disabled = true;
+      try {
+        const action = await Api.call('action.fromAlert', {
+          alert: Object.assign({ cycleId: State.cycleId }, alert)
+        });
+        Toast.success('Action created', `Assigned to ${action.ownerName}, due ${F.date(action.dueDate)}.`);
+        el.textContent = 'Tracked ✓';
+      } catch (err) {
+        el.disabled = false;
+        Toast.fromError(err, 'Could not create the action');
+      }
+    });
+  }
+});
+
+/* --------------------------------------------------------------- helpers --- */
+
+function alertItem(a, showAction) {
+  const payload = F.esc(JSON.stringify({
+    id: a.id, kind: a.kind, title: a.title, detail: a.detail, nextStep: a.nextStep,
+    severity: a.severity, ownerUserId: a.ownerUserId, regionId: a.regionId,
+    accountId: a.accountId, kpiId: a.kpiId
+  }));
+  return `
+    <li class="item">
+      <span class="item__sev" data-sev="${F.esc(a.severity)}">${F.esc(a.severity)}</span>
+      <div class="item__body">
+        <div class="item__title">${F.esc(a.title)}</div>
+        ${a.detail ? `<div class="item__detail">${F.esc(a.detail)}</div>` : ''}
+        ${a.nextStep ? `<div class="item__next">${F.esc(a.nextStep)}</div>` : ''}
+        ${a.ownerName ? `<div class="faint" style="font-size:11.5px;margin-top:5px">
+          Owner: ${F.esc(a.ownerName)}</div>` : ''}
+      </div>
+      <div class="item__actions">
+        ${a.drill ? `<button class="btn btn--sm" data-drill='${F.esc(JSON.stringify(a.drill))}'
+          title="Show the underlying records">Trace</button>` : ''}
+        ${showAction && a.ownerUserId && State.can('ACTION_MANAGE')
+          ? `<button class="btn btn--sm" data-alert-action='${payload}'>Track</button>` : ''}
+      </div>
+    </li>`;
+}
+
+function gmvTrend(t) {
+  const labels = t.points.map(p => p.day);
+  return Components.lineChart([
+    {
+      name: 'Actual', color: 'var(--actual)', width: 2.4,
+      points: t.points.map((p, i) => ({ y: p.actual, label: labels[i] }))
+    },
+    {
+      name: 'Projection', color: 'var(--actual)', dash: '4 4',
+      points: t.points.map((p, i) => ({ y: p.future ? p.projection : null, label: labels[i] }))
+    },
+    {
+      name: 'Plan (straight line)', color: 'var(--plan)', dash: '5 4',
+      points: t.points.map((p, i) => ({ y: p.plan, label: labels[i] }))
+    },
+    {
+      name: 'Last month', color: 'var(--lastmonth)', width: 1.5,
+      points: t.points.map((p, i) => ({ y: p.lastMonth, label: labels[i] }))
+    }
+  ], {
+    formatY: v => '₹' + v.toFixed(1),
+    ariaLabel: 'Cumulative GMV against plan and last month'
+  }) + `
+    <div class="row" style="margin-top:10px;gap:16px;font-size:12.5px">
+      <span>Achieved <b class="tnum">${F.cr(t.actual)}</b></span>
+      <span>Target <b class="tnum">${F.cr(t.target)}</b></span>
+      <span>Run rate <b class="tnum">${F.num(t.currentDrr, 3)}</b> Cr/day</span>
+      <span>Needed <b class="tnum">${F.num(t.requiredDrr, 3)}</b> Cr/day</span>
+    </div>`;
+}
+
+function filterBar(filters) {
+  const showScopePickers = !State.isPoc();
+  return `
+    <div class="row" style="gap:6px">
+      <select class="select btn--sm" id="streamFilter" aria-label="Stream" style="width:auto">
+        <option value="SUPPLY"${filters.stream === 'SUPPLY' ? ' selected' : ''}>Supply (Sellers)</option>
+        <option value="DEMAND"${filters.stream === 'DEMAND' ? ' selected' : ''}>Demand (Buyers)</option>
+      </select>
+      ${showScopePickers ? `
+        <select class="select btn--sm" id="regionFilter" aria-label="Region" style="width:auto">
+          ${Components.regionOptions(true, State.category).map(o =>
+            `<option value="${F.esc(o.value)}"${o.value === filters.regionId ? ' selected' : ''}>${F.esc(o.label)}</option>`
+          ).join('')}
+        </select>
+        <select class="select btn--sm" id="pocFilter" aria-label="POC" style="width:auto">
+          <option value="">All POCs</option>
+          ${State.ref('users').filter(u => u.active && ['POC', 'RH', 'TEAM_LEAD'].includes(u.role))
+            .map(u => `<option value="${F.esc(u.userId)}"${
+              u.userId === filters.pocUserId ? ' selected' : ''}>${F.esc(u.fullName)}</option>`).join('')}
+        </select>` : ''}
+    </div>`;
+}
+
+function bindFilterBar(host) {
+  const apply = () => {
+    const params = { };
+    const s = D.q('#streamFilter', host); if (s) params.stream = s.value;
+    const r = D.q('#regionFilter', host); if (r && r.value) params.regionId = r.value;
+    const p = D.q('#pocFilter', host); if (p && p.value) params.pocUserId = p.value;
+    State.stream = params.stream || State.stream;
+    Router.go(State.route, params);
+  };
+  ['#streamFilter', '#regionFilter', '#pocFilter'].forEach(sel => {
+    const el = D.q(sel, host);
+    if (el) el.onchange = apply;
+  });
+}
+
+function basisFootnote(basis) {
+  return `
+    <p class="faint" style="font-size:11.5px;margin-top:18px">
+      GMV basis: <span class="mono">${F.esc(basis.gmvBasis)}</span>
+      ${basis.gmvBasis === 'TAXABLE' ? '(invoice value excluding GST)' : '(invoice value including GST)'} ·
+      realised rate divisor <span class="mono">${F.esc(basis.rateGstDivisor)}</span> ·
+      reporting lag <span class="mono">${F.esc(basis.reportingLagDays)}</span> day(s).
+      Every figure above is computed from operational records — click any tile to see them.
+    </p>`;
+}
+
+async function runExport(reportKey, params, btn) {
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Exporting…';
+  try {
+    const out = await Api.call('report.export', Object.assign({ reportKey }, params));
+    Toast.success('Exported', `${out.rows} rows written to ${out.sheetName}.`);
+    window.open(out.url, '_blank', 'noopener');
+  } catch (err) {
+    Toast.fromError(err, 'Export failed');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = original;
+  }
+}
+</script>

@@ -1,0 +1,340 @@
+<script>
+/* ==========================================================================
+   My Day — the POC's home screen.
+   The whole "under ten minutes a day" promise lives here: see what needs doing,
+   log the work once, done. No trackers, no reports, no spreadsheets.
+   ========================================================================== */
+
+Router.register('myday', {
+  skeleton: () => Components.loading(4),
+  async render(host) {
+    if (!State.cycleId) { SetupView.renderNoCycle(host); return; }
+
+    const day = State.params.date || State.setting('today');
+    const data = await Api.call('activity.myDay', { cycleId: State.cycleId, date: day });
+
+    const s = data.scorecard;
+    const isToday = day === State.setting('today');
+
+    host.innerHTML = `
+      ${Components.pageHead({
+        title: `Good ${greeting()}, ${F.esc(data.user.fullName.split(' ')[0])}`,
+        subtitle: `${F.esc(data.cycle.label)} · ${isToday ? 'Today' : F.date(day)} ·
+          ${data.loggedTodayCount} update(s) recorded`,
+        actions: `
+          <input class="input" type="date" id="dayPicker" value="${F.esc(day)}"
+                 max="${F.esc(State.setting('today'))}" style="width:auto" aria-label="Date">
+          <button class="btn btn--ghost btn--sm" id="markLeave">Mark leave</button>
+          <button class="btn btn--primary" id="logWork">＋ Log work</button>`
+      })}
+
+      <div class="grid grid--2" style="align-items:start">
+        <div>
+          ${Components.section({
+            title: 'Needs your attention',
+            hint: `${data.attention.length} item(s)`,
+            body: Components.card({
+              flush: true,
+              body: data.attention.length
+                ? `<ul class="itemlist">${data.attention.map(a => `
+                    <li class="item">
+                      <span class="item__sev" data-sev="${F.esc(a.severity)}">${F.esc(a.severity)}</span>
+                      <div class="item__body">
+                        <div class="item__title">${F.esc(a.title)}</div>
+                        <div class="item__detail">${F.esc(a.detail)}</div>
+                      </div>
+                      ${a.accountId ? `<div class="item__actions">
+                        <button class="btn btn--sm" data-log-account="${F.esc(a.accountId)}">Log</button>
+                      </div>` : ''}
+                    </li>`).join('')}</ul>`
+                : `<div class="empty">
+                     <div class="empty__icon" aria-hidden="true">✓</div>
+                     <div class="empty__title">You are on top of everything</div>
+                     <div>No KPI is behind pace and no account is waiting on you.</div>
+                   </div>`
+            })
+          })}
+        </div>
+
+        <div>
+          ${Components.section({
+            title: 'Your scorecard',
+            hint: `${F.pct(s.overallAchievement)} overall · ${F.esc(s.ratingLabel)}`,
+            actions: `<button class="btn btn--sm" data-goto-scorecard>Open</button>`,
+            body: Components.card({
+              body: `
+                <div class="row" style="gap:16px;margin-bottom:14px">
+                  ${Components.progressRing(s.overallAchievement, 64)}
+                  <div>
+                    <div style="font-size:24px;font-weight:700" class="tnum">${F.pct(s.overallAchievement)}</div>
+                    <div class="muted" style="font-size:12.5px">
+                      Weighted score ${F.num(s.weightedScore, 1)} of ${F.num(s.maxWeightedScore, 0)}
+                    </div>
+                    <div class="muted" style="font-size:12.5px">
+                      Day ${s.elapsedDays} of ${s.daysInMonth} · ${s.remainingDays} left
+                    </div>
+                  </div>
+                </div>
+                ${data.kpis.length ? `<div class="stack">${data.kpis.map(k => `
+                  <div>
+                    <div class="row row--between" style="margin-bottom:3px">
+                      <span style="font-size:12.5px;font-weight:550">${F.esc(k.kpiName)}</span>
+                      <span class="pill" data-tone="${F.paceTone(k.paceStatus)}">${F.paceLabel(k.paceStatus)}</span>
+                    </div>
+                    <div class="meter">
+                      <div class="meter__fill" data-tone="${F.tone(k.achievement)}"
+                           style="width:${Math.min(100, (k.achievement || 0) * 100).toFixed(1)}%"></div>
+                    </div>
+                    <div class="faint tnum" style="font-size:11.5px;margin-top:3px">
+                      ${F.unit(k.actual, k.unit)} of ${F.unit(k.target, k.unit)} ·
+                      need ${F.num(k.requiredDrr, 2)}/day
+                    </div>
+                  </div>`).join('')}</div>`
+                  : '<p class="muted">No KPIs are assigned to you for this cycle yet.</p>'}`
+            })
+          })}
+        </div>
+      </div>
+
+      ${Components.section({
+        title: isToday ? "Today's updates" : `Updates on ${F.date(day)}`,
+        hint: 'Recorded once — every dashboard reads from these',
+        body: Components.card({
+          flush: true,
+          body: data.loggedToday.length
+            ? Components.table({
+                compact: true,
+                columns: [
+                  { label: 'Type', format: r => F.esc(r.activityTypeLabel) },
+                  {
+                    label: 'Account', format: r => `<span class="strong">${F.esc(r.accountName || '—')}</span>
+                      <span class="cell-sub">${F.esc(r.gstin || '')}</span>`
+                  },
+                  {
+                    label: 'Measure', align: 'right', format: r => {
+                      const bits = [];
+                      if (r.quantityMT) bits.push(F.mt(r.quantityMT));
+                      if (r.amountINR) bits.push(F.inr(r.amountINR));
+                      if (r.count) bits.push(F.int(r.count));
+                      return bits.join(' · ') || '<span class="faint">—</span>';
+                    }
+                  },
+                  { label: 'Remarks', format: r => F.esc(r.remarks) },
+                  {
+                    label: 'Evidence', format: r => r.evidenceUrl
+                      ? `<a href="${F.esc(r.evidenceUrl)}" target="_blank" rel="noopener">Open ↗</a>`
+                      : '<span class="faint">—</span>'
+                  },
+                  {
+                    label: '', width: '80px', format: r => r.systemOwned ? ''
+                      : `<button class="btn btn--sm" data-void="${F.esc(r.activityId)}">Void</button>`
+                  }
+                ],
+                rows: data.loggedToday
+              })
+            : `<div class="empty">
+                 <div class="empty__title">Nothing recorded yet</div>
+                 <div>Log the visits, proposals and follow-ups you completed. It takes a minute.</div>
+                 <div style="margin-top:14px">
+                   <button class="btn btn--primary" id="logWork2">＋ Log work</button>
+                 </div>
+               </div>`
+        })
+      })}`;
+
+    const openForm = (accountId) => ActivityForm.open({
+      cycleId: State.cycleId,
+      pocUserId: data.user.userId,
+      activityDate: day,
+      accountId,
+      accounts: data.accounts,
+      types: data.activityTypes,
+      onSaved: () => Router.render()
+    });
+
+    D.q('#logWork', host).onclick = () => openForm();
+    const alt = D.q('#logWork2', host);
+    if (alt) alt.onclick = () => openForm();
+
+    D.on(host, 'click', '[data-log-account]', (e, el) => openForm(el.dataset.logAccount));
+    D.on(host, 'click', '[data-goto-scorecard]', () => Router.go('scorecard'));
+
+    D.q('#dayPicker', host).onchange = (e) => Router.go('myday', { date: e.target.value });
+
+    D.q('#markLeave', host).onclick = async () => {
+      const ok = await Overlay.confirm({
+        title: 'Mark leave',
+        message: `Record ${F.date(day)} as a leave day? Your field-visit target is reduced accordingly.`,
+        confirmLabel: 'Mark leave'
+      });
+      if (!ok) return;
+      try {
+        await Api.call('activity.markLeave', {
+          date: day, category: State.category, pocUserId: data.user.userId
+        });
+        Toast.success('Leave recorded', F.date(day));
+        Router.render();
+      } catch (err) { Toast.fromError(err, 'Could not record leave'); }
+    };
+
+    D.on(host, 'click', '[data-void]', async (e, el) => {
+      const reason = await Overlay.confirm({
+        title: 'Void this record',
+        message: 'The row is kept with your reason so the change stays auditable. It stops counting towards KPIs.',
+        confirmLabel: 'Void record', tone: 'danger', requireReason: true
+      });
+      if (!reason) return;
+      try {
+        await Api.call('activity.void', { activityId: el.dataset.void, reason });
+        Toast.success('Record voided');
+        Router.render();
+      } catch (err) { Toast.fromError(err, 'Could not void the record'); }
+    });
+  }
+});
+
+function greeting() {
+  const h = new Date().getHours();
+  return h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening';
+}
+
+/* ==========================================================================
+   The activity form — the single place a POC types anything.
+   ========================================================================== */
+const ActivityForm = (() => {
+
+  function open({ cycleId, pocUserId, activityDate, accountId, accounts, types, activity, onSaved }) {
+    const typeList = types || State.ref('activityTypes').filter(t => !t.systemOwned);
+    const initialType = (activity && activity.activityType) || typeList[0].key;
+
+    Overlay.openModal({
+      title: activity ? 'Edit activity' : 'Log work',
+      wide: false,
+      body: `
+        <form id="activityForm" novalidate>
+          <div class="field">
+            <label class="field__label">What did you do? <span class="req">*</span></label>
+            <div class="btnrow" id="typeChips">
+              ${typeList.map(t => `
+                <button type="button" class="btn btn--sm" data-type="${F.esc(t.key)}"
+                        aria-pressed="${t.key === initialType}"
+                        ${t.key === initialType ? 'style="background:var(--brand);border-color:var(--brand);color:var(--brand-fg)"' : ''}>
+                  ${F.esc(t.label)}</button>`).join('')}
+            </div>
+            <div class="field__hint" id="typeHelp"></div>
+          </div>
+          <input type="hidden" name="activityType" value="${F.esc(initialType)}">
+          <input type="hidden" name="cycleId" value="${F.esc(cycleId)}">
+          <input type="hidden" name="pocUserId" value="${F.esc(pocUserId)}">
+          ${activity ? `<input type="hidden" name="activityId" value="${F.esc(activity.activityId)}">` : ''}
+
+          <div class="formgrid">
+            ${Components.field({
+              name: 'activityDate', label: 'Date', type: 'date', required: true,
+              value: (activity && activity.activityDate) || activityDate || State.setting('today'),
+              max: State.setting('today')
+            })}
+            <div class="field" id="accountField">
+              <label class="field__label" for="f_accountId">Account <span class="req">*</span></label>
+              <select class="select" id="f_accountId" name="accountId">
+                <option value="">— Select seller or buyer —</option>
+                ${(accounts || []).map(a => `
+                  <option value="${F.esc(a.accountId)}"${
+                    a.accountId === ((activity && activity.accountId) || accountId) ? ' selected' : ''}>
+                    ${F.esc(a.businessName)}${a.city ? ' · ' + F.esc(a.city) : ''}
+                  </option>`).join('')}
+              </select>
+              <div class="field__hint">Not listed? Add it under Accounts first.</div>
+            </div>
+          </div>
+
+          <div class="formgrid" id="measureFields"></div>
+
+          ${Components.field({
+            name: 'remarks', label: 'What happened', type: 'textarea', required: true, wide: true,
+            value: (activity && activity.remarks) || '', rows: 3,
+            placeholder: 'One or two lines. This is what leadership reads at review.'
+          })}
+
+          <div class="formgrid">
+            ${Components.field({
+              name: 'blockerReason', label: 'Blocker (if any)', type: 'select',
+              value: (activity && activity.blockerReason) || '',
+              options: [{ value: '', label: 'No blocker' }].concat(State.ref('blockerReasons'))
+            })}
+            ${Components.field({
+              name: 'evidenceUrl', label: 'Evidence link', type: 'url',
+              value: (activity && activity.evidenceUrl) || '',
+              placeholder: 'https://drive.google.com/…',
+              hint: 'Photo, document or system record.'
+            })}
+          </div>
+        </form>`,
+      footer: `
+        <button class="btn" data-close-modal>Cancel</button>
+        <button class="btn btn--primary" id="saveActivity">
+          ${activity ? 'Save changes' : 'Record it'}</button>`
+    });
+
+    const form = D.q('#activityForm');
+
+    function applyType(key) {
+      const def = typeList.find(t => t.key === key) || typeList[0];
+      form.querySelector('[name=activityType]').value = def.key;
+      D.q('#typeHelp').textContent = def.help || '';
+
+      D.qa('#typeChips [data-type]').forEach(btn => {
+        const on = btn.dataset.type === def.key;
+        btn.setAttribute('aria-pressed', on);
+        btn.style.cssText = on
+          ? 'background:var(--brand);border-color:var(--brand);color:var(--brand-fg)' : '';
+      });
+
+      D.q('#accountField').hidden = !def.requiresAccount;
+      D.q('#f_accountId').required = !!def.requiresAccount;
+
+      D.html(D.q('#measureFields'), (def.measures || []).map(m => Components.field({
+        name: m.key, label: `${m.label} (${m.unit})`, type: 'number', step: 'any', min: 0,
+        value: activity ? (activity[m.key] || '') : (m.default !== undefined ? m.default : '')
+      })).join(''));
+
+      const evidenceField = D.q('#f_evidenceUrl').closest('.field');
+      const label = evidenceField.querySelector('.field__label');
+      const required = def.evidence === 'REQUIRED';
+      D.q('#f_evidenceUrl').required = required;
+      label.innerHTML = 'Evidence link' + (required
+        ? ' <span class="req" aria-hidden="true">*</span>'
+        : ' <span class="faint">(optional)</span>');
+    }
+
+    applyType(initialType);
+    D.on(D.q('#typeChips'), 'click', '[data-type]', (e, el) => applyType(el.dataset.type));
+
+    D.q('#saveActivity').onclick = async (e) => {
+      const btn = e.currentTarget;
+      const payload = D.formData(form);
+      D.markInvalid(form, null);
+
+      if (!payload.remarks || !payload.remarks.trim()) {
+        D.markInvalid(form, 'Add a short remark describing what happened.');
+        return;
+      }
+      btn.disabled = true;
+      btn.textContent = 'Saving…';
+      try {
+        await Api.call('activity.save', payload);
+        Toast.success('Recorded', 'Every dashboard already reflects it.');
+        Overlay.closeModal();
+        if (onSaved) onSaved();
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = activity ? 'Save changes' : 'Record it';
+        if (err.code === 'VALIDATION') D.markInvalid(form, err.message);
+        else Toast.fromError(err, 'Could not save');
+      }
+    };
+  }
+
+  return { open };
+})();
+</script>

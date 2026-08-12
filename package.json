@@ -1,0 +1,14 @@
+{
+  "name": "omp-operations-kra-kpi-tracker",
+  "version": "1.0.0",
+  "description": "Operations KRA/KPI Tracker for the OMP Supply & Demand teams — Google Apps Script",
+  "private": true,
+  "scripts": {
+    "test": "node tests/engine.test.js",
+    "check": "node -e \"const fs=require('fs'),p=require('path'),cp=require('child_process');['src/server'].forEach(d=>fs.readdirSync(d).filter(f=>f.endsWith('.gs')).forEach(f=>{const t=p.join(require('os').tmpdir(),f.replace('.gs','.js'));fs.copyFileSync(p.join(d,f),t);cp.execSync('node --check '+t)}));console.log('syntax ok')\"",
+    "push": "clasp push",
+    "deploy": "clasp push && clasp deploy"
+  },
+  "engines": { "node": ">=18" },
+  "license": "UNLICENSED"
+}
