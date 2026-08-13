@@ -8,20 +8,25 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-/* ============================================================ DESIGN SYSTEM */
+/* ===========================================================================
+ * DESIGN SYSTEM — Groww-inspired: white space, big-number-first snapshots,
+ * light borderless surfaces, subtle status colour, segmented controls,
+ * clean area charts, progressive disclosure. Recykal brand accent retained.
+ * ==========================================================================*/
 :root{
-  --brand:#005DFF; --brand-2:#8460D4; --brand-soft:#EAF1FF;
-  --ink:#0E1726; --ink-2:#475569; --muted:#7A879C; --faint:#98A6BC;
-  --line:#E7EBF2; --line-soft:#EEF1F7; --bg:#F5F7FB; --card:#FFFFFF;
-  --good:#0E9F6E; --good-soft:#E7F6EF; --good-ink:#07704E;
-  --warn:#C77A00; --warn-soft:#FCF2E1; --warn-ink:#9A5E00;
-  --bad:#E0344A;  --bad-soft:#FCEBEE;  --bad-ink:#B01f33;
-  --none:#94A3B8; --none-soft:#EEF1F6;
-  --shadow-sm:0 1px 2px rgba(16,24,40,.04),0 1px 3px rgba(16,24,40,.06);
-  --shadow:0 6px 24px -12px rgba(16,24,40,.18),0 2px 6px -3px rgba(16,24,40,.08);
-  --shadow-lg:0 24px 60px -24px rgba(16,24,40,.28);
-  --r-lg:22px; --r-md:16px; --r-sm:11px;
-  --sbw:250px;
+  --brand:#005DFF; --brand-2:#8460D4; --brand-soft:#ECF2FF;
+  --ink:#14161B; --ink-2:#464C59; --muted:#79828F; --faint:#A6AEBB;
+  --line:#EEF0F4; --line-soft:#F4F6F9; --bg:#F7F8FA; --card:#FFFFFF;
+  --surface-2:#F6F8FB;
+  --good:#00B386; --good-soft:#E6F7F1; --good-ink:#028268;
+  --warn:#E8973A; --warn-soft:#FBF0E1; --warn-ink:#B26A17;
+  --bad:#E5484D;  --bad-soft:#FCEBEC;  --bad-ink:#C2303A;
+  --none:#98A2B3; --none-soft:#F0F2F6;
+  --shadow-xs:0 1px 2px rgba(16,24,40,.04);
+  --shadow:0 8px 28px -14px rgba(16,24,40,.16);
+  --shadow-lg:0 24px 60px -22px rgba(16,24,40,.30);
+  --r-lg:18px; --r-md:14px; --r-sm:10px;
+  --sbw:246px;
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
@@ -29,42 +34,43 @@ body{
   font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
   background:var(--bg); color:var(--ink);
   font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased;
-  letter-spacing:-.006em;
+  letter-spacing:-.01em;
 }
 a{color:inherit;text-decoration:none}
 button{font-family:inherit}
-::-webkit-scrollbar{width:10px;height:10px}
-::-webkit-scrollbar-thumb{background:#D3DAE6;border-radius:20px;border:3px solid var(--bg)}
-::-webkit-scrollbar-thumb:hover{background:#BCC6D6}
+.num,.tnum{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:#DBE0E8;border-radius:20px;border:2px solid var(--bg)}
+::-webkit-scrollbar-thumb:hover{background:#C6CDD8}
 
-/* ------------------------------------------------------------------ layout */
+/* --------------------------------------------------------------- app frame */
 .app{display:flex;min-height:100vh}
 .sidebar{
-  width:var(--sbw); flex:0 0 var(--sbw); position:sticky; top:0; height:100vh;
-  background:#FFFFFF; border-right:1px solid var(--line);
-  display:flex; flex-direction:column; padding:20px 16px; z-index:40;
+  width:var(--sbw);flex:0 0 var(--sbw);position:sticky;top:0;height:100vh;
+  background:#fff;border-right:1px solid var(--line);
+  display:flex;flex-direction:column;padding:18px 14px;z-index:40;
 }
-.brand{display:flex;align-items:center;gap:11px;padding:6px 8px 18px}
-.brand .mark{width:34px;height:34px;flex:0 0 34px}
-.brand .name{font-weight:800;font-size:15.5px;letter-spacing:-.02em;line-height:1.1}
-.brand .name span{display:block;font-weight:500;font-size:11px;color:var(--muted);letter-spacing:.02em}
-.nav{display:flex;flex-direction:column;gap:2px;margin-top:6px}
-.nav-label{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);padding:16px 12px 6px}
+.brand{display:flex;align-items:center;gap:11px;padding:6px 8px 16px}
+.brand .mark{width:32px;height:32px;flex:0 0 32px}
+.brand .name{font-weight:800;font-size:15px;letter-spacing:-.02em;line-height:1.1}
+.brand .name span{display:block;font-weight:500;font-size:10.5px;color:var(--muted);letter-spacing:.01em}
+.nav{display:flex;flex-direction:column;gap:2px;margin-top:4px}
+.nav-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);padding:16px 12px 6px}
 .nav-item{
   display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:11px;
   color:var(--ink-2);font-weight:550;cursor:pointer;transition:.14s;font-size:13.5px;
 }
-.nav-item:hover{background:var(--bg);color:var(--ink)}
+.nav-item:hover{background:var(--surface-2);color:var(--ink)}
 .nav-item.active{background:var(--brand-soft);color:var(--brand);font-weight:650}
-.nav-item svg{width:18px;height:18px;flex:0 0 18px;opacity:.85}
-.nav-item .badge{margin-left:auto;font-size:11px;font-weight:700;background:var(--bad-soft);color:var(--bad-ink);border-radius:20px;padding:1px 8px}
-.sidebar .foot{margin-top:auto;padding:12px 10px 2px;border-top:1px solid var(--line-soft);font-size:11.5px;color:var(--faint)}
+.nav-item svg{width:18px;height:18px;flex:0 0 18px;opacity:.9}
+.nav-item .badge{margin-left:auto;font-size:10.5px;font-weight:700;background:var(--bad-soft);color:var(--bad-ink);border-radius:20px;padding:1px 8px}
+.sidebar .foot{margin-top:auto;padding:12px 10px 2px;border-top:1px solid var(--line-soft);font-size:11px;color:var(--faint);line-height:1.6}
 
 .main{flex:1;min-width:0;display:flex;flex-direction:column}
+.main-scroll{flex:1;min-height:0}
 .topbar{
-  position:sticky;top:0;z-index:30;background:rgba(245,247,251,.82);backdrop-filter:blur(10px);
-  border-bottom:1px solid var(--line);padding:13px 30px;
-  display:flex;align-items:center;gap:14px;
+  position:sticky;top:0;z-index:30;background:rgba(247,248,250,.85);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--line);padding:11px 28px;display:flex;align-items:center;gap:12px;
 }
 .crumbs{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--muted);min-width:0;flex-wrap:wrap}
 .crumbs b{color:var(--ink);font-weight:650}
@@ -75,168 +81,180 @@ button{font-family:inherit}
 .search{position:relative}
 .search input{
   border:1px solid var(--line);background:#fff;border-radius:11px;padding:8px 12px 8px 34px;
-  font-size:13px;width:210px;color:var(--ink);transition:.15s;outline:none;
+  font-size:13px;width:200px;color:var(--ink);transition:.15s;outline:none;
 }
-.search input:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft);width:250px}
+.search input:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft);width:236px}
 .search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--faint)}
-.selectwrap{position:relative}
-.pill-select{
-  appearance:none;border:1px solid var(--line);background:#fff;border-radius:11px;
-  padding:8px 30px 8px 13px;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;outline:none;
-}
-.pill-select:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
-.selectwrap::after{content:"";position:absolute;right:12px;top:50%;width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:translateY(-70%) rotate(45deg);pointer-events:none}
 .icon-btn{
-  border:1px solid var(--line);background:#fff;border-radius:11px;width:38px;height:38px;
+  border:1px solid var(--line);background:#fff;border-radius:11px;width:37px;height:37px;
   display:grid;place-items:center;cursor:pointer;color:var(--ink-2);transition:.15s;
 }
 .icon-btn:hover{border-color:var(--brand);color:var(--brand)}
 .icon-btn svg{width:17px;height:17px}
 .userchip{display:flex;align-items:center;gap:9px;padding:5px 12px 5px 6px;border:1px solid var(--line);border-radius:24px;background:#fff}
-.avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;font-weight:700;font-size:12px;display:grid;place-items:center}
+.avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;font-weight:700;font-size:11px;display:grid;place-items:center}
 .userchip .u-name{font-size:12.5px;font-weight:600;line-height:1.1}
 .userchip .u-sub{font-size:10.5px;color:var(--muted)}
 
-.content{padding:26px 30px 60px;max-width:1360px;width:100%;margin:0 auto}
-.page-head{margin-bottom:20px}
-.page-head h1{font-size:23px;font-weight:800;letter-spacing:-.02em;margin:0 0 4px}
-.page-head p{margin:0;color:var(--muted);font-size:13.5px;max-width:720px}
+.content{padding:24px 28px 64px;max-width:1200px;width:100%;margin:0 auto}
+.page-head{margin-bottom:18px}
+.page-head h1{font-size:22px;font-weight:800;letter-spacing:-.025em;margin:0 0 3px}
+.page-head p{margin:0;color:var(--muted);font-size:13px;max-width:760px;line-height:1.55}
 
-/* ------------------------------------------------------------------ cards */
-.grid{display:grid;gap:16px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-sm)}
-.card.pad{padding:20px}
-.card-h{display:flex;align-items:center;gap:10px;margin-bottom:14px}
-.card-h h3{font-size:14.5px;font-weight:700;margin:0;letter-spacing:-.01em}
-.card-h .sub{font-size:12px;color:var(--muted);font-weight:500}
-.card-h .r{margin-left:auto}
-.clickable{cursor:pointer;transition:transform .16s,box-shadow .16s,border-color .16s}
-.clickable:hover{transform:translateY(-2px);box-shadow:var(--shadow);border-color:#D9E0EC}
+/* ------------------------------------------------------------- segmented */
+.seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:3px;gap:2px}
+.seg-btn{border:none;background:transparent;border-radius:9px;padding:7px 15px;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;transition:.14s;white-space:nowrap}
+.seg-btn:hover{color:var(--ink)}
+.seg-btn.active{background:#fff;color:var(--ink);box-shadow:var(--shadow-xs);font-weight:650}
 
-.kpi-hero{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:18px}
-.stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);padding:16px 18px;box-shadow:var(--shadow-sm);position:relative;overflow:hidden}
-.stat .lbl{font-size:11.5px;font-weight:600;color:var(--muted);letter-spacing:.01em;display:flex;align-items:center;gap:6px}
-.stat .val{font-size:27px;font-weight:800;letter-spacing:-.03em;margin-top:7px;line-height:1}
-.stat .val small{font-size:14px;font-weight:600;color:var(--faint);letter-spacing:0}
-.stat .delta{font-size:11.5px;font-weight:650;margin-top:8px;display:inline-flex;align-items:center;gap:4px}
-.stat .foot{font-size:11.5px;color:var(--muted);margin-top:8px}
+/* ---------------------------------------------------------------- panels */
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg)}
+.panel.pad{padding:20px 22px}
+.panel-h{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.panel-h h3{font-size:14.5px;font-weight:700;margin:0;letter-spacing:-.01em}
+.panel-h .sub{font-size:12px;color:var(--muted);font-weight:500}
+.panel-h .r{margin-left:auto;display:flex;align-items:center;gap:10px}
+.link{font-size:12.5px;font-weight:650;color:var(--brand);cursor:pointer}
+.link:hover{text-decoration:underline}
+.stack{margin-top:14px}
+
+/* -------------------------------------------------------- snapshot hero */
+.snap{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:22px 24px;margin-bottom:16px}
+.snap-grid{display:grid;grid-template-columns:minmax(240px,0.9fr) minmax(0,1.3fr);gap:26px;align-items:center}
+.snap-label{font-size:12.5px;font-weight:600;color:var(--muted);letter-spacing:.01em}
+.snap-value{font-size:44px;font-weight:800;letter-spacing:-.035em;line-height:1.02;margin-top:6px}
+.snap-value span{font-size:20px;font-weight:600;color:var(--faint);letter-spacing:-.02em;margin-left:4px}
+.snap-delta{margin-top:8px;font-size:13px;font-weight:650;display:inline-flex;align-items:center;gap:6px}
+.snap-delta span{color:var(--muted);font-weight:500}
+.kstats{display:flex;flex-wrap:wrap;gap:0;margin-top:20px;border-top:1px solid var(--line-soft);padding-top:16px}
+.kstat{padding-right:20px;margin-right:20px;border-right:1px solid var(--line-soft);cursor:default}
+.kstat:last-child{border-right:none;margin-right:0;padding-right:0}
+.kstat.act{cursor:pointer}
+.kstat.act:hover .k-v{color:var(--brand)}
+.k-l{font-size:11.5px;color:var(--muted);font-weight:550}
+.k-v{font-size:19px;font-weight:750;letter-spacing:-.02em;margin-top:3px}
+.k-v small{font-size:12px;font-weight:600;color:var(--faint)}
+.k-s{font-size:11px;color:var(--faint);margin-top:2px}
+.snap-chart{min-width:0}
 .up{color:var(--good-ink)} .down{color:var(--bad-ink)} .flat{color:var(--muted)}
 
-/* status */
-.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:0 0 8px}
+/* delta chips */
+.dchip{display:inline-flex;align-items:center;gap:3px;font-size:11.5px;font-weight:700;padding:2px 7px;border-radius:7px;font-variant-numeric:tabular-nums}
+.dchip.up{background:var(--good-soft);color:var(--good-ink)}
+.dchip.down{background:var(--bad-soft);color:var(--bad-ink)}
+.dchip.flat{background:var(--none-soft);color:var(--muted)}
+
+/* -------------------------------------------------------------- list rows */
+.list{margin:2px -8px 0}
+.lrow{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;cursor:pointer;transition:background .13s}
+.lrow:hover{background:var(--surface-2)}
+.lrow + .lrow{box-shadow:inset 0 1px 0 var(--line-soft)}
+.lrow-id{display:flex;align-items:center;gap:12px;min-width:0;flex:1}
+.lrow-name{font-size:13.5px;font-weight:650;min-width:0;letter-spacing:-.01em}
+.lrow-name .lrow-sub{display:block;font-size:11.5px;font-weight:500;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.lavatar{width:36px;height:36px;flex:0 0 36px;border-radius:11px;background:var(--surface-2);color:var(--ink-2);font-weight:700;font-size:12.5px;display:grid;place-items:center}
+.tlogo{border-radius:11px;display:grid;place-items:center;font-weight:800;color:#fff;font-size:15px;flex:0 0 auto}
+.lrow-spark{flex:0 0 74px;display:none}
+.lrow-val{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex:0 0 auto;min-width:56px}
+.lrow-num{font-size:16px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.lrow-num span{font-size:11px;font-weight:600;color:var(--faint);margin-left:1px}
+.chev{color:var(--faint);font-size:18px;flex:0 0 12px;text-align:center}
+.mini-tag{font-size:9.5px;font-weight:700;color:var(--brand);background:var(--brand-soft);border-radius:5px;padding:1px 5px;margin-left:5px;vertical-align:middle}
+.lrow-mid{flex:0 0 auto;text-align:right}
+.lrow-attain{font-size:12px;font-weight:650;color:var(--ink-2)}
+
+/* compact metric cluster on rows */
+.kmetrics{display:flex;align-items:center;gap:18px;flex:0 0 auto}
+.km{display:flex;flex-direction:column;align-items:flex-end;min-width:52px}
+.km-l{font-size:10px;color:var(--faint);font-weight:600;letter-spacing:.02em;text-transform:uppercase}
+.km-v{font-size:13.5px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:1px}
+.km-s{font-size:10.5px;color:var(--faint)}
+.rchip{min-width:40px;text-align:center;font-size:14px;font-weight:800;padding:5px 8px;border-radius:9px;font-variant-numeric:tabular-nums}
+
+/* status dot + pills */
+.sdot{width:8px;height:8px;border-radius:50%;flex:0 0 8px;display:inline-block}
 .s-good{background:var(--good)} .s-warn{background:var(--warn)} .s-bad{background:var(--bad)} .s-none{background:var(--none)}
 .pill{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:650;padding:3px 10px;border-radius:20px;white-space:nowrap}
 .pill.good{background:var(--good-soft);color:var(--good-ink)}
 .pill.warn{background:var(--warn-soft);color:var(--warn-ink)}
 .pill.bad{background:var(--bad-soft);color:var(--bad-ink)}
 .pill.none{background:var(--none-soft);color:var(--ink-2)}
-.pill.ghost{background:var(--bg);color:var(--ink-2);border:1px solid var(--line)}
-.tag{font-size:11px;font-weight:600;color:var(--ink-2);background:var(--bg);border:1px solid var(--line-soft);border-radius:7px;padding:2px 8px}
+.tag{font-size:11px;font-weight:600;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line);border-radius:7px;padding:2px 8px}
 
-/* team / member cards */
-.team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px}
-.tcard{padding:18px}
-.tcard .top{display:flex;align-items:center;gap:12px;margin-bottom:16px}
-.tcard .tlogo{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;font-weight:800;color:#fff;font-size:16px}
-.tcard h4{margin:0;font-size:15.5px;font-weight:750;letter-spacing:-.01em}
-.tcard .lead{font-size:12px;color:var(--muted)}
-.tcard .score-row{display:flex;align-items:flex-end;gap:14px}
-.ring-wrap{position:relative;width:78px;height:78px;flex:0 0 78px}
-.ring-wrap .rc{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
-.ring-wrap .rc b{font-size:19px;font-weight:800;letter-spacing:-.02em;line-height:1}
-.ring-wrap .rc span{font-size:9.5px;color:var(--muted);font-weight:600}
-.mini-metrics{display:flex;flex-direction:column;gap:7px;flex:1}
-.mini-metrics .m{display:flex;justify-content:space-between;font-size:12px}
-.mini-metrics .m b{font-weight:700}
-.mini-metrics .m span{color:var(--muted)}
-
-/* bars */
-.barrow{display:flex;align-items:center;gap:12px;padding:9px 0}
-.barrow + .barrow{border-top:1px solid var(--line-soft)}
-.barrow .nm{width:190px;flex:0 0 190px;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
-.barrow .nm:hover{color:var(--brand)}
-.barrow .nm small{display:block;font-weight:500;color:var(--muted);font-size:11px}
-.track{flex:1;height:9px;background:var(--line-soft);border-radius:20px;overflow:hidden;min-width:60px}
+/* progress bar */
+.track{flex:1;height:7px;background:var(--line-soft);border-radius:20px;overflow:hidden;min-width:60px}
 .track .fill{height:100%;border-radius:20px;transition:width .5s cubic-bezier(.4,0,.2,1)}
-.barrow .vv{width:96px;flex:0 0 96px;text-align:right;font-size:12.5px;font-weight:700}
-.barrow .vv small{color:var(--muted);font-weight:600;font-size:11px}
 
-/* table */
-.tbl{width:100%;border-collapse:collapse;font-size:13px}
-.tbl th{text-align:left;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
-.tbl td{padding:11px 12px;border-bottom:1px solid var(--line-soft);vertical-align:middle}
-.tbl tr:last-child td{border-bottom:none}
-.tbl tbody tr{transition:.12s}
-.tbl tbody tr.rowlink{cursor:pointer}
-.tbl tbody tr.rowlink:hover{background:var(--bg)}
-.tbl td.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
-.tbl .kname{font-weight:600}
-.tbl .kname small{display:block;color:var(--muted);font-weight:500;font-size:11px}
-.tbl-wrap{overflow-x:auto}
-.rank{width:22px;height:22px;border-radius:7px;background:var(--bg);display:inline-grid;place-items:center;font-size:11.5px;font-weight:700;color:var(--ink-2)}
-.rank.top{background:var(--brand-soft);color:var(--brand)}
+/* grids */
+.two-col{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+.wide-narrow{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px}
+@media(max-width:900px){.two-col,.wide-narrow{grid-template-columns:minmax(0,1fr)}}
 
-.two-col{display:grid;grid-template-columns:1.4fr 1fr;gap:16px}
-.three-col{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-@media(max-width:1080px){.two-col,.three-col{grid-template-columns:1fr}}
+/* mini bars used inside rows */
+.kra-row{display:flex;align-items:center;gap:14px;padding:11px 14px;border-radius:12px}
+.kra-row + .kra-row{box-shadow:inset 0 1px 0 var(--line-soft)}
+.kra-row .knm{width:200px;flex:0 0 200px;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kra-row .knm small{display:block;font-weight:500;color:var(--muted);font-size:11px}
+.kra-row .kv{width:60px;flex:0 0 60px;text-align:right;font-size:13.5px;font-weight:800;font-variant-numeric:tabular-nums}
+.kra-row .kv small{color:var(--faint);font-weight:600;font-size:10.5px}
 
-.person-hd{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
-.person-hd .pa{width:60px;height:60px;border-radius:18px;background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;font-weight:800;font-size:22px;display:grid;place-items:center;flex:0 0 60px}
-.person-hd h1{margin:0;font-size:22px}
-.person-hd .meta{color:var(--muted);font-size:13px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:3px}
+.rank{width:20px;flex:0 0 20px;text-align:center;font-size:12px;font-weight:700;color:var(--faint);font-variant-numeric:tabular-nums}
+.rank.top{color:var(--brand)}
+
+.person-hd{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.person-hd .pa{width:54px;height:54px;border-radius:16px;background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;font-weight:800;font-size:20px;display:grid;place-items:center;flex:0 0 54px}
+.person-hd h1{margin:0;font-size:22px;letter-spacing:-.025em}
+.person-hd .meta{color:var(--muted);font-size:12.5px;display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-top:3px}
 
 .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--ink-2);align-items:center}
 .legend .li{display:flex;align-items:center;gap:6px}
+.empty{padding:34px 20px;text-align:center;color:var(--muted);font-size:13px}
+.empty svg{width:36px;height:36px;opacity:.3;margin-bottom:6px}
 
-.empty{padding:40px 20px;text-align:center;color:var(--muted)}
-.empty svg{width:40px;height:40px;opacity:.35;margin-bottom:8px}
+.chart-note{font-size:11px;color:var(--faint);display:flex;gap:14px;margin-top:6px;flex-wrap:wrap}
+.chart-note b{color:var(--muted);font-weight:600}
 
-/* segment header */
-.seg-h{display:flex;align-items:center;gap:10px;margin:22px 0 10px;font-size:12.5px;font-weight:700;color:var(--ink-2);text-transform:uppercase;letter-spacing:.05em}
-.seg-h::after{content:"";flex:1;height:1px;background:var(--line)}
+/* tables kept for Data view */
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);padding:8px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl td{padding:10px 12px;border-bottom:1px solid var(--line-soft);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl td.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.tbl-wrap{overflow-x:auto}
+.pill-select{appearance:none;border:1px solid var(--line);background:#fff;border-radius:11px;padding:9px 12px;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;outline:none}
+.pill-select:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
 
 /* ------------------------------------------------------------------ drawer */
-.scrim{position:fixed;inset:0;background:rgba(15,23,42,.34);backdrop-filter:blur(2px);opacity:0;pointer-events:none;transition:.2s;z-index:60}
+.scrim{position:fixed;inset:0;background:rgba(15,23,42,.32);backdrop-filter:blur(2px);opacity:0;pointer-events:none;transition:.2s;z-index:60}
 .scrim.on{opacity:1;pointer-events:auto}
-.drawer{
-  position:fixed;top:0;right:0;height:100vh;width:560px;max-width:94vw;background:#fff;
-  box-shadow:var(--shadow-lg);transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);
-  z-index:61;display:flex;flex-direction:column;
-}
+.drawer{position:fixed;top:0;right:0;height:100vh;width:540px;max-width:94vw;background:#fff;box-shadow:var(--shadow-lg);transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);z-index:61;display:flex;flex-direction:column}
 .drawer.on{transform:none}
-.drawer-h{padding:20px 24px;border-bottom:1px solid var(--line);display:flex;gap:14px;align-items:flex-start}
-.drawer-h h2{margin:0;font-size:17px;font-weight:750;letter-spacing:-.01em;line-height:1.25}
-.drawer-h .sub{font-size:12.5px;color:var(--muted);margin-top:5px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.drawer-body{padding:22px 24px;overflow-y:auto;flex:1}
+.drawer-h{padding:20px 22px 18px;border-bottom:1px solid var(--line);display:flex;gap:14px;align-items:flex-start}
+.drawer-h h2{margin:0;font-size:17px;font-weight:750;letter-spacing:-.015em;line-height:1.25}
+.drawer-h .sub{font-size:12px;color:var(--muted);margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.drawer-body{padding:20px 22px;overflow-y:auto;flex:1}
 .drawer .close{margin-left:auto;flex:0 0 34px}
-.section-t{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin:22px 0 10px}
+.section-t{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin:22px 0 10px}
 .section-t:first-child{margin-top:0}
-.def-box{background:var(--bg);border:1px solid var(--line-soft);border-radius:var(--r-md);padding:14px 16px;font-size:13px;color:var(--ink-2);line-height:1.55}
+.def-box{background:var(--surface-2);border:1px solid var(--line-soft);border-radius:var(--r-md);padding:14px 16px;font-size:13px;color:var(--ink-2);line-height:1.55}
 .def-box code{background:#fff;border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:12px;color:var(--ink)}
 .metric-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.metric{background:var(--bg);border:1px solid var(--line-soft);border-radius:12px;padding:12px 13px}
+.metric{background:var(--surface-2);border:1px solid var(--line-soft);border-radius:12px;padding:12px 13px}
 .metric .l{font-size:11px;color:var(--muted);font-weight:600}
-.metric .v{font-size:19px;font-weight:800;letter-spacing:-.02em;margin-top:5px}
+.metric .v{font-size:19px;font-weight:800;letter-spacing:-.02em;margin-top:5px;font-variant-numeric:tabular-nums}
 .metric .v small{font-size:12px;font-weight:600;color:var(--faint)}
-
-/* band scale */
 .bandscale{margin-top:6px}
 .bandscale .bs-track{display:flex;gap:4px;margin-bottom:6px}
-.bandscale .bs-seg{flex:1;height:34px;border-radius:8px;position:relative;display:grid;place-items:center;font-size:11.5px;font-weight:700;color:#fff}
+.bandscale .bs-seg{flex:1;height:34px;border-radius:9px;position:relative;display:grid;place-items:center;font-size:11.5px;font-weight:700;color:#fff}
 .bandscale .bs-lab{display:flex;gap:4px}
 .bandscale .bs-lab div{flex:1;text-align:center;font-size:9.5px;color:var(--muted);font-weight:600;line-height:1.2}
-.bandscale .marker{position:absolute;top:-9px;transform:translateX(-50%);z-index:2;font-size:10px;font-weight:700;color:var(--ink);background:#fff;border:1.5px solid var(--ink);border-radius:20px;padding:1px 7px;white-space:nowrap;box-shadow:var(--shadow-sm)}
+.bandscale .marker{position:absolute;top:-9px;transform:translateX(-50%);z-index:2;font-size:10px;font-weight:700;color:var(--ink);background:#fff;border:1.5px solid var(--ink);border-radius:20px;padding:1px 7px;white-space:nowrap;box-shadow:var(--shadow-xs)}
 .bandscale .marker::after{content:"";position:absolute;bottom:-11px;left:50%;transform:translateX(-50%);width:0;height:0;border:5px solid transparent;border-top-color:var(--ink)}
-
 .field{margin-bottom:14px}
 .field label{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-bottom:6px}
-.field input,.field textarea,.field select{
-  width:100%;border:1px solid var(--line);border-radius:11px;padding:10px 12px;font-size:13.5px;
-  font-family:inherit;color:var(--ink);outline:none;transition:.15s;background:#fff;
-}
+.field input,.field textarea,.field select{width:100%;border:1px solid var(--line);border-radius:11px;padding:10px 12px;font-size:13.5px;font-family:inherit;color:var(--ink);outline:none;transition:.15s;background:#fff}
 .field input:focus,.field textarea:focus,.field select:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
-.field textarea{resize:vertical;min-height:64px}
-.field .hint{font-size:11px;color:var(--muted);margin-top:5px}
+.field textarea{resize:vertical;min-height:62px}
 .inline2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .btn{border:none;border-radius:11px;padding:10px 18px;font-size:13.5px;font-weight:650;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:8px}
 .btn.primary{background:var(--brand);color:#fff}
@@ -244,47 +262,53 @@ button{font-family:inherit}
 .btn.ghost{background:#fff;border:1px solid var(--line);color:var(--ink-2)}
 .btn.ghost:hover{border-color:var(--brand);color:var(--brand)}
 .btn:disabled{opacity:.5;cursor:default;box-shadow:none}
-.drawer-foot{padding:16px 24px;border-top:1px solid var(--line);display:flex;gap:10px;align-items:center}
+.drawer-foot{padding:15px 22px;border-top:1px solid var(--line);display:flex;gap:10px;align-items:center}
 .drawer-foot .saved{font-size:11.5px;color:var(--muted);margin-right:auto}
-
 .rating-picker{display:flex;gap:6px}
 .rating-picker button{flex:1;border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 0;font-weight:700;cursor:pointer;font-size:13px;color:var(--ink-2);transition:.12s}
 .rating-picker button:hover{border-color:var(--brand)}
 .rating-picker button.sel{background:var(--brand);color:#fff;border-color:var(--brand)}
 
-/* toast */
+/* toast + loader */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:11px 18px;border-radius:12px;font-size:13px;font-weight:600;box-shadow:var(--shadow-lg);opacity:0;pointer-events:none;transition:.24s;z-index:80;display:flex;align-items:center;gap:9px}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast.err{background:var(--bad)}
-
-/* loader */
 .loader{position:fixed;inset:0;background:var(--bg);display:grid;place-items:center;z-index:90;transition:.3s}
 .loader.off{opacity:0;pointer-events:none}
-.spin{width:34px;height:34px;border:3px solid var(--brand-soft);border-top-color:var(--brand);border-radius:50%;animation:sp 0.8s linear infinite}
+.spin{width:32px;height:32px;border:3px solid var(--brand-soft);border-top-color:var(--brand);border-radius:50%;animation:sp .8s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
-.skeleton{animation:pulse 1.4s ease-in-out infinite;background:linear-gradient(90deg,#EEF1F7,#F6F8FB,#EEF1F7);border-radius:8px}
-@keyframes pulse{50%{opacity:.55}}
+.fade{animation:fade .28s ease}
+@keyframes fade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
 
-/* mobile */
+/* responsive */
 .hamburger{display:none}
+@media(min-width:1080px){.lrow-spark{display:block}}
 @media(max-width:960px){
   :root{--sbw:0px}
-  .sidebar{position:fixed;left:0;top:0;transform:translateX(-100%);transition:.24s;width:250px;flex-basis:250px}
-  .sidebar.open{transform:none}
+  .sidebar{position:fixed;left:0;top:0;transform:translateX(-100%);transition:.24s;width:246px;flex-basis:246px}
+  .sidebar.open{transform:none;box-shadow:var(--shadow-lg)}
   .hamburger{display:grid}
-  .content{padding:20px 16px 60px}
-  .topbar{padding:11px 16px}
-  .search input{width:130px}
-  .search input:focus{width:150px}
-  .barrow .nm{width:130px;flex-basis:130px}
+  .content{padding:18px 15px 60px}
+  .topbar{padding:10px 15px}
+  .snap-grid{grid-template-columns:minmax(0,1fr);gap:16px}
+  .search input{width:120px}.search input:focus{width:140px}
 }
 @media(max-width:620px){
-  .metric-grid{grid-template-columns:repeat(2,1fr)}
   .search{display:none}
+  .kmetrics{gap:12px}
+  .km:nth-child(2){display:none}
+  .kstat{padding-right:14px;margin-right:14px}
+  .metric-grid{grid-template-columns:repeat(2,1fr)}
   .userchip .u-meta{display:none}
+  .seg-btn{padding:7px 11px;font-size:12px}
 }
-.fade{animation:fade .3s ease}
-@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media(max-width:480px){
+  .crumbs{display:none}
+  .userchip{display:none}
+  .topbar{gap:9px}
+  .kstat{padding-right:11px;margin-right:11px}
+  .snap-value{font-size:38px}
+}
 </style>
 </head>
 <body>
@@ -293,10 +317,7 @@ button{font-family:inherit}
 
 <div class="app">
   <aside class="sidebar" id="sidebar">
-    <div class="brand">
-      <div class="mark" id="brandMark"></div>
-      <div class="name">Recykal<span>KRA / KPI Tracker</span></div>
-    </div>
+    <div class="brand"><div class="mark" id="brandMark"></div><div class="name">Recykal<span>KRA / KPI Tracker</span></div></div>
     <nav class="nav" id="nav"></nav>
     <div class="foot" id="sbFoot"></div>
   </aside>
@@ -310,15 +331,13 @@ button{font-family:inherit}
       <div class="spacer"></div>
       <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
         <input id="searchInput" placeholder="Search people, KPIs…" autocomplete="off"></div>
-      <div class="selectwrap"><select class="pill-select" id="periodSelect" title="Reporting period"></select></div>
+      <div class="seg" id="periodSeg" title="Reporting period"></div>
       <button class="icon-btn" data-action="refresh" title="Refresh from sheet">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
       </button>
       <div class="userchip"><div class="avatar" id="userAv">R</div><div class="u-meta"><div class="u-name" id="userName">User</div><div class="u-sub">Recykal</div></div></div>
     </div>
-    <div class="main-scroll">
-      <div class="content fade" id="content"></div>
-    </div>
+    <div class="main-scroll"><div class="content fade" id="content"></div></div>
   </div>
 </div>
 
@@ -331,7 +350,9 @@ button{font-family:inherit}
  * RECYKAL KRA/KPI TRACKER — FRONTEND
  * The SINGLE scoring engine lives here (Scoring.*). It runs identically on
  * live server data (from Code.gs) and on the offline preview mock, so there is
- * exactly one calculation implementation in the product.
+ * exactly one calculation implementation in the product. This redesign is
+ * presentation-only: every metric, view, filter, drill-down, calculation and
+ * write path is preserved — only the visual language changed (Groww-inspired).
  * ==========================================================================*/
 'use strict';
 
@@ -360,7 +381,9 @@ function statusOf(rating,S){
   return {k:'bad',t:'Off Track',cls:'bad'};
 }
 const STATUS_COLOR={good:'var(--good)',warn:'var(--warn)',bad:'var(--bad)',none:'var(--none)'};
+const STATUS_TINT={good:'var(--good-soft)',warn:'var(--warn-soft)',bad:'var(--bad-soft)',none:'var(--none-soft)'};
 function scoreColor(score5,S){return STATUS_COLOR[statusOf(score5,S).k];}
+function tint(k){return STATUS_TINT[k]||STATUS_TINT.none;}
 
 /* =====================================================  SCORING ENGINE  ==== */
 const Scoring=(()=>{
@@ -498,7 +521,7 @@ const Scoring=(()=>{
 })();
 
 /* ==========================================================  APP STATE  ==== */
-const APP={boot:null,cmp:null,view:'overview',ctx:{},period:null,search:'',navOpen:false};
+const APP={boot:null,cmp:null,view:'overview',ctx:{},period:null,search:'',navOpen:false,tab:null};
 
 /* server bridge — mock when google.script is unavailable (offline preview) */
 const MOCK={enabled:(typeof google==='undefined'||!google.script||!google.script.run)};
@@ -515,7 +538,6 @@ async function boot(){
   try{
     let b=await call('apiBootstrap',{});
     if(!b||!b.ok)throw new Error(b&&b.error||'Bootstrap failed');
-    // auto-seed sample actuals on very first run so the board is alive
     if(!b.actuals||Object.keys(b.actuals).length===0){
       const s=await call('apiSeedSampleData',false);
       if(s&&s.ok)b=s;
@@ -529,9 +551,7 @@ async function boot(){
 function applyBoot(b){
   APP.boot=b;
   APP.period=b.settings.currentPeriod||(b.periods[b.periods.length-1]);
-  recompute();
-  buildChrome();
-  render();
+  recompute();buildChrome();render();
 }
 function recompute(){APP.cmp=Scoring.build(APP.boot,APP.period);}
 
@@ -552,7 +572,6 @@ const NAV=[
   {id:'data',label:'Data & Settings',icon:'data'}
 ];
 function buildChrome(){
-  // nav
   const nav=$('#nav');nav.innerHTML='';
   NAV.forEach(n=>{
     if(n.sep){nav.insertAdjacentHTML('beforeend','<div class="nav-label">'+n.sep+'</div>');return;}
@@ -563,9 +582,8 @@ function buildChrome(){
       (ICONS[ic]||ICONS.overview)+'</svg>'+n.label+
       (risk?'<span class="badge">'+risk+'</span>':'')+'</div>');
   });
-  // period select
-  const ps=$('#periodSelect');ps.innerHTML=APP.boot.periods.map(p=>'<option value="'+p+'"'+(p===APP.period?' selected':'')+'>'+periodLabel(p)+'</option>').join('');
-  // user
+  // period as a Groww-style segmented control
+  $('#periodSeg').innerHTML=APP.boot.periods.map(p=>'<button class="seg-btn'+(p===APP.period?' active':'')+'" data-period="'+p+'">'+periodLabel(p)+'</button>').join('');
   const em=(APP.boot.user&&APP.boot.user.email)||'';
   $('#userName').textContent= em?em.split('@')[0]:'Preview';
   $('#userAv').textContent= em?initials(em.split('@')[0].replace(/[._]/g,' ')):'R';
@@ -574,21 +592,19 @@ function buildChrome(){
 function periodLabel(p){if(!p)return p;const[y,m]=p.split('-');const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return (mn[(+m)-1]||m)+" '"+String(y).slice(2);}
 
 function drawBrand(){
-  // Recykal-style 4-petal pinwheel
   const petals=[['var(--brand)',0],['var(--brand-2)',90],['var(--good)',180],['#567DE8',270]];
   const p=petals.map(([c,r])=>'<path d="M17 17 C17 9, 25 9, 25 17 C25 21, 21 25, 17 25 Z" fill="'+c+'" transform="rotate('+r+' 17 17)"/>').join('');
-  $('#brandMark').innerHTML='<svg viewBox="0 0 34 34" width="34" height="34"><g transform="translate(0 0) scale(1)">'+p.replace(/17/g,'17')+'</g></svg>';
+  $('#brandMark').innerHTML='<svg viewBox="0 0 34 34" width="34" height="34">'+p+'</svg>';
 }
 
 /* =============================================================  ROUTER  ==== */
-function go(view,ctx){APP.view=view;APP.ctx=ctx||{};window.scrollTo(0,0);const sc=$('.main-scroll');if(sc)sc.scrollTop=0;render();}
+function go(view,ctx){APP.view=view;APP.ctx=ctx||{};APP.tab=null;window.scrollTo(0,0);const sc=$('.main-scroll');if(sc)sc.scrollTop=0;render();}
 function render(){
   $$('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.nav===APP.view));
   renderCrumbs();
   const c=$('#content');c.classList.remove('fade');void c.offsetWidth;c.classList.add('fade');
   const v={overview:viewOverview,teams:viewTeams,team:viewTeam,people:viewPeople,member:viewMember,risk:viewRisk,data:viewData}[APP.view]||viewOverview;
   c.innerHTML=v();
-  bindMini();
 }
 function renderCrumbs(){
   const cr=[];
@@ -602,45 +618,61 @@ function renderCrumbs(){
   $('#crumbs').innerHTML=cr.map((c,i)=>{
     const last=i===cr.length-1;
     const link=c.v&&!last;
-    return (i?'<span class="sep">›</span>':'')+'<span class="'+(link?'c-link':'')+(last?' ':'')+'" '+(link?'data-crumb=\''+JSON.stringify({v:c.v,ctx:c.ctx||{}}).replace(/'/g,'&#39;')+'\'':'')+'>'+(last?'<b>'+esc(c.t)+'</b>':esc(c.t))+'</span>';
+    return (i?'<span class="sep">›</span>':'')+'<span class="'+(link?'c-link':'')+'" '+(link?'data-crumb=\''+JSON.stringify({v:c.v,ctx:c.ctx||{}}).replace(/'/g,'&#39;')+'\'':'')+'>'+(last?'<b>'+esc(c.t)+'</b>':esc(c.t))+'</span>';
   }).join('');
 }
 
-/* =====================================================  SHARED PIECES  ==== */
-function ring(score5,S,size=78,stroke=8){
-  const p=score5==null?0:clamp(score5/5,0,1);
-  const r=(size-stroke)/2,c=2*Math.PI*r,off=c*(1-p);
-  const col=scoreColor(score5,S);
-  return '<div class="ring-wrap" style="width:'+size+'px;height:'+size+'px;flex-basis:'+size+'px">'+
-    '<svg width="'+size+'" height="'+size+'" style="transform:rotate(-90deg)">'+
-    '<circle cx="'+size/2+'" cy="'+size/2+'" r="'+r+'" fill="none" stroke="var(--line-soft)" stroke-width="'+stroke+'"/>'+
-    '<circle cx="'+size/2+'" cy="'+size/2+'" r="'+r+'" fill="none" stroke="'+col+'" stroke-width="'+stroke+'" stroke-linecap="round" stroke-dasharray="'+c+'" stroke-dashoffset="'+off+'" style="transition:stroke-dashoffset .7s cubic-bezier(.4,0,.2,1)"/>'+
-    '</svg><div class="rc"><b style="color:'+col+'">'+(score5==null?'—':one(score5))+'</b><span>/ 5.0</span></div></div>';
+/* =====================================================  CHART / PIECES  ==== */
+let _uid=0;
+function trendColor(series){
+  const v=series.filter(p=>p.v!=null);
+  if(v.length<2)return 'var(--muted)';
+  const d=v[v.length-1].v-v[v.length-2].v;
+  return d>0.02?'var(--good)':d<-0.02?'var(--bad)':'var(--brand)';
 }
-function pillFor(st){return '<span class="pill '+st.cls+'"><span class="dot s-'+st.k+'"></span>'+st.t+'</span>';}
-function bar(score5,S){const p=score5==null?0:clamp(score5/5,0,1)*100;const col=scoreColor(score5,S);
-  return '<div class="track"><div class="fill" style="width:'+p+'%;background:'+col+'"></div></div>';}
-function donut(counts,size=132){
-  const order=[['good','var(--good)'],['warn','var(--warn)'],['bad','var(--bad)'],['none','var(--none)']];
-  const total=order.reduce((s,[k])=>s+counts[k],0)||1;
-  const r=size/2-10,c=2*Math.PI*r;let off=0;
-  const segs=order.map(([k,col])=>{const frac=counts[k]/total;const len=c*frac;const el='<circle cx="'+size/2+'" cy="'+size/2+'" r="'+r+'" fill="none" stroke="'+col+'" stroke-width="16" stroke-dasharray="'+len+' '+(c-len)+'" stroke-dashoffset="'+(-off)+'"/>';off+=len;return frac>0?el:'';}).join('');
-  const on=counts.good, tot=counts.good+counts.warn+counts.bad;
-  return '<div style="position:relative;width:'+size+'px;height:'+size+'px;margin:0 auto">'+
-    '<svg width="'+size+'" height="'+size+'" style="transform:rotate(-90deg)">'+segs+'</svg>'+
-    '<div style="position:absolute;inset:0;display:grid;place-items:center;text-align:center"><div><div style="font-size:22px;font-weight:800;letter-spacing:-.02em">'+(tot?Math.round(on/tot*100):0)+'%</div><div style="font-size:10.5px;color:var(--muted);font-weight:600">on track</div></div></div></div>';
+function deltaChip(series){
+  const v=series.filter(p=>p.v!=null);
+  if(v.length<2)return '<span class="dchip flat">—</span>';
+  const d=v[v.length-1].v-v[v.length-2].v;
+  const cls=d>0.02?'up':d<-0.02?'down':'flat';const ar=d>0.02?'▲':d<-0.02?'▼':'•';
+  return '<span class="dchip '+cls+'">'+ar+' '+Math.abs(Math.round(d*100)/100).toFixed(2)+'</span>';
 }
-function sparkline(series,S,w=150,h=40){
-  const pts=series.filter(p=>p.v!=null);
-  if(pts.length<2)return '<div style="font-size:11px;color:var(--faint)">Not enough history</div>';
-  const xs=(i)=>10+i*(w-20)/(series.length-1);
-  const min=0,max=5;const ys=v=>h-4-((v-min)/(max-min))*(h-8);
+function deltaLine(series){
+  const v=series.filter(p=>p.v!=null);
+  if(v.length<2)return '<span class="snap-delta flat">• first tracked period</span>';
+  const d=v[v.length-1].v-v[v.length-2].v;
+  const cls=d>0.02?'up':d<-0.02?'down':'flat';const ar=d>0.02?'▲':d<-0.02?'▼':'•';
+  return '<span class="snap-delta '+cls+'">'+ar+' '+Math.abs(Math.round(d*100)/100).toFixed(2)+' <span>vs last period</span></span>';
+}
+function areaChart(series,S,h){
+  h=h||168;const w=560;const n=series.length;
+  const pad={l:6,r:6,t:14,b:24},iw=w-pad.l-pad.r,ih=h-pad.t-pad.b;
+  const xs=i=>pad.l+(n<=1?iw/2:i*iw/(n-1));
+  const ys=v=>pad.t+ih-(clamp(v,0,5)/5)*ih;
+  const valid=series.map((p,i)=>({i,v:p.v})).filter(p=>p.v!=null);
+  if(valid.length<1)return '<div class="empty" style="height:'+h+'px;display:grid;place-items:center">No data for this period</div>';
+  const col=trendColor(series),id='gr'+(++_uid);
+  let line='';valid.forEach((p,idx)=>{line+=(idx?'L':'M')+xs(p.i).toFixed(1)+' '+ys(p.v).toFixed(1)+' ';});
+  let area='';
+  if(valid.length>=2){area='M'+xs(valid[0].i).toFixed(1)+' '+(pad.t+ih)+' '+line.replace(/^M/,'L')+'L'+xs(valid[valid.length-1].i).toFixed(1)+' '+(pad.t+ih)+' Z';}
+  const grid=[S.atRisk,S.onTrack].map(t=>'<line x1="'+pad.l+'" x2="'+(w-pad.r)+'" y1="'+ys(t).toFixed(1)+'" y2="'+ys(t).toFixed(1)+'" stroke="var(--line)" stroke-width="1" stroke-dasharray="3 5"/>').join('');
+  const dots=valid.map(p=>'<circle cx="'+xs(p.i).toFixed(1)+'" cy="'+ys(p.v).toFixed(1)+'" r="3.4" fill="#fff" stroke="'+col+'" stroke-width="2.2"/>').join('');
+  const vlab=valid.map(p=>'<text x="'+xs(p.i).toFixed(1)+'" y="'+(ys(p.v)-10).toFixed(1)+'" text-anchor="middle" font-size="11" font-weight="700" fill="'+col+'">'+one(p.v)+'</text>').join('');
+  const labels=series.map((p,i)=>'<text x="'+xs(i).toFixed(1)+'" y="'+(h-6)+'" text-anchor="middle" font-size="11" fill="var(--muted)">'+periodLabel(p.period)+'</text>').join('');
+  return '<svg viewBox="0 0 '+w+' '+h+'" style="width:100%;height:'+h+'px;display:block">'+
+    '<defs><linearGradient id="'+id+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="'+col+'" stop-opacity="0.22"/><stop offset="100%" stop-color="'+col+'" stop-opacity="0"/></linearGradient></defs>'+
+    grid+(area?'<path d="'+area+'" fill="url(#'+id+')"/>':'')+
+    '<path d="'+line+'" fill="none" stroke="'+col+'" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>'+
+    dots+vlab+labels+'</svg>';
+}
+function miniSpark(series,S,w,h){
+  w=w||74;h=h||26;
+  const valid=series.filter(p=>p.v!=null);
+  if(valid.length<2)return '<svg width="'+w+'" height="'+h+'"></svg>';
+  const n=series.length,xs=i=>2+i*(w-4)/(n-1),ys=v=>h-3-((clamp(v,0,5))/5)*(h-6);
   let d='';series.forEach((p,i)=>{if(p.v==null)return;d+=(d?'L':'M')+xs(i).toFixed(1)+' '+ys(p.v).toFixed(1)+' ';});
-  const last=pts[pts.length-1];const li=series.map(p=>p.v).lastIndexOf(last.v);
-  const col=scoreColor(last.v,S);
-  return '<svg width="'+w+'" height="'+h+'" style="overflow:visible">'+
-    '<path d="'+d+'" fill="none" stroke="'+col+'" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>'+
-    '<circle cx="'+xs(li).toFixed(1)+'" cy="'+ys(last.v).toFixed(1)+'" r="3.2" fill="'+col+'"/></svg>';
+  const col=trendColor(series);
+  return '<svg width="'+w+'" height="'+h+'" style="display:block"><path d="'+d+'" fill="none" stroke="'+col+'" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 }
 function trendSeries(kind,id){
   return APP.boot.periods.map(p=>{
@@ -652,112 +684,123 @@ function trendSeries(kind,id){
     return {period:p,v};
   });
 }
-function deltaBadge(series){
-  const vals=series.filter(p=>p.v!=null);
-  if(vals.length<2)return '';
-  const d=vals[vals.length-1].v-vals[vals.length-2].v;
-  const cls=d>0.02?'up':d<-0.02?'down':'flat';
-  const ar=d>0.02?'▲':d<-0.02?'▼':'—';
-  return '<span class="delta '+cls+'">'+ar+' '+Math.abs(Math.round(d*100)/100).toFixed(2)+' vs last</span>';
+function ring(score5,S,size,stroke){size=size||70;stroke=stroke||7;
+  const p=score5==null?0:clamp(score5/5,0,1);
+  const r=(size-stroke)/2,c=2*Math.PI*r,off=c*(1-p);const col=scoreColor(score5,S);
+  return '<div style="position:relative;width:'+size+'px;height:'+size+'px;flex:0 0 '+size+'px">'+
+    '<svg width="'+size+'" height="'+size+'" style="transform:rotate(-90deg)">'+
+    '<circle cx="'+size/2+'" cy="'+size/2+'" r="'+r+'" fill="none" stroke="var(--line-soft)" stroke-width="'+stroke+'"/>'+
+    '<circle cx="'+size/2+'" cy="'+size/2+'" r="'+r+'" fill="none" stroke="'+col+'" stroke-width="'+stroke+'" stroke-linecap="round" stroke-dasharray="'+c+'" stroke-dashoffset="'+off+'" style="transition:stroke-dashoffset .7s cubic-bezier(.4,0,.2,1)"/></svg>'+
+    '<div style="position:absolute;inset:0;display:grid;place-items:center;text-align:center"><div><div style="font-size:16px;font-weight:800;color:'+col+';line-height:1">'+(score5==null?'—':one(score5))+'</div></div></div></div>';
 }
+function bar(score5,S){const p=score5==null?0:clamp(score5/5,0,1)*100;const col=scoreColor(score5,S);
+  return '<div class="track"><div class="fill" style="width:'+p+'%;background:'+col+'"></div></div>';}
+function donut(counts,size){size=size||128;
+  const order=[['good','var(--good)'],['warn','var(--warn)'],['bad','var(--bad)'],['none','var(--none)']];
+  const total=order.reduce((s,[k])=>s+counts[k],0)||1;const r=size/2-9,c=2*Math.PI*r;let off=0;
+  const segs=order.map(([k,col])=>{const frac=counts[k]/total;const len=c*frac;const el='<circle cx="'+size/2+'" cy="'+size/2+'" r="'+r+'" fill="none" stroke="'+col+'" stroke-width="12" stroke-dasharray="'+len+' '+(c-len)+'" stroke-dashoffset="'+(-off)+'" stroke-linecap="butt"/>';off+=len;return frac>0?el:'';}).join('');
+  const on=counts.good,tot=counts.good+counts.warn+counts.bad;
+  return '<div style="position:relative;width:'+size+'px;height:'+size+'px;margin:0 auto">'+
+    '<svg width="'+size+'" height="'+size+'" style="transform:rotate(-90deg)">'+segs+'</svg>'+
+    '<div style="position:absolute;inset:0;display:grid;place-items:center;text-align:center"><div><div style="font-size:22px;font-weight:800;letter-spacing:-.02em">'+(tot?Math.round(on/tot*100):0)+'%</div><div style="font-size:10px;color:var(--muted);font-weight:600">on track</div></div></div></div>';
+}
+function pillFor(st){return '<span class="pill '+st.cls+'"><span class="sdot s-'+st.k+'"></span>'+st.t+'</span>';}
 function teamColor(name){const map={Metal:'#64748B',Plastic:'#0EA5A0',Onboarding:'#7C5CE0',Collections:'#E07A2A'};return map[name]||'var(--brand)';}
-function teamLogo(name,size){const c=teamColor(name);return '<div class="tlogo" style="background:linear-gradient(135deg,'+c+',color-mix(in srgb,'+c+' 65%,#000 12%));width:'+(size||42)+'px;height:'+(size||42)+'px">'+esc(name[0])+'</div>';}
+function teamLogo(name,size){size=size||38;const c=teamColor(name);return '<div class="tlogo" style="background:linear-gradient(135deg,'+c+',color-mix(in srgb,'+c+' 65%,#000 12%));width:'+size+'px;height:'+size+'px;font-size:'+(size*0.4)+'px">'+esc(name[0])+'</div>';}
+function kstat(label,value,sub,attrs){return '<div class="kstat'+(attrs?' act':'')+'"'+(attrs||'')+'><div class="k-l">'+label+'</div><div class="k-v">'+value+'</div>'+(sub?'<div class="k-s">'+sub+'</div>':'')+'</div>';}
+function segControl(items,active,attr){
+  return '<div class="seg" style="margin-bottom:14px">'+items.map(it=>'<button class="seg-btn'+(it.id===active?' active':'')+'" '+attr+'="'+esc(it.id)+'">'+esc(it.label)+'</button>').join('')+'</div>';
+}
 
 /* =============================================================  VIEWS  ===== */
 function viewOverview(){
-  const o=APP.cmp.org,S=APP.cmp.S;
-  const orgTrend=trendSeries('org');
-  const stat=(lbl,val,sub,extra)=>'<div class="stat"><div class="lbl">'+lbl+'</div><div class="val">'+val+'</div>'+(extra||'')+(sub?'<div class="foot">'+sub+'</div>':'')+'</div>';
+  const o=APP.cmp.org,S=APP.cmp.S,tr=trendSeries('org');
+  const tot=o.counts.good+o.counts.warn+o.counts.bad;
   return `
   <div class="page-head"><h1>Organisation Performance</h1>
-    <p>Live KRA/KPI performance across all four teams for <b>${periodLabel(APP.period)}</b>. Every number is derived from the source Google Sheet — click any team, person or KPI to drill down.</p></div>
-  <div class="kpi-hero">
-    <div class="stat"><div class="lbl">Performance Index</div><div class="val" style="color:${scoreColor(o.score,S)}">${one(o.score)}<small> / 5.0</small></div>${deltaBadge(orgTrend)}</div>
-    ${stat('Attainment vs Target',pct(o.ach),'weighted actual ÷ target')}
-    ${stat('KPIs On Track',(o.onTrackPct==null?'—':Math.round(o.onTrackPct)+'%'),o.counts.good+' of '+(o.counts.good+o.counts.warn+o.counts.bad)+' tracked')}
-    ${stat('Needs Intervention','<span style="color:var(--bad-ink)">'+o.interventions.length+'</span>','off-track KPI lines')}
-    ${stat('People',o.withData+' / '+o.headcount,'reporting this period')}
+    <p>A live snapshot across all four teams for <b>${periodLabel(APP.period)}</b>, straight from the source sheet. Tap any team, person or KPI to reveal deeper analytics.</p></div>
+
+  <div class="snap">
+    <div class="snap-grid">
+      <div>
+        <div class="snap-label">Performance Index · ${periodLabel(APP.period)}</div>
+        <div class="snap-value" style="color:${scoreColor(o.score,S)}">${one(o.score)}<span>/ 5.0</span></div>
+        ${deltaLine(tr)}
+        <div class="kstats">
+          ${kstat('Attainment',pct(o.ach),'vs target')}
+          ${kstat('On track',(o.onTrackPct==null?'—':Math.round(o.onTrackPct)+'%'),o.counts.good+' of '+tot)}
+          ${kstat('Needs action','<span style="color:var(--bad-ink)">'+o.interventions.length+'</span>','off-track KPIs',' data-nav="risk"')}
+          ${kstat('People',o.withData+' / '+o.headcount,'reporting')}
+        </div>
+      </div>
+      <div class="snap-chart">
+        ${areaChart(tr,S,168)}
+        <div class="chart-note"><span><b>Index trend</b> · weighted rating /5</span><span>▬ On ≥ ${S.onTrack} · At-risk ≥ ${S.atRisk}</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel pad" style="margin-bottom:16px">
+    <div class="panel-h"><h3>Teams</h3><span class="sub">weighted index · ranked</span><span class="r"><span class="link" data-nav="teams">Compare all →</span></span></div>
+    <div class="list stack">${o.teamsRanked.map(t=>teamListRow(t,S,false)).join('')}</div>
   </div>
 
   <div class="two-col" style="margin-bottom:16px">
-    <div class="card pad">
-      <div class="card-h"><h3>Team comparison</h3><span class="sub">weighted performance index · /5</span><span class="r"><span class="pill ghost">${APP.boot.teams.length} teams</span></span></div>
-      ${o.teamsRanked.map(t=>teamBarRow(t,S)).join('')}
+    <div class="panel pad">
+      <div class="panel-h"><h3>Top performers</h3><span class="sub">this period</span></div>
+      <div class="list stack">${o.top.length?o.top.map((m,i)=>personListRow(m,S,{rank:i+1})).join(''):emptyMini('No scored people yet')}</div>
     </div>
-    <div class="card pad">
-      <div class="card-h"><h3>Status distribution</h3></div>
-      ${donut(o.counts)}
+    <div class="panel pad">
+      <div class="panel-h"><h3>Needs attention</h3><span class="sub">lowest index</span></div>
+      <div class="list stack">${o.bottom.length?o.bottom.slice().reverse().map((m)=>personListRow(m,S,{})).join(''):emptyMini('No scored people yet')}</div>
+    </div>
+  </div>
+
+  <div class="wide-narrow">
+    <div class="panel pad">
+      <div class="panel-h"><h3>Gaps requiring intervention</h3><span class="sub">largest weighted shortfalls</span><span class="r"><span class="link" data-nav="risk">View all →</span></span></div>
+      <div class="list stack">${riskList(o.atRisk.slice(0,7),S,true)}</div>
+    </div>
+    <div class="panel pad">
+      <div class="panel-h"><h3>KPI status</h3><span class="sub">${tot} tracked</span></div>
+      <div style="margin-top:16px">${donut(o.counts)}</div>
       <div class="legend" style="justify-content:center;margin-top:16px">
         ${legendItem('good','On Track',o.counts.good)}${legendItem('warn','At Risk',o.counts.warn)}${legendItem('bad','Off Track',o.counts.bad)}${legendItem('none','No Data',o.counts.none)}
       </div>
     </div>
-  </div>
-
-  <div class="two-col" style="margin-bottom:16px">
-    <div class="card pad">
-      <div class="card-h"><h3>Top performers</h3><span class="sub">this period</span></div>
-      ${o.top.length?o.top.map((m,i)=>perfRow(m,i,S,true)).join(''):emptyMini('No scored people yet')}
-    </div>
-    <div class="card pad">
-      <div class="card-h"><h3>Needs attention</h3><span class="sub">lowest index</span></div>
-      ${o.bottom.length?o.bottom.slice().reverse().map((m,i)=>perfRow(m,i,S,false)).join(''):emptyMini('No scored people yet')}
-    </div>
-  </div>
-
-  <div class="card pad">
-    <div class="card-h"><h3>Gaps requiring intervention</h3><span class="sub">largest weighted shortfalls org-wide</span><span class="r"><span class="c-link" data-nav="risk" style="font-size:12.5px;font-weight:650;color:var(--brand);cursor:pointer">View all →</span></span></div>
-    ${riskTable(o.atRisk.slice(0,8),S,true)}
   </div>`;
 }
-function legendItem(k,t,n){return '<div class="li"><span class="dot s-'+k+'"></span>'+t+' <b style="margin-left:2px">'+n+'</b></div>';}
-function teamBarRow(t,S){
-  return '<div class="barrow"><div class="nm" data-team="'+esc(t.team.name)+'">'+esc(t.team.name)+'<small>Lead · '+esc(t.team.lead||'—')+'</small></div>'+
-    bar(t.score,S)+'<div class="vv" style="color:'+scoreColor(t.score,S)+'">'+one(t.score)+'<small>/5</small></div></div>';
+function legendItem(k,t,n){return '<div class="li"><span class="sdot s-'+k+'"></span>'+t+' <b style="margin-left:2px">'+n+'</b></div>';}
+
+function teamListRow(t,S,detailed){
+  const tr=trendSeries('team',t.team.name);
+  return `<div class="lrow" data-team="${esc(t.team.name)}">
+    <div class="lrow-id">${teamLogo(t.team.name,38)}
+      <div class="lrow-name">${esc(t.team.name)}<span class="lrow-sub">${t.team.type==='scorecard'?'Market scorecard':'Individual KRAs'} · ${t.members.length} people · Lead ${esc(t.team.lead||'—')}</span></div></div>
+    ${detailed?`<div class="kmetrics">
+        <div class="km"><span class="km-l">Attain</span><span class="km-v">${pct(t.ach)}</span></div>
+        <div class="km"><span class="km-l">On&nbsp;track</span><span class="km-v">${t.onTrackPct==null?'—':Math.round(t.onTrackPct)+'%'}</span></div>
+      </div>`:`<div class="lrow-spark">${miniSpark(tr,S)}</div>`}
+    <div class="lrow-val"><div class="lrow-num" style="color:${scoreColor(t.score,S)}">${one(t.score)}<span>/5</span></div>${deltaChip(tr)}</div>
+    <span class="chev">›</span></div>`;
 }
-function perfRow(m,i,S,top){
-  return '<div class="barrow"><span class="rank '+(top&&i===0?'top':'')+'">'+(i+1)+'</span>'+
-    '<div class="nm" data-member="'+m.member.id+'" style="width:auto;flex:1">'+esc(m.member.name)+'<small>'+esc(m.member.team)+(m.member.isLead?' · Lead':'')+'</small></div>'+
-    '<div style="width:120px;flex:0 0 120px">'+bar(m.score,S)+'</div>'+
-    '<div class="vv" style="width:56px;flex-basis:56px;color:'+scoreColor(m.score,S)+'">'+one(m.score)+'</div></div>';
+function personListRow(m,S,opts){
+  opts=opts||{};
+  return `<div class="lrow" data-member="${m.member.id}">
+    ${opts.rank!=null?'<span class="rank'+(opts.rank===1?' top':'')+'">'+opts.rank+'</span>':''}
+    <div class="lrow-id"><div class="lavatar">${initials(m.member.name)}</div>
+      <div class="lrow-name">${esc(m.member.name)}${m.member.isLead?'<span class="mini-tag">Lead</span>':''}<span class="lrow-sub">${esc(m.member.team)}${m.member.role?' · '+esc(m.member.role):''}</span></div></div>
+    ${opts.attain?'<div class="kmetrics"><div class="km"><span class="km-l">Attain</span><span class="km-v">'+pct(m.ach)+'</span></div></div>':''}
+    <div class="lrow-val"><div class="lrow-num" style="color:${scoreColor(m.score,S)}">${one(m.score)}<span>/5</span></div><span class="sdot s-${m.status.k}"></span></div>
+    <span class="chev">›</span></div>`;
 }
-function emptyMini(t){return '<div class="empty" style="padding:24px">'+t+'</div>';}
 
 function viewTeams(){
   const S=APP.cmp.S;
-  return `<div class="page-head"><h1>Teams</h1><p>Compare cascading performance across teams. Metal &amp; Plastic run a shared Supply + Demand market scorecard; Onboarding &amp; Collections run per-person KRAs.</p></div>
-  <div class="team-grid">${APP.cmp.org.teamsRanked.map(t=>teamCard(t,S)).join('')}</div>
-  <div class="card pad" style="margin-top:16px">
-    <div class="card-h"><h3>Comparison matrix</h3></div>
-    <div class="tbl-wrap"><table class="tbl">
-      <thead><tr><th>Team</th><th>Lead</th><th>People</th><th class="num">Index /5</th><th class="num">Attainment</th><th class="num">On Track</th><th>Status</th><th></th></tr></thead>
-      <tbody>${APP.cmp.org.teamsRanked.map(t=>`
-        <tr class="rowlink" data-team="${esc(t.team.name)}">
-          <td><div style="display:flex;align-items:center;gap:10px">${teamLogo(t.team.name,30)}<b>${esc(t.team.name)}</b></div></td>
-          <td>${esc(t.team.lead||'—')}</td>
-          <td>${t.members.length}</td>
-          <td class="num" style="color:${scoreColor(t.score,S)}">${one(t.score)}</td>
-          <td class="num">${pct(t.ach)}</td>
-          <td class="num">${t.onTrackPct==null?'—':Math.round(t.onTrackPct)+'%'}</td>
-          <td>${pillFor(t.status)}</td>
-          <td class="num" style="color:var(--faint)">›</td>
-        </tr>`).join('')}</tbody>
-    </table></div>
-  </div>`;
-}
-function teamCard(t,S){
-  const tr=trendSeries('team',t.team.name);
-  return `<div class="card tcard clickable" data-team="${esc(t.team.name)}">
-    <div class="top">${teamLogo(t.team.name)}<div><h4>${esc(t.team.name)}</h4><div class="lead">${t.team.type==='scorecard'?'Market scorecard':'Individual KRAs'} · ${t.members.length} people</div></div><div style="margin-left:auto">${pillFor(t.status)}</div></div>
-    <div class="score-row">${ring(t.score,S,72,8)}
-      <div class="mini-metrics">
-        <div class="m"><span>Attainment</span><b>${pct(t.ach)}</b></div>
-        <div class="m"><span>On track</span><b>${t.onTrackPct==null?'—':Math.round(t.onTrackPct)+'%'}</b></div>
-        <div class="m"><span>Lead</span><b>${esc((t.team.lead||'—').split(' ')[0])}</b></div>
-      </div>
-    </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1px solid var(--line-soft)">
-      ${sparkline(tr.map(p=>({v:p.v})),S,120,34)}${deltaBadge(tr)||'<span class="delta flat">—</span>'}
-    </div>
+  return `<div class="page-head"><h1>Teams</h1><p>Cascading performance across teams. Metal &amp; Plastic run a shared Supply + Demand market scorecard; Onboarding &amp; Collections run per-person KRAs.</p></div>
+  <div class="panel pad">
+    <div class="panel-h"><h3>All teams</h3><span class="sub">tap to drill into people, KRAs &amp; risks</span></div>
+    <div class="list stack">${APP.cmp.org.teamsRanked.map(t=>teamListRow(t,S,true)).join('')}</div>
   </div>`;
 }
 
@@ -765,44 +808,53 @@ function viewTeam(){
   const t=APP.cmp.teams[APP.ctx.team];const S=APP.cmp.S;
   if(!t)return '<div class="empty">Team not found</div>';
   const tr=trendSeries('team',t.team.name);
-  // KRA / segment rollup across the team
+  const tot=t.counts.good+t.counts.warn+t.counts.bad;
+  const tab=APP.tab||'people';
   const kraAgg=aggregateKras(t.rows,S);
-  return `<div class="page-head"><div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-      ${teamLogo(t.team.name,52)}
-      <div><h1 style="margin:0">${esc(t.team.name)} Team</h1><p style="margin-top:3px">Team Lead · <b>${esc(t.team.lead||'—')}</b> · ${t.members.length} people · ${t.team.type==='scorecard'?'Supply + Demand market scorecard':'Per-individual KRA/KPI'}</p></div>
-      <div style="margin-left:auto">${pillFor(t.status)}</div></div></div>
-  <div class="kpi-hero">
-    <div class="stat"><div class="lbl">Team Index</div><div class="val" style="color:${scoreColor(t.score,S)}">${one(t.score)}<small>/5</small></div>${deltaBadge(tr)}</div>
-    <div class="stat"><div class="lbl">Attainment</div><div class="val">${pct(t.ach)}</div><div class="foot">weighted vs target</div></div>
-    <div class="stat"><div class="lbl">On Track</div><div class="val">${t.onTrackPct==null?'—':Math.round(t.onTrackPct)+'%'}</div><div class="foot">${t.counts.good} of ${t.counts.good+t.counts.warn+t.counts.bad}</div></div>
-    <div class="stat"><div class="lbl">At Risk / Off</div><div class="val"><span style="color:var(--warn-ink)">${t.counts.warn}</span> / <span style="color:var(--bad-ink)">${t.counts.bad}</span></div><div class="foot">KPI lines</div></div>
-  </div>
-  <div class="two-col">
-    <div class="card pad">
-      <div class="card-h"><h3>People</h3><span class="sub">ranked by index</span></div>
-      ${t.ranked.map((m,i)=>memberRow(m,i,S)).join('')}
+  const riskRows=t.rows.filter(r=>r.hasData&&r.status.k!=='good').sort((a,b)=>Scoring.shortfall(b)-Scoring.shortfall(a));
+  let body='';
+  if(tab==='people')body=`<div class="list">${t.ranked.map((m,i)=>memberListRow(m,i,S)).join('')}</div>`;
+  else if(tab==='kras')body=`<div class="list">${kraAgg.length?kraAgg.map(k=>kraRow(k,S)).join(''):emptyMini('No data')}</div>`;
+  else body=`<div class="list">${riskList(riskRows,S,true)}</div>`;
+  return `<div class="page-head"><div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      ${teamLogo(t.team.name,46)}
+      <div><h1 style="margin:0;font-size:22px">${esc(t.team.name)} Team</h1><div style="color:var(--muted);font-size:12.5px;margin-top:2px">Lead · <b style="color:var(--ink-2)">${esc(t.team.lead||'—')}</b> · ${t.members.length} people · ${t.team.type==='scorecard'?'Supply + Demand scorecard':'Per-individual KRA/KPI'}</div></div></div></div>
+
+  <div class="snap">
+    <div class="snap-grid">
+      <div>
+        <div class="snap-label">Team Index · ${periodLabel(APP.period)}</div>
+        <div class="snap-value" style="color:${scoreColor(t.score,S)}">${one(t.score)}<span>/ 5.0</span></div>
+        ${deltaLine(tr)}
+        <div class="kstats">
+          ${kstat('Attainment',pct(t.ach),'vs target')}
+          ${kstat('On track',(t.onTrackPct==null?'—':Math.round(t.onTrackPct)+'%'),t.counts.good+' of '+tot)}
+          ${kstat('At risk','<span style="color:var(--warn-ink)">'+t.counts.warn+'</span>','KPI lines')}
+          ${kstat('Off track','<span style="color:var(--bad-ink)">'+t.counts.bad+'</span>','KPI lines')}
+        </div>
+      </div>
+      <div class="snap-chart">${areaChart(tr,S,168)}<div class="chart-note"><span><b>Index trend</b> · /5</span></div></div>
     </div>
-    <div class="card pad">
-      <div class="card-h"><h3>KRA performance</h3><span class="sub">team weighted</span></div>
-      ${kraAgg.map(k=>kraBar(k,S)).join('')||emptyMini('No data')}
-    </div>
   </div>
-  <div class="card pad" style="margin-top:16px">
-    <div class="card-h"><h3>At-risk &amp; off-track KPIs</h3><span class="sub">${t.team.name}</span></div>
-    ${riskTable(t.rows.filter(r=>r.hasData&&r.status.k!=='good').sort((a,b)=>Scoring.shortfall(b)-Scoring.shortfall(a)),S,true)}
+
+  <div class="panel pad">
+    ${segControl([{id:'people',label:'People'},{id:'kras',label:'KRA performance'},{id:'risk',label:'Focus areas ('+riskRows.length+')'}],tab,'data-tab')}
+    ${body}
   </div>`;
 }
-function memberRow(m,i,S){
-  return `<div class="barrow"><span class="rank ${i===0?'top':''}">${i+1}</span>
-    <div class="nm" data-member="${m.member.id}" style="flex:1;width:auto">${esc(m.member.name)}<small>${esc(m.member.role||'')}${m.member.isLead?' · Lead':''}</small></div>
-    <div style="width:130px;flex:0 0 130px">${bar(m.score,S)}</div>
-    <div class="vv" style="width:78px;flex-basis:78px">${pillTiny(m.status)}</div>
-    <div class="vv" style="width:44px;flex-basis:44px;color:${scoreColor(m.score,S)}">${one(m.score)}</div></div>`;
+function memberListRow(m,i,S){
+  return `<div class="lrow" data-member="${m.member.id}">
+    <span class="rank${i===0?' top':''}">${i+1}</span>
+    <div class="lrow-id"><div class="lavatar">${initials(m.member.name)}</div>
+      <div class="lrow-name">${esc(m.member.name)}${m.member.isLead?'<span class="mini-tag">Lead</span>':''}<span class="lrow-sub">${esc(m.member.role||'Team Member')}</span></div></div>
+    <div class="kmetrics"><div class="km"><span class="km-l">Attain</span><span class="km-v">${pct(m.ach)}</span></div>
+      <div style="width:96px">${bar(m.score,S)}</div></div>
+    <div class="lrow-val"><div class="lrow-num" style="color:${scoreColor(m.score,S)}">${one(m.score)}<span>/5</span></div><span class="sdot s-${m.status.k}"></span></div>
+    <span class="chev">›</span></div>`;
 }
-function pillTiny(st){return '<span class="pill '+st.cls+'" style="font-size:10.5px;padding:2px 8px">'+st.t+'</span>';}
-function kraBar(k,S){
-  return `<div class="barrow"><div class="nm" style="width:180px;flex-basis:180px">${esc(k.kra)}<small>weight ${k.weight}%${k.segment?' · '+esc(k.segment.split('·')[0].trim()):''}</small></div>
-    ${bar(k.score,S)}<div class="vv" style="color:${scoreColor(k.score,S)}">${one(k.score)}<small>/5</small></div></div>`;
+function kraRow(k,S){
+  return `<div class="kra-row"><div class="knm">${esc(k.kra)}<small>weight ${k.weight}%${k.segment?' · '+esc(k.segment.split('·')[0].trim()):''}</small></div>
+    ${bar(k.score,S)}<div class="kv" style="color:${scoreColor(k.score,S)}">${one(k.score)}<small>/5</small></div></div>`;
 }
 function aggregateKras(rows,S){
   const map={};
@@ -817,24 +869,12 @@ function aggregateKras(rows,S){
 function viewPeople(){
   const S=APP.cmp.S;
   let mem=Object.values(APP.cmp.members);
-  if(APP.search){const q=APP.search.toLowerCase();mem=mem.filter(m=>m.member.name.toLowerCase().includes(q)||m.member.team.toLowerCase().includes(q));}
+  if(APP.search){const q=APP.search.toLowerCase();mem=mem.filter(m=>m.member.name.toLowerCase().includes(q)||m.member.team.toLowerCase().includes(q)||(m.member.role||'').toLowerCase().includes(q));}
   mem.sort((a,b)=>(b.score||-1)-(a.score||-1));
-  return `<div class="page-head"><h1>People</h1><p>Every individual across the organisation with their weighted performance index, attainment and status. ${APP.search?'Filtered by “'+esc(APP.search)+'”. ':''}Click a row for the full KRA/KPI drill-down.</p></div>
-  <div class="card pad">
-    <div class="tbl-wrap"><table class="tbl">
-      <thead><tr><th>#</th><th>Person</th><th>Team</th><th>Role</th><th class="num">Index /5</th><th class="num">Attainment</th><th style="width:140px">Performance</th><th>Status</th></tr></thead>
-      <tbody>${mem.map((m,i)=>`
-        <tr class="rowlink" data-member="${m.member.id}">
-          <td><span class="rank ${i===0?'top':''}">${i+1}</span></td>
-          <td><div style="display:flex;align-items:center;gap:10px"><div class="avatar" style="width:30px;height:30px">${initials(m.member.name)}</div><b>${esc(m.member.name)}</b>${m.member.isLead?' <span class="tag" style="margin-left:4px">Lead</span>':''}</div></td>
-          <td>${esc(m.member.team)}</td>
-          <td style="color:var(--muted)">${esc(m.member.role||'—')}</td>
-          <td class="num" style="color:${scoreColor(m.score,S)}">${one(m.score)}</td>
-          <td class="num">${pct(m.ach)}</td>
-          <td>${bar(m.score,S)}</td>
-          <td>${pillFor(m.status)}</td>
-        </tr>`).join('')||'<tr><td colspan="8" class="empty">No people match your search.</td></tr>'}</tbody>
-    </table></div>
+  return `<div class="page-head"><h1>People</h1><p>Every individual with their weighted index, attainment and status. ${APP.search?'Filtered by “'+esc(APP.search)+'”. ':''}Tap a row for the full KRA/KPI drill-down.</p></div>
+  <div class="panel pad">
+    <div class="panel-h"><h3>${mem.length} ${mem.length===1?'person':'people'}</h3><span class="sub">ranked by performance index</span></div>
+    <div class="list stack">${mem.length?mem.map((m,i)=>personListRow(m,S,{rank:i+1,attain:true})).join(''):emptyMini('No people match your search.')}</div>
   </div>`;
 }
 
@@ -842,45 +882,49 @@ function viewMember(){
   const m=APP.cmp.members[APP.ctx.memberId];const S=APP.cmp.S;
   if(!m)return '<div class="empty">Person not found</div>';
   const tr=trendSeries('member',m.member.id);
-  const bySeg=groupRows(m.rows);
+  const tracked=m.rows.filter(r=>r.hasData).length;
+  const segNames=m.segments.length?m.segments.map(s=>s.segment):['All KPIs'];
+  const tab=(APP.tab&&segNames.includes(APP.tab))?APP.tab:segNames[0];
+  const rows=m.segments.length?m.rows.filter(r=>(r.kpi.segment||'')===tab):m.rows;
   return `<div class="page-head"><div class="person-hd">
     <div class="pa">${initials(m.member.name)}</div>
     <div><h1>${esc(m.member.name)}</h1><div class="meta"><span>${esc(m.member.team)} Team</span><span>·</span><span>${esc(m.member.role||'Team Member')}</span>${m.member.isLead?'<span class="tag">Team Lead</span>':''}${m.member.region?'<span class="tag">'+esc(m.member.region)+'</span>':''}</div></div>
-    <div style="margin-left:auto;text-align:right">${pillFor(m.status)}</div>
   </div></div>
-  <div class="kpi-hero">
-    <div class="stat"><div class="lbl">Performance Index</div><div class="val" style="color:${scoreColor(m.score,S)}">${one(m.score)}<small>/5</small></div>${deltaBadge(tr)}</div>
-    <div class="stat"><div class="lbl">Attainment</div><div class="val">${pct(m.ach)}</div><div class="foot">weighted vs target</div></div>
-    <div class="stat"><div class="lbl">KPIs On Track</div><div class="val">${m.counts.good}<small> / ${m.rows.filter(r=>r.hasData).length}</small></div><div class="foot">${m.counts.warn} at risk · ${m.counts.bad} off track</div></div>
-    <div class="stat"><div class="lbl">Trend</div><div style="margin-top:6px">${sparkline(tr.map(p=>({v:p.v})),S,150,40)}</div></div>
+
+  <div class="snap">
+    <div class="snap-grid">
+      <div>
+        <div class="snap-label">Performance Index · ${periodLabel(APP.period)}</div>
+        <div class="snap-value" style="color:${scoreColor(m.score,S)}">${one(m.score)}<span>/ 5.0</span></div>
+        ${deltaLine(tr)}
+        <div class="kstats">
+          ${kstat('Attainment',pct(m.ach),'vs target')}
+          ${kstat('On track',m.counts.good+' <small>/ '+tracked+'</small>','KPIs')}
+          ${kstat('At risk','<span style="color:var(--warn-ink)">'+m.counts.warn+'</span>','KPIs')}
+          ${kstat('Off track','<span style="color:var(--bad-ink)">'+m.counts.bad+'</span>','KPIs')}
+        </div>
+      </div>
+      <div class="snap-chart">${areaChart(tr,S,168)}<div class="chart-note"><span><b>Index trend</b> · /5</span></div></div>
+    </div>
   </div>
-  ${Object.keys(bySeg).map(seg=>`
-    ${seg?'<div class="seg-h">'+esc(seg)+'</div>':''}
-    <div class="card pad" style="margin-bottom:16px">
-      <div class="tbl-wrap"><table class="tbl">
-        <thead><tr><th>KPI</th><th>KRA</th><th class="num">Wt</th><th class="num">Target</th><th class="num">Actual</th><th class="num">Ach.</th><th class="num">Rating</th><th>Status</th><th></th></tr></thead>
-        <tbody>${bySeg[seg].map(r=>kpiTableRow(r,S)).join('')}</tbody>
-      </table></div>
-    </div>`).join('')}`;
+
+  <div class="panel pad">
+    ${segNames.length>1?segControl(segNames.map(s=>({id:s,label:s.split('·')[0].trim()})),tab,'data-tab'):'<div class="panel-h" style="margin-bottom:12px"><h3>KPIs</h3><span class="sub">tap a KPI for definition, formula, target vs actual &amp; to update</span></div>'}
+    <div class="list">${rows.length?rows.map(r=>kpiListRow(r,S)).join(''):emptyMini('No KPIs in this segment')}</div>
+  </div>`;
 }
-function groupRows(rows){
-  const hasSeg=rows.some(r=>r.kpi.segment);
-  if(!hasSeg)return {'':rows};
-  const g={};rows.forEach(r=>{(g[r.kpi.segment||'Other']=g[r.kpi.segment||'Other']||[]).push(r);});return g;
-}
-function kpiTableRow(r,S){
+function kpiListRow(r,S){
   const k=r.kpi;
-  return `<tr class="rowlink" data-kpi="${r.kpi.kpiId}" data-member="${k.memberId}">
-    <td class="kname">${esc(k.kpi)}<small>${esc((k.perspective||'')+(k.perspective&&k.unit?' · ':'')+k.unit)}</small></td>
-    <td style="color:var(--ink-2)">${esc(k.kra)}</td>
-    <td class="num">${k.weight==null?'—':k.weight+'%'}</td>
-    <td class="num">${fmtNum(k.target,k.unit)}</td>
-    <td class="num">${r.value!=null?fmtNum(r.value,k.unit):(r.manual?'<span class="tag">rated</span>':'—')}</td>
-    <td class="num">${r.achievement!=null?pct(r.achievement):'—'}</td>
-    <td class="num" style="color:${scoreColor(r.rating,S)};font-weight:800">${r.rating==null?'—':one(r.rating)}</td>
-    <td>${pillTiny(r.status)}</td>
-    <td class="num" style="color:var(--faint)">›</td>
-  </tr>`;
+  const actual=r.value!=null?fmtNum(r.value,k.unit):(r.manual?'Rated':'—');
+  return `<div class="lrow" data-kpi="${k.kpiId}" data-member="${k.memberId}">
+    <div class="lrow-id"><span class="sdot s-${r.hasData?r.status.k:'none'}" style="margin-left:2px"></span>
+      <div class="lrow-name">${esc(k.kpi)}<span class="lrow-sub">${esc(k.kra)}${k.weight!=null?' · '+k.weight+'%':''}${k.perspective?' · '+esc(k.perspective):''}</span></div></div>
+    <div class="kmetrics">
+      <div class="km"><span class="km-l">Actual</span><span class="km-v">${actual}</span><span class="km-s">of ${fmtNum(k.target,k.unit)}</span></div>
+      <div class="km"><span class="km-l">Ach.</span><span class="km-v">${r.achievement!=null?pct(r.achievement):'—'}</span></div>
+      <div class="rchip" style="color:${scoreColor(r.rating,S)};background:${tint(r.hasData?r.status.k:'none')}">${r.rating==null?'—':one(r.rating)}</div>
+    </div>
+    <span class="chev">›</span></div>`;
 }
 
 function viewRisk(){
@@ -889,31 +933,27 @@ function viewRisk(){
   if(teamF)rows=rows.filter(r=>r.kpi.team===teamF);
   if(APP.search){const q=APP.search.toLowerCase();rows=rows.filter(r=>r.kpi.kpi.toLowerCase().includes(q)||r.kpi.individual.toLowerCase().includes(q)||r.kpi.kra.toLowerCase().includes(q));}
   const teams=APP.boot.teams.map(t=>t.name);
-  return `<div class="page-head"><h1>At-Risk &amp; Off-Track KPIs</h1><p>Every KPI line below target for <b>${periodLabel(APP.period)}</b>, ranked by weighted shortfall — the biggest levers for team performance. Click any row to open the KPI, add commentary and log evidence.</p></div>
-  <div class="card pad" style="margin-bottom:16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-    <span style="font-size:12px;font-weight:600;color:var(--muted)">Filter:</span>
-    <button class="btn ghost ${teamF===''?'':''}" data-riskteam="" style="${teamF===''?'border-color:var(--brand);color:var(--brand)':''};padding:7px 14px">All teams</button>
-    ${teams.map(t=>`<button class="btn ghost" data-riskteam="${esc(t)}" style="${teamF===t?'border-color:var(--brand);color:var(--brand)':''};padding:7px 14px">${esc(t)}</button>`).join('')}
-    <span style="margin-left:auto;font-size:12.5px;color:var(--muted)"><b style="color:var(--bad-ink)">${rows.filter(r=>r.status.k==='bad').length}</b> off track · <b style="color:var(--warn-ink)">${rows.filter(r=>r.status.k==='warn').length}</b> at risk</span>
+  const off=rows.filter(r=>r.status.k==='bad').length,at=rows.filter(r=>r.status.k==='warn').length;
+  const segItems=[{id:'',label:'All teams'}].concat(teams.map(t=>({id:t,label:t})));
+  return `<div class="page-head"><h1>At-Risk &amp; Off-Track KPIs</h1><p>Every KPI below target for <b>${periodLabel(APP.period)}</b>, ranked by weighted shortfall — the biggest levers to move team performance. Tap a row to open, comment and log evidence.</p></div>
+  <div class="panel pad" style="margin-bottom:16px;display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+    <div class="seg">${segItems.map(it=>'<button class="seg-btn'+(it.id===teamF?' active':'')+'" data-riskteam="'+esc(it.id)+'">'+esc(it.label)+'</button>').join('')}</div>
+    <span style="margin-left:auto;font-size:12.5px;color:var(--muted)"><b style="color:var(--bad-ink)">${off}</b> off track · <b style="color:var(--warn-ink)">${at}</b> at risk</span>
   </div>
-  <div class="card pad">${riskTable(rows,S,false)}</div>`;
+  <div class="panel pad"><div class="list">${riskList(rows,S,true)}</div></div>`;
 }
-function riskTable(rows,S,compact){
-  if(!rows.length)return '<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 6L9 17l-5-5"/></svg><div>Nothing off track — every tracked KPI is on target.</div></div>';
-  return `<div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th>KPI</th><th>Owner</th>${compact?'':'<th>Team</th>'}<th class="num">Target</th><th class="num">Actual</th><th class="num">Gap</th><th class="num">Rating</th><th>Status</th></tr></thead>
-    <tbody>${rows.map(r=>{const k=r.kpi;return `
-      <tr class="rowlink" data-kpi="${k.kpiId}" data-member="${k.memberId}">
-        <td class="kname">${esc(k.kpi)}<small>${esc(k.kra)}</small></td>
-        <td>${esc(k.individual)}</td>
-        ${compact?'':'<td>'+esc(k.team)+'</td>'}
-        <td class="num">${fmtNum(k.target,k.unit)}</td>
-        <td class="num">${r.value!=null?fmtNum(r.value,k.unit):'—'}</td>
-        <td class="num" style="color:var(--bad-ink)">${r.gap!=null?(r.gap>0?'+':'')+fmtNum(r.gap,k.unit):'—'}</td>
-        <td class="num" style="color:${scoreColor(r.rating,S)};font-weight:800">${one(r.rating)}</td>
-        <td>${pillTiny(r.status)}</td>
-      </tr>`;}).join('')}</tbody>
-  </table></div>`;
+function riskList(rows,S,showTeam){
+  if(!rows.length)return '<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="var(--good)" stroke-width="1.8"><path d="M20 6L9 17l-5-5"/></svg><div>Nothing off track — every tracked KPI is on target.</div></div>';
+  return rows.map(r=>{const k=r.kpi;return `
+    <div class="lrow" data-kpi="${k.kpiId}" data-member="${k.memberId}">
+      <div class="lrow-id"><span class="sdot s-${r.status.k}" style="margin-left:2px"></span>
+        <div class="lrow-name">${esc(k.kpi)}<span class="lrow-sub">${esc(k.individual)} · ${esc(k.kra)}${showTeam?' · '+esc(k.team):''}</span></div></div>
+      <div class="kmetrics">
+        <div class="km"><span class="km-l">Actual</span><span class="km-v">${r.value!=null?fmtNum(r.value,k.unit):'—'}</span><span class="km-s">of ${fmtNum(k.target,k.unit)}</span></div>
+        <div class="km"><span class="km-l">Gap</span><span class="km-v" style="color:var(--bad-ink)">${r.gap!=null?(r.gap>0?'+':'')+fmtNum(r.gap,k.unit):'—'}</span></div>
+        <div class="rchip" style="color:${scoreColor(r.rating,S)};background:${tint(r.status.k)}">${one(r.rating)}</div>
+      </div>
+      <span class="chev">›</span></div>`;}).join('');
 }
 
 function viewData(){
@@ -921,21 +961,24 @@ function viewData(){
   const teamRows=b.teams.map(t=>{const cnt=b.members.filter(m=>m.team===t.name).length;const kc=b.kpis.filter(k=>k.team===t.name).length;
     return `<tr><td><b>${esc(t.name)}</b></td><td>${t.type==='scorecard'?'Market scorecard':'Individual KRA'}</td><td>${esc(t.lead||'—')}</td><td class="num">${cnt}</td><td class="num">${kc}</td><td>${(t.segments||[]).map(s=>'<span class="tag" style="margin-right:4px">'+esc(s)+'</span>').join('')||'—'}</td></tr>`;}).join('');
   return `<div class="page-head"><h1>Data &amp; Settings</h1><p>The application reads the KRA/KPI framework live from the source Google Sheet and stores individual actuals in a managed tab. Nothing here is hardcoded.</p></div>
-  <div class="three-col" style="margin-bottom:16px">
-    <div class="stat"><div class="lbl">Source of truth</div><div class="val" style="font-size:16px;margin-top:8px">${MOCK.enabled?'Preview mock':'Google Sheet'}</div><div class="foot">${MOCK.enabled?'sample data — deploy to go live':'live · '+esc((b.user&&b.user.email)||'')}</div></div>
-    <div class="stat"><div class="lbl">Reporting periods</div><div class="val">${b.periods.length}</div><div class="foot">${b.periods.map(periodLabel).join(' · ')}</div></div>
-    <div class="stat"><div class="lbl">Status thresholds</div><div class="val" style="font-size:16px;margin-top:8px">On ≥ ${S.onTrack} · Risk ≥ ${S.atRisk}</div><div class="foot">rating scale 0–5 · Meets = band 3</div></div>
+  <div class="snap" style="padding:18px 22px">
+    <div class="kstats" style="margin-top:0;border-top:none;padding-top:0">
+      ${kstat('Source of truth',MOCK.enabled?'Preview mock':'Google Sheet',MOCK.enabled?'sample data':'live · '+esc((b.user&&b.user.email)||''))}
+      ${kstat('Reporting periods',b.periods.length,b.periods.map(periodLabel).join(' · '))}
+      ${kstat('People',b.members.length,'across '+b.teams.length+' teams')}
+      ${kstat('Thresholds','On ≥ '+S.onTrack+' · Risk ≥ '+S.atRisk,'rating 0–5 · Meets = band 3')}
+    </div>
   </div>
-  <div class="card pad" style="margin-bottom:16px">
-    <div class="card-h"><h3>Teams &amp; framework parsed from the sheet</h3></div>
-    <div class="tbl-wrap"><table class="tbl">
+  <div class="panel pad" style="margin-bottom:16px">
+    <div class="panel-h"><h3>Framework parsed from the sheet</h3><span class="sub">read-only</span></div>
+    <div class="tbl-wrap stack"><table class="tbl">
       <thead><tr><th>Team</th><th>Model</th><th>Lead</th><th class="num">People</th><th class="num">KPI lines</th><th>Segments</th></tr></thead>
       <tbody>${teamRows}</tbody></table></div>
   </div>
   <div class="two-col">
-    <div class="card pad">
-      <div class="card-h"><h3>Reporting period</h3></div>
-      <div class="field"><label>Active period for the whole dashboard</label>
+    <div class="panel pad">
+      <div class="panel-h"><h3>Reporting period &amp; thresholds</h3></div>
+      <div class="field stack"><label>Active period for the whole dashboard</label>
         <select class="pill-select" id="dataPeriod" style="width:100%">${b.periods.map(p=>'<option value="'+p+'"'+(p===APP.period?' selected':'')+'>'+periodLabel(p)+'</option>').join('')}</select></div>
       <div class="field inline2">
         <div><label>On Track when rating ≥</label><input id="thOn" type="number" step="0.1" min="0" max="5" value="${S.onTrack}"></div>
@@ -943,25 +986,25 @@ function viewData(){
       </div>
       <button class="btn primary" data-action="save-settings">Save settings</button>
     </div>
-    <div class="card pad">
-      <div class="card-h"><h3>Sample data</h3></div>
-      <p style="font-size:13px;color:var(--muted);margin:0 0 16px">The dashboard is seeded with deterministic <b>sample actuals</b> across ${b.periods.length} months so it is immediately explorable. Replace them with real MIS numbers by editing KPIs in-app, or clear them to start from a blank slate.</p>
+    <div class="panel pad">
+      <div class="panel-h"><h3>Sample data</h3></div>
+      <p style="font-size:13px;color:var(--muted);margin:14px 0 16px;line-height:1.55">Seeded with deterministic <b>sample actuals</b> across ${b.periods.length} months so the board is explorable immediately. Replace them with real MIS numbers by editing KPIs in-app, or clear them for a blank slate.</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn ghost" data-action="reseed">Re-seed sample data</button>
         <button class="btn ghost" data-action="clear" style="color:var(--bad-ink)">Clear all actuals</button>
       </div>
-      <div style="margin-top:16px;font-size:12px;color:var(--faint)">Managed tabs: <code style="background:var(--bg);padding:1px 6px;border-radius:5px">_KKT_Actuals</code> · <code style="background:var(--bg);padding:1px 6px;border-radius:5px">_KKT_Settings</code> — the original framework tabs are never modified.</div>
+      <div style="margin-top:16px;font-size:12px;color:var(--faint)">Managed tabs: <code style="background:var(--surface-2);padding:1px 6px;border-radius:5px">_KKT_Actuals</code> · <code style="background:var(--surface-2);padding:1px 6px;border-radius:5px">_KKT_Settings</code> — original framework tabs are never modified.</div>
     </div>
   </div>`;
 }
+function emptyMini(t){return '<div class="empty" style="padding:26px">'+t+'</div>';}
 
 /* =============================================================  DRAWER  ===== */
 function openKpi(memberId,kpiId){
   const m=APP.cmp.members[memberId];if(!m)return;
   const r=m.rows.find(x=>x.kpi.kpiId===kpiId);if(!r)return;
   const k=r.kpi,S=APP.cmp.S;
-  // per-period rating trend for this KPI
-  const kpiTrend=APP.boot.periods.map(p=>{const rec=APP.boot.actuals[m.member.id+'||'+kpiId+'||'+p];const ev=Scoring.evalKpi(k,rec,S);return {v:ev.rating};});
+  const kpiTrend=APP.boot.periods.map(p=>{const rec=APP.boot.actuals[m.member.id+'||'+kpiId+'||'+p];const ev=Scoring.evalKpi(k,rec,S);return {period:p,v:ev.rating};});
   const html=`
     <div class="drawer-h">
       <div>${pillFor(r.status)}
@@ -972,7 +1015,7 @@ function openKpi(memberId,kpiId){
     </div>
     <div class="drawer-body">
       <div class="section-t">Definition &amp; formula</div>
-      <div class="def-box">${esc(k.definition||k.kpi)}${k.source?'<div style="margin-top:10px;font-size:12px;color:var(--muted)">Source of tracking · <code>'+esc(k.source)+'</code> &nbsp;·&nbsp; KRA · <code>'+esc(k.kra)+'</code> &nbsp;·&nbsp; Unit · <code>'+esc(k.unit)+'</code></div>':''}</div>
+      <div class="def-box">${esc(k.definition||k.kpi)}${k.source?'<div style="margin-top:10px;font-size:12px;color:var(--muted)">Source · <code>'+esc(k.source)+'</code> &nbsp; KRA · <code>'+esc(k.kra)+'</code> &nbsp; Unit · <code>'+esc(k.unit)+'</code></div>':''}</div>
 
       <div class="section-t">Performance · ${periodLabel(APP.period)}</div>
       <div class="metric-grid">
@@ -988,7 +1031,7 @@ function openKpi(memberId,kpiId){
       ${bandScale(k,r,S)}
 
       <div class="section-t">Rating trend</div>
-      <div style="display:flex;align-items:center;gap:16px">${sparkline(kpiTrend,S,220,48)}<div style="font-size:12px;color:var(--muted)">${APP.boot.periods.map((p,i)=>periodLabel(p)+': '+(kpiTrend[i].v==null?'—':one(kpiTrend[i].v))).join('<br>')}</div></div>
+      <div style="display:flex;align-items:center;gap:16px">${miniSpark(kpiTrend,S,180,50)}<div style="font-size:12px;color:var(--muted)">${APP.boot.periods.map((p,i)=>periodLabel(p)+': <b style="color:var(--ink-2)">'+(kpiTrend[i].v==null?'—':one(kpiTrend[i].v))+'</b>').join('<br>')}</div></div>
 
       <div class="section-t">Update actual · ${periodLabel(APP.period)}</div>
       ${(k.direction==='qualitative'||k.target==null)
@@ -1007,13 +1050,12 @@ function openKpi(memberId,kpiId){
   const rp=$('#ratePick');if(rp)rp.addEventListener('click',e=>{const b=e.target.closest('[data-rate]');if(!b)return;$$('#ratePick button').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');});
 }
 function bandScale(k,r,S){
-  const cols=['var(--bad)','#E88A2E','var(--warn)','#4F9E6E','var(--good)'];
+  const cols=['var(--bad)','#E8973A','var(--warn)','#4FA98A','var(--good)'];
   const val=r.value;
-  // marker position 0..100 across the 5 bands by rating
   let mk='';
   if(r.rating!=null){const posp=clamp((r.rating-0.5)/5,0,1)*100;mk='<div class="marker" style="left:'+posp+'%">'+(val!=null?fmtNum(val,k.unit):one(r.rating))+'</div>';}
   return '<div class="bandscale"><div class="bs-track">'+
-    k.bands.map((b,i)=>'<div class="bs-seg" style="background:'+cols[i]+';opacity:'+(r.rating!=null&&Math.round(clamp(r.rating,1,5))===i+1?1:.82)+'">'+(i===0?mk:'')+(b.raw?esc(b.raw):'—')+'</div>').join('')+
+    k.bands.map((b,i)=>'<div class="bs-seg" style="background:'+cols[i]+';opacity:'+(r.rating!=null&&Math.round(clamp(r.rating,1,5))===i+1?1:.8)+'">'+(i===0?mk:'')+(b.raw?esc(b.raw):'—')+'</div>').join('')+
     '</div><div class="bs-lab">'+k.bands.map(b=>'<div>'+esc(b.label)+'</div>').join('')+'</div></div>';
 }
 function closeDrawer(){$('#drawer').classList.remove('on');$('#scrim').classList.remove('on');}
@@ -1050,12 +1092,11 @@ async function clearData(){if(!confirm('Clear ALL actuals? The KRA/KPI framework
 document.addEventListener('click',e=>{
   // actions (buttons) win first — a Save button also carries data-member/data-kpi
   const act=e.target.closest('[data-action]');if(act){handleAction(act.dataset.action,act);return;}
-  const nav=e.target.closest('[data-nav]');if(nav){
-    const id=nav.dataset.nav;
-    if(id==='risk')APP.ctx={};
-    go(id);closeNav();return;}
+  const nav=e.target.closest('[data-nav]');if(nav){const id=nav.dataset.nav;if(id==='risk')APP.ctx={};go(id);closeNav();return;}
   const cr=e.target.closest('[data-crumb]');if(cr){const o=JSON.parse(cr.dataset.crumb.replace(/&#39;/g,"'"));go(o.v,o.ctx);return;}
   const rt=e.target.closest('[data-riskteam]');if(rt){APP.ctx.teamFilter=rt.dataset.riskteam;render();return;}
+  const pp=e.target.closest('[data-period]');if(pp){if(pp.dataset.period!==APP.period){APP.period=pp.dataset.period;recompute();buildChrome();render();}return;}
+  const tb=e.target.closest('[data-tab]');if(tb){APP.tab=tb.dataset.tab;render();return;}
   const tm=e.target.closest('[data-team]');if(tm){go('team',{team:tm.dataset.team});return;}
   const kp=e.target.closest('[data-kpi]');if(kp){openKpi(kp.dataset.member,kp.dataset.kpi);return;}
   const mb=e.target.closest('[data-member]');if(mb){go('member',{memberId:mb.dataset.member});return;}
@@ -1072,12 +1113,8 @@ function handleAction(a,el){
 function closeNav(){APP.navOpen=false;$('#sidebar').classList.remove('open');}
 async function doRefresh(){toast('Refreshing from sheet…');try{const b=await call('apiBootstrap',{force:true});if(b&&b.ok){applyBoot(b);toast('Up to date');}}catch(e){toast('Error: '+(e.message||e),true);}}
 
-$('#periodSelect').addEventListener('change',e=>{APP.period=e.target.value;recompute();buildChrome();render();});
 let searchT;$('#searchInput').addEventListener('input',e=>{clearTimeout(searchT);searchT=setTimeout(()=>{APP.search=e.target.value.trim();if(APP.view!=='people'&&APP.view!=='risk'&&APP.search){go('people');}else render();},220);});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDrawer();});
-
-/* bind interactive elements created per-render (none extra needed currently) */
-function bindMini(){}
 
 /* toast */
 let toastT;
@@ -1145,7 +1182,6 @@ const MockBackend=(()=>{
       ['Vendor Onboarding','Vendor Payments',10,O5,'End-to-end ownership; minimise escalations.','Individual Work Sheet']]
   };
   const ONB_ROLE={'Ajay':'Onboarding Lead','Vamsi':'Onboarding Executive','Harshita':'Onboarding Executive','Naveen':'Onboarding Executive'};
-  const ONB_PERSP={'Ajay':'People','_':'Process'};
 
   const COL_LEAD=[
     ['Customer','Due Date + 7 Days Collections – Marketplace','Collection % vs Target',20,['80%','85%','90%','100%','105%'],'Target vs achievement of due-date+7-day collections (Marketplace).'],
@@ -1178,7 +1214,6 @@ const MockBackend=(()=>{
   // ---------- assemble model ----------
   function buildModel(){
     const teams=[],members=[],kpis=[];
-    // scorecard teams
     [['Metal',METAL_POC,'Amit Jha'],['Plastic',PLASTIC_POC,'Tabesh']].forEach(([tn,roster,lead])=>{
       const segs=[SUP,DEM];
       teams.push({id:slug(tn),name:tn,lead,type:'scorecard',segments:segs});
@@ -1190,7 +1225,6 @@ const MockBackend=(()=>{
           kpis.push(Object.assign({id:slug(mid+'|'+kpiId),kpiId,team:tn,memberId:mid,individual:nm,role:''},t));});
       });
     });
-    // roster teams
     function rosterTeam(tn,lead,data,roleMap){
       teams.push({id:slug(tn),name:tn,lead,type:'roster',segments:[]});
       Object.keys(data).forEach(nm=>{
@@ -1206,10 +1240,7 @@ const MockBackend=(()=>{
         });
       });
     }
-    // Normalise every roster row to exactly [persp,kra,kpi,w,raws,def,src].
-    // Onboarding source rows are [kra,kpi,w,raws,def,src] -> prepend perspective.
     const onbData={};Object.keys(ONB).forEach(nm=>{onbData[nm]=ONB[nm].map(r=>{const persp=(nm==='Ajay'&&r[1].indexOf('Vendor Payments')>=0)?'People':'Process';return [persp,r[0],r[1],r[2],r[3],r[4],r[5]];});});
-    // Collections source rows are [persp,kra,kpi,w,raws,def] -> append source.
     const colData={};Object.keys(COL).forEach(nm=>{colData[nm]=COL[nm].map(r=>[r[0],r[1],r[2],r[3],r[4],r[5],'MIS Report']);});
     rosterTeam('Onboarding','Ajay',onbData,ONB_ROLE);
     rosterTeam('Collections','Srinivas Reddy',colData,COL_ROLE);
@@ -1235,7 +1266,6 @@ const MockBackend=(()=>{
   }
   function months(n){const out=[],d=new Date();d.setDate(1);for(let i=n-1;i>=0;i--){const dd=new Date(d.getFullYear(),d.getMonth()-i,1);out.push(dd.getFullYear()+'-'+String(dd.getMonth()+1).padStart(2,'0'));}return out;}
 
-  // state
   const periods=months(3);
   const model=buildModel();
   let actuals=seed(model,periods);
