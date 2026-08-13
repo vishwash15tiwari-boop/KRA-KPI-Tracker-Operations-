@@ -1,738 +1,633 @@
 /*******************************************************************************
- * RECYKAL — KRA / KPI PERFORMANCE TRACKER
- * -----------------------------------------------------------------------------
- * Backend (data access, normalisation, persistence, security, APIs).
+ * RECYKAL — KRA / KPI PERFORMANCE COMMAND CENTRE
+ * =============================================================================
+ * BACKEND / DATA-PROCESSING LAYER  (the single source of truth for the UI)
  *
- * The source Google Sheet is the SINGLE SOURCE OF TRUTH for the KRA/KPI
- * framework (teams, KRAs, KPIs, weights, targets, units, direction). This file
- * NEVER invents business logic — it reads whatever the sheet defines and maps
- * it into one normalised model. Individuals' actuals / commentary / evidence
- * are persisted into managed tabs that this script auto-provisions, so the
- * original framework tabs are never modified.
+ * Architecture:  Google Sheet  ->  this backend  ->  normalized model  ->  UI
  *
- * DESIGN CONTRACT
- *   - Code.gs         : parse + normalise the messy sheet into a clean model,
- *                       compute the data *primitives* (band values, direction,
- *                       target, weight, stable KpiId), persist actuals, secure
- *                       and expose the APIs. It does the "data calculations".
- *   - Index.html      : owns the SINGLE scoring engine (rating -> score ->
- *                       status -> roll-ups -> trends). There is exactly one
- *                       scoring implementation in the whole product, so there
- *                       is no duplicated calculation logic. The same engine runs
- *                       on live server data and on the offline preview mock.
+ * This file owns ALL business logic. The frontend (Index.html) is a pure
+ * renderer — it never calculates a KPI, a status, an achievement or a roll-up.
+ * Everything below is computed here and returned as one normalized payload:
+ *   - reads every tab once (batched) and parses the KRA/KPI framework
+ *   - normalizes people, teams, KRAs, KPIs, weights, targets, units, direction
+ *   - reads the actuals the app collects (targets today, achievements as they
+ *     are entered) and scores every KPI line
+ *   - aggregates to member / team / organisation, with trends across periods
+ *   - handles missing / blank / malformed values and empty / error states
+ *   - caches the parsed framework and exposes a "lastUpdated" signal
  *
- * Supported dynamically (nothing below is hardcoded to today's data):
- *   - new teams / tabs, new individuals, new KRAs / KPIs, new weights & targets
- *   - both scorecard shapes (Metal/Plastic market scorecard, Onboarding/
- *     Collections per-individual blocks) + the POC roster tab
+ * The parser is generic and structure-driven (no hard-coded KPI data): it reads
+ * whatever the sheet contains today and adapts as the sheet evolves.
  ******************************************************************************/
 
 /** ------------------------------------------------------------------ CONFIG */
-
 var SOURCE_SPREADSHEET_ID = '1c0_pP4Mmye5s5D_vzoxrvJ-utkLb6JhD69TvvOBbjoo';
 
-// Managed tabs this app owns (created on first run; framework tabs untouched).
-var TAB_ACTUALS  = '_KKT_Actuals';   // individual actuals / commentary / evidence
-var TAB_SETTINGS = '_KKT_Settings';  // status thresholds, current period, etc.
+var TAB_ACTUALS  = '_KKT_Actuals';    // app-managed: the achievements/actuals
+var TAB_SETTINGS = '_KKT_Settings';   // app-managed: thresholds, current period
 
-// Team leads (from the brief). Used to flag the lead + ensure they exist as a
-// member even if absent from the roster (e.g. Tabesh for Plastic).
-var TEAM_LEADS = {
-  'Metal':       'Amit Jha',
-  'Plastic':     'Tabesh',
-  'Onboarding':  'Ajay',
-  'Collections': 'Srinivas Reddy'
-};
+// Canonical functions/teams and the keywords that map raw text onto them.
+// Team is resolved from (1) the tab name, (2) the block-title role suffix,
+// (3) the KPI content — in that order — so it stays correct as the sheet grows.
+var TEAM_RULES = [
+  { id: 'Metal',        match: ['metal'] },
+  { id: 'Plastic',      match: ['plastic'] },
+  { id: 'Onboarding',   match: ['onboard'] },
+  { id: 'Collections',  match: ['collection'] },
+  { id: 'Transactions', match: ['transaction', 'mis', 'match making', 'match-making', 'cn / dn', 'dn / cn'] },
+  { id: 'Logistics',    match: ['logistic', 'dispatch', 'pod', 'in-transit', 'transit', 'delivery', 'settlement', 'qc &', 'shipment'] }
+];
 
-// Rating (0..5) thresholds -> status. Overridable in the _KKT_Settings tab.
 var DEFAULT_SETTINGS = {
-  onTrack: 3.0,          // rating >= 3.0  -> On Track   (meets expectation+)
-  atRisk:  2.0,          // rating >= 2.0  -> At Risk
-  targetBandLevel: 3,    // band level treated as the "target" (Meets Exp.)
-  currentPeriod: ''      // 'YYYY-MM'; '' -> latest period with data / this month
+  onTrack: 3.0,          // rating >= 3.0 (Meets Expectation) -> On Track
+  atRisk:  2.0,          // rating >= 2.0 -> At Risk, else Off Track
+  targetBandLevel: 3,    // band level treated as the "target" (Meets)
+  currentPeriod: ''      // '' -> latest period with data / this month
 };
 
-var CACHE_KEY = 'kkt_model_v3';
-var CACHE_TTL = 21600;   // 6h; invalidated on save/reset
+var CACHE_KEY = 'kkt_model_v4';
+var CACHE_TTL = 900;     // 15 min; invalidated on write
 
 /** -------------------------------------------------------------- WEB ENTRY */
-
 function doGet() {
   return HtmlService.createHtmlOutputFromFile('Index')
-    .setTitle('Recykal · KRA / KPI Tracker')
+    .setTitle('Recykal · KRA / KPI Command Centre')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
-/** ---------------------------------------------------------------- PUBLIC API
- * Everything the client needs in ONE round-trip. Reads are batched and the
- * parsed framework is cached; actuals are always read fresh.
+/** ============================================================= PUBLIC API */
+
+/**
+ * The one call the frontend needs. Returns the fully computed, normalized
+ * dashboard model. Never throws to the client — always returns a shaped object
+ * with ok / connected / empty / error so the UI can render the right state.
  */
 function apiBootstrap(opts) {
   opts = opts || {};
   try {
-    var model    = getFrameworkModel(!!opts.force);      // cached parse
-    var settings = readSettings();
-    var store    = readActuals();                        // {key -> record}, periods
-
-    var periods = uniqueSorted(store.periods.concat(defaultPeriods_()));
-    var current = settings.currentPeriod && periods.indexOf(settings.currentPeriod) >= 0
-      ? settings.currentPeriod
-      : (periods.length ? periods[periods.length - 1] : thisMonth_());
-
-    return {
-      ok: true,
-      generatedAt: new Date().toISOString(),
-      user: safeUser_(),
-      settings: {
-        onTrack: settings.onTrack,
-        atRisk: settings.atRisk,
-        targetBandLevel: settings.targetBandLevel,
-        currentPeriod: current
-      },
-      periods: periods,
-      teams: model.teams,
-      members: model.members,
-      kpis: model.kpis,
-      actuals: store.map
-    };
+    var cache = CacheService.getScriptCache();
+    if (!opts.force) {
+      var hit = cache.get(CACHE_KEY);
+      if (hit) { try { return JSON.parse(hit); } catch (e) {} }
+    }
+    var model = buildDashboard_();
+    try { cache.put(CACHE_KEY, JSON.stringify(model), CACHE_TTL); } catch (e) {}
+    return model;
   } catch (err) {
-    return { ok: false, error: String(err && err.message || err) };
+    return { ok: false, connected: false, empty: true,
+             error: String(err && err.message || err),
+             generatedAt: new Date().toISOString() };
   }
 }
 
-/**
- * Upsert a single actual (+ optional commentary / evidence / manual rating).
- * Returns the fresh bootstrap so the client always renders server truth.
- * payload: {memberId, kpiId, period, actual, rating, commentary, evidence}
- */
-function apiSaveActual(payload) {
+/** Save one actual/achievement (+ commentary / evidence / manual rating). */
+function apiSaveActual(p) {
   var lock = LockService.getScriptLock();
   try {
     lock.waitLock(20000);
-    if (!payload || !payload.memberId || !payload.kpiId || !payload.period) {
+    if (!p || !p.memberId || !p.kpiId || !p.period) {
       throw new Error('memberId, kpiId and period are required.');
     }
     var sh = ensureActualsSheet_();
     var data = sh.getDataRange().getValues();
-    var header = data[0];
-    var idx = colIndex_(header);
-    var key = actualKey_(payload.memberId, payload.kpiId, payload.period);
-
-    var rowNum = -1;
+    var header = data[0], idx = colIndex_(header);
+    var key = actualKey_(p.memberId, p.kpiId, p.period), rowNum = -1;
     for (var r = 1; r < data.length; r++) {
-      var k = actualKey_(data[r][idx.MemberId], data[r][idx.KpiId], data[r][idx.Period]);
-      if (k === key) { rowNum = r + 1; break; }
+      if (actualKey_(data[r][idx.MemberId], data[r][idx.KpiId], data[r][idx.Period]) === key) { rowNum = r + 1; break; }
     }
-
-    var now  = new Date();
-    var who  = safeUser_().email || 'unknown';
-    var rowArr = buildActualRow_(header, payload, who, now);
-
-    if (rowNum === -1) {
-      sh.appendRow(rowArr);
-    } else {
-      sh.getRange(rowNum, 1, 1, header.length).setValues([rowArr]);
-    }
+    var row = buildActualRow_(header, p, safeUser_().email || 'unknown', new Date());
+    if (rowNum === -1) sh.appendRow(row);
+    else sh.getRange(rowNum, 1, 1, header.length).setValues([row]);
     invalidateCache_();
-    return apiBootstrap({});
+    return apiBootstrap({ force: true });
   } catch (err) {
     return { ok: false, error: String(err && err.message || err) };
-  } finally {
-    try { lock.releaseLock(); } catch (e) {}
-  }
+  } finally { try { lock.releaseLock(); } catch (e) {} }
 }
 
-/** Persist a settings change (thresholds / current period). */
 function apiSaveSettings(patch) {
   try {
-    var s = readSettings();
+    var s = readSettings_();
     patch = patch || {};
     if (patch.currentPeriod   != null) s.currentPeriod   = String(patch.currentPeriod);
     if (patch.onTrack         != null) s.onTrack         = Number(patch.onTrack);
     if (patch.atRisk          != null) s.atRisk          = Number(patch.atRisk);
     if (patch.targetBandLevel != null) s.targetBandLevel = Number(patch.targetBandLevel);
     writeSettings_(s);
-    return apiBootstrap({});
-  } catch (err) {
-    return { ok: false, error: String(err && err.message || err) };
-  }
+    invalidateCache_();
+    return apiBootstrap({ force: true });
+  } catch (err) { return { ok: false, error: String(err && err.message || err) }; }
 }
 
-/** Clear only the actuals (keeps the framework + settings). */
-function apiClearActuals() {
+/** Remove actuals whose KpiId no longer exists in the framework (orphans from
+ *  a framework change), then optionally everything. */
+function apiCleanupActuals(mode) {
+  try {
+    var fw = getFramework_(true);
+    var valid = {}; fw.kpis.forEach(function (k) { valid[k.memberId + '||' + k.kpiId] = true; });
+    var sh = ensureActualsSheet_();
+    var data = sh.getDataRange().getValues();
+    if (data.length < 2) return apiBootstrap({ force: true });
+    var idx = colIndex_(data[0]), keep = [data[0]];
+    for (var r = 1; r < data.length; r++) {
+      var mk = String(data[r][idx.MemberId]) + '||' + String(data[r][idx.KpiId]);
+      if (mode === 'all') continue;
+      if (valid[mk]) keep.push(data[r]);
+    }
+    sh.clearContents();
+    sh.getRange(1, 1, keep.length, data[0].length).setValues(keep);
+    invalidateCache_();
+    return apiBootstrap({ force: true });
+  } catch (err) { return { ok: false, error: String(err && err.message || err) }; }
+}
+
+/** Observability: what did the parser actually see? Helps validate the live
+ *  sheet mapping without guessing. */
+function apiDiagnostics() {
   try {
     var ss = SpreadsheetApp.openById(SOURCE_SPREADSHEET_ID);
-    var sh = ss.getSheetByName(TAB_ACTUALS);
-    if (sh) ss.deleteSheet(sh);
-    ensureActualsSheet_();
-    invalidateCache_();
-    return apiBootstrap({});
-  } catch (err) {
-    return { ok: false, error: String(err && err.message || err) };
-  }
+    var out = { title: ss.getName(), tabs: [], teams: {}, warnings: PARSE_WARNINGS_.slice(0, 50) };
+    ss.getSheets().forEach(function (sh) {
+      out.tabs.push({ name: sh.getName(), rows: sh.getLastRow(), cols: sh.getLastColumn() });
+    });
+    var fw = getFramework_(true);
+    fw.members.forEach(function (m) {
+      out.teams[m.team] = out.teams[m.team] || { members: [], kpiLines: 0 };
+      out.teams[m.team].members.push(m.name + ' (' + m.role + ')');
+    });
+    fw.kpis.forEach(function (k) { if (out.teams[k.team]) out.teams[k.team].kpiLines++; });
+    return { ok: true, diagnostics: out };
+  } catch (err) { return { ok: false, error: String(err && err.message || err) }; }
 }
 
-/**
- * One-click first-run setup: provision managed tabs and seed a few months of
- * realistic SAMPLE actuals so the dashboard is immediately alive. Safe to
- * re-run — it only seeds when the actuals tab is empty (unless force=true).
- */
-function apiSeedSampleData(force) {
-  try {
-    ensureSettingsSheet_();
-    var sh = ensureActualsSheet_();
-    var hasData = sh.getLastRow() > 1;
-    if (hasData && !force) return apiBootstrap({});
-    if (hasData && force) { apiClearActuals(); sh = ensureActualsSheet_(); }
-    seedSampleActuals_();
-    invalidateCache_();
-    return apiBootstrap({});
-  } catch (err) {
-    return { ok: false, error: String(err && err.message || err) };
+/** ========================================================= BUILD DASHBOARD */
+
+function buildDashboard_() {
+  var ss;
+  try { ss = SpreadsheetApp.openById(SOURCE_SPREADSHEET_ID); }
+  catch (e) { return { ok: false, connected: false, empty: true,
+                       error: 'Cannot open the source spreadsheet.', generatedAt: nowIso_() }; }
+
+  var fw = getFramework_(false);
+  var settings = readSettings_();
+  var store = readActuals_();
+
+  var periods = uniqueSorted_(store.periods.concat(defaultPeriods_()));
+  var current = (settings.currentPeriod && periods.indexOf(settings.currentPeriod) >= 0)
+    ? settings.currentPeriod : (periods.length ? periods[periods.length - 1] : thisMonth_());
+
+  // ---- score every KPI line for every period ----
+  var results = {};                                   // key -> computed result
+  fw.kpis.forEach(function (k) {
+    periods.forEach(function (p) {
+      var rec = store.map[k.memberId + '||' + k.kpiId + '||' + p] || null;
+      results[k.memberId + '||' + k.kpiId + '||' + p] = evalKpi_(k, rec, settings);
+    });
+  });
+
+  // ---- roll up per period ----
+  var rollups = {}, trends = { org: [], teams: {}, members: {} };
+  fw.teams.forEach(function (t) { trends.teams[t.name] = []; });
+  fw.members.forEach(function (m) { trends.members[m.id] = []; });
+
+  periods.forEach(function (p) {
+    var roll = rollupPeriod_(fw, results, settings, p);
+    rollups[p] = roll;
+    trends.org.push({ period: p, v: roll.org.score });
+    fw.teams.forEach(function (t) {
+      trends.teams[t.name].push({ period: p, v: roll.teams[t.name] ? roll.teams[t.name].score : null });
+    });
+    fw.members.forEach(function (m) {
+      trends.members[m.id].push({ period: p, v: roll.members[m.id] ? roll.members[m.id].score : null });
+    });
+  });
+
+  // team meta (counts)
+  var teamMeta = fw.teams.map(function (t) {
+    var mem = fw.members.filter(function (m) { return m.team === t.name; });
+    var kc = fw.kpis.filter(function (k) { return k.team === t.name; }).length;
+    return { id: t.id, name: t.name, lead: t.lead || '', memberCount: mem.length, kpiCount: kc };
+  });
+
+  var empty = fw.members.length === 0 || fw.kpis.length === 0;
+
+  return {
+    ok: true, connected: true, empty: empty,
+    generatedAt: nowIso_(),
+    lastUpdated: store.lastUpdated || nowIso_(),
+    user: safeUser_(),
+    source: {
+      title: ss.getName(),
+      tabs: fw.tabs, blocks: fw.blockCount,
+      kpiLines: fw.kpis.length, people: fw.members.length,
+      hasActuals: store.count > 0
+    },
+    settings: {
+      onTrack: settings.onTrack, atRisk: settings.atRisk,
+      targetBandLevel: settings.targetBandLevel, currentPeriod: current
+    },
+    periods: periods,
+    teams: teamMeta,
+    members: fw.members,
+    kpis: fw.kpis,
+    results: results,
+    rollups: rollups,
+    trends: trends
+  };
+}
+
+function rollupPeriod_(fw, results, S, period) {
+  var members = {}, teams = {};
+  fw.teams.forEach(function (t) { teams[t.name] = accum_(); });
+  var org = accum_();
+
+  fw.members.forEach(function (m) {
+    var rows = fw.kpis.filter(function (k) { return k.memberId === m.id; })
+      .map(function (k) { return results[m.id + '||' + k.kpiId + '||' + period]; });
+    var mr = summarize_(rows, S);
+    members[m.id] = mr;
+    if (teams[m.team]) mergeAccum_(teams[m.team], mr);
+    mergeAccum_(org, mr);
+  });
+
+  var out = { org: finalizeAccum_(org, S), teams: {}, members: {} };
+  fw.teams.forEach(function (t) { out.teams[t.name] = finalizeAccum_(teams[t.name], S); });
+  fw.members.forEach(function (m) { out.members[m.id] = members[m.id]; });
+  return out;
+}
+
+/* member-level summary from its scored rows */
+function summarize_(rows, S) {
+  var d = rows.filter(function (r) { return r && r.hasData && r.weight != null && r.weight > 0; });
+  var counts = { good: 0, warn: 0, bad: 0, none: 0 };
+  rows.forEach(function (r) { if (r) counts[r.hasData ? r.status.k : 'none']++; });
+  var score = null, attainment = null;
+  if (d.length) {
+    var ws = d.reduce(function (s, r) { return s + r.weight; }, 0);
+    score = d.reduce(function (s, r) { return s + r.weight * r.rating; }, 0) / ws;
+    var da = d.filter(function (r) { return r.achievement != null; });
+    if (da.length) {
+      var wa = da.reduce(function (s, r) { return s + r.weight; }, 0);
+      attainment = da.reduce(function (s, r) { return s + r.weight * r.achievement; }, 0) / wa;
+    }
   }
+  var tracked = rows.filter(function (r) { return r && r.hasData; }).length;
+  var onPct = tracked ? Math.round(counts.good / tracked * 1000) / 10 : null;
+  return { score: round2_(score), attainment: round1_(attainment),
+           onTrackPct: onPct, counts: counts, tracked: tracked, hasData: !!d.length,
+           status: statusOf_(score, S) };
+}
+
+function accum_() { return { scores: [], attain: [], counts: { good: 0, warn: 0, bad: 0, none: 0 }, people: 0, reporting: 0 }; }
+function mergeAccum_(a, mr) {
+  a.people++;
+  if (mr.score != null) { a.scores.push(mr.score); a.reporting++; }
+  if (mr.attainment != null) a.attain.push(mr.attainment);
+  ['good', 'warn', 'bad', 'none'].forEach(function (k) { a.counts[k] += mr.counts[k]; });
+}
+function finalizeAccum_(a, S) {
+  var score = a.scores.length ? a.scores.reduce(function (s, x) { return s + x; }, 0) / a.scores.length : null;
+  var attn  = a.attain.length ? a.attain.reduce(function (s, x) { return s + x; }, 0) / a.attain.length : null;
+  var tracked = a.counts.good + a.counts.warn + a.counts.bad;
+  return { score: round2_(score), attainment: round1_(attn),
+           onTrackPct: tracked ? Math.round(a.counts.good / tracked * 1000) / 10 : null,
+           counts: a.counts, people: a.people, reporting: a.reporting,
+           status: statusOf_(score, S) };
+}
+
+/** ============================================================ SCORING CORE */
+
+function evalKpi_(kpi, rec, S) {
+  var out = { memberId: kpi.memberId, kpiId: kpi.kpiId, weight: kpi.weight,
+              actual: null, rating: null, achievement: null, gap: null,
+              hasData: false, manual: false, status: statusOf_(null, S),
+              commentary: '', evidence: '', updatedBy: '', updatedAt: '' };
+  if (rec) {
+    out.commentary = rec.commentary || ''; out.evidence = rec.evidence || '';
+    out.updatedBy = rec.updatedBy || '';  out.updatedAt = rec.updatedAt || '';
+    if (rec.rating != null && !isNaN(rec.rating)) {          // qualitative / manual
+      out.rating = clamp_(Number(rec.rating), 0, 5); out.manual = true; out.hasData = true;
+    } else if (rec.actual != null && !isNaN(rec.actual)) {
+      out.actual = Number(rec.actual);
+      out.rating = valueToRating_(kpi, out.actual);
+      out.hasData = out.rating != null;
+    }
+  }
+  if (out.actual != null && kpi.target != null) {
+    var t = kpi.target;
+    if (kpi.direction === 'lower') {
+      out.achievement = out.actual > 0 ? round1_((t / out.actual) * 100) : null;
+      out.gap = round2_(t - out.actual);
+    } else {
+      out.achievement = t > 0 ? round1_((out.actual / t) * 100) : null;
+      out.gap = round2_(out.actual - t);
+    }
+  }
+  out.status = statusOf_(out.rating, S);
+  return out;
+}
+
+function valueToRating_(kpi, actual) {
+  var v = kpi.bands.map(function (b) { return b.value; });
+  var w = v.slice();
+  for (var i = 0; i < 5; i++) if (w[i] == null) w[i] = nearestVal_(v, i);
+  if (w.every(function (x) { return x == null; })) return null;
+  var sign = kpi.direction === 'lower' ? -1 : 1;
+  var s = sign * actual, ww = w.map(function (x) { return sign * x; });
+  if (s <= ww[0]) { var d0 = (ww[1] - ww[0]) || 1; return clamp_(1 + (s - ww[0]) / d0, 0, 1); }
+  if (s >= ww[4]) return 5;
+  for (var k = 0; k < 4; k++) {
+    if (s >= ww[k] && s <= ww[k + 1]) { var d = (ww[k + 1] - ww[k]) || 1; return (k + 1) + (s - ww[k]) / d; }
+  }
+  return 5;
+}
+function nearestVal_(v, i) { for (var d = 1; d < 5; d++) { if (v[i - d] != null) return v[i - d]; if (v[i + d] != null) return v[i + d]; } return null; }
+
+function statusOf_(rating, S) {
+  if (rating == null) return { k: 'none', label: 'No Data' };
+  if (rating >= S.onTrack) return { k: 'good', label: 'On Track' };
+  if (rating >= S.atRisk)  return { k: 'warn', label: 'At Risk' };
+  return { k: 'bad', label: 'Off Track' };
 }
 
 /** ============================================================ FRAMEWORK PARSE
- * Reads every tab, classifies it, and builds the normalised model:
- *   teams[]   {id,name,lead,type,segments[]}
- *   members[] {id,name,team,role,region,isLead}
- *   kpis[]    {id,kpiId,team,memberId,individual,segment,perspective,role,
- *              kra,kpi,definition,source,unit,weight,direction,target,bands[]}
+ * Reads every tab and turns the KRA/KPI scorecards into a normalized model.
+ * Handles the current sheet's shapes: consolidated team scorecards, per-person
+ * "NAME (ROLE)" scorecard blocks, and Region/POC roster maps.
  */
-function getFrameworkModel(force) {
+var PARSE_WARNINGS_ = [];
+
+function getFramework_(force) {
   var cache = CacheService.getScriptCache();
   if (!force) {
-    var hit = cache.get(CACHE_KEY);
+    var hit = cache.get(CACHE_KEY + '_fw');
     if (hit) { try { return JSON.parse(hit); } catch (e) {} }
   }
-  var model = parseFramework_();
-  try { cache.put(CACHE_KEY, JSON.stringify(model), CACHE_TTL); } catch (e) {}
-  return model;
+  var fw = parseFramework_();
+  try { cache.put(CACHE_KEY + '_fw', JSON.stringify(fw), CACHE_TTL); } catch (e) {}
+  return fw;
 }
 
 function parseFramework_() {
+  PARSE_WARNINGS_ = [];
   var ss = SpreadsheetApp.openById(SOURCE_SPREADSHEET_ID);
   var sheets = ss.getSheets();
+  var members = [], kpis = [], teamsSet = {}, tabs = [], blockCount = 0;
+  var rosterHints = {};   // name(lower) -> {team, region}
 
-  var teams = [];
-  var members = [];
-  var kpis = [];
-  var pocRoster = {};   // teamName(UPPER) -> [{name,region}]
-  var rosterSheets = [];
-  var scorecardSheets = [];
-
-  // Pass 1: classify sheets. POC-roster parsing runs on EVERY sheet (it is a
-  // no-op unless the grid actually contains METAL/PLASTIC + Region/POC sections),
-  // so a scorecard tab and a POC roster can even coexist on one sheet. A sheet
-  // is then additionally treated as a KPI framework if it carries KPI headers.
-  sheets.forEach(function (sheet) {
-    var name = sheet.getName();
+  // Pass 1: roster maps (Region/POC) give team + region hints for people.
+  sheets.forEach(function (sh) {
+    var name = sh.getName();
     if (name === TAB_ACTUALS || name === TAB_SETTINGS) return;
-    var grid = sheet.getDataRange().getValues();
-    if (!grid || !grid.length) return;
-
-    parsePocRoster_(grid, pocRoster);
-
-    var isPocOnly = looksLikePocRoster_(grid) && !hasScorecard_(grid) &&
-                    !hasHeaderRow_(grid, ['kpi', 'weightage']);
-    if (isPocOnly) return;
-
-    if (hasHeaderRow_(grid, ['kpi', 'weightage']) &&
-        hasAny_(grid, ['individual -', 'collections -', 'collections &'])) {
-      rosterSheets.push({ name: name, grid: grid });
-    } else if (hasScorecard_(grid)) {
-      scorecardSheets.push({ name: name, grid: grid });
-    } else if (hasHeaderRow_(grid, ['kpi', 'weightage'])) {
-      // Fallback: header-driven roster even without explicit name markers.
-      rosterSheets.push({ name: name, grid: grid });
-    }
+    var grid = safeValues_(sh);
+    if (!grid.length) return;
+    collectRosterHints_(name, grid, rosterHints);
   });
 
-  // Pass 2: scorecard teams (Metal / Plastic style — shared template).
-  scorecardSheets.forEach(function (s) {
+  // Pass 2: parse scorecard blocks from every tab.
+  sheets.forEach(function (sh) {
+    var name = sh.getName();
+    if (name === TAB_ACTUALS || name === TAB_SETTINGS) return;
+    var grid = safeValues_(sh);
+    if (!grid.length) return;
+    tabs.push(name);
     try {
-      var parsed = parseScorecardSheet_(s.name, s.grid);
-      teams.push(parsed.team);
-      var roster = pocRoster[s.name.toUpperCase()] || [];
-      var mem = buildScorecardMembers_(s.name, roster);
-      mem.forEach(function (m) { members.push(m); });
-      // Expand the shared template across every member.
-      mem.forEach(function (m) {
-        parsed.templates.forEach(function (t) {
-          kpis.push(expandTemplateForMember_(t, m));
-        });
+      var blocks = extractBlocks_(grid);
+      blocks.forEach(function (b) {
+        blockCount++;
+        var kra = mapCols_(b.header);
+        if (kra.kpi < 0 || kra.weight < 0) return;               // not a scorecard block
+        var person = personFromTitle_(b.title);
+        var teamGuess = resolveTeam_(name, person.role, b.rows, kra);
+        var indiv = person.name || null;
+        var isTemplate = !indiv;                                  // team-level template (e.g. Metal)
+
+        if (isTemplate) {
+          // Expand a team template across the roster of that team.
+          var roster = rosterForTeam_(teamGuess, rosterHints, members);
+          if (!roster.length) {
+            // No roster -> treat the template itself as a single "Team (overall)" member
+            roster = [{ name: teamGuess + ' — Team', role: 'Team', region: '' }];
+          }
+          roster.forEach(function (rm) {
+            var mid = ensureMember_(members, teamGuess, rm.name, rm.role, rm.region, teamsSet);
+            addBlockKpis_(kpis, b, kra, teamGuess, mid, rm.name, rm.role);
+          });
+        } else {
+          var hint = rosterHints[norm_(indiv)] || {};
+          var team = hint.team || teamGuess;
+          var region = hint.region || '';
+          var mid = ensureMember_(members, team, indiv, person.role, region, teamsSet);
+          addBlockKpis_(kpis, b, kra, team, mid, indiv, person.role);
+        }
       });
-    } catch (e) { logSoft_('scorecard ' + s.name, e); }
+    } catch (e) { warn_('tab ' + name + ': ' + (e && e.message)); }
   });
 
-  // Pass 3: per-individual roster teams (Onboarding / Collections style).
-  rosterSheets.forEach(function (s) {
-    try {
-      var parsed = parseRosterSheet_(s.name, s.grid);
-      teams.push(parsed.team);
-      parsed.members.forEach(function (m) { members.push(m); });
-      parsed.kpis.forEach(function (k) { kpis.push(k); });
-    } catch (e) { logSoft_('roster ' + s.name, e); }
+  // Build team list with a lead (most senior role, else first member).
+  var teams = Object.keys(teamsSet).map(function (tn) {
+    var mem = members.filter(function (m) { return m.team === tn; });
+    var lead = pickLead_(mem);
+    mem.forEach(function (m) { m.isLead = (lead && m.id === lead.id); });
+    return { id: slug_(tn), name: tn, lead: lead ? lead.name : '' };
   });
 
-  // Ensure every configured lead exists as a member of their team.
-  ensureLeads_(teams, members, kpis);
-
-  return { teams: teams, members: members, kpis: kpis };
+  return { teams: teams, members: members, kpis: kpis, tabs: tabs, blockCount: blockCount };
 }
 
-/** ------------------------------------------------ classification predicates */
-
-function hasScorecard_(grid) {
-  return hasAny_(grid, [
-    'business development', 'kpi / definition', 'kpi description', 'target 1'
-  ]) && hasHeaderRow_(grid, ['perspective', 'target 1']);
-}
-
-function looksLikePocRoster_(grid) {
-  var poc = false, region = false;
+/* Split a grid into scorecard blocks: each block = an optional title row + a
+ * header row (Perspective/KRA/KPI/Weightage/Target 1..) + the KPI rows under it. */
+function extractBlocks_(grid) {
+  var blocks = [], headerRows = [];
   for (var r = 0; r < grid.length; r++) {
-    for (var c = 0; c < grid[r].length; c++) {
-      var v = norm_(grid[r][c]);
-      if (v === 'poc') poc = true;
-      if (v === 'region') region = true;
-    }
+    if (isKpiHeader_(grid[r])) headerRows.push(r);
   }
-  return poc && region;
-}
-
-function hasHeaderRow_(grid, tokens) {
-  for (var r = 0; r < grid.length; r++) {
-    var rowTokens = grid[r].map(norm_);
-    var all = tokens.every(function (t) {
-      return rowTokens.some(function (cell) { return cell.indexOf(t) >= 0; });
-    });
-    if (all) return true;
-  }
-  return false;
-}
-
-function hasAny_(grid, needles) {
-  for (var r = 0; r < grid.length; r++) {
-    for (var c = 0; c < grid[r].length; c++) {
-      var v = norm_(grid[r][c]);
-      for (var i = 0; i < needles.length; i++) {
-        if (v.indexOf(needles[i]) >= 0) return true;
-      }
+  headerRows.forEach(function (hr, hi) {
+    var title = findTitleAbove_(grid, hr);
+    var end = (hi + 1 < headerRows.length) ? headerRows[hi + 1] - 0 : grid.length;
+    // stop the block before the next block's title
+    var rows = [];
+    for (var r = hr + 1; r < end; r++) {
+      if (isKpiHeader_(grid[r])) break;
+      rows.push(grid[r]);
     }
-  }
-  return false;
-}
-
-/** ------------------------------------------------------- POC ROSTER parsing */
-
-function parsePocRoster_(grid, out) {
-  var currentTeam = null, regionCol = 0, pocCol = 1;
-  for (var r = 0; r < grid.length; r++) {
-    var row = grid[r];
-    var joined = row.map(norm_).join(' ').trim();
-
-    // Section header: a row that (merged) names a team, e.g. "METAL".
-    var label = firstNonEmpty_(row);
-    var upper = norm_(label).toUpperCase ? String(label).trim().toUpperCase() : '';
-    if (upper === 'METAL' || upper === 'PLASTIC') {
-      currentTeam = properTeam_(upper);
-      out[currentTeam.toUpperCase()] = out[currentTeam.toUpperCase()] || [];
-      continue;
-    }
-    // Header row inside a section.
-    var rn = row.map(norm_);
-    if (rn.indexOf('region') >= 0 && rn.indexOf('poc') >= 0) {
-      regionCol = rn.indexOf('region');
-      pocCol = rn.indexOf('poc');
-      continue;
-    }
-    if (!currentTeam) continue;
-    var pocName = String(row[pocCol] || '').trim();
-    var region  = String(row[regionCol] || '').trim();
-    if (pocName && norm_(pocName) !== 'poc') {
-      out[currentTeam.toUpperCase()].push({ name: pocName, region: region });
-    }
-  }
-}
-
-function properTeam_(upper) {
-  return upper.charAt(0) + upper.slice(1).toLowerCase(); // METAL -> Metal
-}
-
-/** ------------------------------------------------ SCORECARD sheet (template) */
-
-function parseScorecardSheet_(teamName, grid) {
-  var templates = [];
-  var segments = [];
-  var headerRows = findHeaderRows_(grid, ['perspective', 'target 1']);
-
-  headerRows.forEach(function (hr) {
-    var header = grid[hr];
-    var cols = mapScorecardColumns_(header);
-    var segment = detectSegment_(grid, hr);
-    if (segments.indexOf(segment) < 0) segments.push(segment);
-
-    for (var r = hr + 1; r < grid.length; r++) {
-      var row = grid[r];
-      // stop at next header / a new title block / a fully-blank separator run
-      if (isHeaderRow_(row, ['perspective', 'target 1'])) break;
-      if (isScorecardTitle_(row)) break;
-      var kra = String(row[cols.kra] || '').trim();
-      var kpi = String(row[cols.kpi] || '').trim();
-      if (!kra && !kpi) continue;
-
-      var bands = cols.bands.map(function (bc, i) {
-        return makeBand_(i + 1, row[bc], scorecardBandLabel_(i));
-      });
-      var weight = parseWeight_(row[cols.weight]);
-      var unit = String(row[cols.unit] || '').trim() || inferUnit_(bands);
-      var kpiId = slug_([teamName, segment, kra, kpi].join('|'));
-
-      templates.push({
-        kpiId: kpiId,
-        team: teamName,
-        segment: segment,
-        perspective: String(row[cols.perspective] || '').trim(),
-        role: '',
-        kra: kra,
-        kpi: kpi,
-        definition: String(row[cols.kpi] || '').trim(),
-        source: String(row[cols.source] || '').trim(),
-        unit: unit,
-        weight: weight,
-        bands: bands,
-        direction: detectDirection_(bands),
-        target: targetFromBands_(bands, DEFAULT_SETTINGS.targetBandLevel)
-      });
-    }
+    blocks.push({ title: title, header: grid[hr], rows: rows });
   });
-
-  return {
-    team: {
-      id: slug_(teamName),
-      name: teamName,
-      lead: TEAM_LEADS[teamName] || '',
-      type: 'scorecard',
-      segments: segments
-    },
-    templates: templates
-  };
+  return blocks;
 }
 
-function mapScorecardColumns_(header) {
+function isKpiHeader_(row) {
+  var rn = row.map(norm_);
+  var has = function (t) { return rn.some(function (c) { return c.indexOf(t) >= 0; }); };
+  return has('kra') && (has('kpi') || has('kpi / definition') || has('kpi description')) &&
+         has('weightage') && (has('target 1') || has('needs improvement') || has('unit'));
+}
+
+/* Find the merged/title row just above a header row (the person or template). */
+function findTitleAbove_(grid, hr) {
+  for (var r = hr - 1; r >= 0 && r >= hr - 4; r--) {
+    var first = firstNonEmpty_(grid[r]);
+    if (!first) continue;
+    if (isKpiHeader_(grid[r])) break;
+    return String(first).trim();
+  }
+  return '';
+}
+
+function mapCols_(header) {
   var n = header.map(norm_);
-  function find(preds) {
-    for (var c = 0; c < n.length; c++) {
-      for (var p = 0; p < preds.length; p++) {
-        if (n[c].indexOf(preds[p]) >= 0) return c;
-      }
+  function find(preds, from) {
+    for (var c = (from || 0); c < n.length; c++) {
+      for (var p = 0; p < preds.length; p++) if (n[c].indexOf(preds[p]) >= 0) return c;
     }
     return -1;
   }
-  var source = find(['source of tracking']);
+  var kpiCol = find(['kpi / definition', 'kpi description', 'kpi']);
+  // KRA = the 'kra' column nearest-left of KPI (col0 may be a spurious label)
+  var kraCol = -1; for (var c = 0; c < (kpiCol < 0 ? n.length : kpiCol); c++) if (n[c].indexOf('kra') >= 0) kraCol = c;
+  if (kraCol < 0) kraCol = find(['kra']);
+  var src = find(['source of tracking', 'source']);
   var cols = {
-    perspective: find(['perspective']),
-    kra: find(['kra']),
-    kpi: find(['kpi / definition', 'kpi description', 'kpi']),
-    weight: find(['weightage']),
-    unit: find(['unit']),
-    source: source,
-    bands: []
+    perspective: find(['perspective']), kra: kraCol, kpi: kpiCol,
+    weight: find(['weightage']), unit: find(['unit of measurement', 'units of measurement', 'unit']),
+    source: src, bands: []
   };
-  // The five target columns are the trailing five (Target 1..5) after Unit.
   var start = -1;
-  for (var c = 0; c < n.length; c++) {
-    if (n[c].indexOf('target 1') >= 0) { start = c; break; }
-  }
-  if (start < 0) start = header.length - 5;
-  for (var i = 0; i < 5; i++) cols.bands.push(start + i);
+  for (var i = 0; i < n.length; i++) { if (n[i].indexOf('target 1') >= 0 || n[i].indexOf('needs improvement') >= 0) { start = i; break; } }
+  if (start < 0) start = (cols.unit >= 0 ? cols.unit + 1 : header.length - 5);
+  for (var b = 0; b < 5; b++) cols.bands.push(start + b);
   return cols;
 }
 
-function detectSegment_(grid, headerRow) {
-  // Look at the merged title above the header row.
-  for (var r = headerRow - 1; r >= 0 && r >= headerRow - 3; r--) {
-    var t = norm_(firstNonEmpty_(grid[r]));
-    if (!t) continue;
-    if (t.indexOf('demand') >= 0) return 'Demand · Buyer side';
-    if (t.indexOf('business development') >= 0 || t.indexOf('sales') >= 0) {
-      return 'Supply · Seller side';
+var BAND_LABELS = ['Target 1', 'Target 2', 'Target 3', 'Target 4', 'Target 5'];
+
+function addBlockKpis_(kpis, block, cols, team, memberId, indiv, role) {
+  block.rows.forEach(function (row) {
+    if (isTotalsRow_(row, cols) || isTitleRow_(row)) return;
+    var kra = cell_(row, cols.kra), kpiName = cell_(row, cols.kpi);
+    if (!kra && !kpiName) return;
+    var bands = cols.bands.map(function (bc, i) { return makeBand_(i + 1, row[bc], BAND_LABELS[i]); });
+    var weight = parseNum_(cell_(row, cols.weight));
+    var unit = cell_(row, cols.unit) || inferUnit_(bands);
+    // Display KPI name = the KRA area when the "KPI" cell is just a TAT/metric label.
+    var displayKpi = kpiName;
+    if (/^tat\b|^document completeness$|^approved sop|^automation|^collection %|^dso days$|^pdd |^legacy /i.test(kpiName) && kra) {
+      displayKpi = kra;
     }
-    return 'Supply · Seller side';
-  }
-  return 'Supply · Seller side';
-}
-
-function isScorecardTitle_(row) {
-  var t = norm_(firstNonEmpty_(row));
-  return t.indexOf('demand') >= 0 || t.indexOf('business development') >= 0;
-}
-
-function scorecardBandLabel_(i) {
-  return ['Target 1', 'Target 2', 'Target 3', 'Target 4', 'Target 5'][i];
-}
-
-function buildScorecardMembers_(teamName, roster) {
-  var seen = {}, out = [];
-  roster.forEach(function (p) {
-    var key = norm_(p.name);
-    if (!p.name || seen[key]) return;
-    seen[key] = true;
-    out.push({
-      id: slug_(teamName + '|' + p.name),
-      name: p.name,
-      team: teamName,
-      role: p.region ? (p.region + ' Region POC') : 'Team Member',
-      region: p.region || '',
-      isLead: isLead_(teamName, p.name)
+    var kpiId = slug_([team, indiv, kra, kpiName].join('|'));
+    kpis.push({
+      id: kpiId, kpiId: kpiId, team: team, memberId: memberId, individual: indiv, role: role || '',
+      perspective: cell_(row, cols.perspective), kra: kra, kpi: displayKpi || kra || kpiName,
+      definition: kpiName || kra, source: cell_(row, cols.source),
+      unit: unit, weight: weight, direction: detectDirection_(bands),
+      target: targetFromBands_(bands, DEFAULT_SETTINGS.targetBandLevel), bands: bands
     });
+  });
+}
+
+/* Extract a person's name + role from a block title like "NAME (ROLE)". Returns
+ * empty name for team templates (Business Development / Demand / Supply / etc.). */
+function personFromTitle_(title) {
+  if (!title) return { name: '', role: '' };
+  var t = title.replace(/\\\[merged\\\]/g, '').trim();
+  var low = t.toLowerCase();
+  if (/business development|demand|supply|purchase & sales|sales kra|kpi/i.test(low) && !/\(/.test(t)) {
+    return { name: '', role: '' };
+  }
+  var m = t.match(/^(.+?)\s*\(([^)]*)\)\s*$/);
+  if (m) {
+    var nm = m[1].trim(), role = m[2].trim();
+    if (/business development|demand|supply|purchase|sales kra|kra & kpi/i.test(nm.toLowerCase())) return { name: '', role: '' };
+    if (looksLikeName_(nm)) return { name: cleanName_(nm), role: role };
+  }
+  // "Individual - NAME" / "Collections - NAME"
+  var m2 = t.match(/[-–]\s*([A-Za-z][A-Za-z .]+)\s*$/);
+  if (m2 && /individual|collections|omp/i.test(low)) return { name: cleanName_(m2[1]), role: '' };
+  if (looksLikeName_(t)) return { name: cleanName_(t), role: '' };
+  return { name: '', role: '' };
+}
+function looksLikeName_(s) {
+  if (!s) return false;
+  var w = s.trim().split(/\s+/);
+  if (w.length > 5) return false;
+  if (/business|development|demand|supply|sales|kra|kpi|scorecard|perspective|target/i.test(s)) return false;
+  return /^[A-Za-z][A-Za-z. ]+$/.test(s);
+}
+
+/* Team resolution: tab name -> role suffix -> KPI content. */
+function resolveTeam_(tabName, role, rows, cols) {
+  var byTab = teamFromText_(tabName); if (byTab) return byTab;
+  var byRole = teamFromText_(role);   if (byRole) return byRole;
+  var joined = rows.map(function (r) { return [cell_(r, cols.kra), cell_(r, cols.kpi), cell_(r, cols.perspective)].join(' '); }).join(' ').toLowerCase();
+  var byKpi = teamFromText_(joined);  if (byKpi) return byKpi;
+  return properCase_(tabName) || 'Other';
+}
+function teamFromText_(text) {
+  if (!text) return '';
+  var low = String(text).toLowerCase();
+  for (var i = 0; i < TEAM_RULES.length; i++) {
+    var rule = TEAM_RULES[i];
+    for (var j = 0; j < rule.match.length; j++) if (low.indexOf(rule.match[j]) >= 0) return rule.id;
+  }
+  return '';
+}
+
+function collectRosterHints_(tabName, grid, out) {
+  // A roster block has a "Region"/"POC" header. Names beneath map to a team.
+  var section = teamFromText_(tabName);
+  for (var r = 0; r < grid.length; r++) {
+    var rn = grid[r].map(norm_);
+    var label = norm_(firstNonEmpty_(grid[r]));
+    var t = teamFromText_(label);
+    if (t && rn.filter(function (x) { return x; }).length <= 2) section = t;   // section header e.g. "PLASTIC"
+    var regionCol = rn.indexOf('region'), pocCol = rn.indexOf('poc');
+    if (regionCol >= 0 && pocCol >= 0) { grid._rc = { regionCol: regionCol, pocCol: pocCol }; continue; }
+    if (!grid._rc) continue;
+    var poc = String(grid[r][grid._rc.pocCol] || '').trim();
+    var region = String(grid[r][grid._rc.regionCol] || '').trim();
+    if (poc && norm_(poc) !== 'poc' && section) {
+      out[norm_(poc)] = { team: section, region: region };
+    }
+  }
+}
+function rosterForTeam_(team, hints, members) {
+  var seen = {}, out = [];
+  Object.keys(hints).forEach(function (k) {
+    if (hints[k].team === team) { out.push({ name: titleCaseName_(k), role: 'Team Member', region: hints[k].region }); seen[k] = true; }
   });
   return out;
 }
 
-function expandTemplateForMember_(t, m) {
-  return {
-    id: slug_(m.id + '|' + t.kpiId),
-    kpiId: t.kpiId,
-    team: t.team,
-    memberId: m.id,
-    individual: m.name,
-    segment: t.segment,
-    perspective: t.perspective,
-    role: t.role,
-    kra: t.kra,
-    kpi: t.kpi,
-    definition: t.definition,
-    source: t.source,
-    unit: t.unit,
-    weight: t.weight,
-    direction: t.direction,
-    target: t.target,
-    bands: t.bands
-  };
+function ensureMember_(members, team, name, role, region, teamsSet) {
+  teamsSet[team] = true;
+  var id = slug_(team + '|' + name);
+  var existing = members.filter(function (m) { return m.id === id; })[0];
+  if (existing) { if (!existing.role && role) existing.role = role; return id; }
+  members.push({ id: id, name: cleanName_(name), team: team, role: role || 'Team Member', region: region || '', isLead: false });
+  return id;
 }
 
-/** -------------------------------------------- ROSTER sheet (per-individual) */
-
-function parseRosterSheet_(teamName, grid) {
-  var members = [], kpis = [], seenMember = {};
-  var headerRows = findHeaderRows_(grid, ['kpi', 'weightage', 'kra']);
-
-  headerRows.forEach(function (hr, hi) {
-    var header = grid[hr];
-    var cols = mapRosterColumns_(header);
-    var indiv = memberNameForBlock_(grid, hr, cols);
-    if (!indiv) indiv = teamName + ' Member ' + (hi + 1);
-
-    var memberId = slug_(teamName + '|' + indiv);
-    if (!seenMember[memberId]) {
-      seenMember[memberId] = true;
-      members.push({
-        id: memberId,
-        name: indiv,
-        team: teamName,
-        role: rowRole_(grid, hr, cols) || 'Team Member',
-        region: '',
-        isLead: isLead_(teamName, indiv)
-      });
-    }
-
-    var nextHr = hi + 1 < headerRows.length ? headerRows[hi + 1] : grid.length;
-    for (var r = hr + 1; r < nextHr; r++) {
-      var row = grid[r];
-      if (isRosterBlockTitle_(row)) continue;         // "Collections - X" title
-      if (isTotalsRow_(row, cols)) continue;          // weightage 100% total
-      var kra = String(row[cols.kra] || '').trim();
-      var kpi = String(row[cols.kpi] || '').trim();
-      if (!kra && !kpi) continue;
-
-      var bands = cols.bands.map(function (bc, i) {
-        return makeBand_(i + 1, row[bc], ROSTER_BAND_LABELS[i]);
-      });
-      var weight = parseWeight_(row[cols.weight]);
-      var kpiId = slug_([teamName, indiv, kra, kpi].join('|'));
-
-      kpis.push({
-        id: kpiId,
-        kpiId: kpiId,
-        team: teamName,
-        memberId: memberId,
-        individual: indiv,
-        segment: '',
-        perspective: String(row[cols.perspective] || '').trim(),
-        role: String(cols.role >= 0 ? (row[cols.role] || '') : '').trim(),
-        kra: kra,
-        kpi: kpi,
-        definition: String(cols.goal >= 0 ? (row[cols.goal] || '') : '').trim() || kpi,
-        source: String(cols.source >= 0 ? (row[cols.source] || '') : '').trim(),
-        unit: inferUnit_(bands),
-        weight: weight,
-        direction: detectDirection_(bands),
-        target: targetFromBands_(bands, DEFAULT_SETTINGS.targetBandLevel),
-        bands: bands
-      });
-    }
-  });
-
-  return {
-    team: {
-      id: slug_(teamName),
-      name: teamName,
-      lead: TEAM_LEADS[teamName] || '',
-      type: 'roster',
-      segments: []
-    },
-    members: members,
-    kpis: kpis
-  };
-}
-
-var ROSTER_BAND_LABELS = [
-  'Needs Improvement', 'Below Expectation', 'Meets Expectation',
-  'Above Expectation', 'Exceeds Expectation'
-];
-
-function mapRosterColumns_(header) {
-  var n = header.map(norm_);
-  function findFrom(from, preds) {
-    for (var c = from; c < n.length; c++) {
-      for (var p = 0; p < preds.length; p++) {
-        if (n[c].indexOf(preds[p]) >= 0) return c;
-      }
-    }
-    return -1;
+function pickLead_(mem) {
+  if (!mem.length) return null;
+  var rank = ['head', 'manager', 'senior manager', 'lead', 'regional head', 'am ', 'assistant manager', 'senior', 'poc'];
+  function score(m) {
+    var r = (m.role || '').toLowerCase();
+    if (/head|regional head/.test(r)) return 5;
+    if (/senior manager/.test(r)) return 5;
+    if (/manager/.test(r)) return 4;
+    if (/lead/.test(r)) return 4;
+    if (/senior/.test(r)) return 2;
+    return 1;
   }
-  var kpiCol = findFrom(0, ['kpi']);
-  // KRA is the "kra" header nearest-left of the KPI column (col0 may also be a
-  // spurious "kra"/"individual -" label).
-  var kraCol = -1;
-  for (var c = 0; c < kpiCol; c++) { if (n[c].indexOf('kra') >= 0) kraCol = c; }
-  if (kraCol < 0) kraCol = findFrom(0, ['kra']);
-
-  var source = findFrom(0, ['source of tracking', 'source']);
-  var cols = {
-    perspective: findFrom(0, ['perspective']),
-    role: findFrom(0, ['role']),
-    kra: kraCol,
-    kpi: kpiCol,
-    goal: findFrom(0, ['goal description', 'goal']),
-    weight: findFrom(0, ['weightage']),
-    source: source,
-    bands: []
-  };
-  // Five rating bands = the five columns after "Source of Tracking", or the
-  // explicit "Needs Improvement".."Exceeds Expectation" columns if present.
-  var start = -1;
-  for (var c2 = 0; c2 < n.length; c2++) {
-    if (n[c2].indexOf('needs improvement') >= 0) { start = c2; break; }
-  }
-  if (start < 0) start = source >= 0 ? source + 1 : header.length - 5;
-  for (var i = 0; i < 5; i++) cols.bands.push(start + i);
-  return cols;
-}
-
-function memberNameForBlock_(grid, hr, cols) {
-  // 1) Onboarding: header col0 is "Individual - Vamsi".
-  var h0 = String(grid[hr][0] || '').trim();
-  var m = h0.match(/^\s*individual\s*[-–]\s*(.+)$/i);
-  if (m) return cleanName_(m[1]);
-
-  // 2) Collections: a title row above the header, "Collections - Sai Nitin",
-  //    "Collections & OMP Tnx - Srinivas Reddy".
-  for (var r = hr - 1; r >= 0 && r >= hr - 3; r--) {
-    var t = String(firstNonEmpty_(grid[r]) || '').trim();
-    var mm = t.match(/[-–]\s*([A-Za-z][A-Za-z .]+)\s*$/);
-    if (mm && /collection|individual|omp|tnx/i.test(t)) return cleanName_(mm[1]);
-  }
-  // 3) Any leading label with a dash.
-  var m3 = h0.match(/[-–]\s*([A-Za-z][A-Za-z .]+)\s*$/);
-  if (m3) return cleanName_(m3[1]);
-  return '';
-}
-
-function rowRole_(grid, hr, cols) {
-  if (cols.role < 0) return '';
-  for (var r = hr + 1; r < Math.min(grid.length, hr + 4); r++) {
-    var v = String(grid[r][cols.role] || '').trim();
-    if (v) return v;
-  }
-  return '';
-}
-
-function isRosterBlockTitle_(row) {
-  var t = norm_(firstNonEmpty_(row));
-  if (!t) return false;
-  return (/^collections\s*[-–]/.test(t) || /^collections &/.test(t) ||
-          /^individual\s*[-–]/.test(t));
-}
-
-function isTotalsRow_(row, cols) {
-  var kra = String(row[cols.kra] || '').trim();
-  var kpi = String(row[cols.kpi] || '').trim();
-  if (kra || kpi) return false;
-  // a weightage-only row (the "100%" total)
-  return String(row[cols.weight] || '').trim() !== '';
-}
-
-/** --------------------------------------------------------------- leads glue */
-
-function isLead_(teamName, name) {
-  var lead = TEAM_LEADS[teamName];
-  if (!lead) return false;
-  return norm_(name).indexOf(norm_(lead)) >= 0 ||
-         norm_(name).split(' ')[0] === norm_(lead).split(' ')[0];
-}
-
-function ensureLeads_(teams, members, kpis) {
-  teams.forEach(function (team) {
-    var lead = TEAM_LEADS[team.name];
-    if (!lead) return;
-    var has = members.some(function (m) {
-      return m.team === team.name && isLead_(team.name, m.name);
-    });
-    if (has) {
-      members.forEach(function (m) {
-        if (m.team === team.name && isLead_(team.name, m.name)) m.isLead = true;
-      });
-      return;
-    }
-    // Lead absent from roster (e.g. Tabesh / Plastic): add as a member and,
-    // for scorecard teams, give them the shared template.
-    var memberId = slug_(team.name + '|' + lead);
-    members.push({
-      id: memberId, name: lead, team: team.name,
-      role: 'Team Lead', region: '', isLead: true
-    });
-    if (team.type === 'scorecard') {
-      var templates = {};
-      kpis.forEach(function (k) {
-        if (k.team === team.name) templates[k.kpiId] = k;
-      });
-      Object.keys(templates).forEach(function (tid) {
-        var t = templates[tid];
-        kpis.push(expandTemplateForMember_({
-          kpiId: t.kpiId, team: t.team, segment: t.segment,
-          perspective: t.perspective, role: t.role, kra: t.kra, kpi: t.kpi,
-          definition: t.definition, source: t.source, unit: t.unit,
-          weight: t.weight, direction: t.direction, target: t.target,
-          bands: t.bands
-        }, { id: memberId, name: lead }));
-      });
-    }
-  });
+  return mem.slice().sort(function (a, b) { return score(b) - score(a); })[0];
 }
 
 /** ------------------------------------------------------------- band helpers */
-
 function makeBand_(level, raw, label) {
   var text = raw == null ? '' : String(raw).trim();
   return { level: level, label: label, raw: text, value: parseBandValue_(text) };
 }
-
-/** First standalone number in a cell (commas stripped, hyphen-after-letter
- *  neutralised) -> Number, else null (qualitative band). */
 function parseBandValue_(text) {
   if (text == null) return null;
   var s = String(text).trim();
@@ -741,85 +636,51 @@ function parseBandValue_(text) {
   var m = s.match(/\d+(?:\.\d+)?/);
   return m ? Number(m[0]) : null;
 }
-
-/** best band (5) vs worst band (1): higher value in best -> higher-is-better. */
 function detectDirection_(bands) {
-  var vals = bands.map(function (b) { return b.value; })
-                  .filter(function (v) { return v != null; });
+  var vals = bands.map(function (b) { return b.value; }).filter(function (v) { return v != null; });
   if (vals.length < 2) return 'qualitative';
-  var first = vals[0], last = vals[vals.length - 1];
-  if (last > first) return 'higher';
-  if (last < first) return 'lower';
-  return 'higher';
+  var f = vals[0], l = vals[vals.length - 1];
+  return l > f ? 'higher' : l < f ? 'lower' : 'higher';
 }
-
 function targetFromBands_(bands, level) {
   var b = bands[Math.max(0, Math.min(4, level - 1))];
   if (b && b.value != null) return b.value;
-  // fall back to nearest numeric band
   for (var i = 0; i < bands.length; i++) if (bands[i].value != null) return bands[i].value;
   return null;
 }
-
 function inferUnit_(bands) {
-  var joined = bands.map(function (b) { return b.raw; }).join(' ').toLowerCase();
-  if (joined.indexOf('%') >= 0) return 'Percentage';
-  if (joined.indexOf('day') >= 0) return 'Days';
-  if (joined.indexOf('cr') >= 0) return '₹ Cr';
+  var j = bands.map(function (b) { return b.raw; }).join(' ').toLowerCase();
+  if (j.indexOf('%') >= 0) return 'Percentage';
+  if (j.indexOf('day') >= 0) return 'Days';
+  if (j.indexOf('cr') >= 0) return '₹ Cr';
   return 'Number';
 }
 
-function parseWeight_(raw) {
-  if (raw == null || String(raw).trim() === '') return null;
-  var m = String(raw).replace(/,/g, '').match(/\d+(?:\.\d+)?/);
-  return m ? Number(m[0]) : null;
+/** ------------------------------------------------------------ grid helpers */
+function safeValues_(sh) { try { var r = sh.getDataRange(); return r ? r.getValues() : []; } catch (e) { return []; } }
+function isTitleRow_(row) {
+  var n = row.map(norm_).filter(function (x) { return x; });
+  if (n.length === 0) return true;
+  return /\(poc\)|\(regional head\)|\(manager|\(executive|\(senior|\(assistant|\(management trainee|business development|^demand$|^metal$|^plastic$/.test(norm_(firstNonEmpty_(row)));
 }
-
-/** --------------------------------------------------------- row/grid helpers */
-
-function findHeaderRows_(grid, tokens) {
-  var rows = [];
-  for (var r = 0; r < grid.length; r++) {
-    if (isHeaderRow_(grid[r], tokens)) rows.push(r);
-  }
-  return rows;
+function isTotalsRow_(row, cols) {
+  var kra = cell_(row, cols.kra), kpi = cell_(row, cols.kpi);
+  if (kra || kpi) return false;
+  return cell_(row, cols.weight) !== '';
 }
+function cell_(row, i) { return i >= 0 && i < row.length ? String(row[i] == null ? '' : row[i]).trim() : ''; }
+function firstNonEmpty_(row) { for (var c = 0; c < row.length; c++) if (String(row[c] == null ? '' : row[c]).trim() !== '') return row[c]; return ''; }
+function cleanName_(s) { return String(s || '').replace(/\s+/g, ' ').trim(); }
+function titleCaseName_(s) { return String(s || '').replace(/\w\S*/g, function (t) { return t.charAt(0).toUpperCase() + t.substr(1); }); }
+function properCase_(s) { s = String(s || '').trim(); return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
+function norm_(v) { return String(v == null ? '' : v).replace(/\s+/g, ' ').trim().toLowerCase(); }
+function slug_(s) { return String(s).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 200); }
+function parseNum_(raw) { if (raw == null || String(raw).trim() === '') return null; var m = String(raw).replace(/,/g, '').match(/\d+(?:\.\d+)?/); return m ? Number(m[0]) : null; }
+function warn_(msg) { PARSE_WARNINGS_.push(msg); try { Logger.log('parse: ' + msg); } catch (e) {} }
 
-function isHeaderRow_(row, tokens) {
-  var rn = row.map(norm_);
-  return tokens.every(function (t) {
-    return rn.some(function (cell) { return cell.indexOf(t) >= 0; });
-  });
-}
-
-function firstNonEmpty_(row) {
-  for (var c = 0; c < row.length; c++) {
-    if (String(row[c] || '').trim() !== '') return row[c];
-  }
-  return '';
-}
-
-function cleanName_(s) {
-  return String(s || '').replace(/\s+/g, ' ').trim();
-}
-
-function norm_(v) {
-  return String(v == null ? '' : v).replace(/\s+/g, ' ').trim().toLowerCase();
-}
-
-function slug_(s) {
-  return String(s).toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 200);
-}
-
-function logSoft_(where, e) {
-  try { Logger.log('parse warning @' + where + ': ' + (e && e.message || e)); } catch (x) {}
-}
-
-/** ========================================================= ACTUALS STORE */
-
-var ACTUAL_HEADER = ['Team', 'MemberId', 'Individual', 'KpiId', 'KpiName',
-  'Period', 'Actual', 'Rating', 'Commentary', 'Evidence', 'UpdatedBy', 'UpdatedAt'];
+/** =========================================================== ACTUALS STORE */
+var ACTUAL_HEADER = ['Team', 'MemberId', 'Individual', 'KpiId', 'KpiName', 'Period',
+  'Actual', 'Rating', 'Commentary', 'Evidence', 'UpdatedBy', 'UpdatedAt'];
 
 function ensureActualsSheet_() {
   var ss = SpreadsheetApp.openById(SOURCE_SPREADSHEET_ID);
@@ -827,17 +688,14 @@ function ensureActualsSheet_() {
   if (!sh) {
     sh = ss.insertSheet(TAB_ACTUALS);
     sh.getRange(1, 1, 1, ACTUAL_HEADER.length).setValues([ACTUAL_HEADER]);
-    sh.setFrozenRows(1);
-    try { sh.hideSheet(); } catch (e) {}
+    sh.setFrozenRows(1); try { sh.hideSheet(); } catch (e) {}
   }
   return sh;
 }
-
-function readActuals() {
+function readActuals_() {
   var sh = ensureActualsSheet_();
-  var data = sh.getDataRange().getValues();
-  var map = {}, periods = {};
-  if (data.length < 2) return { map: map, periods: [] };
+  var data = safeValues_(sh), map = {}, periods = {}, count = 0, last = '';
+  if (data.length < 2) return { map: map, periods: [], count: 0, lastUpdated: '' };
   var idx = colIndex_(data[0]);
   for (var r = 1; r < data.length; r++) {
     var row = data[r];
@@ -845,200 +703,74 @@ function readActuals() {
     var kpiId = String(row[idx.KpiId] || '').trim();
     var period = String(row[idx.Period] || '').trim();
     if (!memberId || !kpiId || !period) continue;
-    var key = actualKey_(memberId, kpiId, period);
-    map[key] = {
-      actual: numOrNull_(row[idx.Actual]),
-      rating: numOrNull_(row[idx.Rating]),
-      commentary: String(row[idx.Commentary] || ''),
-      evidence: String(row[idx.Evidence] || ''),
-      updatedBy: String(row[idx.UpdatedBy] || ''),
-      updatedAt: row[idx.UpdatedAt] ? String(row[idx.UpdatedAt]) : ''
+    var updatedAt = row[idx.UpdatedAt] ? String(row[idx.UpdatedAt]) : '';
+    map[actualKey_(memberId, kpiId, period)] = {
+      actual: numOrNull_(row[idx.Actual]), rating: numOrNull_(row[idx.Rating]),
+      commentary: String(row[idx.Commentary] || ''), evidence: String(row[idx.Evidence] || ''),
+      updatedBy: String(row[idx.UpdatedBy] || ''), updatedAt: updatedAt
     };
-    periods[period] = true;
+    periods[period] = true; count++;
+    if (updatedAt > last) last = updatedAt;
   }
-  return { map: map, periods: Object.keys(periods).sort() };
+  return { map: map, periods: Object.keys(periods).sort(), count: count, lastUpdated: last };
 }
-
 function buildActualRow_(header, p, who, now) {
-  var idx = colIndex_(header);
-  var arr = new Array(header.length).fill('');
-  arr[idx.Team]       = p.team || '';
-  arr[idx.MemberId]   = p.memberId;
-  arr[idx.Individual] = p.individual || '';
-  arr[idx.KpiId]      = p.kpiId;
-  arr[idx.KpiName]    = p.kpiName || '';
-  arr[idx.Period]     = p.period;
-  arr[idx.Actual]     = (p.actual === '' || p.actual == null) ? '' : Number(p.actual);
-  arr[idx.Rating]     = (p.rating === '' || p.rating == null) ? '' : Number(p.rating);
-  arr[idx.Commentary] = p.commentary || '';
-  arr[idx.Evidence]   = p.evidence || '';
-  arr[idx.UpdatedBy]  = who;
-  arr[idx.UpdatedAt]  = now.toISOString();
+  var idx = colIndex_(header), arr = new Array(header.length).fill('');
+  arr[idx.Team] = p.team || ''; arr[idx.MemberId] = p.memberId; arr[idx.Individual] = p.individual || '';
+  arr[idx.KpiId] = p.kpiId; arr[idx.KpiName] = p.kpiName || ''; arr[idx.Period] = p.period;
+  arr[idx.Actual] = (p.actual === '' || p.actual == null) ? '' : Number(p.actual);
+  arr[idx.Rating] = (p.rating === '' || p.rating == null) ? '' : Number(p.rating);
+  arr[idx.Commentary] = p.commentary || ''; arr[idx.Evidence] = p.evidence || '';
+  arr[idx.UpdatedBy] = who; arr[idx.UpdatedAt] = now.toISOString();
   return arr;
 }
+function colIndex_(header) { var idx = {}; header.forEach(function (h, i) { idx[String(h).trim()] = i; }); return idx; }
+function actualKey_(m, k, p) { return [String(m).trim(), String(k).trim(), String(p).trim()].join('||'); }
 
-function colIndex_(header) {
-  var idx = {};
-  header.forEach(function (h, i) { idx[String(h).trim()] = i; });
-  return idx;
-}
-
-function actualKey_(memberId, kpiId, period) {
-  return [String(memberId).trim(), String(kpiId).trim(), String(period).trim()].join('||');
-}
-
-/** =========================================================== SETTINGS STORE */
-
+/** ============================================================ SETTINGS STORE */
 function ensureSettingsSheet_() {
   var ss = SpreadsheetApp.openById(SOURCE_SPREADSHEET_ID);
   var sh = ss.getSheetByName(TAB_SETTINGS);
   if (!sh) {
     sh = ss.insertSheet(TAB_SETTINGS);
     sh.getRange(1, 1, 1, 2).setValues([['Key', 'Value']]);
-    var rows = Object.keys(DEFAULT_SETTINGS).map(function (k) {
-      return [k, DEFAULT_SETTINGS[k]];
-    });
+    var rows = Object.keys(DEFAULT_SETTINGS).map(function (k) { return [k, DEFAULT_SETTINGS[k]]; });
     sh.getRange(2, 1, rows.length, 2).setValues(rows);
-    sh.setFrozenRows(1);
-    try { sh.hideSheet(); } catch (e) {}
+    sh.setFrozenRows(1); try { sh.hideSheet(); } catch (e) {}
   }
   return sh;
 }
-
-function readSettings() {
-  var sh = ensureSettingsSheet_();
-  var data = sh.getDataRange().getValues();
+function readSettings_() {
+  var sh = ensureSettingsSheet_(), data = safeValues_(sh);
   var s = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
   for (var r = 1; r < data.length; r++) {
-    var k = String(data[r][0] || '').trim();
-    if (!k) continue;
-    var v = data[r][1];
-    if (k === 'currentPeriod') s[k] = String(v || '');
-    else if (DEFAULT_SETTINGS.hasOwnProperty(k)) s[k] = Number(v);
+    var k = String(data[r][0] || '').trim(); if (!k) continue;
+    if (k === 'currentPeriod') s[k] = String(data[r][1] || '');
+    else if (DEFAULT_SETTINGS.hasOwnProperty(k)) s[k] = Number(data[r][1]);
   }
   return s;
 }
-
 function writeSettings_(s) {
   var sh = ensureSettingsSheet_();
-  var rows = Object.keys(DEFAULT_SETTINGS).map(function (k) {
-    return [k, s[k] != null ? s[k] : DEFAULT_SETTINGS[k]];
-  });
+  var rows = Object.keys(DEFAULT_SETTINGS).map(function (k) { return [k, s[k] != null ? s[k] : DEFAULT_SETTINGS[k]]; });
   sh.clearContents();
   sh.getRange(1, 1, 1, 2).setValues([['Key', 'Value']]);
   sh.getRange(2, 1, rows.length, 2).setValues(rows);
 }
 
-/** ================================================================ SEED DATA
- * Deterministic, realistic SAMPLE actuals so the dashboard is alive on first
- * open. These are clearly-labelled samples in a managed tab — replace them
- * with real MIS numbers (or run "Clear actuals" from the app).
- */
-function seedSampleActuals_() {
-  var model = getFrameworkModel(true);
-  var periods = defaultPeriods_();               // last 3 months incl. current
-  var sh = ensureActualsSheet_();
-  var rows = [];
-  var header = ACTUAL_HEADER;
-
-  model.kpis.forEach(function (k) {
-    if (k.weight == null) return;                // skip unweighted info rows
-    var baseR = 1.6 + 3.1 * hash01_(k.memberId + '|' + k.kpiId); // 1.6..4.7
-    periods.forEach(function (period, pi) {
-      var drift = (pi - (periods.length - 1)) * 0.18;            // improve over time
-      var wobble = (hash01_(k.kpiId + period) - 0.5) * 0.5;
-      var r = clamp_(baseR + drift + wobble, 0.7, 5);
-      var rec = {
-        team: k.team, memberId: k.memberId, individual: k.individual,
-        kpiId: k.kpiId, kpiName: k.kpi, period: period,
-        commentary: '', evidence: '', rating: ''
-      };
-      if (k.direction === 'qualitative' || k.target == null) {
-        rec.rating = Math.round(r * 10) / 10;    // qualitative -> manual rating
-        rec.actual = '';
-      } else {
-        rec.actual = Math.round(ratingToValue_(k.bands, r) * 100) / 100;
-        rec.rating = '';
-      }
-      rows.push(buildActualRow_(header, rec, 'sample@recykal.com', new Date()));
-    });
-  });
-
-  if (rows.length) {
-    sh.getRange(sh.getLastRow() + 1, 1, rows.length, header.length).setValues(rows);
-  }
-}
-
-/** Invert the band scale: rating (1..5) -> a plausible actual value. */
-function ratingToValue_(bands, r) {
-  var v = bands.map(function (b) { return b.value; });
-  // fill nulls by neighbour so interpolation is safe
-  for (var i = 0; i < 5; i++) if (v[i] == null) v[i] = nearestVal_(v, i);
-  r = clamp_(r, 1, 5);
-  var lo = Math.floor(r); if (lo >= 5) return v[4];
-  var t = r - lo;
-  return v[lo - 1] + t * (v[lo] - v[lo - 1]);
-}
-
-function nearestVal_(v, i) {
-  for (var d = 1; d < 5; d++) {
-    if (v[i - d] != null) return v[i - d];
-    if (v[i + d] != null) return v[i + d];
-  }
-  return 0;
-}
-
 /** ---------------------------------------------------------------- utilities */
-
 function defaultPeriods_() {
-  var out = [], d = new Date();
-  d.setDate(1);
-  for (var i = 2; i >= 0; i--) {
-    var dd = new Date(d.getFullYear(), d.getMonth() - i, 1);
-    out.push(ym_(dd));
-  }
+  var out = [], d = new Date(); d.setDate(1);
+  for (var i = 2; i >= 0; i--) { var dd = new Date(d.getFullYear(), d.getMonth() - i, 1); out.push(ym_(dd)); }
   return out;
 }
-
 function thisMonth_() { return ym_(new Date()); }
-
-function ym_(d) {
-  var m = d.getMonth() + 1;
-  return d.getFullYear() + '-' + (m < 10 ? '0' + m : '' + m);
-}
-
-function uniqueSorted(arr) {
-  var seen = {}, out = [];
-  arr.forEach(function (x) { if (x && !seen[x]) { seen[x] = true; out.push(x); } });
-  return out.sort();
-}
-
-function numOrNull_(v) {
-  if (v === '' || v == null) return null;
-  var n = Number(v);
-  return isNaN(n) ? null : n;
-}
-
+function ym_(d) { var m = d.getMonth() + 1; return d.getFullYear() + '-' + (m < 10 ? '0' + m : '' + m); }
+function uniqueSorted_(arr) { var seen = {}, out = []; arr.forEach(function (x) { if (x && !seen[x]) { seen[x] = true; out.push(x); } }); return out.sort(); }
+function numOrNull_(v) { if (v === '' || v == null) return null; var n = Number(v); return isNaN(n) ? null : n; }
 function clamp_(x, lo, hi) { return Math.max(lo, Math.min(hi, x)); }
-
-/** stable 0..1 hash of a string */
-function hash01_(s) {
-  var h = 2166136261;
-  s = String(s);
-  for (var i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = (h * 16777619) >>> 0;
-  }
-  return (h % 100000) / 100000;
-}
-
-function safeUser_() {
-  var email = '';
-  try { email = Session.getActiveUser().getEmail() || ''; } catch (e) {}
-  if (!email) { try { email = Session.getEffectiveUser().getEmail() || ''; } catch (e2) {} }
-  return { email: email };
-}
-
-function invalidateCache_() {
-  try { CacheService.getScriptCache().remove(CACHE_KEY); } catch (e) {}
-}
+function round1_(x) { return x == null || isNaN(x) ? null : Math.round(x * 10) / 10; }
+function round2_(x) { return x == null || isNaN(x) ? null : Math.round(x * 100) / 100; }
+function nowIso_() { return new Date().toISOString(); }
+function safeUser_() { var e = ''; try { e = Session.getActiveUser().getEmail() || ''; } catch (x) {} if (!e) { try { e = Session.getEffectiveUser().getEmail() || ''; } catch (y) {} } return { email: e }; }
+function invalidateCache_() { try { var c = CacheService.getScriptCache(); c.remove(CACHE_KEY); c.remove(CACHE_KEY + '_fw'); } catch (e) {} }
