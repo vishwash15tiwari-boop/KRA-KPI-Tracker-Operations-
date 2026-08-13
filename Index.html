@@ -118,24 +118,6 @@ button{font-family:inherit}
 .link:hover{text-decoration:underline}
 .stack{margin-top:14px}
 
-/* -------------------------------------------------------- snapshot hero */
-.snap{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:22px 24px;margin-bottom:16px}
-.snap-grid{display:grid;grid-template-columns:minmax(240px,0.9fr) minmax(0,1.3fr);gap:26px;align-items:center}
-.snap-label{font-size:12.5px;font-weight:600;color:var(--muted);letter-spacing:.01em}
-.snap-value{font-size:44px;font-weight:800;letter-spacing:-.035em;line-height:1.02;margin-top:6px}
-.snap-value span{font-size:20px;font-weight:600;color:var(--faint);letter-spacing:-.02em;margin-left:4px}
-.snap-delta{margin-top:8px;font-size:13px;font-weight:650;display:inline-flex;align-items:center;gap:6px}
-.snap-delta span{color:var(--muted);font-weight:500}
-.kstats{display:flex;flex-wrap:wrap;gap:0;margin-top:20px;border-top:1px solid var(--line-soft);padding-top:16px}
-.kstat{padding-right:20px;margin-right:20px;border-right:1px solid var(--line-soft);cursor:default}
-.kstat:last-child{border-right:none;margin-right:0;padding-right:0}
-.kstat.act{cursor:pointer}
-.kstat.act:hover .k-v{color:var(--brand)}
-.k-l{font-size:11.5px;color:var(--muted);font-weight:550}
-.k-v{font-size:19px;font-weight:750;letter-spacing:-.02em;margin-top:3px}
-.k-v small{font-size:12px;font-weight:600;color:var(--faint)}
-.k-s{font-size:11px;color:var(--faint);margin-top:2px}
-.snap-chart{min-width:0}
 .up{color:var(--good-ink)} .down{color:var(--bad-ink)} .flat{color:var(--muted)}
 
 /* delta chips */
@@ -223,6 +205,40 @@ button{font-family:inherit}
 .tbl-wrap{overflow-x:auto}
 .pill-select{appearance:none;border:1px solid var(--line);background:#fff;border-radius:11px;padding:9px 12px;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;outline:none}
 .pill-select:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+
+/* KPI cards — one primary metric per card (title + big number + 1 support) */
+.kc-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
+.kc{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px 20px 18px;display:flex;flex-direction:column;justify-content:space-between;min-height:132px;transition:border-color .15s,box-shadow .15s,transform .15s}
+.kc-click{cursor:pointer}
+.kc-click:hover{border-color:#DCE2EC;box-shadow:var(--shadow);transform:translateY(-1px)}
+.kc-label{font-size:12.5px;color:var(--muted);font-weight:600}
+.kc-value{font-size:38px;font-weight:800;letter-spacing:-.03em;line-height:1.02;font-variant-numeric:tabular-nums;color:var(--ink)}
+.kc-value small{font-size:17px;font-weight:600;color:var(--faint);margin-left:1px;letter-spacing:0}
+.kc-support{font-size:12.5px;font-weight:600;color:var(--muted);margin-top:8px}
+.kc-support.up{color:var(--good-ink)} .kc-support.down{color:var(--bad-ink)} .kc-support.warn{color:var(--warn-ink)} .kc-support.bad{color:var(--bad-ink)}
+@media(max-width:820px){.kc-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}}
+@media(max-width:380px){.kc-value{font-size:32px}.kc{min-height:118px;padding:16px 16px 15px}}
+
+/* titled chart header — the title explains what the chart shows */
+.chart-title{margin-bottom:10px}
+.chart-title h3{margin:0;font-size:14.5px;font-weight:700;letter-spacing:-.01em}
+.chart-title span{font-size:12px;color:var(--muted)}
+
+/* team comparison bars */
+.bc{display:flex;flex-direction:column;gap:2px}
+.bc-row{display:flex;align-items:center;gap:14px;padding:11px 6px;border-radius:10px;cursor:pointer;transition:background .13s}
+.bc-row:hover{background:var(--surface-2)}
+.bc-label{width:108px;flex:0 0 108px;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bc-track{flex:1;height:10px;background:var(--line-soft);border-radius:20px;overflow:hidden;min-width:40px}
+.bc-fill{height:100%;border-radius:20px;transition:width .5s cubic-bezier(.4,0,.2,1)}
+.bc-val{width:40px;flex:0 0 40px;text-align:right;font-size:14px;font-weight:800;font-variant-numeric:tabular-nums}
+
+/* simplified list-row right column */
+.lrow>.lrow-num{flex:0 0 auto;color:var(--ink)}
+.lrow>.sdot{flex:0 0 8px}
+.lrow-meta{font-size:12.5px;font-weight:600;color:var(--ink-2);font-variant-numeric:tabular-nums;flex:0 0 auto;text-align:right;white-space:nowrap}
+.lrow-meta span{color:var(--faint)}
+@media(max-width:560px){.lrow-meta{display:none}}
 
 /* ------------------------------------------------------------------ drawer */
 .scrim{position:fixed;inset:0;background:rgba(15,23,42,.32);backdrop-filter:blur(2px);opacity:0;pointer-events:none;transition:.2s;z-index:60}
@@ -630,19 +646,32 @@ function trendColor(series){
   const d=v[v.length-1].v-v[v.length-2].v;
   return d>0.02?'var(--good)':d<-0.02?'var(--bad)':'var(--brand)';
 }
-function deltaChip(series){
+function toneOf(score,S){if(score==null)return '';const k=statusOf(score,S).cls;return k==='none'?'':k;}
+function supportTrend(series){
   const v=series.filter(p=>p.v!=null);
-  if(v.length<2)return '<span class="dchip flat">—</span>';
+  if(v.length<2)return {cls:'',html:'first tracked period'};
   const d=v[v.length-1].v-v[v.length-2].v;
-  const cls=d>0.02?'up':d<-0.02?'down':'flat';const ar=d>0.02?'▲':d<-0.02?'▼':'•';
-  return '<span class="dchip '+cls+'">'+ar+' '+Math.abs(Math.round(d*100)/100).toFixed(2)+'</span>';
+  const cls=d>0.02?'up':d<-0.02?'down':'';const ar=d>0.02?'▲':d<-0.02?'▼':'•';
+  return {cls:cls,html:ar+' '+Math.abs(Math.round(d*100)/100).toFixed(2)+' vs last month'};
 }
-function deltaLine(series){
-  const v=series.filter(p=>p.v!=null);
-  if(v.length<2)return '<span class="snap-delta flat">• first tracked period</span>';
-  const d=v[v.length-1].v-v[v.length-2].v;
-  const cls=d>0.02?'up':d<-0.02?'down':'flat';const ar=d>0.02?'▲':d<-0.02?'▼':'•';
-  return '<span class="snap-delta '+cls+'">'+ar+' '+Math.abs(Math.round(d*100)/100).toFixed(2)+' <span>vs last period</span></span>';
+/* One KPI card: a title + one big number + at most one supporting element. */
+function kpiCard(label,value,support,opts){
+  opts=opts||{};
+  const color=opts.tone?('var(--'+opts.tone+'-ink)'):'var(--ink)';
+  const attr=opts.nav?('data-nav="'+opts.nav+'"'):(opts.attr||'');
+  const clk=(opts.nav||opts.attr)?' kc-click':'';
+  return '<div class="kc'+clk+'" '+attr+'>'+
+    '<div class="kc-label">'+label+'</div>'+
+    '<div><div class="kc-value" style="color:'+color+'">'+value+'</div>'+
+    (support?'<div class="kc-support '+(opts.supportTone||'')+'">'+support+'</div>':'')+
+    '</div></div>';
+}
+/* Simple horizontal bar chart — one row per item, clear value, no legend. */
+function barChart(rows){
+  return '<div class="bc">'+rows.map(function(r){return '<div class="bc-row" '+(r.attr||'')+'>'+
+    '<div class="bc-label">'+esc(r.label)+'</div>'+
+    '<div class="bc-track"><div class="bc-fill" style="width:'+(clamp(r.value/5,0,1)*100).toFixed(1)+'%;background:'+r.color+'"></div></div>'+
+    '<div class="bc-val" style="color:'+r.color+'">'+one(r.value)+'</div></div>';}).join('')+'</div>';
 }
 function areaChart(series,S,h){
   h=h||168;const w=560;const n=series.length;
@@ -684,30 +713,11 @@ function trendSeries(kind,id){
     return {period:p,v};
   });
 }
-function ring(score5,S,size,stroke){size=size||70;stroke=stroke||7;
-  const p=score5==null?0:clamp(score5/5,0,1);
-  const r=(size-stroke)/2,c=2*Math.PI*r,off=c*(1-p);const col=scoreColor(score5,S);
-  return '<div style="position:relative;width:'+size+'px;height:'+size+'px;flex:0 0 '+size+'px">'+
-    '<svg width="'+size+'" height="'+size+'" style="transform:rotate(-90deg)">'+
-    '<circle cx="'+size/2+'" cy="'+size/2+'" r="'+r+'" fill="none" stroke="var(--line-soft)" stroke-width="'+stroke+'"/>'+
-    '<circle cx="'+size/2+'" cy="'+size/2+'" r="'+r+'" fill="none" stroke="'+col+'" stroke-width="'+stroke+'" stroke-linecap="round" stroke-dasharray="'+c+'" stroke-dashoffset="'+off+'" style="transition:stroke-dashoffset .7s cubic-bezier(.4,0,.2,1)"/></svg>'+
-    '<div style="position:absolute;inset:0;display:grid;place-items:center;text-align:center"><div><div style="font-size:16px;font-weight:800;color:'+col+';line-height:1">'+(score5==null?'—':one(score5))+'</div></div></div></div>';
-}
 function bar(score5,S){const p=score5==null?0:clamp(score5/5,0,1)*100;const col=scoreColor(score5,S);
   return '<div class="track"><div class="fill" style="width:'+p+'%;background:'+col+'"></div></div>';}
-function donut(counts,size){size=size||128;
-  const order=[['good','var(--good)'],['warn','var(--warn)'],['bad','var(--bad)'],['none','var(--none)']];
-  const total=order.reduce((s,[k])=>s+counts[k],0)||1;const r=size/2-9,c=2*Math.PI*r;let off=0;
-  const segs=order.map(([k,col])=>{const frac=counts[k]/total;const len=c*frac;const el='<circle cx="'+size/2+'" cy="'+size/2+'" r="'+r+'" fill="none" stroke="'+col+'" stroke-width="12" stroke-dasharray="'+len+' '+(c-len)+'" stroke-dashoffset="'+(-off)+'" stroke-linecap="butt"/>';off+=len;return frac>0?el:'';}).join('');
-  const on=counts.good,tot=counts.good+counts.warn+counts.bad;
-  return '<div style="position:relative;width:'+size+'px;height:'+size+'px;margin:0 auto">'+
-    '<svg width="'+size+'" height="'+size+'" style="transform:rotate(-90deg)">'+segs+'</svg>'+
-    '<div style="position:absolute;inset:0;display:grid;place-items:center;text-align:center"><div><div style="font-size:22px;font-weight:800;letter-spacing:-.02em">'+(tot?Math.round(on/tot*100):0)+'%</div><div style="font-size:10px;color:var(--muted);font-weight:600">on track</div></div></div></div>';
-}
 function pillFor(st){return '<span class="pill '+st.cls+'"><span class="sdot s-'+st.k+'"></span>'+st.t+'</span>';}
 function teamColor(name){const map={Metal:'#64748B',Plastic:'#0EA5A0',Onboarding:'#7C5CE0',Collections:'#E07A2A'};return map[name]||'var(--brand)';}
 function teamLogo(name,size){size=size||38;const c=teamColor(name);return '<div class="tlogo" style="background:linear-gradient(135deg,'+c+',color-mix(in srgb,'+c+' 65%,#000 12%));width:'+size+'px;height:'+size+'px;font-size:'+(size*0.4)+'px">'+esc(name[0])+'</div>';}
-function kstat(label,value,sub,attrs){return '<div class="kstat'+(attrs?' act':'')+'"'+(attrs||'')+'><div class="k-l">'+label+'</div><div class="k-v">'+value+'</div>'+(sub?'<div class="k-s">'+sub+'</div>':'')+'</div>';}
 function segControl(items,active,attr){
   return '<div class="seg" style="margin-bottom:14px">'+items.map(it=>'<button class="seg-btn'+(it.id===active?' active':'')+'" '+attr+'="'+esc(it.id)+'">'+esc(it.label)+'</button>').join('')+'</div>';
 }
@@ -716,91 +726,64 @@ function segControl(items,active,attr){
 function viewOverview(){
   const o=APP.cmp.org,S=APP.cmp.S,tr=trendSeries('org');
   const tot=o.counts.good+o.counts.warn+o.counts.bad;
+  const st=supportTrend(tr);
+  const need=o.counts.warn+o.counts.bad;
+  const needTone=o.counts.bad>0?'bad':(o.counts.warn>0?'warn':'good');
+  const teamBars=o.teamsRanked.map(t=>({label:t.team.name,value:t.score,color:scoreColor(t.score,S),attr:'data-team="'+esc(t.team.name)+'"'}));
   return `
   <div class="page-head"><h1>Organisation Performance</h1>
-    <p>A live snapshot across all four teams for <b>${periodLabel(APP.period)}</b>, straight from the source sheet. Tap any team, person or KPI to reveal deeper analytics.</p></div>
+    <p>How the whole business is doing for <b>${periodLabel(APP.period)}</b>. Tap any number, bar or row to drill in.</p></div>
 
-  <div class="snap">
-    <div class="snap-grid">
-      <div>
-        <div class="snap-label">Performance Index · ${periodLabel(APP.period)}</div>
-        <div class="snap-value" style="color:${scoreColor(o.score,S)}">${one(o.score)}<span>/ 5.0</span></div>
-        ${deltaLine(tr)}
-        <div class="kstats">
-          ${kstat('Attainment',pct(o.ach),'vs target')}
-          ${kstat('On track',(o.onTrackPct==null?'—':Math.round(o.onTrackPct)+'%'),o.counts.good+' of '+tot)}
-          ${kstat('Needs action','<span style="color:var(--bad-ink)">'+o.interventions.length+'</span>','off-track KPIs',' data-nav="risk"')}
-          ${kstat('People',o.withData+' / '+o.headcount,'reporting')}
-        </div>
-      </div>
-      <div class="snap-chart">
-        ${areaChart(tr,S,168)}
-        <div class="chart-note"><span><b>Index trend</b> · weighted rating /5</span><span>▬ On ≥ ${S.onTrack} · At-risk ≥ ${S.atRisk}</span></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="panel pad" style="margin-bottom:16px">
-    <div class="panel-h"><h3>Teams</h3><span class="sub">weighted index · ranked</span><span class="r"><span class="link" data-nav="teams">Compare all →</span></span></div>
-    <div class="list stack">${o.teamsRanked.map(t=>teamListRow(t,S,false)).join('')}</div>
+  <div class="kc-grid">
+    ${kpiCard('Performance Index', one(o.score)+'<small>/5</small>', st.html, {tone:toneOf(o.score,S), supportTone:st.cls})}
+    ${kpiCard('On-Track Rate', (o.onTrackPct==null?'—':Math.round(o.onTrackPct)+'%'), o.counts.good+' of '+tot+' KPIs', {})}
+    ${kpiCard('Needs Attention', String(need), 'KPIs below target →', {tone:needTone, supportTone:(needTone==='good'?'':needTone), nav:'risk'})}
+    ${kpiCard('People Reporting', o.withData+'<small>/'+o.headcount+'</small>', 'across '+APP.boot.teams.length+' teams', {})}
   </div>
 
   <div class="two-col" style="margin-bottom:16px">
     <div class="panel pad">
-      <div class="panel-h"><h3>Top performers</h3><span class="sub">this period</span></div>
-      <div class="list stack">${o.top.length?o.top.map((m,i)=>personListRow(m,S,{rank:i+1})).join(''):emptyMini('No scored people yet')}</div>
+      <div class="chart-title"><h3>Performance index over time</h3><span>weighted rating, out of 5</span></div>
+      ${areaChart(tr,S,182)}
     </div>
     <div class="panel pad">
-      <div class="panel-h"><h3>Needs attention</h3><span class="sub">lowest index</span></div>
-      <div class="list stack">${o.bottom.length?o.bottom.slice().reverse().map((m)=>personListRow(m,S,{})).join(''):emptyMini('No scored people yet')}</div>
+      <div class="chart-title"><h3>How each team is performing</h3><span>index out of 5 · tap a team to drill in</span></div>
+      <div class="stack">${barChart(teamBars)}</div>
     </div>
   </div>
 
-  <div class="wide-narrow">
-    <div class="panel pad">
-      <div class="panel-h"><h3>Gaps requiring intervention</h3><span class="sub">largest weighted shortfalls</span><span class="r"><span class="link" data-nav="risk">View all →</span></span></div>
-      <div class="list stack">${riskList(o.atRisk.slice(0,7),S,true)}</div>
-    </div>
-    <div class="panel pad">
-      <div class="panel-h"><h3>KPI status</h3><span class="sub">${tot} tracked</span></div>
-      <div style="margin-top:16px">${donut(o.counts)}</div>
-      <div class="legend" style="justify-content:center;margin-top:16px">
-        ${legendItem('good','On Track',o.counts.good)}${legendItem('warn','At Risk',o.counts.warn)}${legendItem('bad','Off Track',o.counts.bad)}${legendItem('none','No Data',o.counts.none)}
-      </div>
-    </div>
+  <div class="panel pad">
+    <div class="panel-h"><h3>What needs attention</h3><span class="sub">lowest-rated KPIs right now</span><span class="r"><span class="link" data-nav="risk">View all →</span></span></div>
+    <div class="list stack">${riskList(o.atRisk.slice(0,6),S,true)}</div>
   </div>`;
 }
-function legendItem(k,t,n){return '<div class="li"><span class="sdot s-'+k+'"></span>'+t+' <b style="margin-left:2px">'+n+'</b></div>';}
 
-function teamListRow(t,S,detailed){
-  const tr=trendSeries('team',t.team.name);
+function teamListRow(t,S){
   return `<div class="lrow" data-team="${esc(t.team.name)}">
     <div class="lrow-id">${teamLogo(t.team.name,38)}
-      <div class="lrow-name">${esc(t.team.name)}<span class="lrow-sub">${t.team.type==='scorecard'?'Market scorecard':'Individual KRAs'} · ${t.members.length} people · Lead ${esc(t.team.lead||'—')}</span></div></div>
-    ${detailed?`<div class="kmetrics">
-        <div class="km"><span class="km-l">Attain</span><span class="km-v">${pct(t.ach)}</span></div>
-        <div class="km"><span class="km-l">On&nbsp;track</span><span class="km-v">${t.onTrackPct==null?'—':Math.round(t.onTrackPct)+'%'}</span></div>
-      </div>`:`<div class="lrow-spark">${miniSpark(tr,S)}</div>`}
-    <div class="lrow-val"><div class="lrow-num" style="color:${scoreColor(t.score,S)}">${one(t.score)}<span>/5</span></div>${deltaChip(tr)}</div>
+      <div class="lrow-name">${esc(t.team.name)}<span class="lrow-sub">${t.members.length} people · Lead ${esc(t.team.lead||'—')}</span></div></div>
+    <div class="lrow-num">${one(t.score)}<span>/5</span></div>
+    <span class="sdot s-${t.status.k}" title="${t.status.t}"></span>
     <span class="chev">›</span></div>`;
 }
 function personListRow(m,S,opts){
   opts=opts||{};
+  const sub=opts.roleOnly?esc(m.member.role||'Team Member'):esc(m.member.team)+(m.member.role?' · '+esc(m.member.role):'');
   return `<div class="lrow" data-member="${m.member.id}">
     ${opts.rank!=null?'<span class="rank'+(opts.rank===1?' top':'')+'">'+opts.rank+'</span>':''}
     <div class="lrow-id"><div class="lavatar">${initials(m.member.name)}</div>
-      <div class="lrow-name">${esc(m.member.name)}${m.member.isLead?'<span class="mini-tag">Lead</span>':''}<span class="lrow-sub">${esc(m.member.team)}${m.member.role?' · '+esc(m.member.role):''}</span></div></div>
-    ${opts.attain?'<div class="kmetrics"><div class="km"><span class="km-l">Attain</span><span class="km-v">'+pct(m.ach)+'</span></div></div>':''}
-    <div class="lrow-val"><div class="lrow-num" style="color:${scoreColor(m.score,S)}">${one(m.score)}<span>/5</span></div><span class="sdot s-${m.status.k}"></span></div>
+      <div class="lrow-name">${esc(m.member.name)}${m.member.isLead?'<span class="mini-tag">Lead</span>':''}<span class="lrow-sub">${sub}</span></div></div>
+    <div class="lrow-num">${one(m.score)}<span>/5</span></div>
+    <span class="sdot s-${m.status.k}" title="${m.status.t}"></span>
     <span class="chev">›</span></div>`;
 }
 
 function viewTeams(){
   const S=APP.cmp.S;
-  return `<div class="page-head"><h1>Teams</h1><p>Cascading performance across teams. Metal &amp; Plastic run a shared Supply + Demand market scorecard; Onboarding &amp; Collections run per-person KRAs.</p></div>
+  return `<div class="page-head"><h1>Teams</h1><p>Four teams, one index each. Tap a team to see its people, KRAs and focus areas.</p></div>
   <div class="panel pad">
-    <div class="panel-h"><h3>All teams</h3><span class="sub">tap to drill into people, KRAs &amp; risks</span></div>
-    <div class="list stack">${APP.cmp.org.teamsRanked.map(t=>teamListRow(t,S,true)).join('')}</div>
+    <div class="panel-h"><h3>All teams</h3><span class="sub">ranked by index · out of 5</span></div>
+    <div class="list stack">${APP.cmp.org.teamsRanked.map(t=>teamListRow(t,S)).join('')}</div>
   </div>`;
 }
 
@@ -809,48 +792,36 @@ function viewTeam(){
   if(!t)return '<div class="empty">Team not found</div>';
   const tr=trendSeries('team',t.team.name);
   const tot=t.counts.good+t.counts.warn+t.counts.bad;
+  const st=supportTrend(tr);
+  const need=t.counts.warn+t.counts.bad;
+  const needTone=t.counts.bad>0?'bad':(t.counts.warn>0?'warn':'good');
   const tab=APP.tab||'people';
   const kraAgg=aggregateKras(t.rows,S);
   const riskRows=t.rows.filter(r=>r.hasData&&r.status.k!=='good').sort((a,b)=>Scoring.shortfall(b)-Scoring.shortfall(a));
   let body='';
-  if(tab==='people')body=`<div class="list">${t.ranked.map((m,i)=>memberListRow(m,i,S)).join('')}</div>`;
+  if(tab==='people')body=`<div class="list">${t.ranked.map((m,i)=>personListRow(m,S,{rank:i+1,roleOnly:true})).join('')}</div>`;
   else if(tab==='kras')body=`<div class="list">${kraAgg.length?kraAgg.map(k=>kraRow(k,S)).join(''):emptyMini('No data')}</div>`;
-  else body=`<div class="list">${riskList(riskRows,S,true)}</div>`;
+  else body=`<div class="list">${riskList(riskRows,S,false)}</div>`;
   return `<div class="page-head"><div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-      ${teamLogo(t.team.name,46)}
-      <div><h1 style="margin:0;font-size:22px">${esc(t.team.name)} Team</h1><div style="color:var(--muted);font-size:12.5px;margin-top:2px">Lead · <b style="color:var(--ink-2)">${esc(t.team.lead||'—')}</b> · ${t.members.length} people · ${t.team.type==='scorecard'?'Supply + Demand scorecard':'Per-individual KRA/KPI'}</div></div></div></div>
+      ${teamLogo(t.team.name,44)}
+      <div><h1 style="margin:0;font-size:21px">${esc(t.team.name)}</h1><div style="color:var(--muted);font-size:12.5px;margin-top:2px">Lead ${esc(t.team.lead||'—')} · ${t.members.length} people</div></div></div></div>
 
-  <div class="snap">
-    <div class="snap-grid">
-      <div>
-        <div class="snap-label">Team Index · ${periodLabel(APP.period)}</div>
-        <div class="snap-value" style="color:${scoreColor(t.score,S)}">${one(t.score)}<span>/ 5.0</span></div>
-        ${deltaLine(tr)}
-        <div class="kstats">
-          ${kstat('Attainment',pct(t.ach),'vs target')}
-          ${kstat('On track',(t.onTrackPct==null?'—':Math.round(t.onTrackPct)+'%'),t.counts.good+' of '+tot)}
-          ${kstat('At risk','<span style="color:var(--warn-ink)">'+t.counts.warn+'</span>','KPI lines')}
-          ${kstat('Off track','<span style="color:var(--bad-ink)">'+t.counts.bad+'</span>','KPI lines')}
-        </div>
-      </div>
-      <div class="snap-chart">${areaChart(tr,S,168)}<div class="chart-note"><span><b>Index trend</b> · /5</span></div></div>
-    </div>
+  <div class="kc-grid">
+    ${kpiCard('Team Index', one(t.score)+'<small>/5</small>', st.html, {tone:toneOf(t.score,S), supportTone:st.cls})}
+    ${kpiCard('On-Track Rate', (t.onTrackPct==null?'—':Math.round(t.onTrackPct)+'%'), t.counts.good+' of '+tot+' KPIs', {})}
+    ${kpiCard('Needs Attention', String(need), 'KPIs below target', {tone:needTone, supportTone:(needTone==='good'?'':needTone)})}
+    ${kpiCard('Attainment', pct(t.ach), 'weighted vs target', {})}
+  </div>
+
+  <div class="panel pad" style="margin-bottom:16px">
+    <div class="chart-title"><h3>Team index over time</h3><span>weighted rating, out of 5</span></div>
+    ${areaChart(tr,S,182)}
   </div>
 
   <div class="panel pad">
     ${segControl([{id:'people',label:'People'},{id:'kras',label:'KRA performance'},{id:'risk',label:'Focus areas ('+riskRows.length+')'}],tab,'data-tab')}
     ${body}
   </div>`;
-}
-function memberListRow(m,i,S){
-  return `<div class="lrow" data-member="${m.member.id}">
-    <span class="rank${i===0?' top':''}">${i+1}</span>
-    <div class="lrow-id"><div class="lavatar">${initials(m.member.name)}</div>
-      <div class="lrow-name">${esc(m.member.name)}${m.member.isLead?'<span class="mini-tag">Lead</span>':''}<span class="lrow-sub">${esc(m.member.role||'Team Member')}</span></div></div>
-    <div class="kmetrics"><div class="km"><span class="km-l">Attain</span><span class="km-v">${pct(m.ach)}</span></div>
-      <div style="width:96px">${bar(m.score,S)}</div></div>
-    <div class="lrow-val"><div class="lrow-num" style="color:${scoreColor(m.score,S)}">${one(m.score)}<span>/5</span></div><span class="sdot s-${m.status.k}"></span></div>
-    <span class="chev">›</span></div>`;
 }
 function kraRow(k,S){
   return `<div class="kra-row"><div class="knm">${esc(k.kra)}<small>weight ${k.weight}%${k.segment?' · '+esc(k.segment.split('·')[0].trim()):''}</small></div>
@@ -871,10 +842,10 @@ function viewPeople(){
   let mem=Object.values(APP.cmp.members);
   if(APP.search){const q=APP.search.toLowerCase();mem=mem.filter(m=>m.member.name.toLowerCase().includes(q)||m.member.team.toLowerCase().includes(q)||(m.member.role||'').toLowerCase().includes(q));}
   mem.sort((a,b)=>(b.score||-1)-(a.score||-1));
-  return `<div class="page-head"><h1>People</h1><p>Every individual with their weighted index, attainment and status. ${APP.search?'Filtered by “'+esc(APP.search)+'”. ':''}Tap a row for the full KRA/KPI drill-down.</p></div>
+  return `<div class="page-head"><h1>People</h1><p>Every individual, ranked by performance index. ${APP.search?'Filtered by “'+esc(APP.search)+'”. ':''}Tap a name for the full KRA/KPI drill-down.</p></div>
   <div class="panel pad">
-    <div class="panel-h"><h3>${mem.length} ${mem.length===1?'person':'people'}</h3><span class="sub">ranked by performance index</span></div>
-    <div class="list stack">${mem.length?mem.map((m,i)=>personListRow(m,S,{rank:i+1,attain:true})).join(''):emptyMini('No people match your search.')}</div>
+    <div class="panel-h"><h3>${mem.length} ${mem.length===1?'person':'people'}</h3><span class="sub">index out of 5</span></div>
+    <div class="list stack">${mem.length?mem.map((m,i)=>personListRow(m,S,{rank:i+1})).join(''):emptyMini('No people match your search.')}</div>
   </div>`;
 }
 
@@ -883,33 +854,31 @@ function viewMember(){
   if(!m)return '<div class="empty">Person not found</div>';
   const tr=trendSeries('member',m.member.id);
   const tracked=m.rows.filter(r=>r.hasData).length;
+  const st=supportTrend(tr);
+  const need=m.counts.warn+m.counts.bad;
+  const needTone=m.counts.bad>0?'bad':(m.counts.warn>0?'warn':'good');
   const segNames=m.segments.length?m.segments.map(s=>s.segment):['All KPIs'];
   const tab=(APP.tab&&segNames.includes(APP.tab))?APP.tab:segNames[0];
   const rows=m.segments.length?m.rows.filter(r=>(r.kpi.segment||'')===tab):m.rows;
   return `<div class="page-head"><div class="person-hd">
     <div class="pa">${initials(m.member.name)}</div>
-    <div><h1>${esc(m.member.name)}</h1><div class="meta"><span>${esc(m.member.team)} Team</span><span>·</span><span>${esc(m.member.role||'Team Member')}</span>${m.member.isLead?'<span class="tag">Team Lead</span>':''}${m.member.region?'<span class="tag">'+esc(m.member.region)+'</span>':''}</div></div>
+    <div><h1>${esc(m.member.name)}</h1><div class="meta"><span>${esc(m.member.team)} Team</span><span>·</span><span>${esc(m.member.role||'Team Member')}</span>${m.member.isLead?'<span class="tag">Lead</span>':''}</div></div>
   </div></div>
 
-  <div class="snap">
-    <div class="snap-grid">
-      <div>
-        <div class="snap-label">Performance Index · ${periodLabel(APP.period)}</div>
-        <div class="snap-value" style="color:${scoreColor(m.score,S)}">${one(m.score)}<span>/ 5.0</span></div>
-        ${deltaLine(tr)}
-        <div class="kstats">
-          ${kstat('Attainment',pct(m.ach),'vs target')}
-          ${kstat('On track',m.counts.good+' <small>/ '+tracked+'</small>','KPIs')}
-          ${kstat('At risk','<span style="color:var(--warn-ink)">'+m.counts.warn+'</span>','KPIs')}
-          ${kstat('Off track','<span style="color:var(--bad-ink)">'+m.counts.bad+'</span>','KPIs')}
-        </div>
-      </div>
-      <div class="snap-chart">${areaChart(tr,S,168)}<div class="chart-note"><span><b>Index trend</b> · /5</span></div></div>
-    </div>
+  <div class="kc-grid">
+    ${kpiCard('Performance Index', one(m.score)+'<small>/5</small>', st.html, {tone:toneOf(m.score,S), supportTone:st.cls})}
+    ${kpiCard('On-Track KPIs', m.counts.good+'<small>/'+tracked+'</small>', 'meeting expectation', {})}
+    ${kpiCard('Needs Attention', String(need), 'KPIs below target', {tone:needTone, supportTone:(needTone==='good'?'':needTone)})}
+    ${kpiCard('Attainment', pct(m.ach), 'weighted vs target', {})}
+  </div>
+
+  <div class="panel pad" style="margin-bottom:16px">
+    <div class="chart-title"><h3>Performance over time</h3><span>weighted rating, out of 5</span></div>
+    ${areaChart(tr,S,182)}
   </div>
 
   <div class="panel pad">
-    ${segNames.length>1?segControl(segNames.map(s=>({id:s,label:s.split('·')[0].trim()})),tab,'data-tab'):'<div class="panel-h" style="margin-bottom:12px"><h3>KPIs</h3><span class="sub">tap a KPI for definition, formula, target vs actual &amp; to update</span></div>'}
+    ${segNames.length>1?segControl(segNames.map(s=>({id:s,label:s.split('·')[0].trim()})),tab,'data-tab'):'<div class="panel-h" style="margin-bottom:12px"><h3>KPIs</h3><span class="sub">tap a KPI for full detail &amp; to update</span></div>'}
     <div class="list">${rows.length?rows.map(r=>kpiListRow(r,S)).join(''):emptyMini('No KPIs in this segment')}</div>
   </div>`;
 }
@@ -917,13 +886,10 @@ function kpiListRow(r,S){
   const k=r.kpi;
   const actual=r.value!=null?fmtNum(r.value,k.unit):(r.manual?'Rated':'—');
   return `<div class="lrow" data-kpi="${k.kpiId}" data-member="${k.memberId}">
-    <div class="lrow-id"><span class="sdot s-${r.hasData?r.status.k:'none'}" style="margin-left:2px"></span>
-      <div class="lrow-name">${esc(k.kpi)}<span class="lrow-sub">${esc(k.kra)}${k.weight!=null?' · '+k.weight+'%':''}${k.perspective?' · '+esc(k.perspective):''}</span></div></div>
-    <div class="kmetrics">
-      <div class="km"><span class="km-l">Actual</span><span class="km-v">${actual}</span><span class="km-s">of ${fmtNum(k.target,k.unit)}</span></div>
-      <div class="km"><span class="km-l">Ach.</span><span class="km-v">${r.achievement!=null?pct(r.achievement):'—'}</span></div>
-      <div class="rchip" style="color:${scoreColor(r.rating,S)};background:${tint(r.hasData?r.status.k:'none')}">${r.rating==null?'—':one(r.rating)}</div>
-    </div>
+    <div class="lrow-id"><span class="sdot s-${r.hasData?r.status.k:'none'}" style="margin-left:2px" title="${r.status.t}"></span>
+      <div class="lrow-name">${esc(k.kpi)}<span class="lrow-sub">${esc(k.kra)}${k.weight!=null?' · '+k.weight+'%':''}</span></div></div>
+    <div class="lrow-meta">${r.hasData?actual+'<span> / '+fmtNum(k.target,k.unit)+'</span>':'—'}</div>
+    <div class="rchip" style="color:${scoreColor(r.rating,S)};background:${tint(r.hasData?r.status.k:'none')}">${r.rating==null?'—':one(r.rating)}</div>
     <span class="chev">›</span></div>`;
 }
 
@@ -935,7 +901,7 @@ function viewRisk(){
   const teams=APP.boot.teams.map(t=>t.name);
   const off=rows.filter(r=>r.status.k==='bad').length,at=rows.filter(r=>r.status.k==='warn').length;
   const segItems=[{id:'',label:'All teams'}].concat(teams.map(t=>({id:t,label:t})));
-  return `<div class="page-head"><h1>At-Risk &amp; Off-Track KPIs</h1><p>Every KPI below target for <b>${periodLabel(APP.period)}</b>, ranked by weighted shortfall — the biggest levers to move team performance. Tap a row to open, comment and log evidence.</p></div>
+  return `<div class="page-head"><h1>What needs attention</h1><p>KPIs below target for <b>${periodLabel(APP.period)}</b>, worst first. Tap a row to see the detail, add commentary and log evidence.</p></div>
   <div class="panel pad" style="margin-bottom:16px;display:flex;gap:14px;align-items:center;flex-wrap:wrap">
     <div class="seg">${segItems.map(it=>'<button class="seg-btn'+(it.id===teamF?' active':'')+'" data-riskteam="'+esc(it.id)+'">'+esc(it.label)+'</button>').join('')}</div>
     <span style="margin-left:auto;font-size:12.5px;color:var(--muted)"><b style="color:var(--bad-ink)">${off}</b> off track · <b style="color:var(--warn-ink)">${at}</b> at risk</span>
@@ -943,16 +909,12 @@ function viewRisk(){
   <div class="panel pad"><div class="list">${riskList(rows,S,true)}</div></div>`;
 }
 function riskList(rows,S,showTeam){
-  if(!rows.length)return '<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="var(--good)" stroke-width="1.8"><path d="M20 6L9 17l-5-5"/></svg><div>Nothing off track — every tracked KPI is on target.</div></div>';
+  if(!rows.length)return '<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="var(--good)" stroke-width="1.8"><path d="M20 6L9 17l-5-5"/></svg><div>Nothing below target — every tracked KPI is on track.</div></div>';
   return rows.map(r=>{const k=r.kpi;return `
     <div class="lrow" data-kpi="${k.kpiId}" data-member="${k.memberId}">
-      <div class="lrow-id"><span class="sdot s-${r.status.k}" style="margin-left:2px"></span>
+      <div class="lrow-id"><span class="sdot s-${r.status.k}" style="margin-left:2px" title="${r.status.t}"></span>
         <div class="lrow-name">${esc(k.kpi)}<span class="lrow-sub">${esc(k.individual)} · ${esc(k.kra)}${showTeam?' · '+esc(k.team):''}</span></div></div>
-      <div class="kmetrics">
-        <div class="km"><span class="km-l">Actual</span><span class="km-v">${r.value!=null?fmtNum(r.value,k.unit):'—'}</span><span class="km-s">of ${fmtNum(k.target,k.unit)}</span></div>
-        <div class="km"><span class="km-l">Gap</span><span class="km-v" style="color:var(--bad-ink)">${r.gap!=null?(r.gap>0?'+':'')+fmtNum(r.gap,k.unit):'—'}</span></div>
-        <div class="rchip" style="color:${scoreColor(r.rating,S)};background:${tint(r.status.k)}">${one(r.rating)}</div>
-      </div>
+      <div class="rchip" style="color:${scoreColor(r.rating,S)};background:${tint(r.status.k)}">${one(r.rating)}</div>
       <span class="chev">›</span></div>`;}).join('');
 }
 
@@ -960,14 +922,12 @@ function viewData(){
   const S=APP.cmp.S;const b=APP.boot;
   const teamRows=b.teams.map(t=>{const cnt=b.members.filter(m=>m.team===t.name).length;const kc=b.kpis.filter(k=>k.team===t.name).length;
     return `<tr><td><b>${esc(t.name)}</b></td><td>${t.type==='scorecard'?'Market scorecard':'Individual KRA'}</td><td>${esc(t.lead||'—')}</td><td class="num">${cnt}</td><td class="num">${kc}</td><td>${(t.segments||[]).map(s=>'<span class="tag" style="margin-right:4px">'+esc(s)+'</span>').join('')||'—'}</td></tr>`;}).join('');
-  return `<div class="page-head"><h1>Data &amp; Settings</h1><p>The application reads the KRA/KPI framework live from the source Google Sheet and stores individual actuals in a managed tab. Nothing here is hardcoded.</p></div>
-  <div class="snap" style="padding:18px 22px">
-    <div class="kstats" style="margin-top:0;border-top:none;padding-top:0">
-      ${kstat('Source of truth',MOCK.enabled?'Preview mock':'Google Sheet',MOCK.enabled?'sample data':'live · '+esc((b.user&&b.user.email)||''))}
-      ${kstat('Reporting periods',b.periods.length,b.periods.map(periodLabel).join(' · '))}
-      ${kstat('People',b.members.length,'across '+b.teams.length+' teams')}
-      ${kstat('Thresholds','On ≥ '+S.onTrack+' · Risk ≥ '+S.atRisk,'rating 0–5 · Meets = band 3')}
-    </div>
+  return `<div class="page-head"><h1>Data &amp; Settings</h1><p>The app reads the KRA/KPI framework live from the Google Sheet and stores actuals in a managed tab. Nothing here is hardcoded.</p></div>
+  <div class="kc-grid">
+    ${kpiCard('Source',MOCK.enabled?'Preview':'Live',MOCK.enabled?'sample data':esc((b.user&&b.user.email)||'connected'),{})}
+    ${kpiCard('Periods',String(b.periods.length),b.periods.map(periodLabel).join(' · '),{})}
+    ${kpiCard('People',String(b.members.length),'across '+b.teams.length+' teams',{})}
+    ${kpiCard('KPI Lines',String(b.kpis.length),'tracked in the sheet',{})}
   </div>
   <div class="panel pad" style="margin-bottom:16px">
     <div class="panel-h"><h3>Framework parsed from the sheet</h3><span class="sub">read-only</span></div>
