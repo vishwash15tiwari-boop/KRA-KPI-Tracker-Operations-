@@ -501,6 +501,7 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
 .hero{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
 .hero-fig{font-size:56px;font-weight:600;letter-spacing:-.035em;line-height:.95;font-variant-numeric:proportional-nums}
 .hero-fig .u{font-size:22px;font-weight:600;color:var(--muted);margin-left:2px;letter-spacing:-.02em}
+.hero-fig .hero-blank{color:var(--faint);font-weight:500}
 .hero-side{display:flex;flex-direction:column;gap:7px;min-width:0}
 .hero-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .hero-note{font-size:11.5px;color:var(--muted);line-height:1.5}
@@ -933,7 +934,7 @@ function heroTile(score,rating,status,delta,note){
   const has=score!=null;
   return tile('t4','Overall performance',
     '<div class="hero">'+radialMeter(score)+
-    '<div class="hero-side"><div class="hero-fig">'+(has?n1(score):'—')+'<span class="u">%</span></div>'+
+    '<div class="hero-side"><div class="hero-fig">'+(has?n1(score)+'<span class="u">%</span>':'<span class="hero-blank">—</span>')+'</div>'+
     '<div class="hero-meta">'+(has?statusPill(status):'<span class="pill none">Awaiting actuals</span>')+
     (rating!=null?'<span class="tag">'+ratingStr(rating)+' / 5</span>':'')+
     (delta!=null?deltaChip(delta):'')+'</div>'+
@@ -1047,18 +1048,12 @@ function vOverview(){
     <span class="sub">${esc(cy?cy.name:periodLong(APP.period))} · ${o.people} people · ${o.kpis} KPIs across ${o.departments} teams</span>
     <div class="r"><span class="link" data-nav="reports">Reports ›</span></div></div>`;
 
-  if(!hasData) return head+`
-    <div class="banner"><div class="bi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
-      <div><div class="bt">Framework loaded — awaiting actuals for ${esc(periodLong(APP.period))}</div>
-      <div class="bs">Structure, weightage and the 5-band rubric are live from the master sheet. Add actuals to light up every score below.</div></div>
-      <div class="r"><button class="btn primary sm" data-act="scaffold">Scaffold actuals</button></div></div>
-    <div class="dash">
-      ${tile('t4','Framework size','<div class="stat"><div class="v">'+o.kpis+'</div><div class="sub">KPI lines defined across '+o.people+' people</div></div>',{nav:'goals'})}
-      ${tile('t4','Perspectives','<div class="stat"><div class="v">'+(B().perspectives||[]).length+'</div><div class="sub">role dimensions in use</div></div>',{nav:'perspectives'})}
-      ${tile('t4','Coverage','<div class="stat"><div class="v">0<span class="u">%</span></div><div class="sub">0 of '+o.kpis+' KPIs have actuals</div><div class="meter"><span style="width:0%"></span></div></div>',{nav:'checkins'})}
-      ${tile('t6','Coverage by team',coverageRows(),{})}
-      ${tile('t6','Set-up checks',attentionFramework(),{nav:'settings'})}
-    </div>`;
+  // Blank state keeps the FULL card format — every tile, the modal, and the
+  // defined framework (teams, members, KRAs/KPIs) are shown; only the measured
+  // values stay empty until the backend sheet is connected.
+  const banner=hasData?'':`<div class="banner"><div class="bi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 12h16M12 4v16"/></svg></div>
+    <div><div class="bt">Awaiting the backend sheet</div>
+    <div class="bs">The framework — teams, roles, KRAs/KPIs and the 5-band rubric — is loaded. Performance fills in every card below once the data source is connected.</div></div></div>`;
 
   // magnitude on nominal categories: identical ink, length carries the value
   const maxTeam=Math.max(1,...depts.map(d=>d.score||0));
@@ -1078,17 +1073,17 @@ function vOverview(){
   const priorityRows=priority.length?priority.map(x=>{const r=x.r;
     return `<tr data-rec="${r.kpiId}"><td class="nm"><span class="sdot s-${r.status.k}"></span> ${esc(r.kpi||r.kra)}<small>${esc(titleName(r.employee))} · ${esc(r.department)}</small></td>
       <td class="n">${r.weightShown==null?'—':n1(r.weightShown)+'%'}</td><td class="n">${r.rating==null?'—':ratingStr(r.rating)}</td></tr>`;
-  }).join(''):'<tr><td class="empty" colspan="3">Nothing below target.</td></tr>';
+  }).join(''):'<tr><td class="empty" colspan="3">'+(hasData?'Nothing below target.':'Awaiting the backend sheet.')+'</td></tr>';
 
   const movers=(o.movers||[]).filter(m=>Math.abs(m.delta)>=.01);
   const moverRows=movers.length?movers.slice(0,3).concat(movers.slice(-3).reverse().filter(m=>movers.slice(0,3).indexOf(m)<0)).map(m=>
     `<tr data-person="${m.id}"><td class="nm">${esc(titleName(m.name))}<small>${esc(m.department)}</small></td>
       <td class="n">${deltaChip(m.delta)}</td><td class="n">${m.score==null?'—':n1(m.score)+'%'}</td></tr>`).join('')
-    :'<tr><td class="empty" colspan="3">No period-over-period change yet.</td></tr>';
+    :'<tr><td class="empty" colspan="3">'+(hasData?'No period-over-period change yet.':'Awaiting the backend sheet.')+'</td></tr>';
 
-  return head+`<div class="dash">
+  return head+banner+`<div class="dash">
     ${heroTile(o.score,o.rating,o.status,o.delta,
-      'Weightage × rating across '+o.kpisWithData+' scored KPIs'+(o.previousPeriod?', vs '+prev:'')+'.')}
+      hasData?('Weightage × rating across '+o.kpisWithData+' scored KPIs'+(o.previousPeriod?', vs '+prev:'')+'.'):'Awaiting the backend sheet — the framework is ready.')}
     ${statTile('t2','Employees on track',n1(o.peopleOnTrackPct),'%',o.onTrack+' of '+o.peopleWithData+' rated',{meter:o.peopleOnTrackPct,nav:'employees'})}
     ${statTile('t2','KPIs on track',n1(o.recOnTrackPct),'%',o.recOnTrack+' of '+o.kpisWithData+' scored',{meter:o.recOnTrackPct,nav:'goals'})}
     ${statTile('t2','KPIs at risk',String(o.recAtRisk+o.recOffTrack),'',o.recAtRisk+' at risk · '+o.recOffTrack+' off track',{nav:'goals'})}
@@ -1161,12 +1156,11 @@ function vDept(){
     <span class="sub">${leadChip(d)}${emps.length} people · ${d.kpiCount} KPIs${subs.length?' · '+subs.length+' sub-teams':''}</span>
     <div class="r"><span class="link" data-nav="teams">All teams ›</span></div></div>`;
 
-  if(!hasData) return head+`<div class="dash">
-    ${tile('t4','Framework size','<div class="stat"><div class="v">'+d.kpiCount+'</div><div class="sub">KPI lines across '+emps.length+' people</div></div>',{})}
-    ${tile('t4','Coverage','<div class="stat"><div class="v">0<span class="u">%</span></div><div class="sub">no actuals for '+esc(periodShort(APP.period))+' yet</div><div class="meter"><span style="width:0%"></span></div></div>',{nav:'checkins'})}
-    ${tile('t4','Reviews','<div class="stat"><div class="v">'+done+'<span class="u">/'+emps.length+'</span></div><div class="sub">complete this cycle</div></div>',{nav:'reviews'})}
-    ${tile('t12','People',peopleRows(emps),{right:'awaiting actuals'})}
-  </div>`;
+  // Blank state keeps the full team-dashboard format — lead, members with
+  // roles, sub-teams and KRAs all shown; only the scores stay empty.
+  const banner=hasData?'':`<div class="banner"><div class="bi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 12h16M12 4v16"/></svg></div>
+    <div><div class="bt">Awaiting the backend sheet</div>
+    <div class="bs">This team's people, roles and KRAs/KPIs are loaded. Scores fill in once the data source is connected.</div></div></div>`;
 
   const maxP=Math.max(1,...emps.map(e=>e.score||0));
   const perspRows=(d.perspectives&&d.perspectives.length?d.perspectives:[]).map(g=>
@@ -1179,10 +1173,10 @@ function vDept(){
   const prRows=pr.length?pr.map(x=>{const r=x.r;
     return `<tr data-rec="${r.kpiId}"><td class="nm"><span class="sdot s-${r.status.k}"></span> ${esc(r.kpi||r.kra)}<small>${esc(titleName(r.employee))}</small></td>
       <td class="n">${r.weightShown==null?'—':n1(r.weightShown)+'%'}</td><td class="n">${r.rating==null?'—':ratingStr(r.rating)}</td></tr>`;
-  }).join(''):'<tr><td class="empty" colspan="3">Nothing below target.</td></tr>';
+  }).join(''):'<tr><td class="empty" colspan="3">'+(hasData?'Nothing below target.':'Awaiting the backend sheet.')+'</td></tr>';
 
-  return head+`<div class="dash">
-    ${heroTile(d.score,d.rating,d.status,d.delta,'Weighted across '+withData(recs).length+' scored KPIs'+(prev?', vs '+prev:'')+'.')}
+  return head+banner+`<div class="dash">
+    ${heroTile(d.score,d.rating,d.status,d.delta,hasData?('Weighted across '+withData(recs).length+' scored KPIs'+(prev?', vs '+prev:'')+'.'):'Awaiting the backend sheet — this team’s framework is ready.')}
     ${d.lead?leadTile(d):statTile('t2','People',String(emps.length),'','members',{nav:'employees'})}
     ${statTile('t2','KPIs on track',String(d.recOnTrack),'',d.recAtRisk+' at risk · '+d.recOffTrack+' off',{meter:recs.length?d.recOnTrack/recs.length*100:0})}
     ${statTile('t2','Pending updates',String(pending),'',withData(recs).length+' of '+recs.length+' updated',{meter:recs.length?withData(recs).length/recs.length*100:0,nav:'checkins'})}
@@ -1924,7 +1918,7 @@ function vReports(){
 /* ---------------- DRAWER (KPI detail + edit) ---------------- */
 function openRec(id){
   const r=recById(id);if(!r)return;
-  const meets=r.bands&&r.bands[2]?r.bands[2].raw:'';
+  const meets=r.bands&&r.bands[2]?bandDisplay(r,r.bands[2]):'';
   const locked=cycleLocked(),lk=locked?' disabled':'';
   const m=nextMilestone(r);
   let msHtml='';
