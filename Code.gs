@@ -618,17 +618,39 @@ function resolveDirection_(declared, bands, name, def) {
 /* KPI "rule layer": derive a metric TYPE and TARGET LOGIC from the unit, the
  * band cells and the KPI text, so the front-end can score & visualise each KPI
  * by its own nature instead of forcing every KPI into a percentage bar. */
+/* Evidence is ranked, strongest first: an explicit Unit column beats what the
+ * band cells look like, which beats guessing from the KPI's name. Without that
+ * ordering a KPI like "PDD Recovered" measured in ₹ Cr gets read as Days purely
+ * because "pdd" appears in the days-ish name pattern. */
 function classifyMetric_(unit, bands, name, def, direction) {
   var u = norm_(unit);
   var s = norm_((name || '') + ' ' + (def || ''));
   var numeric = bands.filter(function (b) { return b.num != null; }).length;
   if (numeric < 2) return { metricType: 'Qualitative', targetLogic: 'text' };
-  var mt = 'Number';
   var bandHas = function (re) { return bands.some(function (b) { return re.test(String(b.raw || '')); }); };
-  if (u.indexOf('day') >= 0 || /\b(dso|tat|pdd)\b|days/.test(s) || bandHas(/day/i)) mt = 'Days';
-  else if (u.indexOf('cr') >= 0 || u.indexOf('₹') >= 0 || /gmv|revenue|recover|amount|collection value|\bvalue\b/.test(s) || bandHas(/₹|cr\b/i)) mt = 'Amount';
-  else if (u.indexOf('percent') >= 0 || u.indexOf('%') >= 0 || bandHas(/%/) || /\brate\b|retention|adherence|coverage|\bdn\b|automation|accuracy/.test(s)) mt = 'Percentage';
-  else if (u.indexOf('count') >= 0 || /count|number of|no\.? of|# of|cases|tickets|escalations/.test(s)) mt = 'Count';
+
+  var mt = null;
+  // 1) the declared unit.
+  if (u) {
+    if (u.indexOf('day') >= 0) mt = 'Days';
+    else if (u.indexOf('cr') >= 0 || u.indexOf('₹') >= 0 || u.indexOf('inr') >= 0 || u.indexOf('lakh') >= 0 || u.indexOf('amount') >= 0) mt = 'Amount';
+    else if (u.indexOf('percent') >= 0 || u.indexOf('%') >= 0) mt = 'Percentage';
+    else if (u.indexOf('count') >= 0 || u.indexOf('number') >= 0 || u.indexOf('nos') >= 0) mt = 'Count';
+  }
+  // 2) what the band cells actually contain.
+  if (!mt) {
+    if (bandHas(/₹|\bcr\b|lakh/i)) mt = 'Amount';
+    else if (bandHas(/%/)) mt = 'Percentage';
+    else if (bandHas(/day/i)) mt = 'Days';
+  }
+  // 3) the KPI's own language, last.
+  if (!mt) {
+    if (/\b(dso|tat|pdd)\b|days/.test(s)) mt = 'Days';
+    else if (/gmv|revenue|recover|amount|collection value|\bvalue\b/.test(s)) mt = 'Amount';
+    else if (/\brate\b|retention|adherence|coverage|\bdn\b|automation|accuracy/.test(s)) mt = 'Percentage';
+    else if (/count|number of|no\.? of|# of|cases|tickets|escalations/.test(s)) mt = 'Count';
+    else mt = 'Number';
+  }
   var tl = 'numeric';
   if (bandHas(/\d\s*[–—-]\s*\d/)) tl = 'range';
   else if (bandHas(/[<>≤≥]|less than|greater than|more than|within/i)) tl = 'threshold';
@@ -977,8 +999,8 @@ function groupScore_(recs, field, settings) {
   var map = {};
   recs.forEach(function (r) {
     var key = r[field] || (field === 'kra' ? (r.kpi || 'General') : (r.kra || 'General'));
-    var m = map[key] || (map[key] = { name: key, sw: 0, sr: 0, sp: 0, kpis: 0, withData: 0, weight: 0, points: 0 });
-    m.kpis++;
+    var m = map[key] || (map[key] = { name: key, sw: 0, sr: 0, sp: 0, kpis: 0, withData: 0, weight: 0, points: 0, people: {} });
+    m.kpis++; m.people[r.employeeId] = true;
     if (r.weightShown != null) m.weight += r.weightShown;
     if (r.points != null) m.points += r.points;
     if (r.rating != null && r.weightNorm != null) { m.sw += r.weightNorm; m.sr += r.weightNorm * r.rating; m.sp += r.weightNorm * r.scorePct; m.withData++; }
@@ -986,11 +1008,17 @@ function groupScore_(recs, field, settings) {
   return Object.keys(map).map(function (k) {
     var m = map[k];
     var rating = m.sw > 0 ? round2_(m.sr / m.sw) : null;
+    var people = Object.keys(m.people).length;
     return {
       name: m.name, rating: rating,
       score: m.sw > 0 ? round1_(m.sp / m.sw) : null,
-      kpis: m.kpis, withData: m.withData,
-      weight: round1_(m.weight), points: round1_(m.points),
+      kpis: m.kpis, withData: m.withData, people: people,
+      // Weightage is only additive inside ONE person's scorecard. Across several
+      // people the sum is meaningless, so expose the per-person average instead
+      // and let the caller say which it is showing.
+      weight: people === 1 ? round1_(m.weight) : null,
+      avgWeight: people ? round1_(m.weight / people) : null,
+      points: people === 1 ? round1_(m.points) : null,
       status: statusFromRating_(rating, settings.statusScale)
     };
   }).sort(function (a, b) { return (b.rating == null ? -1 : b.rating) - (a.rating == null ? -1 : a.rating); });
