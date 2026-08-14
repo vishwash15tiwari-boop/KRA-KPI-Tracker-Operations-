@@ -6,25 +6,36 @@
 <title>Recykal · KRA / KPI Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
-  /* Strictly white / black / grayscale — no colour coding, no gradients */
-  --brand:#111111;--brand-2:#111111;--brand-soft:#F2F2F2;--brand-ink:#111111;
-  --ink:#111111;--ink-2:#666666;--muted:#999999;--faint:#B4B4B4;
-  --line:#E5E5E5;--line-2:#DADADA;--line-soft:#F0F0F0;--bg:#FFFFFF;--card:#FFFFFF;--surface-2:#F7F7F7;--surface-3:#F2F2F2;
-  --good:#111111;--good-soft:#F2F2F2;--good-ink:#111111;
-  --warn:#666666;--warn-soft:#F2F2F2;--warn-ink:#666666;
-  --bad:#111111;--bad-soft:#F2F2F2;--bad-ink:#111111;
-  --none:#C7C7C7;--none-soft:#F7F7F7;
-  --shadow-xs:0 0 0 0 rgba(0,0,0,0);
-  --shadow:0 1px 2px rgba(0,0,0,.04),0 10px 26px -16px rgba(0,0,0,.16);
-  --shadow-lg:0 24px 60px -24px rgba(0,0,0,.20);
+  /* ===== Recykal brand system — Poppins (display) + Inter (data) ===== */
+  --font-sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --font-display:'Poppins','Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  /* brand — Bright Blue is the single interactive accent; purple completes the gradient */
+  --brand:#005DFF;--brand-2:#8460D4;--brand-soft:#EAF1FF;--brand-ink:#0048C7;
+  --brand-grad:linear-gradient(135deg,#005DFF,#8460D4);
+  --cta:#005DFF;--info:#567DE8;
+  /* ink + cool, blue-tinted neutrals */
+  --ink:#0C1A33;--ink-2:#47566E;--muted:#77859B;--faint:#A9B4C6;
+  --line:#E5EAF2;--line-2:#D2DAE7;--line-soft:#EFF3F9;--bg:#FBFCFE;--card:#FFFFFF;--surface-2:#F5F8FD;--surface-3:#EAF0F8;
+  /* status — green is on-brand (sustainability); amber/red are restrained functional signals */
+  --good:#049769;--good-soft:#E3F5EE;--good-ink:#03794F;
+  --warn:#C57A00;--warn-soft:#FBF0DA;--warn-ink:#98600A;
+  --bad:#E5484D;--bad-soft:#FCEBEC;--bad-ink:#C42B30;
+  --none:#C3CDDC;--none-soft:#F2F6FB;
+  --shadow-xs:0 1px 1px rgba(12,26,51,.03);
+  --shadow:0 1px 2px rgba(12,26,51,.05),0 12px 28px -18px rgba(12,26,51,.22);
+  --shadow-lg:0 28px 64px -28px rgba(12,26,51,.30);
   --r-lg:18px;--r-md:14px;--sbw:246px;--ease:cubic-bezier(.22,.61,.36,1);
 }
 *{box-sizing:border-box}html,body{margin:0;padding:0}
-body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;font-feature-settings:'tnum' 1,'calt' 1,'cv11' 1;letter-spacing:-.011em}
+body{font-family:var(--font-sans);background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;font-feature-settings:'tnum' 1,'calt' 1,'cv11' 1;letter-spacing:-.011em}
 button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
+/* Poppins carries brand personality on the logo, titles and headline figures;
+   Inter keeps tables, meta and dense tabular numbers crisp. */
+.wordmark,.page-head h1,.dash-head h1,.person-hd h1,.state h2,.hero-fig,.kc-value,.exp-pt,.dcard h3,.lead-tile .lt-name{font-family:var(--font-display);letter-spacing:-.02em}
+.page-head h1,.dash-head h1{letter-spacing:-.022em}
 :focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:5px}
 ::selection{background:rgba(0,0,0,.10)}
 ::-webkit-scrollbar{width:11px;height:11px}::-webkit-scrollbar-thumb{background:#D4DAE3;border-radius:20px;border:3px solid var(--bg);background-clip:padding-box}::-webkit-scrollbar-thumb:hover{background:#BFC7D2}
@@ -33,12 +44,15 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
 /* top navigation — white, thin bottom border, minimal active state */
 .topnav{position:sticky;top:0;z-index:40;background:rgba(255,255,255,.86);backdrop-filter:saturate(180%) blur(14px);border-bottom:1px solid var(--line)}
 .tn-inner{max-width:1360px;margin:0 auto;padding:0 32px;height:56px;display:flex;align-items:center;gap:28px}
-.wordmark{font-weight:600;font-size:17px;letter-spacing:-.02em;color:var(--ink);flex:0 0 auto}
+.brand{display:flex;align-items:center;gap:9px;flex:0 0 auto}
+.brand .logo{flex:0 0 auto;display:grid;place-items:center}
+.brand .logo svg{width:26px;height:26px;display:block}
+.wordmark{font-weight:700;font-size:16.5px;letter-spacing:.01em;color:var(--ink);flex:0 0 auto}
 .tn-links{display:flex;align-items:center;gap:4px;flex:1;min-width:0}
 .nav-item{display:flex;align-items:center;padding:8px 14px;border-radius:9px;position:relative;color:var(--ink-2);font-weight:500;cursor:pointer;font-size:14px;letter-spacing:-.006em;white-space:nowrap;transition:color .16s var(--ease)}
 .nav-item:hover{color:var(--ink)}
 .nav-item.active{color:var(--ink);font-weight:600}
-.nav-item.active::after{content:"";position:absolute;left:14px;right:14px;bottom:-17px;height:2px;background:var(--ink);border-radius:2px}
+.nav-item.active::after{content:"";position:absolute;left:14px;right:14px;bottom:-17px;height:2px;background:var(--brand);border-radius:2px}
 .nav-item svg{display:none}
 .nav-item .badge{margin-left:7px;font-size:10.5px;font-weight:600;background:var(--surface-3);color:var(--ink-2);border-radius:20px;padding:1px 7px}
 .tn-right{display:flex;align-items:center;gap:12px;flex:0 0 auto;margin-left:auto}
@@ -46,8 +60,8 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
 .icon-btn:hover{border-color:var(--ink);color:var(--ink)}.icon-btn svg{width:16px;height:16px}
 .userchip{display:flex;align-items:center;gap:9px;padding:4px 13px 4px 5px;border:1px solid var(--line);border-radius:24px;background:#fff;cursor:pointer;transition:.15s}
 .userchip:hover{border-color:var(--ink)}
-.userchip.active{border-color:var(--ink);background:var(--ink)}.userchip.active .u-name{color:#fff}.userchip.active .u-sub{color:rgba(255,255,255,.68)}.userchip.active .avatar{background:#fff;color:var(--ink)}
-.avatar{width:28px;height:28px;border-radius:50%;background:var(--ink);color:#fff;font-weight:600;font-size:11px;display:grid;place-items:center}
+.userchip.active{border-color:transparent;background:var(--brand)}.userchip.active .u-name{color:#fff}.userchip.active .u-sub{color:rgba(255,255,255,.72)}.userchip.active .avatar{background:#fff;color:var(--brand)}
+.avatar{width:28px;height:28px;border-radius:50%;background:var(--brand-grad);color:#fff;font-weight:600;font-size:11px;display:grid;place-items:center}
 .userchip .u-name{font-size:12.5px;font-weight:600;line-height:1.1;color:var(--ink)}.userchip .u-sub{font-size:10.5px;color:var(--muted)}
 .main-scroll{flex:1;min-height:0}
 /* sub bar — breadcrumb + freshness */
@@ -116,9 +130,13 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
 .delta{display:inline-flex;align-items:center;gap:3px;font-size:11.5px;font-weight:750;padding:1px 7px 1px 5px;border-radius:20px;font-variant-numeric:tabular-nums;line-height:1.7}
 .delta svg{width:9px;height:9px}
 .delta.good,.delta.bad,.delta.none{background:transparent;color:var(--ink-2);padding:0}
-.levelchip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;background:var(--brand-soft);color:var(--brand-ink);white-space:nowrap}
+.levelchip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;background:var(--surface-3);color:var(--ink-2);white-space:nowrap}
 .levelchip::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.7}
-.levelchip.lv5,.levelchip.lv1,.levelchip.lv2{background:var(--surface-3);color:var(--ink-2)}
+.levelchip.lv1{background:var(--bad-soft);color:var(--bad-ink)}
+.levelchip.lv2{background:var(--warn-soft);color:var(--warn-ink)}
+.levelchip.lv3{background:var(--brand-soft);color:var(--brand-ink)}
+.levelchip.lv4{background:var(--good-soft);color:var(--good-ink)}
+.levelchip.lv5{background:var(--good-soft);color:var(--good-ink);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--good) 25%,transparent)}
 
 .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-xs)}
 .panel.pad{padding:20px 22px}
@@ -171,21 +189,21 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
 .lrow-track span{display:block;height:100%;border-radius:20px}
 .lrow-meta{font-size:12.5px;font-weight:600;color:var(--ink-2);font-variant-numeric:tabular-nums;flex:0 0 auto;text-align:right;white-space:nowrap}
 @media(max-width:620px){.lrow-track{display:none}}
-.sdot{width:9px;height:9px;border-radius:50%;flex:0 0 9px;display:inline-block;border:1.5px solid var(--ink);background:transparent}
-/* Five ordered tiers, distinguished by fill rather than colour: the dot gets
-   fuller as performance rises, so the scale reads in greyscale and in print. */
-.s-elite{background:var(--ink);box-shadow:0 0 0 2px var(--ink) inset,0 0 0 1px #fff inset}
-.s-strong{background:var(--ink)}
-.s-good{background:radial-gradient(circle,var(--ink) 0 58%,transparent 58% 100%)}
-.s-warn{background:linear-gradient(90deg,var(--ink) 0 50%,transparent 50% 100%)}
-.s-bad{background:transparent}
+.sdot{width:9px;height:9px;border-radius:50%;flex:0 0 9px;display:inline-block;border:1.5px solid var(--none);background:transparent}
+/* Dual-encoded status: semantic colour (green/amber/red) AND fill fullness, so
+   the scale still reads for colour-blind users and in greyscale print. */
+.s-elite{border-color:var(--good);background:var(--good);box-shadow:0 0 0 2px var(--good) inset,0 0 0 1px #fff inset}
+.s-strong{border-color:var(--good);background:var(--good)}
+.s-good{border-color:var(--good);background:radial-gradient(circle,var(--good) 0 56%,transparent 56% 100%)}
+.s-warn{border-color:var(--warn);background:linear-gradient(90deg,var(--warn) 0 50%,transparent 50% 100%)}
+.s-bad{border-color:var(--bad);background:transparent}
 .s-none{border-color:var(--none);background:transparent}
 .chev{color:var(--faint);font-size:18px;flex:0 0 12px;text-align:center;transition:transform .18s var(--ease),color .18s var(--ease)}.lrow:hover .chev{transform:translateX(3px);color:var(--ink-2)}
 .rchip{min-width:50px;text-align:center;font-size:13.5px;font-weight:800;padding:5px 8px;border-radius:9px;font-variant-numeric:tabular-nums;letter-spacing:-.015em;box-shadow:inset 0 0 0 1px color-mix(in srgb,currentColor 14%,transparent)}
 .rchip small{font-size:9.5px;font-weight:700;opacity:.6}
 .pill{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:650;padding:3px 10px;border-radius:20px;white-space:nowrap}
-.pill.good,.pill.warn,.pill.bad,.pill.strong,.pill.elite{background:var(--surface-3);color:var(--ink)}.pill.none{background:var(--surface-2);color:var(--muted)}
-.pill.elite{box-shadow:inset 0 0 0 1px var(--line-2)}
+.pill.good,.pill.strong,.pill.elite{background:var(--good-soft);color:var(--good-ink)}.pill.warn{background:var(--warn-soft);color:var(--warn-ink)}.pill.bad{background:var(--bad-soft);color:var(--bad-ink)}.pill.none{background:var(--surface-2);color:var(--muted)}
+.pill.elite{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--good) 22%,transparent)}
 .tag{font-size:11px;font-weight:600;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line);border-radius:7px;padding:2px 8px;white-space:nowrap}
 .tag.brand{color:var(--ink);background:var(--surface-3);border-color:var(--line)}
 .tag.mt{color:var(--ink-2);background:#fff;border-color:var(--line)}
@@ -241,7 +259,7 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
 .lb.on{border-color:transparent;color:#fff;box-shadow:var(--shadow-xs)}
 .lb.on .lbn{color:rgba(255,255,255,.82)}.lb.on .lbv{color:#fff}
 .lb.meets::after{content:"MEETS";position:absolute;top:-7px;left:50%;transform:translateX(-50%);font-size:7px;font-weight:800;letter-spacing:.04em;color:var(--faint);background:var(--card);padding:0 3px}
-.lb.g1,.lb.g2,.lb.g3,.lb.g4,.lb.g5{--c:var(--ink)}
+.lb.g1{--c:var(--bad)}.lb.g2{--c:var(--warn)}.lb.g3{--c:var(--brand)}.lb.g4{--c:var(--good)}.lb.g5{--c:var(--good)}
 .lb.on{background:var(--c)}
 .lb .qd{width:11px;height:11px;border-radius:50%;border:2px solid var(--faint);margin:3px auto 0}
 .lb.on .qd{border-color:#fff;background:#fff}
@@ -338,7 +356,7 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
 .skl{background:linear-gradient(90deg,#EEF1F6,#F6F8FB,#EEF1F6);background-size:200% 100%;border-radius:12px;animation:sh 1.3s ease infinite}@keyframes sh{to{background-position:-200% 0}}
 .btn{border:none;border-radius:11px;padding:10px 18px;font-size:13.5px;font-weight:650;cursor:pointer;transition:.16s;display:inline-flex;align-items:center;gap:8px}
 .btn:active{transform:translateY(1px)}
-.btn.primary{background:var(--cta,#000);color:#fff}.btn.primary:hover{background:#000}
+.btn.primary{background:var(--cta,#005DFF);color:#fff}.btn.primary:hover{background:var(--brand-ink)}
 .btn.ghost{background:#fff;border:1px solid var(--line);color:var(--ink-2)}.btn.ghost:hover{border-color:var(--brand);color:var(--brand)}
 .btn.sm{padding:7px 12px;font-size:12.5px;border-radius:9px}
 
@@ -380,7 +398,7 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
   .nav-item.active::after{display:none}
   .subbar,.filterbar{padding-left:16px;padding-right:16px}
   .content{padding:22px 16px 64px}
-  .wordmark{flex:1}
+  .brand{flex:1}
 }
 @media(max-width:620px){.userchip .u-meta{display:none}.updated{display:none}.metric-grid{grid-template-columns:repeat(2,1fr)}.person-hd .r{margin-left:0;width:100%}.fseg{flex-wrap:wrap}.fseg button{padding:6px 9px;font-size:11.5px}.fsearch{flex:1 1 100%}.pill-select{max-width:100%}}
 @media(max-width:480px){.crumbs{display:none}.userchip{display:none}}
@@ -472,9 +490,9 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
 
 /* ============================================================ DASHBOARD
    A dashboard is an instrument panel, not a document: one hero figure, a
-   dense tile grid, and a form chosen per job. Monochrome is retained — a
-   single-hue ramp carries magnitude and status reads by fill + label, so
-   there is no categorical hue to confuse and nothing depends on colour. */
+   dense tile grid, and a form chosen per job. Colour is disciplined — brand
+   blue for the accent and progress, a green/amber/red ramp for status only,
+   and neutral ink for pure magnitude, so hue always carries meaning. */
 .dash{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px;align-items:stretch}
 .t1{grid-column:span 1}.t2{grid-column:span 2}.t3{grid-column:span 3}.t4{grid-column:span 4}
 .t5{grid-column:span 5}.t6{grid-column:span 6}.t7{grid-column:span 7}.t8{grid-column:span 8}
@@ -515,7 +533,7 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
 
 /* meter — a single ratio against its limit; track is a lighter step of the ramp */
 .meter{height:6px;border-radius:20px;background:var(--line-soft);overflow:hidden;margin-top:9px}
-.meter span{display:block;height:100%;border-radius:20px;background:var(--ink)}
+.meter span{display:block;height:100%;border-radius:20px;background:var(--brand)}
 .meter.sm{height:4px;margin-top:7px}
 
 /* dense ranked rows — magnitude on nominal categories: one ink, length varies */
@@ -545,10 +563,10 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
 .chart{width:100%;display:block;overflow:visible}
 .chart .grid{stroke:var(--line-soft);stroke-width:1}
 .chart .axis{fill:var(--faint);font-size:9.5px;font-weight:600}
-.chart .ln{fill:none;stroke:var(--ink);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.chart .ar{fill:var(--surface-3)}
-.chart .pt{fill:#fff;stroke:var(--ink);stroke-width:2}
-.chart .pt.cur{fill:var(--ink)}
+.chart .ln{fill:none;stroke:var(--brand);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.chart .ar{fill:var(--brand-soft)}
+.chart .pt{fill:#fff;stroke:var(--brand);stroke-width:2}
+.chart .pt.cur{fill:var(--brand)}
 .chart .hit{fill:transparent;cursor:crosshair}
 .chart .cross{stroke:var(--line-2);stroke-width:1;stroke-dasharray:3 3;opacity:0}
 .chart .band:hover .cross{opacity:1}
@@ -602,7 +620,10 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
 <div class="app">
   <header class="topnav" id="topnav">
     <div class="tn-inner">
-      <div class="wordmark">RECYKAL</div>
+      <div class="brand">
+        <span class="logo" aria-hidden="true"><svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><g transform="rotate(6 20 20)"><path d="M20 3.4 C27.4 8.2 26.2 15.8 20 20 C14.6 15.6 14.2 8.6 20 3.4 Z" fill="#005DFF"/><path d="M20 3.4 C27.4 8.2 26.2 15.8 20 20 C14.6 15.6 14.2 8.6 20 3.4 Z" transform="rotate(90 20 20)" fill="#567DE8"/><path d="M20 3.4 C27.4 8.2 26.2 15.8 20 20 C14.6 15.6 14.2 8.6 20 3.4 Z" transform="rotate(180 20 20)" fill="#1DC797"/><path d="M20 3.4 C27.4 8.2 26.2 15.8 20 20 C14.6 15.6 14.2 8.6 20 3.4 Z" transform="rotate(270 20 20)" fill="#8460D4"/></g></svg></span>
+        <span class="wordmark">RECYKAL</span>
+      </div>
       <button class="icon-btn hamburger" data-act="toggle-nav" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
       <nav class="tn-links" id="nav"></nav>
       <div class="tn-right">
@@ -630,9 +651,10 @@ const initials=n=>String(n||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]||'')
 const n1=v=>v==null||isNaN(v)?'—':(Math.round(v*10)/10);
 const n2=v=>v==null||isNaN(v)?'—':(Math.round(v*100)/100);
 const pct=v=>v==null||isNaN(v)?'—':(Math.round(v*10)/10)+'%';
-/* Monochrome: bars/values are ink; status conveyed by glyph + label, not colour */
-const SCOL={good:'var(--ink)',strong:'var(--ink)',elite:'var(--ink)',warn:'var(--ink)',bad:'var(--ink)',none:'var(--none)'};
-const STINT={good:'var(--surface-3)',strong:'var(--surface-3)',elite:'var(--surface-3)',warn:'var(--surface-3)',bad:'var(--surface-3)',none:'var(--none-soft)'};
+/* Status colour ramp: on-brand green for healthy tiers, restrained amber/red for
+   risk. Applied to rating chips + status bars; pure-magnitude bars stay neutral. */
+const SCOL={good:'var(--good)',strong:'var(--good)',elite:'var(--good)',warn:'var(--warn)',bad:'var(--bad)',none:'var(--none)'};
+const STINT={good:'var(--good-soft)',strong:'var(--good-soft)',elite:'var(--good-soft)',warn:'var(--warn-soft)',bad:'var(--bad-soft)',none:'var(--none-soft)'};
 const sc=k=>SCOL[k]||SCOL.none, tint=k=>STINT[k]||STINT.none;
 const AR_UP='<svg viewBox="0 0 10 10"><path d="M5 2.2l3.2 5.2H1.8z" fill="currentColor"/></svg>';
 const AR_DN='<svg viewBox="0 0 10 10"><path d="M5 7.8L1.8 2.6h6.4z" fill="currentColor"/></svg>';
@@ -947,7 +969,7 @@ function radialMeter(score){
   return '<svg viewBox="0 0 84 84" style="width:84px;height:84px;flex:0 0 84px" aria-hidden="true">'
     +'<circle cx="42" cy="42" r="'+r+'" fill="none" stroke="var(--line-soft)" stroke-width="8" stroke-linecap="round"'
     +' stroke-dasharray="'+(C*sweep).toFixed(1)+' '+C.toFixed(1)+'" transform="rotate(135 42 42)"/>'
-    +(score==null?'':'<circle cx="42" cy="42" r="'+r+'" fill="none" stroke="var(--ink)" stroke-width="8" stroke-linecap="round"'
+    +(score==null?'':'<circle cx="42" cy="42" r="'+r+'" fill="none" stroke="var(--brand)" stroke-width="8" stroke-linecap="round"'
     +' stroke-dasharray="'+(C*sweep*p).toFixed(1)+' '+C.toFixed(1)+'" transform="rotate(135 42 42)"/>')
     +'</svg>';
 }
