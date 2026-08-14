@@ -470,6 +470,105 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
 .status-row .st-at{font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap}
 .tbl tr.tot td{border-top:2px solid var(--line-2);font-weight:700;background:var(--surface-2)}
 
+/* ============================================================ DASHBOARD
+   A dashboard is an instrument panel, not a document: one hero figure, a
+   dense tile grid, and a form chosen per job. Monochrome is retained — a
+   single-hue ramp carries magnitude and status reads by fill + label, so
+   there is no categorical hue to confuse and nothing depends on colour. */
+.dash{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px;align-items:stretch}
+.t1{grid-column:span 1}.t2{grid-column:span 2}.t3{grid-column:span 3}.t4{grid-column:span 4}
+.t5{grid-column:span 5}.t6{grid-column:span 6}.t7{grid-column:span 7}.t8{grid-column:span 8}
+.t9{grid-column:span 9}.t12{grid-column:span 12}
+@media(max-width:1180px){.t3{grid-column:span 6}.t4{grid-column:span 6}.t5,.t7,.t8,.t9{grid-column:span 12}}
+@media(max-width:720px){.dash{gap:10px}.t2,.t3,.t4,.t5,.t6{grid-column:span 12}}
+
+/* compact page header — a dashboard states what it is in one line */
+.dash-head{display:flex;align-items:flex-end;gap:14px;margin-bottom:14px;flex-wrap:wrap}
+.dash-head h1{font-size:23px;font-weight:600;letter-spacing:-.024em;margin:0;line-height:1.15}
+.dash-head .sub{font-size:12.5px;color:var(--muted);padding-bottom:2px}
+.dash-head .r{margin-left:auto;display:flex;align-items:center;gap:8px;padding-bottom:1px}
+
+.tile{border:1px solid var(--line);border-radius:14px;background:var(--card);padding:13px 15px;min-width:0;display:flex;flex-direction:column}
+.tile.pad0{padding:13px 8px 8px}
+.tile-h{display:flex;align-items:center;gap:8px;margin-bottom:9px;min-height:16px}
+.tile-h .tlb{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);white-space:nowrap}
+.tile-h .r{margin-left:auto;font-size:11px;font-weight:600;color:var(--muted);white-space:nowrap}
+.tile-h .r.link{cursor:pointer}.tile-h .r.link:hover{color:var(--ink)}
+.tile.clickable{cursor:pointer;transition:border-color .15s var(--ease)}
+.tile.clickable:hover{border-color:var(--line-2)}
+
+/* hero: the one number the view leads with (proportional figures, ≥48px) */
+.hero{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.hero-fig{font-size:56px;font-weight:600;letter-spacing:-.035em;line-height:.95;font-variant-numeric:proportional-nums}
+.hero-fig .u{font-size:22px;font-weight:600;color:var(--muted);margin-left:2px;letter-spacing:-.02em}
+.hero-side{display:flex;flex-direction:column;gap:7px;min-width:0}
+.hero-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.hero-note{font-size:11.5px;color:var(--muted);line-height:1.5}
+
+/* stat tile: label · value · delta · sparkline */
+.stat{display:flex;flex-direction:column;gap:2px;flex:1}
+.stat .v{font-size:27px;font-weight:600;letter-spacing:-.028em;line-height:1.1;font-variant-numeric:proportional-nums}
+.stat .v .u{font-size:14px;color:var(--muted);font-weight:600;margin-left:1px}
+.stat .sub{font-size:11.5px;color:var(--muted);margin-top:2px;line-height:1.45}
+.stat .spark{margin-top:auto;padding-top:9px}
+
+/* meter — a single ratio against its limit; track is a lighter step of the ramp */
+.meter{height:6px;border-radius:20px;background:var(--line-soft);overflow:hidden;margin-top:9px}
+.meter span{display:block;height:100%;border-radius:20px;background:var(--ink)}
+.meter.sm{height:4px;margin-top:7px}
+
+/* dense ranked rows — magnitude on nominal categories: one ink, length varies */
+.drow{display:flex;align-items:center;gap:10px;padding:7px 6px;border-radius:8px;cursor:pointer;transition:background .13s}
+.drow:hover{background:var(--surface-2)}
+.drow.static{cursor:default}.drow.static:hover{background:transparent}
+.drow .nm{font-size:12.5px;font-weight:550;flex:0 0 118px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.drow .nm small{display:block;font-size:10.5px;color:var(--faint);font-weight:500}
+.drow .bar{flex:1;height:8px;background:var(--line-soft);border-radius:20px;overflow:hidden;min-width:40px}
+.drow .bar i{display:block;height:100%;border-radius:20px;background:var(--ink)}
+.drow .val{font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums;flex:0 0 auto;min-width:44px;text-align:right}
+.drow .val small{font-size:9.5px;color:var(--muted);font-weight:600}
+.drow .d{flex:0 0 auto;min-width:52px;text-align:right}
+@media(max-width:520px){.drow .nm{flex-basis:88px}.drow .d{display:none}}
+
+/* distribution columns — ordered categories, so the ordinal ramp is legitimate */
+.cols{display:flex;align-items:flex-end;gap:7px;height:104px;padding:0 2px}
+.ccol{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px;height:100%;min-width:0}
+.ccol .cbar{width:100%;max-width:52px;border-radius:4px 4px 0 0;background:var(--ink);position:relative;min-height:2px;transition:opacity .13s}
+.ccol .cbar b{position:absolute;top:-17px;left:0;right:0;text-align:center;font-size:11px;font-weight:700;color:var(--ink)}
+.ccol .clab{font-size:9.5px;font-weight:600;color:var(--faint);text-align:center;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.ccol.dim .cbar{background:var(--line-2)}
+
+/* charts */
+.chart{width:100%;display:block;overflow:visible}
+.chart .grid{stroke:var(--line-soft);stroke-width:1}
+.chart .axis{fill:var(--faint);font-size:9.5px;font-weight:600}
+.chart .ln{fill:none;stroke:var(--ink);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.chart .ar{fill:var(--surface-3)}
+.chart .pt{fill:#fff;stroke:var(--ink);stroke-width:2}
+.chart .pt.cur{fill:var(--ink)}
+.chart .hit{fill:transparent;cursor:crosshair}
+.chart .cross{stroke:var(--line-2);stroke-width:1;stroke-dasharray:3 3;opacity:0}
+.chart .band:hover .cross{opacity:1}
+.sparksvg{display:block;width:100%;height:26px;overflow:visible}
+.sparksvg .sl{fill:none;stroke:var(--line-2);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.sparksvg .sd{fill:var(--ink)}
+
+/* one shared tooltip for every chart's hover layer */
+.vtip{position:fixed;z-index:80;pointer-events:none;background:var(--ink);color:#fff;border-radius:8px;padding:7px 10px;font-size:11.5px;font-weight:600;line-height:1.45;opacity:0;transform:translate(-50%,-118%);transition:opacity .12s;white-space:nowrap;box-shadow:var(--shadow)}
+.vtip.on{opacity:1}
+.vtip b{font-variant-numeric:tabular-nums}
+.vtip .k{color:rgba(255,255,255,.62);font-weight:600}
+
+/* compact attention table */
+.mini{width:100%;border-collapse:collapse;font-size:12.5px}
+.mini td{padding:7px 6px;border-bottom:1px solid var(--line-soft)}
+.mini tr:last-child td{border-bottom:none}
+.mini tr{cursor:pointer}.mini tr:hover{background:var(--surface-2)}
+.mini .nm{font-weight:600}
+.mini .nm small{display:block;font-size:10.5px;color:var(--faint);font-weight:500}
+.mini .n{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap}
+.tile .empty{padding:16px 4px;font-size:12px}
+
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-delay:0ms!important;transition-duration:.05ms!important}}
 </style>
 </head>
@@ -494,6 +593,7 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
 <div class="scrim" id="scrim" data-act="close-drawer"></div>
 <aside class="drawer" id="drawer"><div id="drawerContent"></div></aside>
 <div class="toast" id="toast"></div>
+<div class="vtip" id="vtip"></div>
 
 <script>
 'use strict';
@@ -777,32 +877,183 @@ function moversList(movers,limit){
   return top.concat(bottom).map(m=>'<div class="lrow" data-person="'+m.id+'"><div class="lrow-id"><div class="lavatar">'+initials(m.name)+'</div><div class="lrow-name">'+esc(m.name)+'<span class="lrow-sub">'+esc(m.department)+'</span></div></div>'+deltaChip(m.delta)+rchip(m.rating,m.status)+'<span class="chev">›</span></div>').join('');
 }
 
-/* ---------------- OVERVIEW (management) ---------------- */
+/* ==================== DASHBOARD COMPONENTS ====================
+   Form is chosen per job: a hero figure for the one headline number, a meter
+   for a ratio against its limit, bars for magnitude on nominal categories
+   (one ink — length carries the value, never a value-ramp on team names),
+   an area line for change over time, columns for an ordered distribution.
+   Every mark carries a hover tooltip through the shared `data-tip` layer. */
+
+function tile(cls,label,body,opts){
+  opts=opts||{};
+  const right=opts.right?('<span class="r'+(opts.rightNav?' link':'')+'"'+(opts.rightNav?' data-nav="'+opts.rightNav+'"':'')+'>'+opts.right+'</span>'):'';
+  const head=label?('<div class="tile-h"><span class="tlb">'+label+'</span>'+right+'</div>'):'';
+  const attr=opts.nav?(' data-nav="'+opts.nav+'"'):(opts.attr||'');
+  return '<div class="tile '+cls+(opts.pad0?' pad0':'')+(attr?' clickable':'')+'"'+attr+'>'+head+body+'</div>';
+}
+
+/* The single number the view leads with. Exactly one per dashboard. */
+function heroTile(score,rating,status,delta,note){
+  const has=score!=null;
+  return tile('t4','Overall performance',
+    '<div class="hero">'+radialMeter(score)+
+    '<div class="hero-side"><div class="hero-fig">'+(has?n1(score):'—')+'<span class="u">%</span></div>'+
+    '<div class="hero-meta">'+(has?statusPill(status):'<span class="pill none">Awaiting actuals</span>')+
+    (rating!=null?'<span class="tag">'+ratingStr(rating)+' / 5</span>':'')+
+    (delta!=null?deltaChip(delta):'')+'</div>'+
+    (note?'<div class="hero-note">'+note+'</div>':'')+'</div></div>');
+}
+/* A ratio against its limit. Track is a lighter step of the same ramp. */
+function radialMeter(score){
+  const p=score==null?0:clamp(score,0,100)/100;
+  const r=32,C=2*Math.PI*r,sweep=.75;
+  return '<svg viewBox="0 0 84 84" style="width:84px;height:84px;flex:0 0 84px" aria-hidden="true">'
+    +'<circle cx="42" cy="42" r="'+r+'" fill="none" stroke="var(--line-soft)" stroke-width="8" stroke-linecap="round"'
+    +' stroke-dasharray="'+(C*sweep).toFixed(1)+' '+C.toFixed(1)+'" transform="rotate(135 42 42)"/>'
+    +(score==null?'':'<circle cx="42" cy="42" r="'+r+'" fill="none" stroke="var(--ink)" stroke-width="8" stroke-linecap="round"'
+    +' stroke-dasharray="'+(C*sweep*p).toFixed(1)+' '+C.toFixed(1)+'" transform="rotate(135 42 42)"/>')
+    +'</svg>';
+}
+/* Stat tile: label · value · delta · optional sparkline. */
+function statTile(span,label,value,unit,sub,opts){
+  opts=opts||{};
+  const v='<div class="v">'+value+(unit?'<span class="u">'+unit+'</span>':'')+(opts.delta!=null?deltaChip(opts.delta):'')+'</div>';
+  const meter=opts.meter!=null?('<div class="meter'+(opts.sm?' sm':'')+'"><span style="width:'+clamp(opts.meter,0,100)+'%"></span></div>'):'';
+  const spark=opts.trend&&opts.trend.length>1?('<div class="spark">'+sparkMini(opts.trend)+'</div>'):'';
+  return tile(span||'t2',label,'<div class="stat">'+v+(sub?'<div class="sub">'+sub+'</div>':'')+meter+spark+'</div>',opts);
+}
+/* 12-point sparkline; history in the de-emphasis step, current in the accent. */
+function sparkMini(series){
+  const pts=(series||[]).map(p=>p.rating==null?null:p.rating);
+  const idx=pts.map((v,i)=>({v,i})).filter(p=>p.v!=null);
+  if(idx.length<2)return '';
+  const W=100,H=26,mn=Math.min(...idx.map(p=>p.v)),mx=Math.max(...idx.map(p=>p.v)),sp=(mx-mn)||1;
+  const x=i=>pts.length<=1?W/2:(i/(pts.length-1))*W;
+  const y=v=>3+(H-6)*(1-(v-mn)/sp);
+  const d=idx.map((p,k)=>(k?'L':'M')+x(p.i).toFixed(1)+' '+y(p.v).toFixed(1)).join(' ');
+  const last=idx[idx.length-1];
+  return '<svg class="sparksvg" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" aria-hidden="true"><path class="sl" d="'+d+'"/>'
+    +'<circle class="sd" cx="'+x(last.i).toFixed(1)+'" cy="'+y(last.v).toFixed(1)+'" r="2.4"/></svg>';
+}
+/* Change over time. One series, so no legend — the tile label names it. */
+function areaChart(series,opts){
+  opts=opts||{};
+  const H=opts.h||150,W=560,pad={l:26,r:10,t:12,b:20};
+  const all=(series||[]).map((p,i)=>({i,period:p.period,v:p.rating,score:p.score}));
+  const idx=all.filter(p=>p.v!=null);
+  if(idx.length<2)return '<div class="empty">Not enough periods to plot a trend yet.</div>';
+  const iw=W-pad.l-pad.r,ih=H-pad.t-pad.b;
+  const x=i=>pad.l+(all.length<=1?iw/2:iw*i/(all.length-1));
+  const y=v=>pad.t+ih*(1-(clamp(v,1,5)-1)/4);
+  let g='';[1,2,3,4,5].forEach(v=>{g+='<line class="grid" x1="'+pad.l+'" x2="'+(W-pad.r)+'" y1="'+y(v).toFixed(1)+'" y2="'+y(v).toFixed(1)+'"/>'
+    +'<text class="axis" x="'+(pad.l-7)+'" y="'+(y(v)+3.2).toFixed(1)+'" text-anchor="end">'+v+'</text>';});
+  const line=idx.map((p,k)=>(k?'L':'M')+x(p.i).toFixed(1)+' '+y(p.v).toFixed(1)).join(' ');
+  const area=line+' L'+x(idx[idx.length-1].i).toFixed(1)+' '+(pad.t+ih)+' L'+x(idx[0].i).toFixed(1)+' '+(pad.t+ih)+' Z';
+  let pts='',xl='',bands='';
+  idx.forEach((p,k)=>{pts+='<circle class="pt'+(k===idx.length-1?' cur':'')+'" cx="'+x(p.i).toFixed(1)+'" cy="'+y(p.v).toFixed(1)+'" r="'+(k===idx.length-1?4:3)+'"/>';});
+  all.forEach(p=>{xl+='<text class="axis" x="'+x(p.i).toFixed(1)+'" y="'+(H-5)+'" text-anchor="middle">'+esc(periodShort(p.period))+'</text>';});
+  const bw=all.length>1?iw/(all.length-1):iw;
+  all.forEach(p=>{
+    const tip=p.v==null?(periodLong(p.period)+' · no data'):(periodLong(p.period)+' · '+n1(p.score)+'% · '+ratingStr(p.v)+'/5');
+    bands+='<g class="band"><line class="cross" x1="'+x(p.i).toFixed(1)+'" x2="'+x(p.i).toFixed(1)+'" y1="'+pad.t+'" y2="'+(pad.t+ih)+'"/>'
+      +'<rect class="hit" x="'+(x(p.i)-bw/2).toFixed(1)+'" y="'+pad.t+'" width="'+bw.toFixed(1)+'" height="'+ih+'" data-tip="'+esc(tip)+'"/></g>';
+  });
+  return '<svg class="chart" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" style="height:'+H+'px">'
+    +g+'<path class="ar" d="'+area+'"/><path class="ln" d="'+line+'"/>'+pts+xl+bands+'</svg>';
+}
+/* Magnitude on nominal categories: one ink for every bar, length is the value. */
+function dRow(name,sub,value,unit,pct01,attr,delta){
+  return '<div class="drow"'+(attr||'')+' data-tip="'+esc(name+(sub?' · '+sub:'')+' · '+(value==null?'no data':value+(unit||'')))+'">'
+    +'<div class="nm">'+esc(name)+(sub?'<small>'+esc(sub)+'</small>':'')+'</div>'
+    +'<div class="bar"><i style="width:'+clamp(pct01*100,0,100).toFixed(1)+'%"></i></div>'
+    +(delta!=null?'<span class="d">'+deltaChip(delta)+'</span>':'')
+    +'<div class="val">'+(value==null?'—':value)+(unit?'<small>'+unit+'</small>':'')+'</div></div>';
+}
+/* Ordered categories (performance tiers) — an ordinal scale is legitimate here. */
+function distCols(bins){
+  const max=Math.max(1,...bins.map(b=>b.n));
+  return '<div class="cols">'+bins.map(b=>{
+    const h=b.n===0?2:clamp(b.n/max*100,10,100);
+    return '<div class="ccol'+(b.n?'':' dim')+'" data-tip="'+esc(b.n+' '+(b.n===1?'person':'people')+' · '+b.label)+'">'
+      +'<div class="cbar" style="height:'+h+'%">'+(b.n?'<b>'+b.n+'</b>':'')+'</div>'
+      +'<div class="clab">'+esc(b.short||b.label)+'</div></div>';
+  }).join('')+'</div>';
+}
+
+/* ---------------- OVERVIEW (management) ----------------
+   The dashboard. One hero figure, a dense tile grid, and a form per job —
+   not a document with a paragraph on top. */
 function vOverview(){
-  const o=B().rollups.org;const hasData=o.kpisWithData>0;
-  const depts=perfDepts();
-  let banner='';
-  if(!hasData)banner='<div class="banner"><div class="bi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div><div><div class="bt">Framework loaded — awaiting actuals for '+esc(periodLong(APP.period))+'</div><div class="bs">The KRA/KPI structure, weightage and 5-band rubric are live from the master sheet. Add actuals in the separate '+esc(B().source.actuals.tab)+' source to light up scores.</div></div><div class="r"><button class="btn primary sm" data-act="scaffold">Scaffold actuals sheet</button></div></div>';
-  const rv=B().rollups.reviews||{pending:0,complete:0,total:0,progress:0};
-  const cards=`<div class="kc-grid c5">
-    ${kpiCard('Overall performance',hasData?scoreBig(o.score,o.rating):'—',hasData?statusPill(o.status)+levelChip(o.level):'no actuals yet',{tone:hasData?o.status.k:'none',bar:hasData?o.score:null,delta:hasData?o.delta:null})}
-    ${kpiCard('Employees on track',hasData?n1(o.peopleOnTrackPct)+'<small>%</small>':'—',o.onTrack+' of '+o.peopleWithData+' rated',{tone:'good',bar:hasData?o.peopleOnTrackPct:null})}
-    ${kpiCard('KPIs on track',hasData?n1(o.recOnTrackPct)+'<small>%</small>':'—',o.recOnTrack+' of '+o.kpisWithData+' with actuals',{tone:'good',bar:hasData?o.recOnTrackPct:null})}
-    ${kpiCard('KPIs at risk',hasData?String(o.recAtRisk+o.recOffTrack):'—','below the On Track cut-off',{tone:(o.recAtRisk+o.recOffTrack)?'warn':'good',nav:'goals'})}
-    ${kpiCard('Reviews pending',String(rv.pending),rv.total?rv.complete+' of '+rv.total+' complete':'no cycle reviews yet',{tone:rv.pending?'warn':'good',nav:'reviews'})}
+  const o=B().rollups.org, hasData=o.kpisWithData>0;
+  const depts=perfDepts(), rv=B().rollups.reviews||{pending:0,complete:0,total:0,progress:0};
+  const cy=CY(), prev=esc(periodShort(o.previousPeriod)||'');
+
+  const head=`<div class="dash-head"><h1>Performance</h1>
+    <span class="sub">${esc(cy?cy.name:periodLong(APP.period))} · ${o.people} people · ${o.kpis} KPIs across ${o.departments} teams</span>
+    <div class="r"><span class="link" data-nav="reports">Reports ›</span></div></div>`;
+
+  if(!hasData) return head+`
+    <div class="banner"><div class="bi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+      <div><div class="bt">Framework loaded — awaiting actuals for ${esc(periodLong(APP.period))}</div>
+      <div class="bs">Structure, weightage and the 5-band rubric are live from the master sheet. Add actuals to light up every score below.</div></div>
+      <div class="r"><button class="btn primary sm" data-act="scaffold">Scaffold actuals</button></div></div>
+    <div class="dash">
+      ${tile('t4','Framework size','<div class="stat"><div class="v">'+o.kpis+'</div><div class="sub">KPI lines defined across '+o.people+' people</div></div>',{nav:'goals'})}
+      ${tile('t4','Perspectives','<div class="stat"><div class="v">'+(B().perspectives||[]).length+'</div><div class="sub">role dimensions in use</div></div>',{nav:'perspectives'})}
+      ${tile('t4','Coverage','<div class="stat"><div class="v">0<span class="u">%</span></div><div class="sub">0 of '+o.kpis+' KPIs have actuals</div><div class="meter"><span style="width:0%"></span></div></div>',{nav:'checkins'})}
+      ${tile('t6','Coverage by team',coverageRows(),{})}
+      ${tile('t6','Set-up checks',attentionFramework(),{nav:'settings'})}
+    </div>`;
+
+  // magnitude on nominal categories: identical ink, length carries the value
+  const maxTeam=Math.max(1,...depts.map(d=>d.score||0));
+  const teamRows=depts.slice().sort((a,b)=>(b.score||0)-(a.score||0))
+    .map(d=>dRow(d.name,d.employeeCount+(d.employeeCount===1?' person':' people'),
+      d.score==null?null:n1(d.score),'%',(d.score||0)/maxTeam,' data-dept="'+d.id+'"',d.delta)).join('');
+
+  const perspRows=(B().perspectives||[]).slice(0,6).map(p=>
+    dRow(p.perspective,p.kpis+' KPIs',p.score==null?null:n1(p.score),'%',(p.score||0)/100,' data-persp="'+esc(p.perspective)+'"')).join('');
+
+  // ordered tiers -> an ordinal distribution, read left (weakest) to right
+  const scale=SCALE().slice().sort((a,b)=>a.min-b.min);
+  const bins=scale.map(s=>({label:s.label,short:s.label,
+    n:B().employees.filter(e=>e.rating!=null&&e.status.k===s.key).length}));
+
+  const priority=priorityRecords(null).slice(0,6);
+  const priorityRows=priority.length?priority.map(x=>{const r=x.r;
+    return `<tr data-rec="${r.kpiId}"><td class="nm"><span class="sdot s-${r.status.k}"></span> ${esc(r.kpi||r.kra)}<small>${esc(r.employee)} · ${esc(r.department)}</small></td>
+      <td class="n">${r.weightShown==null?'—':n1(r.weightShown)+'%'}</td><td class="n">${r.rating==null?'—':ratingStr(r.rating)}</td></tr>`;
+  }).join(''):'<tr><td class="empty" colspan="3">Nothing below target.</td></tr>';
+
+  const movers=(o.movers||[]).filter(m=>Math.abs(m.delta)>=.01);
+  const moverRows=movers.length?movers.slice(0,3).concat(movers.slice(-3).reverse().filter(m=>movers.slice(0,3).indexOf(m)<0)).map(m=>
+    `<tr data-person="${m.id}"><td class="nm">${esc(m.name)}<small>${esc(m.department)}</small></td>
+      <td class="n">${deltaChip(m.delta)}</td><td class="n">${m.score==null?'—':n1(m.score)+'%'}</td></tr>`).join('')
+    :'<tr><td class="empty" colspan="3">No period-over-period change yet.</td></tr>';
+
+  return head+`<div class="dash">
+    ${heroTile(o.score,o.rating,o.status,o.delta,
+      'Weightage × rating across '+o.kpisWithData+' scored KPIs'+(o.previousPeriod?', vs '+prev:'')+'.')}
+    ${statTile('t2','Employees on track',n1(o.peopleOnTrackPct),'%',o.onTrack+' of '+o.peopleWithData+' rated',{meter:o.peopleOnTrackPct,nav:'employees'})}
+    ${statTile('t2','KPIs on track',n1(o.recOnTrackPct),'%',o.recOnTrack+' of '+o.kpisWithData+' scored',{meter:o.recOnTrackPct,nav:'goals'})}
+    ${statTile('t2','KPIs at risk',String(o.recAtRisk+o.recOffTrack),'',o.recAtRisk+' at risk · '+o.recOffTrack+' off track',{nav:'goals'})}
+    ${statTile('t2','Reviews pending',String(rv.pending),'',rv.total?rv.complete+' of '+rv.total+' complete':'no reviews yet',{meter:rv.progress,nav:'reviews'})}
+
+    ${tile('t7','Performance trend',areaChart(o.trend,{h:150}),{right:o.delta!=null?(o.delta>0?'▲':'▼')+' vs '+prev:'rating / 5'})}
+    ${tile('t5','Team performance','<div>'+(teamRows||'<div class="empty">No teams.</div>')+'</div>',{right:'score / 100'})}
+
+    ${tile('t5','Perspective performance','<div>'+(perspRows||'<div class="empty">No perspectives tagged.</div>')+'</div>',{right:'All ›',rightNav:'perspectives'})}
+    ${tile('t3','Performance distribution',distCols(bins),{right:o.peopleWithData+' rated'})}
+    ${tile('t4','Coverage','<div class="stat"><div class="v">'+n1(o.coverage)+'<span class="u">%</span></div><div class="sub">'+o.kpisWithData+' of '+o.kpis+' KPIs have '+esc(periodShort(APP.period))+' actuals</div><div class="meter"><span style="width:'+clamp(o.coverage,0,100)+'%"></span></div></div>',{nav:'checkins'})}
+
+    ${tile('t6','Priority actions','<table class="mini"><tbody>'+priorityRows+'</tbody></table>',{right:'gap × weight'})}
+    ${tile('t6','Biggest movers','<table class="mini"><tbody>'+moverRows+'</tbody></table>',{right:o.previousPeriod?'vs '+prev:''})}
   </div>`;
-  const trend=`<div class="panel pad"><div class="panel-h"><h3>Performance trend</h3><span class="sub">org rating over the last ${B().rollups.org.periods.length} periods</span>${o.delta!=null?'<div class="r">'+deltaChip(o.delta)+' vs '+esc(periodShort(o.previousPeriod))+'</div>':''}</div><div class="q">Are we getting better?</div>${trendChart(o.trend,{h:150})}</div>`;
-  const persp=`<div class="panel pad"><div class="panel-h"><h3>Perspective performance</h3><span class="sub">weighted rating by perspective</span><div class="r"><span class="link" data-nav="perspectives">All perspectives ›</span></div></div><div class="q">Which part of the role drives the score?</div><div class="stack" style="margin-top:6px">${B().perspectives.slice(0,6).map(perspBar).join('')||'<div class="empty">No perspectives tagged.</div>'}</div></div>`;
-  return `<div class="page-head"><h1>KRA / KPI Performance</h1>
-    <p>A single, live view over Recykal's complete KRA/KPI framework — read from <b>${esc(B().source.title)}</b>. Definitions, weightage and the 5-band rubric come from the master sheet; targets &amp; actuals from the separate ${esc(B().source.actuals.type)} source. Nothing is hard-coded.</p></div>
-  ${banner}${cards}
-  <div class="sect-t">How each team is performing<span class="r">${hasData?'score / 100 · Δ vs '+esc(periodShort(o.previousPeriod)):'framework size'}</span></div>
-  <div class="panel pad"><div class="stack" style="margin-top:2px">${depts.map(d=>deptBar(d,hasData)).join('')||'<div class="empty">No teams detected.</div>'}</div></div>
-  <div class="two-eq" style="margin-top:16px">${trend}${persp}</div>
-  <div class="two-col" style="margin-top:16px">
-    <div class="panel pad"><div class="panel-h"><h3>Priority actions</h3><span class="sub">gap below target × weightage</span></div><div class="q">What should we act on first?</div><div class="list stack" style="margin-top:4px">${hasData?priorityList(null,6):attentionFramework()}</div></div>
-    <div class="panel pad"><div class="panel-h"><h3>${hasData?'Biggest movers':'Framework coverage'}</h3><span class="sub">${hasData?'vs '+esc(periodShort(o.previousPeriod)):'actuals vs defined'}</span></div><div class="list stack" style="margin-top:4px">${hasData?moversList(o.movers,6):coveragePanel()}</div></div>
-  </div>`;
+}
+function coverageRows(){
+  return perfDepts().map(d=>{const recs=B().records.filter(r=>r.deptId===d.id);const wd=withData(recs).length;
+    return dRow(d.name,recs.length+' KPIs',wd+'/'+recs.length,'',recs.length?wd/recs.length:0,' data-dept="'+d.id+'"');}).join('')
+    ||'<div class="empty">No teams detected.</div>';
 }
 function perspBar(p){const r=p.rating,pp=r==null?0:clamp((r-1)/4*100,0,100);return `<div class="bc-row" data-persp="${esc(p.perspective)}"><div class="bc-label">${esc(p.perspective)}<small> · ${p.kpis} KPIs</small></div><div class="bc-track"><div class="bc-fill" style="width:${pp}%;background:${sc(p.status.k)}"></div></div><div class="bc-val" style="color:${sc(p.status.k)}">${p.score==null?'—':n1(p.score)+'<small>%</small>'}</div><span class="bc-chev">›</span></div>`;}
 function deptBar(d,hasData){
@@ -844,26 +1095,60 @@ function deptCard(d,hasData,i){
 function vDept(){
   const d=deptById(APP.ctx.deptId);if(!d)return '<div class="empty" style="padding:60px">Team not found</div>';
   if(d.kind==='info'&&d.rawTable)return vInfoDept(d);
-  const emps=deptEmployees(d.id);const subs=deptSubTeams(d.id);const recs=B().records.filter(r=>r.deptId===d.id);
+  const emps=deptEmployees(d.id), subs=deptSubTeams(d.id);
+  const recs=B().records.filter(r=>r.deptId===d.id);
   const hasData=withData(recs).length>0;
-  const head=`<div class="page-head"><h1>${esc(d.name)} performance</h1><p>${d.kind==='scorecard'?'Market scorecard — a shared KRA/KPI template applied to each POC':'Individual KRA/KPI blocks per person'} · ${emps.length} people · ${d.kpiCount} KPIs.</p></div>`;
-  const teamReviews=emps.filter(e=>e.review&&e.review.status==='Complete').length;
-  const cards=`<div class="kc-grid c5">
-    ${kpiCard('Team performance',hasData?scoreBig(d.score,d.rating):'—',hasData?statusPill(d.status)+levelChip(d.level):'awaiting actuals',{tone:hasData?d.status.k:'none',bar:hasData?d.score:null,delta:hasData?d.delta:null})}
-    ${kpiCard('People',String(emps.length),d.kind==='scorecard'?'POCs on this scorecard':'individual scorecards',{})}
-    ${kpiCard('KPIs on track',hasData?String(d.recOnTrack):'—',hasData?d.recAtRisk+' at risk · '+d.recOffTrack+' off':(subs.length?subs.length+' sub-teams':'single track'),{tone:'good'})}
-    ${kpiCard('Pending updates',String(recs.length-withData(recs).length),withData(recs).length+' of '+recs.length+' have actuals',{tone:(recs.length-withData(recs).length)?'warn':'good'})}
-    ${kpiCard('Reviews complete',String(teamReviews),'of '+emps.length+' people',{tone:teamReviews===emps.length&&emps.length?'good':'warn',nav:'reviews'})}
+  const pending=recs.length-withData(recs).length;
+  const done=emps.filter(e=>e.review&&e.review.status==='Complete').length;
+  const prev=esc(periodShort(B().rollups.org.previousPeriod)||'');
+
+  const head=`<div class="dash-head"><h1>${esc(d.name)}</h1>
+    <span class="sub">${d.kind==='scorecard'?'Shared market scorecard':'Individual KRA/KPI blocks'} · ${emps.length} people · ${d.kpiCount} KPIs${subs.length?' · '+subs.length+' sub-teams':''}</span>
+    <div class="r"><span class="link" data-nav="teams">All teams ›</span></div></div>`;
+
+  if(!hasData) return head+`<div class="dash">
+    ${tile('t4','Framework size','<div class="stat"><div class="v">'+d.kpiCount+'</div><div class="sub">KPI lines across '+emps.length+' people</div></div>',{})}
+    ${tile('t4','Coverage','<div class="stat"><div class="v">0<span class="u">%</span></div><div class="sub">no actuals for '+esc(periodShort(APP.period))+' yet</div><div class="meter"><span style="width:0%"></span></div></div>',{nav:'checkins'})}
+    ${tile('t4','Reviews','<div class="stat"><div class="v">'+done+'<span class="u">/'+emps.length+'</span></div><div class="sub">complete this cycle</div></div>',{nav:'reviews'})}
+    ${tile('t12','People',peopleRows(emps),{right:'awaiting actuals'})}
   </div>`;
-  let body='';
-  if(hasData)body+=`<div class="two-eq"><div class="panel pad"><div class="panel-h"><h3>Team trend</h3><span class="sub">rating over time</span>${d.delta!=null?'<div class="r">'+deltaChip(d.delta)+'</div>':''}</div>${trendChart(d.trend,{h:140})}</div>
-    <div class="panel pad"><div class="panel-h"><h3>Perspective performance</h3><span class="sub">what drives this team</span></div><div class="stack" style="margin-top:4px">${(d.perspectives&&d.perspectives.length?d.perspectives.map(groupBar).join(''):teamPerspectives(recs))}</div></div></div>`;
-  if(subs.length){
-    body+='<div class="sect-t">Sub-teams</div><div class="panel pad"><div class="stack" style="margin-top:2px">'+subs.map(s=>{const p=s.rating==null?0:clamp((s.rating-1)/4*100,0,100);return `<div class="bc-row" data-subteam="${s.id}"><div class="bc-label">${esc(s.name)}<small> · ${s.people} people</small></div><div class="bc-track"><div class="bc-fill" style="width:${p}%;background:${sc(s.status.k)}"></div></div><div class="bc-val" style="color:${sc(s.status.k)}">${s.rating==null?'—':ratingStr(s.rating)+'<small>/5</small>'}</div><span class="bc-chev">›</span></div>`;}).join('')+'</div></div>';
-  }
-  body+='<div class="sect-t">People<span class="r">ranked by rating · Δ vs prior period</span></div><div class="panel pad"><div class="list stack" style="margin-top:2px">'+(emps.length?emps.slice().sort((a,b)=>(b.rating==null?-1:b.rating)-(a.rating==null?-1:a.rating)).map((e,i)=>personRow(e,i+1)).join(''):'<div class="empty">No people mapped for this team.</div>')+'</div></div>';
-  if(hasData){const pr=priorityRecords(recs);if(pr.length)body+='<div class="sect-t">Where this team should focus</div><div class="panel pad"><div class="list stack" style="margin-top:2px">'+priorityList(recs,5)+'</div></div>';}
-  return head+cards+body;
+
+  const maxP=Math.max(1,...emps.map(e=>e.score||0));
+  const perspRows=(d.perspectives&&d.perspectives.length?d.perspectives:[]).map(g=>
+    dRow(g.name,g.kpis+' KPIs',g.score==null?null:n1(g.score),'%',(g.score||0)/100,' data-persp="'+esc(g.name)+'"')).join('');
+  const subRows=subs.map(sb=>dRow(sb.name,sb.people+(sb.people===1?' person':' people'),
+    sb.score==null?null:n1(sb.score),'%',(sb.score||0)/100,' data-subteam="'+sb.id+'"')).join('');
+  const scale=SCALE().slice().sort((a,b)=>a.min-b.min);
+  const bins=scale.map(x=>({label:x.label,short:x.label,n:emps.filter(e=>e.rating!=null&&e.status.k===x.key).length}));
+  const pr=priorityRecords(recs).slice(0,6);
+  const prRows=pr.length?pr.map(x=>{const r=x.r;
+    return `<tr data-rec="${r.kpiId}"><td class="nm"><span class="sdot s-${r.status.k}"></span> ${esc(r.kpi||r.kra)}<small>${esc(r.employee)}</small></td>
+      <td class="n">${r.weightShown==null?'—':n1(r.weightShown)+'%'}</td><td class="n">${r.rating==null?'—':ratingStr(r.rating)}</td></tr>`;
+  }).join(''):'<tr><td class="empty" colspan="3">Nothing below target.</td></tr>';
+
+  return head+`<div class="dash">
+    ${heroTile(d.score,d.rating,d.status,d.delta,'Weighted across '+withData(recs).length+' scored KPIs'+(prev?', vs '+prev:'')+'.')}
+    ${statTile('t2','People',String(emps.length),'',d.kind==='scorecard'?'POCs on this scorecard':'individual scorecards',{nav:'employees'})}
+    ${statTile('t2','KPIs on track',String(d.recOnTrack),'',d.recAtRisk+' at risk · '+d.recOffTrack+' off',{meter:recs.length?d.recOnTrack/recs.length*100:0})}
+    ${statTile('t2','Pending updates',String(pending),'',withData(recs).length+' of '+recs.length+' updated',{meter:recs.length?withData(recs).length/recs.length*100:0,nav:'checkins'})}
+    ${statTile('t2','Reviews complete',String(done),'/'+emps.length,'this cycle',{meter:emps.length?done/emps.length*100:0,nav:'reviews'})}
+
+    ${tile('t7','Team trend',areaChart(d.trend,{h:150}),{right:d.delta!=null?(d.delta>0?'▲':'▼')+' vs '+prev:'rating / 5'})}
+    ${tile('t5','Perspective performance','<div>'+(perspRows||'<div class="empty">No perspectives tagged.</div>')+'</div>',{right:'score / 100'})}
+
+    ${subs.length?tile('t4','Sub-teams','<div>'+subRows+'</div>',{right:'score / 100'}):''}
+    ${tile(subs.length?'t4':'t6','Performance distribution',distCols(bins),{right:emps.filter(e=>e.rating!=null).length+' rated'})}
+    ${tile(subs.length?'t4':'t6','Priority actions','<table class="mini"><tbody>'+prRows+'</tbody></table>',{right:'gap × weight'})}
+
+    ${tile('t12','People',peopleRows(emps),{right:'score / 100 · Δ vs '+prev})}
+  </div>`;
+}
+/* Ranked people, dense — the third drill-down level (spec §22). */
+function peopleRows(emps){
+  if(!emps.length)return '<div class="empty">No people mapped for this team.</div>';
+  return emps.slice().sort((a,b)=>(b.score==null?-1:b.score)-(a.score==null?-1:a.score)).map(e=>
+    dRow(e.name,[e.role,e.region].filter(Boolean).join(' · ')||e.department,
+      e.score==null?null:n1(e.score),'%',(e.score||0)/100,' data-person="'+e.id+'"',e.delta)).join('');
 }
 function teamPerspectives(recs){
   const map={};recs.forEach(r=>{const p=r.perspective||r.kra||'General';const m=map[p]||(map[p]={sw:0,sr:0,n:0});m.n++;if(r.rating!=null&&r.weightNorm!=null){m.sw+=r.weightNorm;m.sr+=r.weightNorm*r.rating;}});
@@ -1855,7 +2140,29 @@ async function doSaveAssignment(id){
     else toast((res&&res.error)||'Save failed',true);
   }catch(e){if(e&&e.__offline)toast('Connect to the sheet to save',true);else toast('Save failed',true);}
 }
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDrawer();});
+/* Shared hover layer: any element carrying data-tip gets a tooltip. Charts are
+   interactive by default — a static SVG on a dashboard is a missed affordance. */
+(function(){
+  let tipEl;
+  const get=()=>tipEl||(tipEl=$('#vtip'));
+  document.addEventListener('mouseover',e=>{
+    const t=e.target.closest&&e.target.closest('[data-tip]');if(!t)return;
+    const el=get();if(!el)return;
+    el.innerHTML=esc(t.getAttribute('data-tip')).replace(/ · /g,' <span class="k">·</span> ');
+    el.classList.add('on');
+  });
+  document.addEventListener('mousemove',e=>{
+    const el=get();if(!el||!el.classList.contains('on'))return;
+    el.style.left=e.clientX+'px';
+    el.style.top=Math.max(34,e.clientY)+'px';
+  });
+  document.addEventListener('mouseout',e=>{
+    const t=e.target.closest&&e.target.closest('[data-tip]');if(!t)return;
+    const el=get();if(el)el.classList.remove('on');
+  });
+  window.addEventListener('scroll',()=>{const el=get();if(el)el.classList.remove('on');},true);
+})();
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeDrawer();const t=$('#vtip');if(t)t.classList.remove('on');}});
 let toastT;function toast(m,err){const t=$('#toast');t.textContent=m;t.classList.toggle('err',!!err);t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),err?4000:2200);}
 boot();
 </script>
