@@ -141,28 +141,33 @@ function apiScaffoldActuals(opts) {
   try {
     var settings = readSettings_();
     var period = opts.period || settings.period || currentPeriod_();
+    assertUnlocked_(period);
     var model = buildModel_(period, settings);           // framework (+ any existing actuals)
-    var sh = ensureActualsSheet_();
-    var existing = {};
+    var sh = ensureActualsSheet_(settings);
     var data = sh.getDataRange().getValues();
     var head = data.length ? data[0] : ACTUALS_HEADERS_();
-    var idIdx = head.indexOf('KpiId'), perIdx = head.indexOf('Period');
-    for (var i = 1; i < data.length; i++) existing[data[i][idIdx] + '|' + data[i][perIdx]] = true;
+    var col = actualsCols_(head, sh.getName());
+    var existing = {};
+    for (var i = 1; i < data.length; i++) existing[cleanCell_(data[i][col.kpiid]) + '|' + String(data[i][col.period]).trim()] = true;
 
+    // Build each row against the sheet's OWN column positions, so a source with
+    // a different column order still receives the right values.
     var rows = [];
     model.records.forEach(function (r) {
-      var key = r.kpiId + '|' + period;
-      if (existing[key]) return;
-      rows.push([
-        r.kpiId, period, r.department, r.subTeam || '', r.employee, r.kra, r.kpi,
-        r.unit || '', r.weightShown == null ? '' : r.weightShown,
-        r.meetsValue == null ? '' : r.meetsValue, '', '', '', '',
-        nowIso_(), safeEmail_()
-      ]);
+      if (existing[r.kpiId + '|' + period]) return;
+      var row = blankRow_(head.length);
+      var put = function (key, val) { if (col[key] != null) row[col[key]] = val; };
+      put('kpiid', r.kpiId);         put('period', period);
+      put('department', r.department); put('subteam', r.subTeam || '');
+      put('employee', r.employee);   put('kra', r.kra); put('kpi', r.kpi);
+      put('unit', r.unit || '');     put('weight%', r.weightShown == null ? '' : r.weightShown);
+      put('target', r.meetsValue == null ? '' : r.meetsValue);
+      put('updatedat', nowIso_());   put('updatedby', safeEmail_());
+      rows.push(row);
     });
-    if (rows.length) sh.getRange(sh.getLastRow() + 1, 1, rows.length, ACTUALS_HEADERS_().length).setValues(rows);
+    if (rows.length) sh.getRange(sh.getLastRow() + 1, 1, rows.length, head.length).setValues(rows);
     bustCache_(period);
-    return { ok: true, added: rows.length, period: period, total: sh.getLastRow() - 1, tab: ACTUALS_TAB };
+    return { ok: true, added: rows.length, period: period, total: sh.getLastRow() - 1, tab: sh.getName() };
   } catch (err) { return { ok: false, error: String(err && err.message || err) }; }
 }
 
@@ -171,22 +176,26 @@ function apiSaveActual(p) {
   p = p || {};
   try {
     if (!p.kpiId) throw new Error('Missing kpiId.');
-    var period = p.period || readSettings_().period || currentPeriod_();
+    var settings = readSettings_();
+    var period = p.period || settings.period || currentPeriod_();
     assertUnlocked_(period);
-    var sh = ensureActualsSheet_();
+    var sh = ensureActualsSheet_(settings);
     var data = sh.getDataRange().getValues();
     var head = data[0];
-    var col = {}; head.forEach(function (h, i) { col[h] = i; });
+    var col = actualsCols_(head, sh.getName());
     var row = -1;
-    for (var i = 1; i < data.length; i++) if (data[i][col.KpiId] === p.kpiId && String(data[i][col.Period]) === String(period)) { row = i; break; }
+    for (var i = 1; i < data.length; i++) if (cleanCell_(data[i][col.kpiid]) === p.kpiId && String(data[i][col.period]).trim() === String(period)) { row = i; break; }
 
-    var rec = row >= 0 ? data[row].slice() : newActualRow_(p, period);
-    if (p.actual   !== undefined) rec[col.Actual]   = p.actual   === '' ? '' : num_(p.actual);
-    if (p.target   !== undefined) rec[col.Target]   = p.target   === '' ? '' : num_(p.target);
-    if (p.rating   !== undefined) rec[col.Rating]   = p.rating   === '' ? '' : clamp_(num_(p.rating), 1, 5);
-    if (p.comment  !== undefined) rec[col.Comment]  = String(p.comment || '');
-    if (p.evidence !== undefined) rec[col.Evidence] = String(p.evidence || '');
-    rec[col.UpdatedAt] = nowIso_(); rec[col.UpdatedBy] = safeEmail_();
+    var rec = row >= 0 ? data[row].slice() : blankRow_(head.length);
+    while (rec.length < head.length) rec.push('');
+    var put = function (key, val) { if (col[key] != null) rec[col[key]] = val; };
+    put('kpiid', p.kpiId); put('period', period);
+    if (p.actual   !== undefined) put('actual',   p.actual === '' ? '' : num_(p.actual));
+    if (p.target   !== undefined) put('target',   p.target === '' ? '' : num_(p.target));
+    if (p.rating   !== undefined) put('rating',   p.rating === '' ? '' : clamp_(num_(p.rating), 1, 5));
+    if (p.comment  !== undefined) put('comment',  String(p.comment || ''));
+    if (p.evidence !== undefined) put('evidence', String(p.evidence || ''));
+    put('updatedat', nowIso_()); put('updatedby', safeEmail_());
 
     if (row >= 0) sh.getRange(row + 1, 1, 1, head.length).setValues([rec]);
     else          sh.getRange(sh.getLastRow() + 1, 1, 1, head.length).setValues([rec]);
@@ -1307,17 +1316,47 @@ function inferUnit_(name, def, bands) {
 function ACTUALS_HEADERS_() {
   return ['KpiId', 'Period', 'Department', 'SubTeam', 'Employee', 'KRA', 'KPI', 'Unit', 'Weight%', 'Target', 'Actual', 'Rating', 'Comment', 'Evidence', 'UpdatedAt', 'UpdatedBy'];
 }
-function ensureActualsSheet_() {
-  var ss = SpreadsheetApp.openById(SOURCE_SPREADSHEET_ID);
-  var sh = ss.getSheetByName(ACTUALS_TAB);
-  if (!sh) { sh = ss.insertSheet(ACTUALS_TAB); sh.getRange(1, 1, 1, ACTUALS_HEADERS_().length).setValues([ACTUALS_HEADERS_()]).setFontWeight('bold'); sh.setFrozenRows(1); }
-  else if (sh.getLastRow() === 0) sh.getRange(1, 1, 1, ACTUALS_HEADERS_().length).setValues([ACTUALS_HEADERS_()]).setFontWeight('bold');
+/* Resolve the actuals sheet the SAME way readAllActuals_ does. When an external
+ * source is configured, reads come from it — so writes must go there too, or a
+ * saved actual lands in the master tab and never appears again. */
+function ensureActualsSheet_(settings) {
+  settings = settings || readSettings_();
+  var headers = ACTUALS_HEADERS_();
+  var ss, tab;
+  if (settings.actualsSheetId) { ss = SpreadsheetApp.openById(settings.actualsSheetId); tab = settings.actualsTab || ACTUALS_TAB; }
+  else { ss = SpreadsheetApp.openById(SOURCE_SPREADSHEET_ID); tab = ACTUALS_TAB; }
+  var sh = ss.getSheetByName(tab);
+  if (!sh) { sh = ss.insertSheet(tab); sh.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold'); sh.setFrozenRows(1); }
+  else if (sh.getLastRow() === 0) sh.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
   return sh;
 }
-function newActualRow_(p, period) {
-  var h = ACTUALS_HEADERS_(), row = h.map(function () { return ''; });
-  row[h.indexOf('KpiId')] = p.kpiId; row[h.indexOf('Period')] = period;
-  return row;
+/* ONE header-matching rule, shared by every reader and writer. Case, spacing
+ * and punctuation are ignored ("KPI Id", "kpi_id" and "KpiId" all match), so
+ * the read and write paths can never disagree about which column is which. */
+function normCols_(head) {
+  var col = {};
+  (head || []).forEach(function (h, i) { var k = norm_(h).replace(/[^a-z0-9%]/g, ''); if (k && col[k] == null) col[k] = i; });
+  return col;
+}
+/* Same mapping, but for writes — where a missing key column must fail loudly
+ * rather than silently write into nothing or append duplicate rows. */
+/* `keys` are [normalisedKey, headerAsWritten] pairs so the error can name the
+ * column the way it appears in the sheet, not the internal key. */
+function requireCols_(head, keys, tab) {
+  var col = normCols_(head);
+  for (var i = 0; i < keys.length; i++) {
+    var k = keys[i][0], label = keys[i][1];
+    if (col[k] == null) throw new Error('The "' + tab + '" sheet has no "' + label + '" column, so rows cannot be matched. Restore that header, or delete the tab and let it be rebuilt.');
+  }
+  return col;
+}
+function actualsCols_(head, tab) { return requireCols_(head, [['kpiid', 'KpiId'], ['period', 'Period']], tab || ACTUALS_TAB); }
+function blankRow_(n) { var r = []; for (var i = 0; i < n; i++) r.push(''); return r; }
+/* Existing row padded to the header width, or a fresh blank row. */
+function blankOr_(data, row, width) {
+  var rec = row >= 0 ? data[row].slice() : [];
+  while (rec.length < width) rec.push('');
+  return rec;
 }
 /* Read ALL actual rows (every period) from the managed tab, or an external
  * sheet if configured. Returns { byKey: {"kpiId|period": rec}, periods: [...] }.
@@ -1337,7 +1376,7 @@ function readAllActuals_(settings) {
   if (!sh) return out;
   var data = safeValues_(sh);
   if (!data.length) return out;
-  var head = data[0], col = {}; head.forEach(function (h, i) { col[norm_(h)] = i; });
+  var head = data[0], col = normCols_(head);
   var ci = { id: col['kpiid'], per: col['period'], tgt: col['target'], act: col['actual'], rat: col['rating'], com: col['comment'], ev: col['evidence'], up: col['updatedat'] };
   if (ci.id == null) return out;
   var pset = {};
@@ -1381,7 +1420,7 @@ function readCycles_() {
   if (!sh) return out;
   var data = safeValues_(sh);
   if (data.length < 2) return out;
-  var col = {}; data[0].forEach(function (h, i) { col[norm_(h)] = i; });
+  var col = normCols_(data[0]);
   for (var i = 1; i < data.length; i++) {
     var period = cell_(data[i], col['period']);
     if (!period) continue;
@@ -1422,24 +1461,25 @@ function apiSaveCycle(p) {
     if (p.status && CYCLE_STATES.indexOf(p.status) < 0) throw new Error('Unknown cycle status: ' + p.status);
     var sh = ensureSheet_(CYCLES_TAB, CYCLES_HEADERS_());
     var data = sh.getDataRange().getValues();
-    var head = data[0], col = {}; head.forEach(function (h, i) { col[h] = i; });
+    var head = data[0], col = requireCols_(head, [['period', 'Period']], CYCLES_TAB);
     var row = -1;
-    for (var i = 1; i < data.length; i++) if (String(data[i][col.Period]).trim() === String(p.period).trim()) { row = i; break; }
-    var rec = row >= 0 ? data[row].slice() : head.map(function () { return ''; });
-    rec[col.Period] = p.period;
-    if (p.name      !== undefined) rec[col.Name]      = String(p.name || '');
-    if (p.startDate !== undefined) rec[col.StartDate] = String(p.startDate || '');
-    if (p.endDate   !== undefined) rec[col.EndDate]   = String(p.endDate || '');
-    if (p.status    !== undefined) rec[col.Status]    = String(p.status || 'Active');
-    if (p.reviewDue !== undefined) rec[col.ReviewDue] = String(p.reviewDue || '');
-    if (p.note      !== undefined) rec[col.Note]      = String(p.note || '');
-    if (!rec[col.Name]) rec[col.Name] = periodLabel_(p.period);
-    if (!rec[col.Status]) rec[col.Status] = 'Active';
-    rec[col.UpdatedAt] = nowIso_(); rec[col.UpdatedBy] = safeEmail_();
+    for (var i = 1; i < data.length; i++) if (String(data[i][col.period]).trim() === String(p.period).trim()) { row = i; break; }
+    var rec = blankOr_(data, row, head.length);
+    var put = function (k, v) { if (col[k] != null) rec[col[k]] = v; };
+    put('period', p.period);
+    if (p.name      !== undefined) put('name',      String(p.name || ''));
+    if (p.startDate !== undefined) put('startdate', String(p.startDate || ''));
+    if (p.endDate   !== undefined) put('enddate',   String(p.endDate || ''));
+    if (p.status    !== undefined) put('status',    String(p.status || 'Active'));
+    if (p.reviewDue !== undefined) put('reviewdue', String(p.reviewDue || ''));
+    if (p.note      !== undefined) put('note',      String(p.note || ''));
+    if (col.name != null && !rec[col.name]) rec[col.name] = periodLabel_(p.period);
+    if (col.status != null && !rec[col.status]) rec[col.status] = 'Active';
+    put('updatedat', nowIso_()); put('updatedby', safeEmail_());
     if (row >= 0) sh.getRange(row + 1, 1, 1, head.length).setValues([rec]);
     else          sh.getRange(sh.getLastRow() + 1, 1, 1, head.length).setValues([rec]);
     bustCache_(p.period);
-    return { ok: true, period: p.period, status: rec[col.Status] };
+    return { ok: true, period: p.period, status: col.status != null ? rec[col.status] : 'Active' };
   } catch (err) { return { ok: false, error: String(err && err.message || err) }; }
 }
 
@@ -1459,7 +1499,7 @@ function readAssignments_() {
   if (!sh) return out;
   var data = safeValues_(sh);
   if (data.length < 2) return out;
-  var col = {}; data[0].forEach(function (h, i) { col[norm_(h)] = i; });
+  var col = normCols_(data[0]);
   if (col['kpiid'] == null) return out;
   for (var i = 1; i < data.length; i++) {
     var id = cell_(data[i], col['kpiid']);
@@ -1489,19 +1529,20 @@ function apiSaveAssignment(p) {
     assertUnlocked_(period);
     var sh = ensureSheet_(ASSIGNMENTS_TAB, ASSIGNMENTS_HEADERS_());
     var data = sh.getDataRange().getValues();
-    var head = data[0], col = {}; head.forEach(function (h, i) { col[h] = i; });
+    var head = data[0], col = requireCols_(head, [['kpiid', 'KpiId'], ['period', 'Period']], ASSIGNMENTS_TAB);
     var row = -1;
-    for (var i = 1; i < data.length; i++) if (data[i][col.KpiId] === p.kpiId && String(data[i][col.Period]) === String(period)) { row = i; break; }
-    var rec = row >= 0 ? data[row].slice() : head.map(function () { return ''; });
-    rec[col.KpiId] = p.kpiId; rec[col.Period] = period;
-    if (p.employee  !== undefined) rec[col.Employee]  = String(p.employee || '');
-    if (p.kpi       !== undefined) rec[col.KPI]       = String(p.kpi || '');
-    if (p.weight    !== undefined) rec[col['Weight%']] = p.weight === '' ? '' : num_(p.weight);
-    if (p.direction !== undefined) rec[col.Direction] = String(p.direction || '');
-    if (p.reviewer  !== undefined) rec[col.Reviewer]  = String(p.reviewer || '');
-    if (p.note      !== undefined) rec[col.Note]      = String(p.note || '');
-    if (p.bands !== undefined && p.bands) for (var b = 1; b <= 5; b++) rec[col['Target' + b]] = p.bands[b - 1] == null ? '' : String(p.bands[b - 1]);
-    rec[col.UpdatedAt] = nowIso_(); rec[col.UpdatedBy] = safeEmail_();
+    for (var i = 1; i < data.length; i++) if (cleanCell_(data[i][col.kpiid]) === p.kpiId && String(data[i][col.period]).trim() === String(period)) { row = i; break; }
+    var rec = blankOr_(data, row, head.length);
+    var put = function (k, v) { if (col[k] != null) rec[col[k]] = v; };
+    put('kpiid', p.kpiId); put('period', period);
+    if (p.employee  !== undefined) put('employee',  String(p.employee || ''));
+    if (p.kpi       !== undefined) put('kpi',       String(p.kpi || ''));
+    if (p.weight    !== undefined) put('weight%',   p.weight === '' ? '' : num_(p.weight));
+    if (p.direction !== undefined) put('direction', String(p.direction || ''));
+    if (p.reviewer  !== undefined) put('reviewer',  String(p.reviewer || ''));
+    if (p.note      !== undefined) put('note',      String(p.note || ''));
+    if (p.bands !== undefined && p.bands) for (var b = 1; b <= 5; b++) put('target' + b, p.bands[b - 1] == null ? '' : String(p.bands[b - 1]));
+    put('updatedat', nowIso_()); put('updatedby', safeEmail_());
     if (row >= 0) sh.getRange(row + 1, 1, 1, head.length).setValues([rec]);
     else          sh.getRange(sh.getLastRow() + 1, 1, 1, head.length).setValues([rec]);
     bustCache_(period);
@@ -1523,7 +1564,7 @@ function readCheckins_() {
   if (!sh) return out;
   var data = safeValues_(sh);
   if (data.length < 2) return out;
-  var col = {}; data[0].forEach(function (h, i) { col[norm_(h)] = i; });
+  var col = normCols_(data[0]);
   if (col['kpiid'] == null) return out;
   for (var i = 1; i < data.length; i++) {
     var id = cell_(data[i], col['kpiid']);
@@ -1578,12 +1619,18 @@ function apiSaveCheckin(p) {
     rec[col.At] = nowIso_();
     sh.getRange(sh.getLastRow() + 1, 1, 1, head.length).setValues([rec]);
 
-    // roll the check-in forward into the actuals row (the current position).
+    // Roll the check-in forward into the actuals row (the current position).
+    // If that write fails the log entry still stands, so say so rather than
+    // reporting a clean save the numbers do not reflect.
     var fwd = { kpiId: p.kpiId, period: period, comment: p.comment, evidence: p.evidence };
     if (p.actual !== undefined && p.actual !== '') fwd.actual = p.actual;
     if (p.rating !== undefined && p.rating !== '') fwd.rating = p.rating;
-    apiSaveActual(fwd);
+    var rolled = apiSaveActual(fwd);
     bustCache_(period);
+    if (!rolled || !rolled.ok) {
+      return { ok: false, checkinId: rec[col.CheckinId], kpiId: p.kpiId, period: period,
+               error: 'Check-in logged, but the current value could not be updated: ' + ((rolled && rolled.error) || 'unknown error') };
+    }
     return { ok: true, kpiId: p.kpiId, period: period, checkinId: rec[col.CheckinId] };
   } catch (err) { return { ok: false, error: String(err && err.message || err) }; }
 }
@@ -1605,7 +1652,7 @@ function readReviews_() {
   if (!sh) return out;
   var data = safeValues_(sh);
   if (data.length < 2) return out;
-  var col = {}; data[0].forEach(function (h, i) { col[norm_(h)] = i; });
+  var col = normCols_(data[0]);
   if (col['employeeid'] == null) return out;
   for (var i = 1; i < data.length; i++) {
     var eid = cell_(data[i], col['employeeid']);
@@ -1641,39 +1688,40 @@ function apiSaveReview(p) {
     assertUnlocked_(period);
     var sh = ensureSheet_(REVIEWS_TAB, REVIEWS_HEADERS_());
     var data = sh.getDataRange().getValues();
-    var head = data[0], col = {}; head.forEach(function (h, i) { col[h] = i; });
+    var head = data[0], col = requireCols_(head, [['employeeid', 'EmployeeId'], ['period', 'Period']], REVIEWS_TAB);
     var row = -1;
-    for (var i = 1; i < data.length; i++) if (data[i][col.EmployeeId] === p.employeeId && String(data[i][col.Period]) === String(period)) { row = i; break; }
-    var rec = row >= 0 ? data[row].slice() : head.map(function () { return ''; });
-    rec[col.Period] = period; rec[col.EmployeeId] = p.employeeId;
-    if (p.employee   !== undefined) rec[col.Employee]   = String(p.employee || '');
-    if (p.department !== undefined) rec[col.Department] = String(p.department || '');
-    if (p.systemRating !== undefined) rec[col.SystemRating] = p.systemRating === '' ? '' : num_(p.systemRating);
-    if (p.systemScore  !== undefined) rec[col.SystemScore]  = p.systemScore === '' ? '' : num_(p.systemScore);
+    for (var i = 1; i < data.length; i++) if (cleanCell_(data[i][col.employeeid]) === p.employeeId && String(data[i][col.period]).trim() === String(period)) { row = i; break; }
+    var rec = blankOr_(data, row, head.length);
+    var put = function (k, v) { if (col[k] != null) rec[col[k]] = v; };
+    var statusNow = function () { return col.status != null ? rec[col.status] : ''; };
+    put('period', period); put('employeeid', p.employeeId);
+    if (p.employee   !== undefined) put('employee',   String(p.employee || ''));
+    if (p.department !== undefined) put('department', String(p.department || ''));
+    if (p.systemRating !== undefined) put('systemrating', p.systemRating === '' ? '' : num_(p.systemRating));
+    if (p.systemScore  !== undefined) put('systemscore',  p.systemScore === '' ? '' : num_(p.systemScore));
 
     var now = nowIso_(), who = safeEmail_();
     if (stage === 'self') {
-      if (p.rating  !== undefined) rec[col.SelfRating]  = p.rating === '' ? '' : clamp_(num_(p.rating), 1, 5);
-      if (p.comment !== undefined) rec[col.SelfComment] = String(p.comment || '');
-      rec[col.SelfBy] = who; rec[col.SelfAt] = now;
-      if (p.submit) rec[col.Status] = 'Manager Review';
-      else if (!rec[col.Status] || rec[col.Status] === 'Not Started') rec[col.Status] = 'Self Review';
+      if (p.rating  !== undefined) put('selfrating',  p.rating === '' ? '' : clamp_(num_(p.rating), 1, 5));
+      if (p.comment !== undefined) put('selfcomment', String(p.comment || ''));
+      put('selfby', who); put('selfat', now);
+      if (p.submit) put('status', 'Manager Review');
+      else if (!statusNow() || statusNow() === 'Not Started') put('status', 'Self Review');
     } else if (stage === 'manager') {
-      if (p.rating  !== undefined) rec[col.ManagerRating]  = p.rating === '' ? '' : clamp_(num_(p.rating), 1, 5);
-      if (p.comment !== undefined) rec[col.ManagerComment] = String(p.comment || '');
-      rec[col.ManagerBy] = who; rec[col.ManagerAt] = now;
-      if (p.submit) rec[col.Status] = 'Final Review';
-      else rec[col.Status] = 'Manager Review';
+      if (p.rating  !== undefined) put('managerrating',  p.rating === '' ? '' : clamp_(num_(p.rating), 1, 5));
+      if (p.comment !== undefined) put('managercomment', String(p.comment || ''));
+      put('managerby', who); put('managerat', now);
+      put('status', p.submit ? 'Final Review' : 'Manager Review');
     } else {
-      if (p.rating  !== undefined) rec[col.FinalRating]  = p.rating === '' ? '' : clamp_(num_(p.rating), 1, 5);
-      if (p.comment !== undefined) rec[col.FinalComment] = String(p.comment || '');
-      rec[col.Status] = p.submit ? 'Complete' : 'Final Review';
+      if (p.rating  !== undefined) put('finalrating',  p.rating === '' ? '' : clamp_(num_(p.rating), 1, 5));
+      if (p.comment !== undefined) put('finalcomment', String(p.comment || ''));
+      put('status', p.submit ? 'Complete' : 'Final Review');
     }
-    rec[col.UpdatedAt] = now; rec[col.UpdatedBy] = who;
+    put('updatedat', now); put('updatedby', who);
     if (row >= 0) sh.getRange(row + 1, 1, 1, head.length).setValues([rec]);
     else          sh.getRange(sh.getLastRow() + 1, 1, 1, head.length).setValues([rec]);
     bustCache_(period);
-    return { ok: true, employeeId: p.employeeId, period: period, status: rec[col.Status] };
+    return { ok: true, employeeId: p.employeeId, period: period, status: statusNow() };
   } catch (err) { return { ok: false, error: String(err && err.message || err) }; }
 }
 
