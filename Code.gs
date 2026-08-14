@@ -218,12 +218,15 @@ function buildModel_(period, settings) {
     else parseGenericTab_(grid, name, ctx);
   });
 
-  // ---- join the SEPARATE actuals source and compute per-record performance.
-  var actuals = readActuals_(period, settings);
-  ctx.records.forEach(function (r) { computeRecord_(r, actuals[r.kpiId + '|' + period] || actuals[r.kpiId] || null, settings); });
+  // ---- join the SEPARATE actuals source (all periods) & compute performance.
+  var all = readAllActuals_(settings);
+  ctx.records.forEach(function (r) { computeRecord_(r, all.byKey[r.kpiId + '|' + period] || all.byKey[r.kpiId + '|'] || null, settings); });
 
-  // ---- roll-ups.
+  // ---- roll-ups, then trends / levels / perspectives / master-health.
   rollUp_(ctx, settings);
+  computeTrends_(ctx, all, period, settings);
+  var perspectives = perspectiveRollup_(ctx, settings);
+  var health = computeHealth_(ctx, all);
 
   var empty = ctx.records.length === 0 && ctx.depts.every(function (d) { return !d.rawTable; });
   return {
@@ -234,14 +237,16 @@ function buildModel_(period, settings) {
     source: {
       title: ss.getName(), id: SOURCE_SPREADSHEET_ID,
       tabs: sheets.map(function (s) { return { name: s.getName(), rows: s.getLastRow(), cols: s.getLastColumn() }; }),
-      actuals: actualsSourceInfo_(settings, actuals)
+      actuals: actualsSourceInfo_(settings, all)
     },
-    settings: { thresholds: settings.thresholds, period: settings.period, periods: knownPeriods_(actuals, period), ratingMax: RATING_MAX },
+    settings: { thresholds: settings.thresholds, period: settings.period, periods: knownPeriods_(all, period), ratingMax: RATING_MAX },
     departments: ctx.depts,
     subTeams: ctx.subTeams,
     employees: ctx.employees,
     records: ctx.records,
     rollups: ctx.rollups,
+    perspectives: perspectives,
+    health: health,
     notes: ctx.notes
   };
 }
@@ -432,20 +437,45 @@ function readKpi_(row, cols, name) {
   var nums = bands.map(function (b) { return b.num; }).filter(function (x) { return x != null; });
   var direction = nums.length >= 2 ? (nums[nums.length - 1] > nums[0] ? 1 : (nums[nums.length - 1] < nums[0] ? -1 : 0)) : 0;
   var meets = bands.length >= 3 ? bands[2].num : (nums.length ? nums[Math.floor(nums.length / 2)] : null);
+  var def = cell_(row, cols.def);
+  var unit = cell_(row, cols.unit) || inferUnit_(name, def, bands);
+  var mc = classifyMetric_(unit, bands, name, def, direction);
   return {
     perspective: cell_(row, cols.perspective),
     role: cell_(row, cols.role),
     kra: cell_(row, cols.kra),
     kpi: name,
-    definition: cell_(row, cols.def),
+    definition: def,
     source: cell_(row, cols.source),
-    unit: cell_(row, cols.unit) || inferUnit_(name, cell_(row, cols.def), bands),
+    unit: unit,
     weight: parseNum_(cell_(row, cols.weight)),
     bands: bands,
     direction: direction,
+    metricType: mc.metricType,
+    targetLogic: mc.targetLogic,
     qualitative: nums.length < 2,
     meets: meets
   };
+}
+
+/* KPI "rule layer": derive a metric TYPE and TARGET LOGIC from the unit, the
+ * band cells and the KPI text, so the front-end can score & visualise each KPI
+ * by its own nature instead of forcing every KPI into a percentage bar. */
+function classifyMetric_(unit, bands, name, def, direction) {
+  var u = norm_(unit);
+  var s = norm_((name || '') + ' ' + (def || ''));
+  var numeric = bands.filter(function (b) { return b.num != null; }).length;
+  if (numeric < 2) return { metricType: 'Qualitative', targetLogic: 'text' };
+  var mt = 'Number';
+  var bandHas = function (re) { return bands.some(function (b) { return re.test(String(b.raw || '')); }); };
+  if (u.indexOf('day') >= 0 || /\b(dso|tat|pdd)\b|days/.test(s) || bandHas(/day/i)) mt = 'Days';
+  else if (u.indexOf('cr') >= 0 || u.indexOf('₹') >= 0 || /gmv|revenue|recover|amount|collection value|\bvalue\b/.test(s) || bandHas(/₹|cr\b/i)) mt = 'Amount';
+  else if (u.indexOf('percent') >= 0 || u.indexOf('%') >= 0 || bandHas(/%/) || /\brate\b|retention|adherence|coverage|\bdn\b|automation|accuracy/.test(s)) mt = 'Percentage';
+  else if (u.indexOf('count') >= 0 || /count|number of|no\.? of|# of|cases|tickets|escalations/.test(s)) mt = 'Count';
+  var tl = 'numeric';
+  if (bandHas(/\d\s*[–—-]\s*\d/)) tl = 'range';
+  else if (bandHas(/[<>≤≥]|less than|greater than|more than|within/i)) tl = 'threshold';
+  return { metricType: mt, targetLogic: tl };
 }
 
 /** ---- register a leaf KPI record (employee × KPI). */
@@ -463,10 +493,13 @@ function pushRecord_(ctx, dept, subTeam, emp, k, sectionTitle) {
     perspective: k.perspective || '', kra: k.kra || '', kpi: k.kpi || '', definition: k.definition || '',
     source: k.source || '', unit: k.unit || '', section: sectionTitle || '',
     weight: k.weight, weightShown: null, weightNorm: null,
-    bands: k.bands, direction: k.direction, qualitative: k.qualitative, meetsValue: k.meets,
+    bands: k.bands, direction: k.direction, metricType: k.metricType, targetLogic: k.targetLogic,
+    qualitative: k.qualitative, meetsValue: k.meets,
     // performance (filled by computeRecord_)
     hasActual: false, target: null, actual: null, rating: null, achievedBand: null,
     attainment: null, weighted: null, status: statusFromRating_(null, ctx.thresholds || DEFAULT_THRESHOLDS),
+    // trend (filled by computeTrends_)
+    history: [], delta: null,
     comment: '', evidence: '', updatedAt: null
   };
   emp.kpiIds.push(kpiId);
@@ -592,6 +625,8 @@ function rollUp_(ctx, settings) {
     e.coverage = total ? round1_(withData / total * 100) : 0;
     e.onTrack = onTrack; e.atRisk = atRisk; e.offTrack = off;
     e.status = statusFromRating_(e.rating, th);
+    e.level = levelFromRating_(e.rating);
+    e.trend = []; e.delta = null; e.consistency = 0;   // filled by computeTrends_
   });
 
   // 4) sub-teams.
@@ -614,24 +649,181 @@ function rollUp_(ctx, settings) {
     d.rating = rs.length ? round2_(avg_(rs)) : null;
     d.peopleWithData = rs.length;
     d.status = statusFromRating_(d.rating, th);
+    d.level = levelFromRating_(d.rating);
+    d.trend = []; d.delta = null;                      // filled by computeTrends_
+    var drecs = ctx.records.filter(function (r) { return r.deptId === d.id; });
+    d.recOnTrack = drecs.filter(function (r) { return r.status.k === 'good'; }).length;
+    d.recAtRisk = drecs.filter(function (r) { return r.status.k === 'warn'; }).length;
+    d.recOffTrack = drecs.filter(function (r) { return r.status.k === 'bad'; }).length;
     d.subTeamIds = ctx.subTeams.filter(function (s) { return s.deptId === d.id; }).map(function (s) { return s.id; });
   });
 
   // 6) org.
   var allR = ctx.employees.map(function (e) { return e.rating; }).filter(function (x) { return x != null; });
   var recWith = ctx.records.filter(function (r) { return r.hasActual; }).length;
+  var orgRating = allR.length ? round2_(avg_(allR)) : null;
   ctx.rollups = {
     org: {
-      rating: allR.length ? round2_(avg_(allR)) : null,
-      status: statusFromRating_(allR.length ? avg_(allR) : null, th),
-      departments: ctx.depts.length,
+      rating: orgRating,
+      status: statusFromRating_(orgRating, th),
+      level: levelFromRating_(orgRating),
+      departments: ctx.depts.filter(function (d) { return d.kind !== 'info'; }).length,
       people: ctx.employees.length, peopleWithData: allR.length,
       kpis: ctx.records.length, kpisWithData: recWith,
       coverage: ctx.records.length ? round1_(recWith / ctx.records.length * 100) : 0,
+      // people-level status counts
       onTrack: ctx.employees.filter(function (e) { return e.status.k === 'good'; }).length,
       atRisk: ctx.employees.filter(function (e) { return e.status.k === 'warn'; }).length,
-      offTrack: ctx.employees.filter(function (e) { return e.status.k === 'bad'; }).length
+      offTrack: ctx.employees.filter(function (e) { return e.status.k === 'bad'; }).length,
+      // KPI-instance status counts (the "How are we performing" tallies)
+      recOnTrack: ctx.records.filter(function (r) { return r.status.k === 'good'; }).length,
+      recAtRisk: ctx.records.filter(function (r) { return r.status.k === 'warn'; }).length,
+      recOffTrack: ctx.records.filter(function (r) { return r.status.k === 'bad'; }).length,
+      // filled by computeTrends_
+      trend: [], delta: null, periods: [], movers: []
     }
+  };
+}
+
+/* Map a 1–5 rating to a performance LEVEL with a label (subtle gamification). */
+function levelFromRating_(r) {
+  if (r == null || isNaN(r)) return { level: 0, label: 'Unrated' };
+  if (r >= 4.5) return { level: 5, label: 'Elite' };
+  if (r >= 3.75) return { level: 4, label: 'High performer' };
+  if (r >= 3.0) return { level: 3, label: 'Solid · meets' };
+  if (r >= 2.0) return { level: 2, label: 'Developing' };
+  return { level: 1, label: 'Needs focus' };
+}
+
+/** ==================================================== TRENDS (multi-period) */
+/* Re-score every record for each known period and roll ratings up over time,
+ * so the UI can answer "are we getting better?" and rank biggest movers. Uses
+ * the weightNorm computed in rollUp_, so this must run AFTER it. */
+function computeTrends_(ctx, all, current, settings) {
+  var periods = all.periods.slice();
+  if (periods.indexOf(current) < 0) periods.push(current);
+  periods = periods.filter(function (p) { return p; }).sort();
+  var show = periods.slice(-6);                          // last 6 for display
+  if (show.indexOf(current) < 0) show.push(current);
+
+  function recRatingAt(r, p) {
+    var a = all.byKey[r.kpiId + '|' + p];
+    if (!a && p === current) a = all.byKey[r.kpiId + '|'];
+    if (!a) return null;
+    if (r.qualitative) return a.rating != null ? clamp_(a.rating, 1, 5) : null;
+    if (a.actual != null) return ratingFromBands_(r.bands, a.actual);
+    if (a.rating != null) return clamp_(a.rating, 1, 5);
+    return null;
+  }
+  function actualAt(r, p) { var a = all.byKey[r.kpiId + '|' + p] || (p === current ? all.byKey[r.kpiId + '|'] : null); return a && a.actual != null ? a.actual : null; }
+
+  // per-record history + delta (current vs the period immediately before it).
+  var prev = null; for (var i = show.length - 1; i >= 0; i--) { if (show[i] === current && i > 0) { prev = show[i - 1]; break; } }
+  if (prev == null && show.length >= 2 && show[show.length - 1] === current) prev = show[show.length - 2];
+  ctx.records.forEach(function (r) {
+    r.history = show.map(function (p) { return { period: p, rating: recRatingAt(r, p), actual: actualAt(r, p) }; });
+    var cur = recRatingAt(r, current), pr = prev ? recRatingAt(r, prev) : null;
+    r.delta = (cur != null && pr != null) ? round2_(cur - pr) : null;
+  });
+
+  // per-period employee rating (weightNorm-weighted, same contract as rollUp_).
+  var empPer = {}; ctx.employees.forEach(function (e) { empPer[e.id] = {}; });
+  show.forEach(function (p) {
+    var agg = {};
+    ctx.records.forEach(function (r) {
+      var rt = recRatingAt(r, p); if (rt == null || r.weightNorm == null) return;
+      var a = agg[r.employeeId] || (agg[r.employeeId] = { sw: 0, sr: 0 });
+      a.sw += r.weightNorm; a.sr += r.weightNorm * rt;
+    });
+    ctx.employees.forEach(function (e) { var a = agg[e.id]; empPer[e.id][p] = (a && a.sw > 0) ? round2_(a.sr / a.sw) : null; });
+  });
+
+  var th = settings.thresholds;
+  ctx.employees.forEach(function (e) {
+    e.trend = show.map(function (p) { return { period: p, rating: empPer[e.id][p] }; });
+    var cur = empPer[e.id][current], pr = prev ? empPer[e.id][prev] : null;
+    e.delta = (cur != null && pr != null) ? round2_(cur - pr) : null;
+    // consistency streak: consecutive periods (ending at current) rated On Track.
+    var streak = 0; for (var i = show.length - 1; i >= 0; i--) { var v = empPer[e.id][show[i]]; if (v != null && v >= th.onTrack) streak++; else break; }
+    e.consistency = streak;
+  });
+
+  // dept + org trends = mean of member ratings per period.
+  function meanAt(emps, p) { var xs = emps.map(function (e) { return empPer[e.id][p]; }).filter(function (x) { return x != null; }); return xs.length ? round2_(avg_(xs)) : null; }
+  ctx.depts.forEach(function (d) {
+    var emps = ctx.employees.filter(function (e) { return e.deptId === d.id; });
+    d.trend = show.map(function (p) { return { period: p, rating: meanAt(emps, p) }; });
+    var cur = meanAt(emps, current), pr = prev ? meanAt(emps, prev) : null;
+    d.delta = (cur != null && pr != null) ? round2_(cur - pr) : null;
+  });
+  var org = ctx.rollups.org;
+  org.periods = show;
+  org.trend = show.map(function (p) { return { period: p, rating: meanAt(ctx.employees, p) }; });
+  var oc = meanAt(ctx.employees, current), op = prev ? meanAt(ctx.employees, prev) : null;
+  org.delta = (oc != null && op != null) ? round2_(oc - op) : null;
+
+  // biggest movers (people with a computable delta), best & worst.
+  org.movers = ctx.employees.filter(function (e) { return e.delta != null; })
+    .map(function (e) { return { id: e.id, name: e.name, department: e.department, rating: e.rating, delta: e.delta, status: e.status }; })
+    .sort(function (a, b) { return b.delta - a.delta; });
+  org.previousPeriod = prev;
+}
+
+/** ==================================================== PERSPECTIVE ROLL-UP */
+/* Preserve BOTH Perspective and KRA — aggregate ratings by Perspective across
+ * the whole framework (weightNorm-weighted), with the KRAs that sit under each. */
+function perspectiveRollup_(ctx, settings) {
+  var th = settings.thresholds;
+  var map = {};
+  ctx.records.forEach(function (r) {
+    var p = r.perspective || r.kra || 'General';
+    var m = map[p] || (map[p] = { perspective: p, sw: 0, sr: 0, kpis: 0, withData: 0, people: {}, kras: {} });
+    m.kpis++; m.people[r.employeeId] = true;
+    if (r.kra) m.kras[r.kra] = true;
+    if (r.rating != null && r.weightNorm != null) { m.sw += r.weightNorm; m.sr += r.weightNorm * r.rating; m.withData++; }
+  });
+  return Object.keys(map).map(function (k) {
+    var m = map[k];
+    var rating = m.sw > 0 ? round2_(m.sr / m.sw) : null;
+    return { perspective: k, rating: rating, kpis: m.kpis, withData: m.withData, people: Object.keys(m.people).length, kras: Object.keys(m.kras), status: statusFromRating_(rating, th) };
+  }).sort(function (a, b) { return (b.rating == null ? -1 : b.rating) - (a.rating == null ? -1 : a.rating); });
+}
+
+/** ==================================================== MASTER-DATA HEALTH */
+/* Admin validation surfaced before an overall score is trusted: weightage that
+ * doesn't total 100% per person-block, KPIs without numeric bands, actual rows
+ * that map to no KPI, and coverage. */
+function computeHealth_(ctx, all) {
+  var blocks = {};
+  ctx.records.forEach(function (r) {
+    var k = r.employeeId + '|' + (r.subTeamId || 'na');
+    (blocks[k] = blocks[k] || { recs: [], emp: r.employee, dept: r.department, sub: r.subTeam }).recs.push(r);
+  });
+  var weightIssues = [];
+  Object.keys(blocks).forEach(function (k) {
+    var b = blocks[k], sum = 0, has = false;
+    b.recs.forEach(function (r) { if (r.weight != null) { sum += r.weight; has = true; } });
+    if (has) {
+      var norm = sum > 2 ? sum : sum * 100;            // handle fraction-weighted sheets
+      if (Math.abs(norm - 100) >= 0.5) weightIssues.push({ employee: b.emp, dept: b.dept, subTeam: b.sub || '', sum: round1_(norm), kpis: b.recs.length });
+    }
+  });
+  var missingBands = ctx.records.filter(function (r) { return r.qualitative; }).length;
+  var ids = {}; ctx.records.forEach(function (r) { ids[r.kpiId] = true; });
+  var seen = {}, unmapped = 0;
+  Object.keys(all.byKey).forEach(function (key) { var id = key.slice(0, key.lastIndexOf('|')); if (id && !ids[id] && !seen[id]) { seen[id] = true; unmapped++; } });
+  var withData = ctx.records.filter(function (r) { return r.hasActual; }).length;
+  var noWeight = ctx.records.filter(function (r) { return r.weight == null; }).length;
+  return {
+    weightIssues: weightIssues,
+    qualitative: missingBands,
+    noWeight: noWeight,
+    unmappedActuals: unmapped,
+    templateRoster: ctx.employees.filter(function (e) { return e.isTemplate; }).length,
+    kpis: ctx.records.length,
+    withData: withData,
+    coverage: ctx.records.length ? round1_(withData / ctx.records.length * 100) : 0,
+    people: ctx.employees.length
   };
 }
 
@@ -758,10 +950,12 @@ function newActualRow_(p, period) {
   row[h.indexOf('KpiId')] = p.kpiId; row[h.indexOf('Period')] = period;
   return row;
 }
-/* Read actuals for a period from the managed tab, or an external sheet if set. */
-function readActuals_(period, settings) {
+/* Read ALL actual rows (every period) from the managed tab, or an external
+ * sheet if configured. Returns { byKey: {"kpiId|period": rec}, periods: [...] }.
+ * A period-less row is stored under "kpiId|" as a fallback for the current view. */
+function readAllActuals_(settings) {
   settings = settings || readSettings_();
-  var map = {};
+  var out = { byKey: {}, periods: [], rows: 0 };
   var sh = null;
   try {
     if (settings.actualsSheetId) {
@@ -771,12 +965,13 @@ function readActuals_(period, settings) {
       sh = SpreadsheetApp.openById(SOURCE_SPREADSHEET_ID).getSheetByName(ACTUALS_TAB);
     }
   } catch (e) { sh = null; }
-  if (!sh) return map;
+  if (!sh) return out;
   var data = safeValues_(sh);
-  if (!data.length) return map;
+  if (!data.length) return out;
   var head = data[0], col = {}; head.forEach(function (h, i) { col[norm_(h)] = i; });
   var ci = { id: col['kpiid'], per: col['period'], tgt: col['target'], act: col['actual'], rat: col['rating'], com: col['comment'], ev: col['evidence'], up: col['updatedat'] };
-  if (ci.id == null) return map;
+  if (ci.id == null) return out;
+  var pset = {};
   for (var i = 1; i < data.length; i++) {
     var row = data[i], id = String(row[ci.id] || '').trim();
     if (!id) continue;
@@ -789,23 +984,24 @@ function readActuals_(period, settings) {
       evidence: ci.ev != null ? String(row[ci.ev] || '') : '',
       updatedAt: ci.up != null && row[ci.up] ? String(row[ci.up]) : null
     };
-    map[id + '|' + per] = rec;
-    if (per === period || !per) map[id] = rec;          // period-agnostic fallback
+    out.byKey[id + '|' + per] = rec;
+    out.rows++;
+    if (per) pset[per] = true;
   }
-  return map;
+  out.periods = Object.keys(pset).sort();
+  return out;
 }
-function actualsSourceInfo_(settings, actuals) {
-  var count = 0; for (var k in actuals) if (k.indexOf('|') < 0) count++;
+function actualsSourceInfo_(settings, all) {
   return {
     type: settings.actualsSheetId ? 'external' : 'managed',
     tab: settings.actualsSheetId ? (settings.actualsTab || ACTUALS_TAB) : ACTUALS_TAB,
     sheetId: settings.actualsSheetId || SOURCE_SPREADSHEET_ID,
-    rows: count
+    rows: all ? all.rows : 0
   };
 }
-function knownPeriods_(actuals, current) {
+function knownPeriods_(all, current) {
   var set = {}; set[current] = true;
-  for (var k in actuals) { var i = k.indexOf('|'); if (i >= 0) { var p = k.slice(i + 1); if (p) set[p] = true; } }
+  (all && all.periods || []).forEach(function (p) { if (p) set[p] = true; });
   return Object.keys(set).sort().reverse();
 }
 

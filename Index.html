@@ -19,7 +19,7 @@
   --shadow-xs:0 1px 1.5px rgba(17,19,24,.05);
   --shadow:0 2px 6px -3px rgba(17,19,24,.07),0 14px 32px -14px rgba(17,19,24,.18);
   --shadow-lg:0 24px 60px -22px rgba(17,19,24,.28);
-  --r-lg:18px;--r-md:14px;--sbw:244px;--ease:cubic-bezier(.22,.61,.36,1);
+  --r-lg:18px;--r-md:14px;--sbw:246px;--ease:cubic-bezier(.22,.61,.36,1);
 }
 *{box-sizing:border-box}html,body{margin:0;padding:0}
 body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;font-feature-settings:'tnum' 1,'calt' 1,'cv11' 1;letter-spacing:-.011em}
@@ -30,14 +30,18 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
 
 .app{display:flex;min-height:100vh}
 .sidebar{width:var(--sbw);flex:0 0 var(--sbw);position:sticky;top:0;height:100vh;background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column;padding:18px 14px;z-index:40}
-.brand{display:flex;align-items:center;gap:11px;padding:6px 8px 14px}
+.brand{display:flex;align-items:center;gap:11px;padding:6px 8px 12px}
 .brand .mark{width:32px;height:32px;flex:0 0 32px}
 .brand .name{font-weight:800;font-size:15px;letter-spacing:-.02em;line-height:1.1}
 .brand .name span{display:block;font-weight:500;font-size:10.5px;color:var(--muted);letter-spacing:.01em}
+.modeswitch{display:flex;gap:3px;background:var(--surface-2);border:1px solid var(--line);border-radius:11px;padding:3px;margin:2px 6px 10px}
+.modeswitch button{flex:1;border:none;background:transparent;border-radius:8px;padding:7px 6px;font-size:12px;font-weight:650;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:.15s}
+.modeswitch button svg{width:14px;height:14px}
+.modeswitch button.active{background:#fff;color:var(--brand);box-shadow:var(--shadow-xs)}
 .scope-badge{margin:4px 6px 8px;padding:10px 12px;border-radius:12px;background:linear-gradient(135deg,var(--brand-soft),#F4EEFF);border:1px solid #E4E9FF}
 .scope-badge .t{font-size:12.5px;font-weight:750;color:var(--brand-ink);letter-spacing:-.01em}
 .scope-badge .s{font-size:11px;color:var(--muted);font-weight:600;margin-top:1px}
-.nav{display:flex;flex-direction:column;gap:2px;margin-top:6px}
+.nav{display:flex;flex-direction:column;gap:2px;margin-top:4px}
 .nav-item{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:11px;position:relative;color:var(--ink-2);font-weight:550;cursor:pointer;font-size:13.5px;letter-spacing:-.008em;transition:background .16s var(--ease),color .16s var(--ease)}
 .nav-item:hover{background:var(--surface-2);color:var(--ink)}
 .nav-item.active{background:var(--brand-soft);color:var(--brand);font-weight:650}
@@ -61,7 +65,7 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
 
 .filterbar{position:sticky;top:57px;z-index:29;background:rgba(246,247,249,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:10px 26px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .selectwrap{position:relative}
-.pill-select{appearance:none;border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 30px 8px 12px;font-size:12.5px;font-weight:600;color:var(--ink);cursor:pointer;outline:none;transition:.15s}
+.pill-select{appearance:none;border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 30px 8px 12px;font-size:12.5px;font-weight:600;color:var(--ink);cursor:pointer;outline:none;transition:.15s;max-width:240px}
 .pill-select:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
 .selectwrap::after{content:"";position:absolute;right:12px;top:50%;width:6px;height:6px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:translateY(-70%) rotate(45deg);pointer-events:none}
 .fsearch{position:relative;flex:0 1 230px}
@@ -75,15 +79,18 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
 .chip b{font-weight:700}.chip button{border:none;background:rgba(0,71,196,.12);color:var(--brand-ink);width:16px;height:16px;border-radius:50%;cursor:pointer;font-size:12px;line-height:1;display:grid;place-items:center}
 .clear-all{font-size:12px;font-weight:650;color:var(--muted);cursor:pointer;padding:4px 6px}.clear-all:hover{color:var(--bad-ink)}
 
-.content{padding:22px 26px 64px;max-width:1260px;width:100%;margin:0 auto}
+.content{padding:22px 26px 64px;max-width:1280px;width:100%;margin:0 auto}
 .page-head{margin-bottom:16px}
 .page-head h1{font-size:21px;font-weight:800;letter-spacing:-.025em;margin:0 0 3px}
-.page-head p{margin:0;color:var(--muted);font-size:13px;max-width:880px;line-height:1.5}
+.page-head p{margin:0;color:var(--muted);font-size:13px;max-width:900px;line-height:1.5}
 .sect-t{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin:24px 0 10px;display:flex;align-items:center;gap:8px}
 .sect-t .r{margin-left:auto;text-transform:none;letter-spacing:0;font-weight:600;color:var(--muted)}
+.q{font-size:12px;color:var(--muted);font-weight:500;font-style:italic;margin:-4px 0 10px}
 
 .banner{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:14px;border:1px solid #E4E9FF;background:linear-gradient(135deg,var(--brand-soft),#F6F1FF);margin-bottom:16px}
+.banner.warn{border-color:#F3DFC0;background:linear-gradient(135deg,var(--warn-soft),#FCF5EA)}
 .banner .bi{width:38px;height:38px;flex:0 0 38px;border-radius:11px;background:#fff;display:grid;place-items:center;color:var(--brand);box-shadow:var(--shadow-xs)}
+.banner.warn .bi{color:var(--warn-ink)}
 .banner .bt{font-size:13.5px;font-weight:700;letter-spacing:-.01em}
 .banner .bs{font-size:12px;color:var(--muted);margin-top:2px}
 .banner .r{margin-left:auto}
@@ -91,20 +98,28 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
 .kc-grid{display:grid;gap:14px;margin-bottom:16px}
 .kc-grid.c4{grid-template-columns:repeat(4,minmax(0,1fr))}
 .kc-grid.c3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.kc-grid.c2{grid-template-columns:repeat(2,minmax(0,1fr))}
 .kc{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:17px 18px 16px;display:flex;flex-direction:column;justify-content:space-between;min-height:126px;box-shadow:var(--shadow-xs);animation:rise .44s var(--ease) backwards;transition:border-color .18s var(--ease),box-shadow .18s var(--ease),transform .18s var(--ease)}
 .kc-grid .kc:nth-child(2){animation-delay:.04s}.kc-grid .kc:nth-child(3){animation-delay:.08s}.kc-grid .kc:nth-child(4){animation-delay:.12s}
 .kc-click{cursor:pointer}.kc-click:hover{border-color:var(--line-2);box-shadow:var(--shadow);transform:translateY(-2px)}.kc-click:active{transform:translateY(-1px);transition-duration:.06s}
 .kc-label{font-size:11.5px;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:6px}
 .kc-label .wt{margin-left:auto;font-size:10px;font-weight:700;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:1px 6px}
-.kc-value{font-size:32px;font-weight:800;letter-spacing:-.033em;line-height:1;font-variant-numeric:tabular-nums;color:var(--ink)}
-.kc-value small{font-size:15px;font-weight:650;color:var(--faint);margin-left:2px;letter-spacing:-.01em}
-.kc-support{font-size:12px;font-weight:650;color:var(--muted);margin-top:8px;display:flex;align-items:center;gap:6px}
+.kc-value{font-size:32px;font-weight:800;letter-spacing:-.033em;line-height:1;font-variant-numeric:tabular-nums;color:var(--ink);display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.kc-value small{font-size:15px;font-weight:650;color:var(--faint);margin-left:0;letter-spacing:-.01em}
+.kc-support{font-size:12px;font-weight:650;color:var(--muted);margin-top:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .kc-bar{height:5px;border-radius:20px;background:var(--line-soft);overflow:hidden;margin-top:11px}
 .kc-bar span{display:block;height:100%;border-radius:20px;transform-origin:left;animation:growx .7s var(--ease) backwards}
 @keyframes rise{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
 @keyframes growx{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 @media(max-width:900px){.kc-grid.c4,.kc-grid.c3{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:430px){.kc-value{font-size:27px}.kc{min-height:108px}}
+
+.delta{display:inline-flex;align-items:center;gap:3px;font-size:11.5px;font-weight:750;padding:1px 7px 1px 5px;border-radius:20px;font-variant-numeric:tabular-nums;line-height:1.7}
+.delta svg{width:9px;height:9px}
+.delta.good{background:var(--good-soft);color:var(--good-ink)}.delta.bad{background:var(--bad-soft);color:var(--bad-ink)}.delta.none{background:var(--none-soft);color:var(--ink-2)}
+.levelchip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;background:var(--brand-soft);color:var(--brand-ink);white-space:nowrap}
+.levelchip::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.7}
+.levelchip.lv5{background:linear-gradient(135deg,#EDE6FF,#E4ECFF);color:#6B3FD4}.levelchip.lv1{background:var(--bad-soft);color:var(--bad-ink)}.levelchip.lv2{background:var(--warn-soft);color:var(--warn-ink)}
 
 .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-xs)}
 .panel.pad{padding:20px 22px}
@@ -115,10 +130,23 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
 .link{font-size:12.5px;font-weight:650;color:var(--brand);cursor:pointer}.link:hover{text-decoration:underline}
 .stack{margin-top:14px}
 .two-col{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:16px}
-@media(max-width:900px){.two-col{grid-template-columns:minmax(0,1fr)}}
+.two-eq{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+@media(max-width:900px){.two-col,.two-eq{grid-template-columns:minmax(0,1fr)}}
 
-/* department cards */
-.dgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+/* trend chart */
+.trend{width:100%;height:auto;display:block;overflow:visible}
+.trend .grid{stroke:var(--line);stroke-width:1}
+.trend .thr{stroke:var(--line-2);stroke-width:1;stroke-dasharray:3 4}
+.trend .area{opacity:.14}
+.trend .ln{fill:none;stroke:var(--brand);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.trend .pt{fill:#fff;stroke:var(--brand);stroke-width:2}
+.trend .pt.cur{fill:var(--brand)}
+.trend .xl{fill:var(--faint);font-size:10.5px;font-weight:600}
+.trend .yl{fill:var(--faint);font-size:9.5px;font-weight:600}
+.trend .vlab{fill:var(--ink);font-size:10.5px;font-weight:800}
+
+/* department / team cards */
+.dgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:14px}
 .dcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 17px;box-shadow:var(--shadow-xs);cursor:pointer;transition:border-color .18s var(--ease),box-shadow .18s var(--ease),transform .18s var(--ease);animation:rise .44s var(--ease) backwards}
 .dcard:hover{border-color:var(--line-2);box-shadow:var(--shadow);transform:translateY(-2px)}
 .dcard .dc-h{display:flex;align-items:center;gap:10px}
@@ -126,13 +154,14 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
 .dcard .dc-ic svg{width:19px;height:19px}
 .dcard h3{margin:0;font-size:15px;font-weight:750;letter-spacing:-.015em}
 .dcard .dc-kind{font-size:11px;color:var(--muted);font-weight:600}
-.dcard .dc-score{margin-left:auto;text-align:right}
+.dcard .dc-score{margin-left:auto;text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:5px}
 .dcard .dc-metrics{display:flex;gap:16px;margin-top:14px;padding-top:13px;border-top:1px solid var(--line-soft)}
 .dcard .dm{font-size:11.5px;color:var(--muted);font-weight:600}.dcard .dm b{display:block;font-size:17px;color:var(--ink);font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin-top:1px}
 
 .list{margin:2px -8px 0}
 .lrow{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:12px;cursor:pointer;transition:background .14s var(--ease)}
 .lrow:hover{background:var(--surface-2)}.lrow+.lrow{box-shadow:inset 0 1px 0 var(--line-soft)}
+.lrow.static{cursor:default}.lrow.static:hover{background:transparent}
 .lrow-id{display:flex;align-items:center;gap:12px;min-width:0;flex:1}
 .lrow-name{font-size:13.5px;font-weight:650;min-width:0;letter-spacing:-.01em}
 .lrow-name .lrow-sub{display:block;font-size:11.5px;font-weight:500;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
@@ -152,23 +181,31 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
 .pill.good{background:var(--good-soft);color:var(--good-ink)}.pill.warn{background:var(--warn-soft);color:var(--warn-ink)}.pill.bad{background:var(--bad-soft);color:var(--bad-ink)}.pill.none{background:var(--none-soft);color:var(--ink-2)}
 .tag{font-size:11px;font-weight:600;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line);border-radius:7px;padding:2px 8px;white-space:nowrap}
 .tag.brand{color:var(--brand-ink);background:var(--brand-soft);border-color:#E4E9FF}
+.tag.mt{color:var(--brand-ink);background:#fff;border-color:#E4E9FF}
 .mini-tag{font-size:9.5px;font-weight:700;color:var(--brand);background:var(--brand-soft);border-radius:5px;padding:1px 5px;margin-left:5px;vertical-align:middle}
 
 .bc-row{display:flex;align-items:center;gap:14px;padding:10px 6px;border-radius:10px;cursor:pointer;transition:background .13s}
+.bc-row.static{cursor:default}.bc-row.static:hover{background:transparent}
 .bc-row:hover{background:var(--surface-2)}
-.bc-label{width:180px;flex:0 0 180px;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bc-label{width:184px;flex:0 0 184px;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bc-label small{color:var(--muted);font-weight:500}
 .bc-track{flex:1;height:10px;background:var(--line-soft);border-radius:20px;overflow:hidden;min-width:40px}
 .bc-fill{height:100%;border-radius:20px;transform-origin:left center;animation:growx .72s var(--ease) backwards}
-.bc-val{width:56px;flex:0 0 56px;text-align:right;font-size:13.5px;font-weight:800;font-variant-numeric:tabular-nums}
+.bc-val{width:70px;flex:0 0 70px;text-align:right;font-size:13.5px;font-weight:800;font-variant-numeric:tabular-nums;display:flex;align-items:center;justify-content:flex-end;gap:6px}
 .bc-val small{font-size:9.5px;color:var(--faint);font-weight:700}
 .bc-chev{color:var(--faint);flex:0 0 10px}
-@media(max-width:560px){.bc-label{width:120px;flex-basis:120px}}
+@media(max-width:560px){.bc-label{width:104px;flex-basis:104px}.bc-row{gap:9px}.bc-chev{display:none}.bc-val{width:auto;flex:0 0 auto}}
 
 .person-hd{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
 .person-hd .pa{width:54px;height:54px;border-radius:16px;background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;font-weight:800;font-size:20px;display:grid;place-items:center;flex:0 0 54px}
-.person-hd h1{margin:0;font-size:22px;letter-spacing:-.025em}
-.person-hd .meta{color:var(--muted);font-size:12.5px;display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-top:4px}
+.person-hd h1{margin:0;font-size:22px;letter-spacing:-.025em;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.person-hd .meta{color:var(--muted);font-size:12.5px;display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-top:5px}
+.person-hd .r{margin-left:auto}
+
+/* in-page tabs */
+.tabs{display:inline-flex;gap:2px;background:var(--surface-2);border:1px solid var(--line);border-radius:11px;padding:3px;margin:2px 0 4px}
+.tabs button{border:none;background:transparent;border-radius:8px;padding:7px 14px;font-size:12.5px;font-weight:650;color:var(--muted);cursor:pointer;transition:.15s}
+.tabs button.active{background:#fff;color:var(--ink);box-shadow:var(--shadow-xs)}
 
 /* KRA group + KPI score cards */
 .kra-group{margin-top:6px}
@@ -176,7 +213,8 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
 .kg-h .kg-t{font-size:13px;font-weight:750;letter-spacing:-.01em}
 .kg-h .kg-p{font-size:11px;font-weight:600;color:var(--muted);background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:1px 7px}
 .kg-h .kg-line{flex:1;height:1px;background:var(--line)}
-.kpigrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:13px}
+.kg-h .kg-r{font-size:12px;font-weight:750;font-variant-numeric:tabular-nums}
+.kpigrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(324px,1fr));gap:13px}
 .kcard{border:1px solid var(--line);border-radius:15px;padding:15px 16px;box-shadow:var(--shadow-xs);cursor:pointer;background:var(--card);transition:border-color .16s,box-shadow .16s,transform .16s;display:flex;flex-direction:column}
 .kcard:hover{border-color:var(--line-2);box-shadow:var(--shadow);transform:translateY(-2px)}
 .kcard .kh{display:flex;align-items:flex-start;gap:9px}
@@ -188,19 +226,58 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
 .kcard .kfoot .kval{font-size:12.5px;font-weight:600;color:var(--muted)}.kcard .kfoot .kval b{color:var(--ink);font-variant-numeric:tabular-nums}
 .kcard .kfoot .r{margin-left:auto;display:flex;align-items:center;gap:8px}
 
-/* band ladder */
+/* band ladder (type-adaptive) */
 .ladder{display:flex;gap:4px;margin-top:12px}
 .lb{flex:1;min-width:0;border-radius:8px;padding:7px 4px 6px;text-align:center;background:var(--surface-2);border:1px solid var(--line);position:relative;transition:.16s}
-.lb .lbn{font-size:9px;font-weight:700;color:var(--faint);letter-spacing:.02em;text-transform:uppercase}
-.lb .lbv{font-size:11px;font-weight:700;color:var(--ink-2);margin-top:2px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lb .lbn{font-size:9px;font-weight:700;color:var(--faint);letter-spacing:.02em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lb .lbv{font-size:10.5px;font-weight:700;color:var(--ink-2);margin-top:2px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lb.on{border-color:transparent;color:#fff;box-shadow:var(--shadow-xs)}
-.lb.on .lbn{color:rgba(255,255,255,.8)}.lb.on .lbv{color:#fff}
+.lb.on .lbn{color:rgba(255,255,255,.82)}.lb.on .lbv{color:#fff}
+.lb.meets::after{content:"MEETS";position:absolute;top:-7px;left:50%;transform:translateX(-50%);font-size:7px;font-weight:800;letter-spacing:.04em;color:var(--faint);background:var(--card);padding:0 3px}
 .lb.g1{--c:var(--bad)}.lb.g2{--c:var(--warn)}.lb.g3{--c:#C9A227}.lb.g4{--c:var(--good)}.lb.g5{--c:var(--good-ink)}
 .lb.on{background:var(--c)}
-.ladder-cap{display:flex;justify-content:space-between;font-size:10.5px;color:var(--faint);font-weight:600;margin-top:6px}
+.lb .qd{width:11px;height:11px;border-radius:50%;border:2px solid var(--faint);margin:3px auto 0}
+.lb.on .qd{border-color:#fff;background:#fff}
+.ladder-cap{display:flex;justify-content:space-between;font-size:10.5px;color:var(--faint);font-weight:600;margin-top:8px;gap:8px}
+.ladder-act{font-size:11.5px;color:var(--ink-2);font-weight:600;margin-top:8px;padding:7px 10px;background:var(--surface-2);border:1px solid var(--line);border-radius:9px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.ladder-act b{color:var(--ink);font-variant-numeric:tabular-nums}
+.ladder-mark{position:relative;height:14px;margin-top:6px}
+.ladder-mark .tk{position:absolute;top:0;width:2px;height:8px;background:var(--ink);border-radius:2px;transform:translateX(-50%)}
+.ladder-mark .tk::after{content:"";position:absolute;top:8px;left:50%;transform:translateX(-50%);border:4px solid transparent;border-top-color:var(--ink)}
+
+/* milestone */
+.ms{border:1px solid var(--line);border-radius:14px;padding:14px 16px;background:var(--card);box-shadow:var(--shadow-xs);display:flex;flex-direction:column;gap:10px}
+.ms .ms-h{display:flex;align-items:center;gap:10px}
+.ms .ms-h .ms-t{font-size:13.5px;font-weight:700}.ms .ms-h .ms-t small{display:block;font-size:11.5px;color:var(--muted);font-weight:500}
+.ms .ms-h .r{margin-left:auto}
+.ms-track{position:relative;height:9px;border-radius:20px;background:var(--line-soft);overflow:hidden}
+.ms-track span{position:absolute;left:0;top:0;height:100%;border-radius:20px;background:linear-gradient(90deg,var(--brand),var(--brand-2))}
+.ms-foot{display:flex;align-items:center;gap:14px;font-size:11.5px;color:var(--muted);font-weight:600}
+.ms-foot b{color:var(--ink)}
+.ms.done{align-items:flex-start}
+
+/* distribution histogram */
+.hist{display:flex;align-items:flex-end;gap:12px;height:150px;padding:8px 4px 0}
+.hcol{flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;height:100%;justify-content:flex-end;cursor:pointer}
+.hbar{width:100%;max-width:56px;border-radius:8px 8px 3px 3px;background:var(--brand-soft);position:relative;transition:.16s;min-height:3px}
+.hcol:hover .hbar{filter:brightness(.96)}
+.hbar b{position:absolute;top:-19px;left:0;right:0;text-align:center;font-size:12px;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums}
+.hlab{font-size:10.5px;font-weight:650;color:var(--muted);text-align:center;line-height:1.2}
+.hlab small{display:block;color:var(--faint);font-weight:600;font-size:9px}
+
+/* achievements */
+.ach{display:flex;flex-wrap:wrap;gap:8px}
+.ach span{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:650;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line);border-radius:20px;padding:6px 12px}
+.ach span svg{width:13px;height:13px;color:var(--good)}
+
+/* review block */
+.review{border:1px solid var(--line);border-radius:12px;padding:13px 15px;background:var(--surface-2)}
+.review .rv-h{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.review .rv-txt{font-size:12.5px;color:var(--ink-2);line-height:1.6}
+.review .rv-meta{font-size:11px;color:var(--faint);margin-top:9px;display:flex;gap:12px;flex-wrap:wrap}
 
 .tbl-wrap{overflow-x:auto;margin-top:4px}
-.tbl{width:100%;border-collapse:collapse;font-size:13px;min-width:920px}
+.tbl{width:100%;border-collapse:collapse;font-size:13px;min-width:940px}
 .tbl th{text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap;cursor:pointer;user-select:none}
 .tbl th.num{text-align:right}.tbl th.sorted{color:var(--ink-2)}.tbl th .sc{opacity:.5;font-size:9px;margin-left:3px}
 .tbl td{padding:10px 12px;border-bottom:1px solid var(--line-soft);vertical-align:middle}
@@ -215,6 +292,13 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
 .info-tbl{width:100%;border-collapse:collapse;font-size:12.5px;min-width:520px}
 .info-tbl th{background:var(--surface-2);text-align:left;font-size:11px;font-weight:700;color:var(--ink-2);padding:8px 11px;border:1px solid var(--line);white-space:nowrap}
 .info-tbl td{padding:8px 11px;border:1px solid var(--line-soft);vertical-align:top;color:var(--ink-2)}
+
+.hcheck{display:flex;align-items:center;gap:11px;padding:11px 6px}.hcheck+.hcheck{box-shadow:inset 0 1px 0 var(--line-soft)}
+.hcheck .hc-ic{width:24px;height:24px;flex:0 0 24px;border-radius:7px;display:grid;place-items:center}
+.hcheck .hc-ic svg{width:14px;height:14px}
+.hcheck.ok .hc-ic{background:var(--good-soft);color:var(--good-ink)}.hcheck.warn .hc-ic{background:var(--warn-soft);color:var(--warn-ink)}.hcheck.bad .hc-ic{background:var(--bad-soft);color:var(--bad-ink)}
+.hcheck .hc-t{font-size:13px;font-weight:600}.hcheck .hc-t small{display:block;font-size:11.5px;color:var(--muted);font-weight:500}
+.hcheck .r{margin-left:auto;font-size:13px;font-weight:800;font-variant-numeric:tabular-nums}
 
 .state{min-height:60vh;display:grid;place-items:center;padding:20px}
 .state-card{max-width:470px;text-align:center}
@@ -231,14 +315,17 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
 
 /* drawer */
 .scrim{position:fixed;inset:0;background:rgba(15,23,42,.32);backdrop-filter:blur(2px);opacity:0;pointer-events:none;transition:.2s;z-index:60}.scrim.on{opacity:1;pointer-events:auto}
-.drawer{position:fixed;top:0;right:0;height:100vh;width:520px;max-width:94vw;background:#fff;box-shadow:var(--shadow-lg);transform:translateX(100%);transition:transform .28s var(--ease);z-index:61;display:flex;flex-direction:column}.drawer.on{transform:none}
+.drawer{position:fixed;top:0;right:0;height:100vh;width:540px;max-width:94vw;background:#fff;box-shadow:var(--shadow-lg);transform:translateX(100%);transition:transform .28s var(--ease);z-index:61;display:flex;flex-direction:column}.drawer.on{transform:none}
 .drawer-h{padding:20px 22px 18px;border-bottom:1px solid var(--line);display:flex;gap:14px;align-items:flex-start}
 .drawer-h h2{margin:0;font-size:17px;font-weight:750;letter-spacing:-.015em;line-height:1.25}
 .drawer-h .sub{font-size:12px;color:var(--muted);margin-top:7px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .drawer-body{padding:20px 22px;overflow-y:auto;flex:1}
 .drawer .close{margin-left:auto;flex:0 0 34px}
-.section-t{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);margin:22px 0 10px}.section-t:first-child{margin-top:0}
+.section-t{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);margin:22px 0 10px;display:flex;align-items:center;gap:8px}.section-t:first-child{margin-top:0}
+.section-t .r{margin-left:auto;text-transform:none;letter-spacing:0;font-weight:600;color:var(--muted)}
 .def-box{font-size:12.5px;color:var(--ink-2);line-height:1.6;background:var(--surface-2);border:1px solid var(--line);border-radius:11px;padding:11px 13px}
+.def-box .dm{display:flex;gap:14px;flex-wrap:wrap;margin-top:9px;padding-top:9px;border-top:1px solid var(--line);font-size:11.5px;color:var(--muted)}
+.def-box .dm b{color:var(--ink-2)}
 .metric-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .metric{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 12px;box-shadow:var(--shadow-xs)}
 .metric .l{font-size:11px;color:var(--muted);font-weight:600}.metric .v{font-size:17px;font-weight:800;letter-spacing:-.025em;margin-top:5px;font-variant-numeric:tabular-nums}.metric .v small{font-size:11px;font-weight:600;color:var(--faint)}
@@ -252,8 +339,8 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:11px 18px;border-radius:12px;font-size:13px;font-weight:600;box-shadow:var(--shadow-lg);opacity:0;pointer-events:none;transition:.24s;z-index:80}.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}.toast.err{background:var(--bad)}
 .fade{animation:fade .28s ease}@keyframes fade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
 .hamburger{display:none}
-@media(max-width:960px){:root{--sbw:0px}.sidebar{position:fixed;left:0;top:0;transform:translateX(-100%);transition:.24s;width:244px;flex-basis:244px}.sidebar.open{transform:none;box-shadow:var(--shadow-lg)}.hamburger{display:grid}.content{padding:18px 15px 60px}.topbar,.filterbar{padding:10px 15px}}
-@media(max-width:620px){.userchip .u-meta{display:none}.updated{display:none}.metric-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:960px){:root{--sbw:0px}.sidebar{position:fixed;left:0;top:0;transform:translateX(-100%);transition:.24s;width:246px;flex-basis:246px}.sidebar.open{transform:none;box-shadow:var(--shadow-lg)}.hamburger{display:grid}.content{padding:18px 15px 60px}.topbar,.filterbar{padding:10px 15px}}
+@media(max-width:620px){.userchip .u-meta{display:none}.updated{display:none}.metric-grid{grid-template-columns:repeat(2,1fr)}.person-hd .r{margin-left:0;width:100%}.fseg{flex-wrap:wrap}.fseg button{padding:6px 9px;font-size:11.5px}.fsearch{flex:1 1 100%}.pill-select{max-width:100%}}
 @media(max-width:480px){.crumbs{display:none}.userchip{display:none}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-delay:0ms!important;transition-duration:.05ms!important}}
 </style>
@@ -262,6 +349,10 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
 <div class="app">
   <aside class="sidebar" id="sidebar">
     <div class="brand"><div class="mark" id="brandMark"></div><div class="name">Recykal<span>KRA / KPI Tracker</span></div></div>
+    <div class="modeswitch" id="modeSwitch">
+      <button data-mode="mgmt" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Management</button>
+      <button data-mode="me"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg>My Performance</button>
+    </div>
     <div class="scope-badge" id="scopeBadge" style="display:none"></div>
     <nav class="nav" id="nav"></nav>
     <div class="foot" id="sbFoot">Loading…</div>
@@ -295,15 +386,23 @@ const pct=v=>v==null||isNaN(v)?'—':(Math.round(v*10)/10)+'%';
 const SCOL={good:'var(--good)',warn:'var(--warn)',bad:'var(--bad)',none:'var(--none)'};
 const STINT={good:'var(--good-soft)',warn:'var(--warn-soft)',bad:'var(--bad-soft)',none:'var(--none-soft)'};
 const sc=k=>SCOL[k]||SCOL.none, tint=k=>STINT[k]||STINT.none;
+const AR_UP='<svg viewBox="0 0 10 10"><path d="M5 2.2l3.2 5.2H1.8z" fill="currentColor"/></svg>';
+const AR_DN='<svg viewBox="0 0 10 10"><path d="M5 7.8L1.8 2.6h6.4z" fill="currentColor"/></svg>';
+const MONTHS=['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function relTime(iso){if(!iso)return '';const d=new Date(iso);if(isNaN(d))return '';const s=(Date.now()-d.getTime())/1000;if(s<60)return 'just now';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';if(s<604800)return Math.floor(s/86400)+'d ago';return d.toLocaleDateString();}
 function ratingStr(r){return r==null?'—':(Math.round(r*10)/10).toFixed(1);}
-function unitStr(rec,v){if(v==null||v==='')return '—';const u=(rec.unit||'').toLowerCase();if(u.indexOf('cr')>=0||u.indexOf('₹')>=0)return '₹'+n2(v)+' Cr';if(u.indexOf('day')>=0)return v+' d';if(u.indexOf('percent')>=0||u.indexOf('%')>=0)return v+((''+v).indexOf('%')<0?'':'');return String(v);}
+function periodShort(p){const m=/^(\d{4})-(\d{2})$/.exec(p||'');return m?(MONTHS[+m[2]]||m[2]):(p||'');}
+function periodLong(p){const m=/^(\d{4})-(\d{2})$/.exec(p||'');return m?(periodShort(p)+" '"+m[1].slice(2)):(p||'');}
+/* type-adaptive value formatting from the KPI rule layer */
+function fmtVal(rec,v){if(v==null||v==='')return '—';const mt=rec&&rec.metricType;if(mt==='Percentage')return n2(v)+'%';if(mt==='Days')return n2(v)+' d';if(mt==='Amount')return '₹'+n2(v)+' Cr';return String(n2(v));}
+function unitStr(rec,v){return fmtVal(rec,v);}
 
 function backend(){return (typeof google!=='undefined'&&google.script&&google.script.run)?google.script.run:null;}
 function call(fn,payload){return new Promise((resolve,reject)=>{const b=backend();if(!b){reject({__offline:true});return;}b.withSuccessHandler(resolve).withFailureHandler(reject)[fn](payload);});}
 
-const APP={boot:null,view:'overview',ctx:{},filters:{dept:'',subTeam:'',status:'',search:''},table:{sort:'employee',dir:1,page:0,per:14},period:''};
+const APP={boot:null,mode:'mgmt',view:'overview',ctx:{},meId:null,tab:'',filters:{dept:'',subTeam:'',status:'',search:''},table:{sort:'employee',dir:1,page:0,per:14},period:''};
 function B(){return APP.boot;}
+function TH(){return B().settings.thresholds;}
 
 async function boot(){
   drawBrand();showState('loading');
@@ -313,8 +412,9 @@ async function boot(){
     applyBoot(b);
   }catch(e){if(e&&e.__offline){showState('offline');return;}showState('error',(e&&e.message)||String(e));}
 }
-function applyBoot(b){APP.boot=b;APP.period=b.period||APP.period;buildChrome();$('#filterbar').style.display=b.empty?'none':'flex';render();}
+function applyBoot(b){APP.boot=b;APP.period=b.period||APP.period;if(!APP.meId)APP.meId=guessMe(b);buildChrome();render();}
 window.__applyBoot=applyBoot;window.__boot=boot;
+function guessMe(b){const em=(b.user&&b.user.email||'').split('@')[0].replace(/[._]+/g,' ').trim().toLowerCase();if(!em)return null;let best=null;(b.employees||[]).forEach(e=>{const n=e.name.toLowerCase();if(n===em||em.indexOf(n)>=0||n.indexOf(em)>=0)best=best||e.id;});return best;}
 
 /* ---------------- data helpers ---------------- */
 function recById(id){return B().records.find(r=>r.kpiId===id);}
@@ -325,161 +425,259 @@ function recordsForEmp(id){return B().records.filter(r=>r.employeeId===id);}
 function deptSubTeams(id){return B().subTeams.filter(s=>s.deptId===id);}
 function deptEmployees(id){return B().employees.filter(e=>e.deptId===id);}
 function withData(rs){return rs.filter(r=>r.rating!=null);}
+function realDepts(){return B().departments.filter(d=>d.kind!=='info');}
+function perfDepts(){return B().departments.filter(d=>d.employeeCount>0);}
 function filteredEmployees(){let es=B().employees.slice();const f=APP.filters;if(f.dept)es=es.filter(e=>e.deptId===f.dept);if(f.subTeam)es=es.filter(e=>e.subTeamIds&&e.subTeamIds.indexOf(f.subTeam)>=0);if(f.status)es=es.filter(e=>e.status.k===f.status);if(f.search){const q=f.search.toLowerCase();es=es.filter(e=>(e.name+' '+e.role+' '+e.region+' '+e.department).toLowerCase().includes(q));}return es;}
-function filteredRecords(){let r=B().records.slice();const f=APP.filters;if(f.dept)r=r.filter(x=>x.deptId===f.dept);if(f.subTeam)r=r.filter(x=>x.subTeamId===f.subTeam);if(f.status)r=r.filter(x=>x.status.k===f.status);if(f.search){const q=f.search.toLowerCase();r=r.filter(x=>(x.employee+' '+x.kpi+' '+x.kra+' '+x.department+' '+(x.subTeam||'')).toLowerCase().includes(q));}return r;}
+function filteredRecords(base){let r=(base||B().records).slice();const f=APP.filters;if(f.dept)r=r.filter(x=>x.deptId===f.dept);if(f.subTeam)r=r.filter(x=>x.subTeamId===f.subTeam);if(f.status)r=r.filter(x=>x.status.k===f.status);if(f.search){const q=f.search.toLowerCase();r=r.filter(x=>(x.employee+' '+x.kpi+' '+x.kra+' '+x.department+' '+(x.subTeam||'')).toLowerCase().includes(q));}return r;}
 
 /* ---------------- chrome ---------------- */
-const ICONS={overview:'<path d="M3 12l2-2 4 4 5-6 4 4 3-3"/><path d="M3 20h18" opacity=".4"/>',depts:'<rect x="3" y="4" width="7" height="7" rx="1.5"/><rect x="14" y="4" width="7" height="7" rx="1.5"/><rect x="3" y="15" width="7" height="5" rx="1.5"/><rect x="14" y="15" width="7" height="5" rx="1.5"/>',people:'<circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="9" r="2.6" opacity=".55"/><path d="M15 20a5 5 0 0 1 6.5-4.8" opacity=".55"/>',records:'<path d="M4 5h16M4 12h16M4 19h16"/>',settings:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>'};
-const NAV=[{id:'overview',label:'Overview'},{id:'depts',label:'Departments'},{id:'people',label:'People'},{id:'records',label:'All KPIs'},{id:'settings',label:'Data & Settings'}];
+const ICONS={overview:'<path d="M3 12l2-2 4 4 5-6 4 4 3-3"/><path d="M3 20h18" opacity=".4"/>',teams:'<rect x="3" y="4" width="7" height="7" rx="1.5"/><rect x="14" y="4" width="7" height="7" rx="1.5"/><rect x="3" y="15" width="7" height="5" rx="1.5"/><rect x="14" y="15" width="7" height="5" rx="1.5"/>',perspectives:'<path d="M12 3l8 4-8 4-8-4z"/><path d="M4 12l8 4 8-4"/><path d="M4 16.5l8 4 8-4" opacity=".5"/>',kpianalysis:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2" opacity=".9"/>',people:'<circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="9" r="2.6" opacity=".55"/><path d="M15 20a5 5 0 0 1 6.5-4.8" opacity=".55"/>',records:'<path d="M4 5h16M4 12h16M4 19h16"/>',health:'<path d="M12 21s-7-4.5-9.5-9C1 9 2.5 5 6 5c2 0 3.2 1.2 4 2.4C10.8 6.2 12 5 14 5c3.5 0 5 4 3.5 7-1 1.9-3 4-5.5 6z" opacity=".25"/><path d="M3 12h4l2-4 3 8 2-5 2 1h5"/>',me:'<circle cx="12" cy="8" r="3.4"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/>',mykpis:'<path d="M4 6h16M4 12h16M4 18h10"/><circle cx="20" cy="18" r="2"/>'};
+const NAV_MGMT=[{id:'overview',label:'Overview'},{id:'teams',label:'Teams'},{id:'perspectives',label:'Perspectives'},{id:'kpianalysis',label:'KPI Analysis'},{id:'people',label:'People'},{id:'records',label:'All KPIs'},{id:'health',label:'Health & Data'}];
+const NAV_ME=[{id:'me',label:'My Scorecard'},{id:'mykpis',label:'My KPIs'}];
+function nav(){return APP.mode==='me'?NAV_ME:NAV_MGMT;}
 function deptIcon(kind){if(kind==='scorecard')return '<path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 4-5" fill="none"/>';if(kind==='individuals')return ICONS.people;if(kind==='info')return '<circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/>';return ICONS.records;}
 function buildChrome(){
-  const nav=$('#nav');nav.innerHTML='';
+  const navEl=$('#nav');navEl.innerHTML='';
   const off=B().empty?0:B().rollups.org.offTrack;
-  NAV.forEach(nv=>{const badge=(nv.id==='people'&&off)?'<span class="badge">'+off+'</span>':'';nav.insertAdjacentHTML('beforeend','<div class="nav-item" data-nav="'+nv.id+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+ICONS[nv.id]+'</svg>'+nv.label+badge+'</div>');});
+  nav().forEach(nv=>{const badge=(nv.id==='people'&&off)?'<span class="badge">'+off+'</span>':'';navEl.insertAdjacentHTML('beforeend','<div class="nav-item" data-nav="'+nv.id+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+ICONS[nv.id]+'</svg>'+nv.label+badge+'</div>');});
+  $$('#modeSwitch button').forEach(b=>b.classList.toggle('active',b.dataset.mode===APP.mode));
   const em=(B().user&&B().user.email)||'';$('#userName').textContent=em?em.split('@')[0]:'You';$('#userAv').textContent=em?initials(em.split('@')[0].replace(/[._]/g,' ')):'R';
   const periods=(B().settings&&B().settings.periods)||[];const pw=$('#periodWrap');
-  if(periods.length){pw.style.display='block';$('#periodSel').innerHTML=periods.map(p=>'<option value="'+esc(p)+'"'+(p===APP.period?' selected':'')+'>'+esc(p)+'</option>').join('');}else pw.style.display='none';
-  if(!B().empty){const o=B().rollups.org;$('#scopeBadge').style.display='block';$('#scopeBadge').innerHTML='<div class="t">Org performance · '+(o.rating!=null?ratingStr(o.rating)+' / 5':'Framework')+'</div><div class="s">'+o.people+' people · '+o.departments+' departments · '+o.kpis+' KPIs</div>';
-    $('#sbFoot').innerHTML='Live · '+esc(B().source.title||'Google Sheet')+'<br>'+o.kpisWithData+' of '+o.kpis+' KPIs have '+esc(APP.period)+' actuals';}
+  if(periods.length){pw.style.display='block';$('#periodSel').innerHTML=periods.map(p=>'<option value="'+esc(p)+'"'+(p===APP.period?' selected':'')+'>'+esc(periodLong(p))+'</option>').join('');}else pw.style.display='none';
+  if(!B().empty){const o=B().rollups.org;$('#scopeBadge').style.display='block';$('#scopeBadge').innerHTML='<div class="t">Org performance · '+(o.rating!=null?ratingStr(o.rating)+' / 5':'Framework')+'</div><div class="s">'+o.people+' people · '+o.departments+' teams · '+o.kpis+' KPIs</div>';
+    $('#sbFoot').innerHTML='Live · '+esc(B().source.title||'Google Sheet')+'<br>'+o.kpisWithData+' of '+o.kpis+' KPIs have '+esc(periodShort(APP.period))+' actuals';}
   else $('#sbFoot').textContent='Connected';
   $('#updated').innerHTML=B().lastUpdated?'<span class="dot"></span>Updated '+esc(relTime(B().lastUpdated)):'';
 }
 function drawBrand(){const p=[['var(--brand)',0],['var(--brand-2)',90],['var(--good)',180],['#567DE8',270]].map(([c,r])=>'<path d="M17 17 C17 9, 25 9, 25 17 C25 21, 21 25, 17 25 Z" fill="'+c+'" transform="rotate('+r+' 17 17)"/>').join('');$('#brandMark').innerHTML='<svg viewBox="0 0 34 34" width="34" height="34">'+p+'</svg>';}
 
 function buildFilterbar(){
-  if(B().empty||APP.view==='settings'||APP.view==='overview'){$('#filterbar').style.display='none';return;}
+  const show=!B().empty && ['people','records','mykpis'].indexOf(APP.view)>=0;
+  if(!show){$('#filterbar').style.display='none';return;}
   $('#filterbar').style.display='flex';
   const f=APP.filters;
-  const depts=B().departments.filter(d=>d.employeeCount>0);
+  const depts=perfDepts();
   const subs=B().subTeams.filter(s=>!f.dept||s.deptId===f.dept);
   const statuses=[['','All status'],['good','On Track'],['warn','At Risk'],['bad','Off Track'],['none','Pending']];
   let h='';
-  h+='<div class="selectwrap"><select class="pill-select" data-filter="dept"><option value="">All departments</option>'+depts.map(d=>'<option value="'+d.id+'"'+(f.dept===d.id?' selected':'')+'>'+esc(d.name)+'</option>').join('')+'</select></div>';
+  h+='<div class="selectwrap"><select class="pill-select" data-filter="dept"><option value="">All teams</option>'+depts.map(d=>'<option value="'+d.id+'"'+(f.dept===d.id?' selected':'')+'>'+esc(d.name)+'</option>').join('')+'</select></div>';
   if(subs.length)h+='<div class="selectwrap"><select class="pill-select" data-filter="subTeam"><option value="">All sub-teams</option>'+subs.map(s=>'<option value="'+s.id+'"'+(f.subTeam===s.id?' selected':'')+'>'+esc((f.dept?'':s.deptName+' · ')+s.name)+'</option>').join('')+'</select></div>';
   h+='<div class="fseg">'+statuses.map(([v,l])=>'<button data-fstatus="'+v+'" class="'+(f.status===v?'active':'')+'">'+l+'</button>').join('')+'</div>';
   h+='<div class="fsearch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg><input id="fSearch" placeholder="Search people, KRAs, KPIs…" value="'+esc(f.search)+'"></div>';
-  const chips=[];if(f.dept)chips.push(chip('Dept','dept',(deptById(f.dept)||{}).name||''));if(f.subTeam)chips.push(chip('Sub-team','subTeam',(subById(f.subTeam)||{}).name||''));if(f.status)chips.push(chip('Status','status',(statuses.find(s=>s[0]===f.status)||['',''])[1]));if(f.search)chips.push(chip('Search','search','“'+f.search+'”'));
+  const chips=[];if(f.dept)chips.push(chip('Team','dept',(deptById(f.dept)||{}).name||''));if(f.subTeam)chips.push(chip('Sub-team','subTeam',(subById(f.subTeam)||{}).name||''));if(f.status)chips.push(chip('Status','status',(statuses.find(s=>s[0]===f.status)||['',''])[1]));if(f.search)chips.push(chip('Search','search','“'+f.search+'”'));
   if(chips.length)h+='<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+chips.join('')+'<span class="clear-all" data-act="clear-filters">Clear all</span></div>';
   $('#filterbar').innerHTML=h;
 }
 function chip(l,k,v){return '<span class="chip">'+esc(l)+' <b>'+esc(v)+'</b><button data-clear="'+k+'">×</button></span>';}
 
-function go(v,ctx){APP.view=v;APP.ctx=ctx||{};APP.table.page=0;scrollTop();render();}
+function go(v,ctx){APP.view=v;APP.ctx=ctx||{};APP.table.page=0;APP.tab='';scrollTop();render();}
 function scrollTop(){window.scrollTo(0,0);const s=$('.main-scroll');if(s)s.scrollTop=0;}
+function setMode(m){if(APP.mode===m)return;APP.mode=m;if(m==='me'){APP.view=APP.meId?'me':'pickme';}else{APP.view='overview';}APP.ctx={};APP.tab='';buildChrome();scrollTop();render();closeNav();}
 function render(){
   if(!B()){renderEmpty();return;}
   if(B().empty){renderEmpty();return;}
   buildFilterbar();$$('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.nav===APP.view));renderCrumbs();
   const c=$('#content');c.classList.remove('fade');void c.offsetWidth;c.classList.add('fade');
-  const v={overview:vOverview,depts:vDepts,dept:vDept,people:vPeople,person:vPerson,records:vRecords,settings:vSettings}[APP.view]||vOverview;
+  const v={overview:vOverview,teams:vTeams,dept:vDept,perspectives:vPerspectives,perspective:vPerspective,kpianalysis:vKpiAnalysis,people:vPeople,person:vPerson,me:vPerson,mykpis:vRecords,records:vRecords,health:vHealth,pickme:vPickMe}[APP.view]||vOverview;
   c.innerHTML=v();
 }
 function renderCrumbs(){
-  const cr=[{t:'Overview',v:'overview'}];const lab={depts:'Departments',people:'People',records:'All KPIs',settings:'Data & Settings'};
-  if(lab[APP.view])cr.push({t:lab[APP.view]});
-  if(APP.view==='dept'){const d=deptById(APP.ctx.deptId);cr.push({t:'Departments',v:'depts'});if(d)cr.push({t:d.name});}
-  if(APP.view==='person'){const e=empById(APP.ctx.empId);cr.push({t:'People',v:'people'});if(e)cr.push({t:e.name});}
+  let cr;
+  if(APP.mode==='me'){cr=[{t:'My Performance'}];if(APP.view==='mykpis')cr.push({t:'My KPIs'});if(APP.view==='pickme')cr.push({t:'Select profile'});}
+  else{cr=[{t:'Overview',v:'overview'}];const lab={teams:'Teams',perspectives:'Perspectives',kpianalysis:'KPI Analysis',people:'People',records:'All KPIs',health:'Health & Data'};
+    if(lab[APP.view])cr.push({t:lab[APP.view]});
+    if(APP.view==='dept'){const d=deptById(APP.ctx.deptId);cr=[{t:'Overview',v:'overview'},{t:'Teams',v:'teams'}];if(d)cr.push({t:d.name});}
+    if(APP.view==='person'){const e=empById(APP.ctx.empId);cr=[{t:'Overview',v:'overview'},{t:'People',v:'people'}];if(e)cr.push({t:e.name});}
+    if(APP.view==='perspective'){cr=[{t:'Overview',v:'overview'},{t:'Perspectives',v:'perspectives'},{t:APP.ctx.name||''}];}}
   $('#crumbs').innerHTML=cr.map((c,i)=>{const last=i===cr.length-1,link=c.v&&!last;return (i?'<span class="sep">›</span>':'')+'<span class="'+(link?'c-link':'')+'" '+(link?'data-crumb="'+c.v+'"':'')+'>'+(last?'<b>'+esc(c.t)+'</b>':esc(c.t))+'</span>';}).join('');
 }
 
 /* ---------------- shared components ---------------- */
-function kpiCard(label,value,support,opts){opts=opts||{};const color=opts.tone?'var(--'+opts.tone+'-ink)':'var(--ink)';const attr=opts.nav?('data-nav="'+opts.nav+'"'):(opts.attr||'');const clk=(opts.nav||opts.attr)?' kc-click':'';const barPct=opts.bar!=null?clamp(opts.bar,0,100):null;return '<div class="kc'+clk+'" '+attr+'><div class="kc-label">'+label+(opts.wt!=null?'<span class="wt">'+opts.wt+'%</span>':'')+'</div><div><div class="kc-value" style="color:'+color+'">'+value+'</div>'+(support?'<div class="kc-support">'+support+'</div>':'')+(barPct!=null?'<div class="kc-bar"><span style="width:'+barPct+'%;background:'+sc(opts.tone||'none')+'"></span></div>':'')+'</div></div>';}
+function kpiCard(label,value,support,opts){opts=opts||{};const color=opts.tone?'var(--'+opts.tone+'-ink)':'var(--ink)';const attr=opts.nav?('data-nav="'+opts.nav+'"'):(opts.attr||'');const clk=(opts.nav||opts.attr)?' kc-click':'';const barPct=opts.bar!=null?clamp(opts.bar,0,100):null;return '<div class="kc'+clk+'" '+attr+'><div class="kc-label">'+label+(opts.wt!=null?'<span class="wt">'+opts.wt+'%</span>':'')+'</div><div><div class="kc-value" style="color:'+color+'">'+value+(opts.delta!=null?deltaChip(opts.delta,opts.deltaUnit):'')+'</div>'+(support?'<div class="kc-support">'+support+'</div>':'')+(barPct!=null?'<div class="kc-bar"><span style="width:'+barPct+'%;background:'+sc(opts.tone||'none')+'"></span></div>':'')+'</div></div>';}
 function rchip(rating,status){return '<div class="rchip" style="color:'+sc(status.k)+';background:'+tint(status.k)+'">'+(rating==null?'—':ratingStr(rating))+(rating==null?'':'<small>/5</small>')+'</div>';}
 function statusPill(status){return '<span class="pill '+status.k+'"><span class="sdot s-'+status.k+'"></span>'+esc(status.label)+'</span>';}
-function ratingBar(rating){const p=rating==null?0:clamp((rating-1)/4*100,0,100);const k=rating==null?'none':(rating>=B().settings.thresholds.onTrack?'good':(rating>=B().settings.thresholds.atRisk?'warn':'bad'));return '<div class="bc-track"><div class="bc-fill" style="width:'+p+'%;background:'+sc(k)+'"></div></div>';}
+function ratingBar(rating){const p=rating==null?0:clamp((rating-1)/4*100,0,100);const k=statusFromRating(rating).k;return '<div class="bc-track"><div class="bc-fill" style="width:'+p+'%;background:'+sc(k)+'"></div></div>';}
+function deltaChip(d,unit){if(d==null)return '';const flat=Math.abs(d)<0.005;const k=flat?'none':(d>0?'good':'bad');const arrow=flat?'':(d>0?AR_UP:AR_DN);const val=(d>0?'+':'')+(Math.round(d*100)/100)+(unit||' pt');return '<span class="delta '+k+'">'+arrow+val+'</span>';}
+function levelChip(level){if(!level||!level.level)return '';return '<span class="levelchip lv'+level.level+'">Lv '+level.level+' · '+esc(level.label)+'</span>';}
 
+/* SVG trend line (rating 1..5 over periods) */
+function trendChart(series,opts){
+  opts=opts||{};const W=opts.w||600,H=opts.h||150,pad={l:26,r:14,t:16,b:26};
+  const iw=W-pad.l-pad.r,ih=H-pad.t-pad.b,n=series.length;
+  const idx=series.map((p,i)=>({i,v:p.rating,period:p.period})).filter(p=>p.v!=null);
+  if(!idx.length)return '<div class="empty" style="padding:24px">No trend data for these periods yet.</div>';
+  const x=i=>pad.l+(n<=1?iw/2:iw*i/(n-1));
+  const y=v=>pad.t+ih*(1-(clamp(v,1,5)-1)/4);
+  const th=TH();
+  let g='';
+  [1,2,3,4,5].forEach(v=>{g+='<line class="grid" x1="'+pad.l+'" y1="'+y(v)+'" x2="'+(W-pad.r)+'" y2="'+y(v)+'" opacity="'+(v===1?.9:.5)+'"/>';g+='<text class="yl" x="'+(pad.l-6)+'" y="'+(y(v)+3)+'" text-anchor="end">'+v+'</text>';});
+  g+='<line class="thr" x1="'+pad.l+'" y1="'+y(th.onTrack)+'" x2="'+(W-pad.r)+'" y2="'+y(th.onTrack)+'"/>';
+  const line=idx.map((p,k)=>(k?'L':'M')+x(p.i).toFixed(1)+' '+y(p.v).toFixed(1)).join(' ');
+  const area=line+' L'+x(idx[idx.length-1].i).toFixed(1)+' '+(pad.t+ih)+' L'+x(idx[0].i).toFixed(1)+' '+(pad.t+ih)+' Z';
+  let pts='';idx.forEach((p,k)=>{const cur=k===idx.length-1;pts+='<circle class="pt'+(cur?' cur':'')+'" cx="'+x(p.i).toFixed(1)+'" cy="'+y(p.v).toFixed(1)+'" r="'+(cur?4:3)+'"/>';if(cur)pts+='<text class="vlab" x="'+x(p.i).toFixed(1)+'" y="'+(y(p.v)-9).toFixed(1)+'" text-anchor="middle">'+ratingStr(p.v)+'</text>';});
+  let xl='';series.forEach((p,i)=>{xl+='<text class="xl" x="'+x(i).toFixed(1)+'" y="'+(H-8)+'" text-anchor="middle">'+esc(periodShort(p.period))+'</text>';});
+  return '<svg class="trend" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet"><defs><linearGradient id="tgr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--brand)"/><stop offset="1" stop-color="var(--brand)" stop-opacity="0"/></linearGradient></defs>'+g+'<path class="area" d="'+area+'" fill="url(#tgr)"/><path class="ln" d="'+line+'"/>'+pts+xl+'</svg>';
+}
+/* native-unit sparkline for one KPI (actual over periods) */
+function kpiSpark(rec){
+  const hist=(rec.history||[]).map(h=>({period:h.period,v:rec.qualitative?h.rating:h.actual})).filter(h=>h.v!=null);
+  if(hist.length<2)return '';
+  const W=520,H=96,pad={l:8,r:8,t:14,b:20};const iw=W-pad.l-pad.r,ih=H-pad.t-pad.b;
+  const vals=hist.map(h=>h.v),mn=Math.min(...vals),mx=Math.max(...vals),sp=mx-mn||1;
+  const all=rec.history.map((h,i)=>({i,v:rec.qualitative?h.rating:h.actual,period:h.period}));
+  const n=all.length,x=i=>pad.l+(n<=1?iw/2:iw*i/(n-1)),y=v=>pad.t+ih*(1-(v-mn)/sp);
+  const idx=all.filter(p=>p.v!=null);
+  const line=idx.map((p,k)=>(k?'L':'M')+x(p.i).toFixed(1)+' '+y(p.v).toFixed(1)).join(' ');
+  let pts='';idx.forEach((p,k)=>{const cur=k===idx.length-1;pts+='<circle class="pt'+(cur?' cur':'')+'" cx="'+x(p.i).toFixed(1)+'" cy="'+y(p.v).toFixed(1)+'" r="'+(cur?3.6:2.6)+'"/>';});
+  let xl='';all.forEach((p,i)=>{xl+='<text class="xl" x="'+x(i).toFixed(1)+'" y="'+(H-6)+'" text-anchor="middle">'+esc(periodShort(p.period))+'</text>';});
+  const first=idx[0].v,last=idx[idx.length-1].v;
+  return '<svg class="trend" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" style="height:96px"><path class="ln" style="stroke-width:2" d="'+line+'"/>'+pts+xl+'</svg>';
+}
+
+/* type-adaptive Target 1–5 ladder */
 function ladder(rec){
   if(!rec.bands||!rec.bands.length)return '';
   const active=rec.rating==null?-1:clamp(Math.round(rec.rating),1,rec.bands.length)-1;
-  const cells=rec.bands.map((b,i)=>{const on=i===active;const g='g'+(i+1);return '<div class="lb '+g+(on?' on':'')+'"><div class="lbn">'+esc(b.label?shortBand(b.label):(i+1)+'')+'</div><div class="lbv" title="'+esc(b.raw||'')+'">'+esc(b.raw||'—')+'</div></div>';}).join('');
-  const dir=rec.qualitative?'Qualitative — manual rating':(rec.direction<0?'Lower is better':'Higher is better');
-  return '<div class="ladder">'+cells+'</div><div class="ladder-cap"><span>'+esc(dir)+'</span><span>Band 3 = Meets / on-target</span></div>';
+  const meetsIdx=rec.bands.length>=3?2:Math.floor(rec.bands.length/2);
+  const cells=rec.bands.map((b,i)=>{const on=i===active;const g='g'+(i+1);const inner=rec.qualitative?'<div class="qd"></div>':'<div class="lbv" title="'+esc(b.raw||'')+'">'+esc(b.raw||'—')+'</div>';return '<div class="lb '+g+(on?' on':'')+(i===meetsIdx?' meets':'')+'"><div class="lbn">'+esc(b.label?shortBand(b.label):(i+1)+'')+'</div>'+inner+'</div>';}).join('');
+  const typ=rec.metricType||(rec.qualitative?'Qualitative':'Number');
+  const dir=rec.qualitative?'manual assessment':(rec.direction<0?'lower is better':'higher is better');
+  let mark='';
+  if(!rec.qualitative&&rec.rating!=null&&rec.bands.length>1){const pos=clamp((rec.rating-1)/(rec.bands.length-1)*100,0,100);mark='<div class="ladder-mark"><div class="tk" style="left:'+pos+'%"></div></div>';}
+  let act='';
+  if(rec.hasActual&&rec.actual!=null&&!rec.qualitative)act='<div class="ladder-act">Actual <b>'+esc(fmtVal(rec,rec.actual))+'</b> lands in <b>'+esc(rec.achievedBand||'—')+'</b> → rating <b>'+ratingStr(rec.rating)+'</b>'+(rec.attainment!=null?' · '+pct(rec.attainment)+' of target':'')+'</div>';
+  else if(rec.qualitative&&rec.rating!=null)act='<div class="ladder-act">Manual rating <b>'+ratingStr(rec.rating)+'</b> → <b>'+esc(rec.achievedBand||'—')+'</b></div>';
+  return '<div class="ladder">'+cells+'</div>'+mark+'<div class="ladder-cap"><span>'+esc(typ)+' · '+esc(dir)+'</span><span>Band '+(meetsIdx+1)+' = Meets</span></div>'+act;
 }
-function shortBand(l){l=String(l);const m=l.match(/\((\d)\)/);if(m)return m[1];const t=l.replace(/target\s*/i,'T').match(/T\s*\d/i);if(t)return t[0].replace(/\s/g,'');if(/needs/i.test(l))return '1';if(/below/i.test(l))return '2';if(/meets/i.test(l))return '3';if(/above/i.test(l))return '4';if(/exceeds/i.test(l))return '5';return l.slice(0,6);}
+function shortBand(l){l=String(l);const m=l.match(/\((\d)\)/);if(m)return m[1];const t=l.replace(/target\s*/i,'T').match(/T\s*\d/i);if(t)return t[0].replace(/\s/g,'');if(/needs/i.test(l))return '1';if(/below/i.test(l))return '2';if(/meets/i.test(l))return '3';if(/above/i.test(l))return '4';if(/exceeds/i.test(l))return '5';return l.slice(0,7);}
 
-/* ---------------- OVERVIEW ---------------- */
+/* next-milestone for a rated KPI */
+function nextMilestone(r){
+  if(r.rating==null||!r.bands||!r.bands.length)return null;
+  const curIdx=clamp(Math.round(r.rating),1,r.bands.length)-1;
+  const up=curIdx+1;
+  if(up>=r.bands.length)return {done:true,r:r};
+  const band=r.bands[up];
+  let gap=null;
+  if(!r.qualitative&&band.num!=null&&r.actual!=null)gap=Math.round(Math.abs(band.num-r.actual)*100)/100;
+  return {done:false,r:r,band:band,toRating:up+1,gap:gap,target:band.num};
+}
+function milestoneCard(r){
+  const m=nextMilestone(r);if(!m)return '';
+  const impact=r.weightShown!=null&&r.weightShown>=25?'High impact':(r.weightShown!=null&&r.weightShown>=15?'Medium impact':'Low impact');
+  if(m.done)return '<div class="ms done" data-rec="'+r.kpiId+'" style="cursor:pointer"><div class="ms-h"><div class="ms-t">'+esc(r.kpi||r.kra)+'<small>Top band reached — hold the line</small></div><div class="r">'+rchip(r.rating,r.status)+'</div></div></div>';
+  const p=clamp((r.rating-1)/4*100,0,100);
+  const gapTxt=m.gap!=null?('<b>'+fmtVal(r,m.gap)+'</b> to go'):('reach '+esc(shortBand(m.band.label||'')));
+  return '<div class="ms" data-rec="'+r.kpiId+'" style="cursor:pointer"><div class="ms-h"><div class="ms-t">'+esc(r.kpi||r.kra)+'<small>Next: '+esc(m.band.label||('Band '+m.toRating))+(m.band.raw?' ('+esc(m.band.raw)+')':'')+'</small></div><div class="r">'+rchip(r.rating,r.status)+'</div></div>'
+    +'<div class="ms-track"><span style="width:'+p+'%"></span></div>'
+    +'<div class="ms-foot"><span>'+gapTxt+'</span><span>·</span><span><b>'+(r.weightShown==null?'—':n1(r.weightShown)+'%')+'</b> weight</span><span>·</span><span>'+impact+'</span></div></div>';
+}
+
+/* priority = gap-below-target × weight (business relevance) */
+function priorityRecords(base){
+  const onT=TH().onTrack;
+  return (base||B().records).filter(r=>r.rating!=null).map(r=>{const gap=Math.max(0,onT-r.rating);const w=r.weightShown!=null?r.weightShown:10;return {r,gap,w,score:gap*(w/100)};}).filter(x=>x.gap>0.01).sort((a,b)=>b.score-a.score);
+}
+function priorityList(base,limit){
+  const items=priorityRecords(base).slice(0,limit||6);
+  if(!items.length)return '<div class="empty">Nothing below target — everyone is on track 🎉</div>';
+  return items.map((x,i)=>{const r=x.r;const impact=x.w>=25?'High impact':(x.w>=15?'Medium':'Low');return '<div class="lrow" data-rec="'+r.kpiId+'"><span class="rank'+(i===0?' top':'')+'">'+(i+1)+'</span><div class="lrow-id"><span class="sdot s-'+r.status.k+'"></span><div class="lrow-name">'+esc(r.kpi||r.kra)+'<span class="lrow-sub">'+esc(r.employee)+' · '+esc(r.department)+(r.subTeam?' · '+esc(r.subTeam):'')+'</span></div></div><span class="tag">'+(r.weightShown==null?'—':n1(r.weightShown)+'% · '+impact)+'</span>'+rchip(r.rating,r.status)+'<span class="chev">›</span></div>';}).join('');
+}
+function moversList(movers,limit){
+  const arr=(movers||[]).filter(m=>Math.abs(m.delta)>=0.01);
+  if(!arr.length)return '<div class="empty">No period-over-period change to compare yet.</div>';
+  const top=arr.slice(0,Math.ceil((limit||6)/2)),bottom=arr.slice(-Math.floor((limit||6)/2)).reverse().filter(b=>top.indexOf(b)<0);
+  return top.concat(bottom).map(m=>'<div class="lrow" data-person="'+m.id+'"><div class="lrow-id"><div class="lavatar">'+initials(m.name)+'</div><div class="lrow-name">'+esc(m.name)+'<span class="lrow-sub">'+esc(m.department)+'</span></div></div>'+deltaChip(m.delta)+rchip(m.rating,m.status)+'<span class="chev">›</span></div>').join('');
+}
+
+/* ---------------- OVERVIEW (management) ---------------- */
 function vOverview(){
   const o=B().rollups.org;const hasData=o.kpisWithData>0;
-  const depts=B().departments.filter(d=>d.employeeCount>0);
+  const depts=perfDepts();
   let banner='';
-  if(!hasData)banner='<div class="banner"><div class="bi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div><div><div class="bt">Framework loaded — awaiting actuals for '+esc(APP.period)+'</div><div class="bs">The KRA/KPI structure, weightage and rubric are live from the master sheet. Add actuals in the separate '+esc(B().source.actuals.tab)+' source to light up scores.</div></div><div class="r"><button class="btn primary sm" data-act="scaffold">Scaffold actuals sheet</button></div></div>';
+  if(!hasData)banner='<div class="banner"><div class="bi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div><div><div class="bt">Framework loaded — awaiting actuals for '+esc(periodLong(APP.period))+'</div><div class="bs">The KRA/KPI structure, weightage and 5-band rubric are live from the master sheet. Add actuals in the separate '+esc(B().source.actuals.tab)+' source to light up scores.</div></div><div class="r"><button class="btn primary sm" data-act="scaffold">Scaffold actuals sheet</button></div></div>';
   const cards=`<div class="kc-grid c4">
-    ${kpiCard('Org performance',hasData?ratingStr(o.rating)+'<small>/5</small>':'—',hasData?statusPill(statusFromRating(o.rating)):'no actuals yet',{tone:hasData?statusFromRating(o.rating).k:'none',bar:hasData?(o.rating/5*100):null})}
-    ${kpiCard('People',String(o.people),o.departments+' departments · '+B().subTeams.length+' sub-teams',{nav:'people'})}
-    ${kpiCard('KPIs tracked',String(o.kpis),hasData?(o.kpisWithData+' with actuals · '+pct(o.coverage)+' coverage'):'defined in the framework',{tone:hasData?(o.coverage>=67?'good':o.coverage>=34?'warn':'bad'):'none',bar:hasData?o.coverage:null,nav:'records'})}
-    ${hasData?kpiCard('Off track',String(o.offTrack),'people below '+B().settings.thresholds.atRisk+'.0 / 5',{tone:o.offTrack?'bad':'good',nav:'people'}):kpiCard('Weight checks',String(depts.filter(d=>d.weightNote&&!d.weightNote.ok).length),'departments whose weights ≠ 100%',{tone:depts.filter(d=>d.weightNote&&!d.weightNote.ok).length?'warn':'good'})}
+    ${kpiCard('Overall performance',hasData?ratingStr(o.rating)+'<small>/5</small>':'—',hasData?statusPill(o.status)+levelChip(o.level):'no actuals yet',{tone:hasData?o.status.k:'none',bar:hasData?(o.rating-1)/4*100:null,delta:hasData?o.delta:null})}
+    ${kpiCard('On track',hasData?String(o.recOnTrack):'—','KPI lines rated ≥ '+TH().onTrack.toFixed(1),{tone:'good'})}
+    ${kpiCard('At risk',hasData?String(o.recAtRisk):'—','below target, above '+TH().atRisk.toFixed(1),{tone:'warn'})}
+    ${kpiCard('Off track',hasData?String(o.recOffTrack):'—','KPI lines rated < '+TH().atRisk.toFixed(1),{tone:o.recOffTrack?'bad':'good'})}
   </div>`;
-  return `<div class="page-head"><h1>KRA / KPI Tracker</h1>
-    <p>A single, live view over Recykal's complete KRA/KPI framework — read from <b>${esc(B().source.title)}</b>. Definitions, weightage and the 5-band rubric come from the master sheet; targets &amp; actuals from the ${esc(B().source.actuals.type)} source. Nothing is hard-coded.</p></div>
+  const trend=`<div class="panel pad"><div class="panel-h"><h3>Performance trend</h3><span class="sub">org rating over the last ${B().rollups.org.periods.length} periods</span>${o.delta!=null?'<div class="r">'+deltaChip(o.delta)+' vs '+esc(periodShort(o.previousPeriod))+'</div>':''}</div><div class="q">Are we getting better?</div>${trendChart(o.trend,{h:150})}</div>`;
+  const persp=`<div class="panel pad"><div class="panel-h"><h3>Perspective performance</h3><span class="sub">weighted rating by perspective</span><div class="r"><span class="link" data-nav="perspectives">All perspectives ›</span></div></div><div class="q">Which part of the role drives the score?</div><div class="stack" style="margin-top:6px">${B().perspectives.slice(0,6).map(perspBar).join('')||'<div class="empty">No perspectives tagged.</div>'}</div></div>`;
+  return `<div class="page-head"><h1>KRA / KPI Performance</h1>
+    <p>A single, live view over Recykal's complete KRA/KPI framework — read from <b>${esc(B().source.title)}</b>. Definitions, weightage and the 5-band rubric come from the master sheet; targets &amp; actuals from the separate ${esc(B().source.actuals.type)} source. Nothing is hard-coded.</p></div>
   ${banner}${cards}
-  <div class="sect-t">How each department is performing<span class="r">${hasData?'rating out of 5':'framework size'}</span></div>
-  <div class="panel pad"><div class="stack" style="margin-top:2px">${depts.map(d=>deptBar(d,hasData)).join('')||'<div class="empty">No departments detected.</div>'}</div></div>
+  <div class="sect-t">How each team is performing<span class="r">${hasData?'rating / 5 · Δ vs '+esc(periodShort(o.previousPeriod)):'framework size'}</span></div>
+  <div class="panel pad"><div class="stack" style="margin-top:2px">${depts.map(d=>deptBar(d,hasData)).join('')||'<div class="empty">No teams detected.</div>'}</div></div>
+  <div class="two-eq" style="margin-top:16px">${trend}${persp}</div>
   <div class="two-col" style="margin-top:16px">
-    <div class="panel pad"><div class="panel-h"><h3>What needs attention</h3><span class="sub">${hasData?'lowest-rated KPIs with data':'data quality & coverage'}</span></div><div class="list stack">${attentionList(hasData)}</div></div>
-    <div class="panel pad"><div class="panel-h"><h3>Framework coverage</h3><span class="sub">actuals entered vs defined</span></div>${coveragePanel()}</div>
+    <div class="panel pad"><div class="panel-h"><h3>Priority actions</h3><span class="sub">gap below target × weightage</span></div><div class="q">What should we act on first?</div><div class="list stack" style="margin-top:4px">${hasData?priorityList(null,6):attentionFramework()}</div></div>
+    <div class="panel pad"><div class="panel-h"><h3>${hasData?'Biggest movers':'Framework coverage'}</h3><span class="sub">${hasData?'vs '+esc(periodShort(o.previousPeriod)):'actuals vs defined'}</span></div><div class="list stack" style="margin-top:4px">${hasData?moversList(o.movers,6):coveragePanel()}</div></div>
   </div>`;
 }
+function perspBar(p){const r=p.rating,pp=r==null?0:clamp((r-1)/4*100,0,100);return `<div class="bc-row" data-persp="${esc(p.perspective)}"><div class="bc-label">${esc(p.perspective)}<small> · ${p.kpis} KPIs</small></div><div class="bc-track"><div class="bc-fill" style="width:${pp}%;background:${sc(p.status.k)}"></div></div><div class="bc-val" style="color:${sc(p.status.k)}">${r==null?'—':ratingStr(r)+'<small>/5</small>'}</div><span class="bc-chev">›</span></div>`;}
 function deptBar(d,hasData){
-  const r=d.rating,p=r==null?0:clamp(r/5*100,0,100);const st=d.status;
+  const r=d.rating,p=r==null?0:clamp((r-1)/4*100,0,100);const st=d.status;
   const right=hasData&&r!=null?('<div class="bc-val" style="color:'+sc(st.k)+'">'+ratingStr(r)+'<small>/5</small></div>'):('<div class="bc-val" style="color:var(--faint)">'+d.kpiCount+'<small>KPIs</small></div>');
-  return `<div class="bc-row" data-dept="${d.id}"><div class="bc-label">${esc(d.name)}<small> · ${d.employeeCount} ${d.employeeCount===1?'person':'people'}</small></div><div class="bc-track"><div class="bc-fill" style="width:${hasData?p:0}%;background:${sc(st.k)}"></div></div>${right}<span class="bc-chev">›</span></div>`;
+  return `<div class="bc-row" data-dept="${d.id}"><div class="bc-label">${esc(d.name)}<small> · ${d.employeeCount} ${d.employeeCount===1?'person':'people'}</small></div><div class="bc-track"><div class="bc-fill" style="width:${hasData?p:0}%;background:${sc(st.k)}"></div></div>${hasData&&d.delta!=null?deltaChip(d.delta):''}${right}<span class="bc-chev">›</span></div>`;
 }
-function attentionList(hasData){
-  if(hasData){
-    const rs=withData(B().records).sort((a,b)=>a.rating-b.rating).slice(0,7);
-    if(!rs.length)return '<div class="empty">No rated KPIs yet.</div>';
-    return rs.map(r=>`<div class="lrow" data-rec="${r.kpiId}"><div class="lrow-id"><span class="sdot s-${r.status.k}"></span><div class="lrow-name">${esc(r.kpi||r.kra)}<span class="lrow-sub">${esc(r.employee)} · ${esc(r.department)}${r.subTeam?' · '+esc(r.subTeam):''}</span></div></div>${rchip(r.rating,r.status)}<span class="chev">›</span></div>`).join('');
-  }
+function attentionFramework(){
   const items=[];
-  B().departments.filter(d=>d.weightNote&&!d.weightNote.ok).forEach(d=>items.push({t:d.name+' — weights sum to '+d.weightNote.sum+'%',s:'expected 100% (or 1.0)',k:'warn',dept:d.id}));
-  const q=B().records.filter(r=>r.qualitative).length;if(q)items.push({t:q+' qualitative KPIs',s:'need a manual 1–5 rating (no numeric bands)',k:'none'});
-  const blanks=B().records.filter(r=>!r.kpi&&!r.kra).length;
-  items.push({t:B().rollups.org.kpis+' KPIs defined',s:'0 have '+APP.period+' actuals — scaffold to begin',k:'none'});
-  if(!items.length)return '<div class="empty">Framework looks clean 🎉</div>';
-  return items.slice(0,7).map(it=>`<div class="lrow" ${it.dept?'data-dept="'+it.dept+'"':''}><div class="lrow-id"><span class="sdot s-${it.k}"></span><div class="lrow-name">${esc(it.t)}<span class="lrow-sub">${esc(it.s)}</span></div></div><span class="chev">${it.dept?'›':''}</span></div>`).join('');
+  (B().health.weightIssues||[]).slice(0,4).forEach(w=>items.push({t:w.employee+' — weights total '+w.sum+'%',s:(w.dept)+(w.subTeam?' · '+w.subTeam:'')+' · expected 100%',k:'warn'}));
+  if(B().health.qualitative)items.push({t:B().health.qualitative+' qualitative KPIs',s:'need a manual 1–5 rating (no numeric bands)',k:'none'});
+  items.push({t:B().rollups.org.kpis+' KPIs defined',s:'0 have '+periodShort(APP.period)+' actuals — scaffold to begin',k:'none'});
+  return items.slice(0,7).map(it=>`<div class="lrow static"><div class="lrow-id"><span class="sdot s-${it.k}"></span><div class="lrow-name">${esc(it.t)}<span class="lrow-sub">${esc(it.s)}</span></div></div></div>`).join('');
 }
 function coveragePanel(){
-  const depts=B().departments.filter(d=>d.employeeCount>0);
-  return '<div class="stack">'+depts.map(d=>{const recs=B().records.filter(r=>r.deptId===d.id);const wd=withData(recs).length;const p=recs.length?wd/recs.length*100:0;const k=p>=67?'good':p>=34?'warn':(p>0?'bad':'none');return `<div class="bc-row" data-dept="${d.id}"><div class="bc-label">${esc(d.name)}</div><div class="bc-track"><div class="bc-fill" style="width:${clamp(p,0,100)}%;background:${sc(k)}"></div></div><div class="bc-val" style="color:${sc(k)}">${wd}<small>/${recs.length}</small></div></div>`;}).join('')+'</div>';
+  const depts=perfDepts();
+  return depts.map(d=>{const recs=B().records.filter(r=>r.deptId===d.id);const wd=withData(recs).length;const p=recs.length?wd/recs.length*100:0;const k=p>=67?'good':p>=34?'warn':(p>0?'bad':'none');return `<div class="bc-row" data-dept="${d.id}"><div class="bc-label">${esc(d.name)}</div><div class="bc-track"><div class="bc-fill" style="width:${clamp(p,0,100)}%;background:${sc(k)}"></div></div><div class="bc-val" style="color:${sc(k)}">${wd}<small>/${recs.length}</small></div></div>`;}).join('');
 }
 
-/* ---------------- DEPARTMENTS ---------------- */
-function vDepts(){
+/* ---------------- TEAMS ---------------- */
+function vTeams(){
   const depts=B().departments;const hasData=B().rollups.org.kpisWithData>0;
-  return `<div class="page-head"><h1>Departments</h1><p>Every team in the framework, exactly as structured in the master sheet. ${esc(B().departments.length)} tabs mapped. Tap a card to drill into sub-teams and people.</p></div>
+  return `<div class="page-head"><h1>Teams</h1><p>Every team in the framework, exactly as structured in the master sheet. ${realDepts().length} teams mapped. Tap a card to drill into sub-teams and people.</p></div>
   <div class="dgrid">${depts.map((d,i)=>deptCard(d,hasData,i)).join('')}</div>`;
 }
 function deptCard(d,hasData,i){
   const isInfo=d.kind==='info';
-  const scoreHtml=isInfo?'<span class="tag">Reference</span>':(hasData&&d.rating!=null?rchip(d.rating,d.status):'<span class="pill none">Framework</span>');
+  const scoreHtml=isInfo?'<span class="tag">Reference</span>':(hasData&&d.rating!=null?rchip(d.rating,d.status)+(d.delta!=null?deltaChip(d.delta):''):'<span class="pill none">Framework</span>');
   return `<div class="dcard" data-dept="${d.id}" style="animation-delay:${Math.min(i*.03,.3)}s">
     <div class="dc-h"><div class="dc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${deptIcon(d.kind)}</svg></div>
       <div style="min-width:0"><h3>${esc(d.name)}</h3><div class="dc-kind">${esc(d.kind==='scorecard'?'Market scorecard':d.kind==='individuals'?'Individual KRAs':d.kind==='info'?'Reference tab':d.kind)}</div></div>
       <div class="dc-score">${scoreHtml}</div></div>
     ${isInfo?'<div class="dc-metrics"><div class="dm">Rows<b>'+((d.rawTable&&d.rawTable.rows.length)||0)+'</b></div><div class="dm">Columns<b>'+((d.rawTable&&d.rawTable.headers.length)||0)+'</b></div></div>'
-      :`<div class="dc-metrics"><div class="dm">People<b>${d.employeeCount}</b></div><div class="dm">KPIs<b>${d.kpiCount}</b></div>${d.subTeamIds&&d.subTeamIds.length?'<div class="dm">Sub-teams<b>'+d.subTeamIds.length+'</b></div>':''}${d.weightNote&&!d.weightNote.ok?'<div class="dm" style="color:var(--warn-ink)">Weights<b style="color:var(--warn-ink)">'+d.weightNote.sum+'%</b></div>':''}</div>`}
+      :`<div class="dc-metrics"><div class="dm">People<b>${d.employeeCount}</b></div><div class="dm">KPIs<b>${d.kpiCount}</b></div>${d.subTeamIds&&d.subTeamIds.length?'<div class="dm">Sub-teams<b>'+d.subTeamIds.length+'</b></div>':''}${hasData&&d.level&&d.level.level?'<div class="dm">Level<b>'+d.level.level+'</b></div>':''}</div>`}
   </div>`;
 }
 
-/* ---------------- DEPARTMENT DETAIL ---------------- */
+/* ---------------- TEAM DETAIL ---------------- */
 function vDept(){
-  const d=deptById(APP.ctx.deptId);if(!d)return '<div class="empty" style="padding:60px">Department not found</div>';
+  const d=deptById(APP.ctx.deptId);if(!d)return '<div class="empty" style="padding:60px">Team not found</div>';
   if(d.kind==='info'&&d.rawTable)return vInfoDept(d);
   const emps=deptEmployees(d.id);const subs=deptSubTeams(d.id);const recs=B().records.filter(r=>r.deptId===d.id);
   const hasData=withData(recs).length>0;
-  const head=`<div class="page-head"><h1>${esc(d.name)}</h1><p>${d.kind==='scorecard'?'Market scorecard — shared KRA/KPI template applied to each POC':'Individual KRA/KPI blocks per person'} · ${emps.length} people · ${d.kpiCount} KPIs${d.weightNote?' · weights sum to '+d.weightNote.sum+'%'+(d.weightNote.ok?'':' ⚠︎'):''}.</p></div>`;
+  const head=`<div class="page-head"><h1>${esc(d.name)} performance</h1><p>${d.kind==='scorecard'?'Market scorecard — a shared KRA/KPI template applied to each POC':'Individual KRA/KPI blocks per person'} · ${emps.length} people · ${d.kpiCount} KPIs.</p></div>`;
   const cards=`<div class="kc-grid c4">
-    ${kpiCard('Department rating',hasData?ratingStr(d.rating)+'<small>/5</small>':'—',hasData?statusPill(d.status):'awaiting actuals',{tone:hasData?d.status.k:'none',bar:hasData?d.rating/5*100:null})}
+    ${kpiCard('Team rating',hasData?ratingStr(d.rating)+'<small>/5</small>':'—',hasData?statusPill(d.status)+levelChip(d.level):'awaiting actuals',{tone:hasData?d.status.k:'none',bar:hasData?(d.rating-1)/4*100:null,delta:hasData?d.delta:null})}
     ${kpiCard('People',String(emps.length),d.kind==='scorecard'?'POCs on this scorecard':'individual scorecards',{})}
-    ${kpiCard('KPIs',String(d.kpiCount),subs.length?subs.length+' sub-teams':'single track',{})}
+    ${kpiCard('KPI lines',String(d.kpiCount),hasData?(d.recOnTrack+' on · '+d.recAtRisk+' risk · '+d.recOffTrack+' off'):(subs.length?subs.length+' sub-teams':'single track'),{})}
     ${kpiCard('Coverage',pct(recs.length?withData(recs).length/recs.length*100:0),withData(recs).length+' of '+recs.length+' with actuals',{tone:'none'})}
   </div>`;
   let body='';
+  if(hasData)body+=`<div class="two-eq"><div class="panel pad"><div class="panel-h"><h3>Team trend</h3><span class="sub">rating over time</span>${d.delta!=null?'<div class="r">'+deltaChip(d.delta)+'</div>':''}</div>${trendChart(d.trend,{h:140})}</div>
+    <div class="panel pad"><div class="panel-h"><h3>Perspective breakdown</h3><span class="sub">what drives this team</span></div><div class="stack" style="margin-top:4px">${teamPerspectives(recs)}</div></div></div>`;
   if(subs.length){
-    body+='<div class="sect-t">Sub-teams</div><div class="panel pad"><div class="stack" style="margin-top:2px">'+subs.map(s=>{const p=s.rating==null?0:s.rating/5*100;return `<div class="bc-row" data-subteam="${s.id}"><div class="bc-label">${esc(s.name)}<small> · ${s.people} people</small></div><div class="bc-track"><div class="bc-fill" style="width:${clamp(p,0,100)}%;background:${sc(s.status.k)}"></div></div><div class="bc-val" style="color:${sc(s.status.k)}">${s.rating==null?'—':ratingStr(s.rating)+'<small>/5</small>'}</div><span class="bc-chev">›</span></div>`;}).join('')+'</div></div>';
+    body+='<div class="sect-t">Sub-teams</div><div class="panel pad"><div class="stack" style="margin-top:2px">'+subs.map(s=>{const p=s.rating==null?0:clamp((s.rating-1)/4*100,0,100);return `<div class="bc-row" data-subteam="${s.id}"><div class="bc-label">${esc(s.name)}<small> · ${s.people} people</small></div><div class="bc-track"><div class="bc-fill" style="width:${p}%;background:${sc(s.status.k)}"></div></div><div class="bc-val" style="color:${sc(s.status.k)}">${s.rating==null?'—':ratingStr(s.rating)+'<small>/5</small>'}</div><span class="bc-chev">›</span></div>`;}).join('')+'</div></div>';
   }
-  body+='<div class="sect-t">People</div><div class="panel pad"><div class="list stack" style="margin-top:2px">'+(emps.length?emps.slice().sort((a,b)=>(b.rating==null?-1:b.rating)-(a.rating==null?-1:a.rating)).map((e,i)=>personRow(e,i+1)).join(''):'<div class="empty">No people mapped for this department.</div>')+'</div></div>';
+  body+='<div class="sect-t">People<span class="r">ranked by rating · Δ vs prior period</span></div><div class="panel pad"><div class="list stack" style="margin-top:2px">'+(emps.length?emps.slice().sort((a,b)=>(b.rating==null?-1:b.rating)-(a.rating==null?-1:a.rating)).map((e,i)=>personRow(e,i+1)).join(''):'<div class="empty">No people mapped for this team.</div>')+'</div></div>';
+  if(hasData){const pr=priorityRecords(recs);if(pr.length)body+='<div class="sect-t">Where this team should focus</div><div class="panel pad"><div class="list stack" style="margin-top:2px">'+priorityList(recs,5)+'</div></div>';}
   return head+cards+body;
+}
+function teamPerspectives(recs){
+  const map={};recs.forEach(r=>{const p=r.perspective||r.kra||'General';const m=map[p]||(map[p]={sw:0,sr:0,n:0});m.n++;if(r.rating!=null&&r.weightNorm!=null){m.sw+=r.weightNorm;m.sr+=r.weightNorm*r.rating;}});
+  const arr=Object.keys(map).map(k=>{const m=map[k];const r=m.sw>0?m.sr/m.sw:null;return {k,r,n:m.n,st:statusFromRating(r)};}).sort((a,b)=>(b.r==null?-1:b.r)-(a.r==null?-1:a.r));
+  return arr.map(a=>{const p=a.r==null?0:clamp((a.r-1)/4*100,0,100);return `<div class="bc-row static"><div class="bc-label">${esc(a.k)}<small> · ${a.n}</small></div><div class="bc-track"><div class="bc-fill" style="width:${p}%;background:${sc(a.st.k)}"></div></div><div class="bc-val" style="color:${sc(a.st.k)}">${a.r==null?'—':ratingStr(a.r)}</div></div>`;}).join('')||'<div class="empty">No data.</div>';
 }
 function vInfoDept(d){
   const t=d.rawTable;
@@ -487,89 +685,219 @@ function vInfoDept(d){
   <div class="panel pad"><div class="tbl-wrap"><table class="info-tbl"><thead><tr>${t.headers.map(h=>'<th>'+esc(h||'')+'</th>').join('')}</tr></thead><tbody>${t.rows.map(row=>'<tr>'+row.map(c=>'<td>'+esc(c||'')+'</td>').join('')+'</tr>').join('')||'<tr><td colspan="'+t.headers.length+'" class="empty">Empty</td></tr>'}</tbody></table></div></div>`;
 }
 
+/* ---------------- PERSPECTIVES ---------------- */
+function vPerspectives(){
+  const ps=B().perspectives;
+  return `<div class="page-head"><h1>Perspectives</h1><p>The framework preserves both <b>Perspective</b> and <b>KRA</b>. This is the org rolled up by perspective — the part of everyone's role that drives the score. Tap one to see its KRAs and the people who own it.</p></div>
+  <div class="kc-grid c3">
+    ${kpiCard('Perspectives',String(ps.length),'distinct role dimensions',{})}
+    ${kpiCard('Strongest',ps.length&&ps[0].rating!=null?esc(ps[0].perspective):'—',ps.length&&ps[0].rating!=null?ratingStr(ps[0].rating)+' / 5':'no data',{tone:'good'})}
+    ${kpiCard('Needs focus',ps.length&&ps[ps.length-1].rating!=null?esc(ps[ps.length-1].perspective):'—',ps.length&&ps[ps.length-1].rating!=null?ratingStr(ps[ps.length-1].rating)+' / 5':'no data',{tone:'warn'})}
+  </div>
+  <div class="panel pad"><div class="panel-h"><h3>All perspectives</h3><span class="sub">weighted rating · KPIs · people</span></div>
+  <div class="stack" style="margin-top:4px">${ps.map(p=>perspBar(p)).join('')||'<div class="empty">No perspectives tagged in the sheet.</div>'}</div></div>`;
+}
+function vPerspective(){
+  const name=APP.ctx.name;const p=B().perspectives.find(x=>x.perspective===name);
+  const recs=B().records.filter(r=>(r.perspective||r.kra||'General')===name);
+  if(!p)return '<div class="empty" style="padding:60px">Perspective not found</div>';
+  const cards=`<div class="kc-grid c4">
+    ${kpiCard('Perspective rating',p.rating==null?'—':ratingStr(p.rating)+'<small>/5</small>',statusPill(p.status),{tone:p.status.k,bar:p.rating==null?null:(p.rating-1)/4*100})}
+    ${kpiCard('KPIs',String(p.kpis),p.withData+' with actuals',{})}
+    ${kpiCard('People',String(p.people),'owning these KPIs',{})}
+    ${kpiCard('KRAs',String(p.kras.length),'under this perspective',{})}
+  </div>`;
+  // group by KRA
+  const byKra={};recs.forEach(r=>{const k=r.kra||'General';(byKra[k]=byKra[k]||[]).push(r);});
+  let body='<div class="sect-t">KRAs under this perspective</div><div class="panel pad"><div class="stack" style="margin-top:2px">';
+  body+=Object.keys(byKra).map(k=>{const g=byKra[k];const wd=withData(g);const r=wd.length?wd.reduce((s,x)=>s+x.rating,0)/wd.length:null;const st=statusFromRating(r);const pp=r==null?0:clamp((r-1)/4*100,0,100);return `<div class="bc-row static"><div class="bc-label">${esc(k)}<small> · ${g.length} KPIs</small></div><div class="bc-track"><div class="bc-fill" style="width:${pp}%;background:${sc(st.k)}"></div></div><div class="bc-val" style="color:${sc(st.k)}">${r==null?'—':ratingStr(r)}</div></div>`;}).join('');
+  body+='</div></div>';
+  body+='<div class="sect-t">KPI lines</div><div class="panel pad"><div class="list stack" style="margin-top:2px">'+recs.slice().sort((a,b)=>(a.rating==null?99:a.rating)-(b.rating==null?99:b.rating)).slice(0,20).map(r=>recRow(r)).join('')+'</div></div>';
+  return `<div class="page-head"><h1>${esc(name)}</h1><p>Everything under the ${esc(name)} perspective, across all teams.</p></div>${cards}${body}`;
+}
+function recRow(r){return `<div class="lrow" data-rec="${r.kpiId}"><div class="lrow-id"><span class="sdot s-${r.status.k}"></span><div class="lrow-name">${esc(r.kpi||r.kra)}<span class="lrow-sub">${esc(r.employee)} · ${esc(r.department)}${r.subTeam?' · '+esc(r.subTeam):''}</span></div></div>${r.metricType?'<span class="tag mt">'+esc(r.metricType)+'</span>':''}${rchip(r.rating,r.status)}<span class="chev">›</span></div>`;}
+
+/* ---------------- KPI ANALYSIS ---------------- */
+function kpiNameGroups(){
+  const map={};B().records.forEach(r=>{const k=(r.kpi||r.kra||'—').trim();(map[k]=map[k]||[]).push(r);});
+  return Object.keys(map).map(k=>({name:k,recs:map[k]})).filter(g=>g.recs.length>1||true).sort((a,b)=>b.recs.length-a.recs.length);
+}
+function vKpiAnalysis(){
+  const groups=kpiNameGroups();
+  const sel=APP.ctx.kpiName||(groups[0]&&groups[0].name);
+  const g=groups.find(x=>x.name===sel)||groups[0];
+  const opts=groups.map(x=>'<option value="'+esc(x.name)+'"'+(x.name===sel?' selected':'')+'>'+esc(x.name)+' ('+x.recs.length+')</option>').join('');
+  if(!g)return `<div class="page-head"><h1>KPI Analysis</h1><p>No KPIs found.</p></div>`;
+  const recs=g.recs;const wd=withData(recs);const avg=wd.length?wd.reduce((s,r)=>s+r.rating,0)/wd.length:null;
+  // by team
+  const byTeam={};recs.forEach(r=>{(byTeam[r.department]=byTeam[r.department]||[]).push(r);});
+  const teamRows=Object.keys(byTeam).map(t=>{const rs=withData(byTeam[t]);const r=rs.length?rs.reduce((s,x)=>s+x.rating,0)/rs.length:null;const st=statusFromRating(r);const p=r==null?0:clamp((r-1)/4*100,0,100);return `<div class="bc-row static"><div class="bc-label">${esc(t)}<small> · ${byTeam[t].length}</small></div><div class="bc-track"><div class="bc-fill" style="width:${p}%;background:${sc(st.k)}"></div></div><div class="bc-val" style="color:${sc(st.k)}">${r==null?'—':ratingStr(r)}</div></div>`;}).join('');
+  const owners=recs.slice().sort((a,b)=>(b.rating==null?-1:b.rating)-(a.rating==null?-1:a.rating));
+  const mt=recs[0].metricType,unit=recs[0].unit;
+  return `<div class="page-head"><h1>KPI Analysis</h1><p>Compare a single KPI across every team and person who owns it — where the same metric is strong and where it lags.</p></div>
+  <div class="panel pad"><div class="panel-h"><h3>Choose a KPI</h3><div class="r"><div class="selectwrap"><select class="pill-select" data-act="kpisel">${opts}</select></div></div></div></div>
+  <div class="kc-grid c4" style="margin-top:16px">
+    ${kpiCard('Average rating',avg==null?'—':ratingStr(avg)+'<small>/5</small>',statusPill(statusFromRating(avg)),{tone:statusFromRating(avg).k,bar:avg==null?null:(avg-1)/4*100})}
+    ${kpiCard('Owners',String(recs.length),Object.keys(byTeam).length+' teams',{})}
+    ${kpiCard('Metric type',esc(mt||'—'),unit?esc(unit):'from rule layer',{})}
+    ${kpiCard('With actuals',String(wd.length),pct(recs.length?wd.length/recs.length*100:0)+' coverage',{tone:'none'})}
+  </div>
+  <div class="two-eq">
+    <div class="panel pad"><div class="panel-h"><h3>By team</h3><span class="sub">average rating</span></div><div class="stack" style="margin-top:4px">${teamRows||'<div class="empty">No data.</div>'}</div></div>
+    <div class="panel pad"><div class="panel-h"><h3>Owners</h3><span class="sub">ranked</span></div><div class="list stack" style="margin-top:2px">${owners.map(r=>`<div class="lrow" data-rec="${r.kpiId}"><div class="lrow-id"><div class="lavatar">${initials(r.employee)}</div><div class="lrow-name">${esc(r.employee)}<span class="lrow-sub">${esc(r.department)}${r.subTeam?' · '+esc(r.subTeam):''}</span></div></div><span class="lrow-meta">${r.actual==null?'—':esc(fmtVal(r,r.actual))}</span>${rchip(r.rating,r.status)}<span class="chev">›</span></div>`).join('')}</div></div>
+  </div>`;
+}
+
 /* ---------------- PEOPLE ---------------- */
 function vPeople(){
   let es=filteredEmployees().sort((a,b)=>{const ra=a.rating==null?-1:a.rating,rb=b.rating==null?-1:b.rating;if(rb!==ra)return rb-ra;return a.name.localeCompare(b.name);});
-  return `<div class="page-head"><h1>People</h1><p>Everyone in the framework across all departments. ${es.length} shown${APP.filters.dept||APP.filters.subTeam||APP.filters.status||APP.filters.search?' (filtered)':''}. Tap for the full KRA/KPI scorecard.</p></div>
-  <div class="panel pad"><div class="panel-h"><h3>${es.length} ${es.length===1?'person':'people'}</h3><span class="sub">ranked by rating · pending shown last</span></div>
+  const rated=es.filter(e=>e.rating!=null);
+  const dist=`<div class="panel pad"><div class="panel-h"><h3>Performance distribution</h3><span class="sub">people by level · does the average hide variability?</span></div>${distributionBlock(rated)}</div>`;
+  return `<div class="page-head"><h1>People</h1><p>Everyone in the framework across all teams. ${es.length} shown${APP.filters.dept||APP.filters.subTeam||APP.filters.status||APP.filters.search?' (filtered)':''}. Tap for the full KRA/KPI scorecard.</p></div>
+  ${rated.length?dist:''}
+  <div class="panel pad" style="margin-top:16px"><div class="panel-h"><h3>${es.length} ${es.length===1?'person':'people'}</h3><span class="sub">ranked by rating · Δ vs prior · pending last</span></div>
   <div class="list stack">${es.length?es.map((e,i)=>personRow(e,i+1)).join(''):'<div class="empty">No people match the filters.</div>'}</div></div>`;
+}
+function distributionBlock(emps){
+  const levels=[{n:1,l:'Needs focus',k:'bad'},{n:2,l:'Developing',k:'warn'},{n:3,l:'Solid',k:'good'},{n:4,l:'High',k:'good'},{n:5,l:'Elite',k:'good'}];
+  const counts=levels.map(L=>emps.filter(e=>e.level&&e.level.level===L.n).length);
+  const max=Math.max(1,...counts);
+  return '<div class="hist">'+levels.map((L,i)=>{const c=counts[i];const h=c===0?3:clamp(c/max*100,8,100);return `<div class="hcol"><div class="hbar" style="height:${h}%;background:${tint(L.k)}"><b>${c}</b></div><div class="hlab">Lv ${L.n}<small>${L.l}</small></div></div>`;}).join('')+'</div>';
 }
 function personRow(e,rank){
   const r=e.rating;const sub=[e.department,e.role,e.region].filter(Boolean).join(' · ');
   return `<div class="lrow" data-person="${e.id}"><span class="rank${rank===1?' top':''}">${rank}</span>
     <div class="lrow-id"><div class="lavatar">${initials(e.name)}</div><div class="lrow-name">${esc(e.name)}${e.isTemplate?'<span class="mini-tag">RUBRIC</span>':''}<span class="lrow-sub">${esc(sub||'—')}</span></div></div>
-    ${ratingBar(r)}<div class="lrow-meta">${e.kpiWithData}/${e.kpiTotal} KPIs</div>${rchip(r,e.status)}<span class="chev">›</span></div>`;
+    ${ratingBar(r)}${e.delta!=null?deltaChip(e.delta):''}<div class="lrow-meta">${e.kpiWithData}/${e.kpiTotal}</div>${rchip(r,e.status)}<span class="chev">›</span></div>`;
 }
 
-/* ---------------- PERSON DETAIL ---------------- */
+/* ---------------- PICK ME ---------------- */
+function vPickMe(){
+  const es=B().employees.filter(e=>!e.isTemplate).slice().sort((a,b)=>a.name.localeCompare(b.name));
+  return `<div class="page-head"><h1>My Performance</h1><p>Pick your profile to see your personal scorecard — your level, journey, KRAs, KPIs and next milestones. The same data and scoring engine, framed for you.</p></div>
+  <div class="panel pad"><div class="panel-h"><h3>Select your profile</h3><span class="sub">${es.length} people</span></div>
+  <div class="list stack">${es.map(e=>`<div class="lrow" data-pick="${e.id}"><div class="lrow-id"><div class="lavatar">${initials(e.name)}</div><div class="lrow-name">${esc(e.name)}<span class="lrow-sub">${esc([e.department,e.role].filter(Boolean).join(' · ')||'—')}</span></div></div>${rchip(e.rating,e.status)}<span class="chev">›</span></div>`).join('')}</div></div>`;
+}
+
+/* ---------------- PERSON / MY SCORECARD ---------------- */
 function vPerson(){
-  const e=empById(APP.ctx.empId);if(!e)return '<div class="empty" style="padding:60px">Person not found</div>';
+  const e=empById(APP.view==='me'?APP.meId:APP.ctx.empId);if(!e)return APP.mode==='me'?vPickMe():'<div class="empty" style="padding:60px">Person not found</div>';
   const recs=recordsForEmp(e.id);
-  const head=`<div class="page-head"><div class="person-hd"><div class="pa">${initials(e.name)}</div><div><h1>${esc(e.name)}</h1>
-    <div class="meta"><span class="tag brand">${esc(e.department)}</span>${e.role?'<span>'+esc(e.role)+'</span>':''}${e.region?'<span>· '+esc(e.region)+'</span>':''}<span>· ${recs.length} KPIs</span>${e.isTemplate?'<span class="tag">Shared rubric — roster not mapped</span>':''}</div></div></div></div>`;
+  const isMe=APP.mode==='me';
+  const tab=APP.tab||'scorecard';
+  const nextLvl=e.rating==null?null:(e.rating>=4.5?null:(e.rating>=3.75?4.5:(e.rating>=3?3.75:(e.rating>=2?3:2))));
+  const toNext=nextLvl==null?null:Math.round((nextLvl-e.rating)*100)/100;
+  const head=`<div class="page-head"><div class="person-hd"><div class="pa">${initials(e.name)}</div><div style="min-width:0"><h1>${esc(e.name)}${e.rating!=null?levelChip(e.level):''}</h1>
+    <div class="meta"><span class="tag brand">${esc(e.department)}</span>${e.role?'<span>'+esc(e.role)+'</span>':''}${e.region?'<span>· '+esc(e.region)+'</span>':''}<span>· ${recs.length} KPIs</span>${e.consistency>=2?'<span class="tag">'+e.consistency+'-period streak</span>':''}${e.isTemplate?'<span class="tag">Shared rubric — roster not mapped</span>':''}</div></div>
+    <div class="r">${isMe?'<button class="btn ghost sm" data-act="switch-me">Switch profile</button>':''}</div></div></div>`;
   const cards=`<div class="kc-grid c4">
-    ${kpiCard('Overall rating',e.rating==null?'—':ratingStr(e.rating)+'<small>/5</small>',e.rating==null?'awaiting actuals':statusPill(e.status),{tone:e.rating==null?'none':e.status.k,bar:e.rating==null?null:e.rating/5*100})}
-    ${kpiCard('On track',String(e.onTrack),'KPIs rated ≥ '+B().settings.thresholds.onTrack,{tone:e.onTrack?'good':'none'})}
-    ${kpiCard('Needs work',String(e.atRisk+e.offTrack),'at risk or off track',{tone:(e.atRisk+e.offTrack)?'warn':'good'})}
+    ${kpiCard('Overall rating',e.rating==null?'—':ratingStr(e.rating)+'<small>/5</small>',e.rating==null?'awaiting actuals':statusPill(e.status),{tone:e.rating==null?'none':e.status.k,bar:e.rating==null?null:(e.rating-1)/4*100,delta:e.delta})}
+    ${kpiCard('Performance level',e.rating==null?'—':'Lv '+e.level.level,e.rating==null?'unrated':(toNext!=null?esc(e.level.label)+' · '+toNext+' to next':esc(e.level.label)+' · top level'),{tone:e.rating==null?'none':(e.level.level>=4?'good':e.level.level>=3?'good':'warn')})}
+    ${kpiCard('On track',String(e.onTrack),(e.atRisk+e.offTrack)+' need work',{tone:e.onTrack>(e.atRisk+e.offTrack)?'good':'warn'})}
     ${kpiCard('Coverage',pct(e.coverage),e.kpiWithData+' of '+e.kpiTotal+' have actuals',{tone:'none'})}
   </div>`;
-  // group by sub-team then by KRA/perspective
-  const bySub={};recs.forEach(r=>{const k=r.subTeamId||'__';(bySub[k]=bySub[k]||[]).push(r);});
-  const subKeys=Object.keys(bySub);
+  const tabs=`<div class="tabs">${[['scorecard','Scorecard'],['journey','Journey'],['milestones','Milestones']].map(([v,l])=>'<button data-tab="'+v+'" class="'+(tab===v?'active':'')+'">'+l+'</button>').join('')}</div>`;
   let body='';
-  subKeys.forEach(sk=>{
+  if(tab==='scorecard')body=personScorecard(e,recs);
+  else if(tab==='journey')body=personJourney(e,recs);
+  else body=personMilestones(e,recs);
+  return head+cards+tabs+'<div style="margin-top:8px">'+body+'</div>';
+}
+function personScorecard(e,recs){
+  const bySub={};recs.forEach(r=>{const k=r.subTeamId||'__';(bySub[k]=bySub[k]||[]).push(r);});
+  let body='';
+  Object.keys(bySub).forEach(sk=>{
     const list=bySub[sk];const s=sk==='__'?null:subById(sk);
     if(s)body+=`<div class="sect-t">${esc(s.name)} scorecard<span class="r">${s.rating==null?'':ratingStr(s.rating)+' / 5'}</span></div>`;
-    // KRA groups
     const byKra={};list.forEach(r=>{const kk=r.kra||r.perspective||'General';(byKra[kk]=byKra[kk]||[]).push(r);});
     Object.keys(byKra).forEach(kk=>{
-      const grp=byKra[kk];
-      body+=`<div class="kra-group"><div class="kg-h"><span class="kg-t">${esc(kk)}</span>${grp[0].perspective&&grp[0].perspective!==kk?'<span class="kg-p">'+esc(grp[0].perspective)+'</span>':''}<span class="kg-line"></span></div>
+      const grp=byKra[kk];const wd=withData(grp);const gr=wd.length?wd.reduce((s,x)=>s+x.rating,0)/wd.length:null;
+      body+=`<div class="kra-group"><div class="kg-h"><span class="kg-t">${esc(kk)}</span>${grp[0].perspective&&grp[0].perspective!==kk?'<span class="kg-p">'+esc(grp[0].perspective)+'</span>':''}<span class="kg-line"></span>${gr==null?'':'<span class="kg-r" style="color:'+sc(statusFromRating(gr).k)+'">'+ratingStr(gr)+' / 5</span>'}</div>
         <div class="kpigrid">${grp.map(kScoreCard).join('')}</div></div>`;
     });
   });
-  return head+cards+body;
+  return body||'<div class="empty">No KPIs mapped.</div>';
+}
+function personJourney(e,recs){
+  const ach=achievements(e);
+  let strong=[],focus=[];
+  const byKra={};recs.forEach(r=>{const kk=r.kra||r.perspective||'General';const wd=byKra[kk]||(byKra[kk]={s:0,n:0});if(r.rating!=null){wd.s+=r.rating;wd.n++;}});
+  Object.keys(byKra).forEach(k=>{const m=byKra[k];if(!m.n)return;const r=m.s/m.n;(r>=TH().onTrack?strong:focus).push({k,r});});
+  strong.sort((a,b)=>b.r-a.r);focus.sort((a,b)=>a.r-b.r);
+  const journey=`<div class="panel pad"><div class="panel-h"><h3>Performance journey</h3><span class="sub">your rating over time</span>${e.delta!=null?'<div class="r">'+deltaChip(e.delta)+'</div>':''}</div><div class="q">Am I getting better?</div>${e.rating==null?'<div class="empty">No actuals yet.</div>':trendChart(e.trend,{h:150})}</div>`;
+  const kraCol=`<div class="panel pad"><div class="panel-h"><h3>By KRA</h3><span class="sub">strong vs focus</span></div><div class="list stack" style="margin-top:2px">${
+    strong.slice(0,4).map(x=>`<div class="lrow static"><div class="lrow-id"><span class="sdot s-good"></span><div class="lrow-name">${esc(x.k)}<span class="lrow-sub">strong</span></div></div><span class="lrow-meta" style="color:${sc('good')}">${ratingStr(x.r)}</span></div>`).join('')
+    +focus.slice(0,4).map(x=>`<div class="lrow static"><div class="lrow-id"><span class="sdot s-${statusFromRating(x.r).k}"></span><div class="lrow-name">${esc(x.k)}<span class="lrow-sub">focus area</span></div></div><span class="lrow-meta" style="color:${sc(statusFromRating(x.r).k)}">${ratingStr(x.r)}</span></div>`).join('')||'<div class="empty">No rated KRAs.</div>'}</div></div>`;
+  const recog=ach.length?`<div class="panel pad" style="margin-top:16px"><div class="panel-h"><h3>Recognition</h3><span class="sub">earned this period</span></div><div class="ach stack">${ach.map(a=>'<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>'+esc(a)+'</span>').join('')}</div></div>`:'';
+  return `<div class="two-eq">${journey}${kraCol}</div>${recog}`;
+}
+function personMilestones(e,recs){
+  const rated=recs.filter(r=>r.rating!=null);
+  if(!rated.length)return '<div class="empty" style="padding:40px">No rated KPIs yet — enter actuals to unlock milestones.</div>';
+  const ranked=rated.map(r=>{const m=nextMilestone(r);const gap=m&&!m.done?(TH().onTrack-r.rating):0;const w=r.weightShown||10;return {r,score:Math.max(0.01,gap)*(w/100),done:m&&m.done};}).sort((a,b)=>(a.done-b.done)||(b.score-a.score));
+  return `<div class="q">What should I improve next — highest weight × biggest gap first.</div><div class="kpigrid" style="grid-template-columns:repeat(auto-fill,minmax(340px,1fr))">${ranked.map(x=>milestoneCard(x.r)).join('')}</div>`;
+}
+function achievements(e){
+  const out=[];const recs=recordsForEmp(e.id);
+  recs.forEach(r=>{if(r.rating!=null&&r.bands&&r.bands.length>=5&&r.rating>=r.bands.length-0.25)out.push('Top band · '+(r.kpi||r.kra));});
+  if(e.consistency>=3)out.push(e.consistency+'-period consistency');
+  if(e.delta!=null&&e.delta>=0.3)out.push('Improved +'+(Math.round(e.delta*100)/100)+' this period');
+  if(e.level&&e.level.level>=4)out.push(e.level.label);
+  return out.slice(0,6);
 }
 function kScoreCard(r){
   return `<div class="kcard" data-rec="${r.kpiId}">
     <div class="kh"><div class="kt">${esc(r.kpi||r.kra||'—')}${r.definition?'<small>'+esc(r.definition)+'</small>':''}</div>${r.weightShown!=null?'<span class="wt">'+n1(r.weightShown)+'%</span>':''}</div>
-    <div class="kmeta">${statusPill(r.status)}${r.unit?'<span class="tag">'+esc(r.unit)+'</span>':''}${r.qualitative?'<span class="tag">Qualitative</span>':''}</div>
+    <div class="kmeta">${statusPill(r.status)}${r.metricType?'<span class="tag mt">'+esc(r.metricType)+'</span>':''}${r.qualitative?'<span class="tag">Qualitative</span>':''}</div>
     ${ladder(r)}
-    <div class="kfoot"><span class="kval">${r.hasActual?'Actual <b>'+esc(fmtActual(r))+'</b>':(r.qualitative?'Manual rating pending':'No actual yet')}</span><span class="r">${rchip(r.rating,r.status)}</span></div>
+    <div class="kfoot"><span class="kval">${r.hasActual?'Actual <b>'+esc(fmtActual(r))+'</b>':(r.qualitative?'Manual rating pending':'No actual yet')}</span><span class="r">${r.delta!=null?deltaChip(r.delta):''}${rchip(r.rating,r.status)}</span></div>
   </div>`;
 }
-function fmtActual(r){if(r.actual==null)return r.rating!=null?'rated '+ratingStr(r.rating):'—';return unitStr(r,r.actual);}
+function fmtActual(r){if(r.actual==null)return r.rating!=null?'rated '+ratingStr(r.rating):'—';return fmtVal(r,r.actual);}
 
-/* ---------------- RECORDS (All KPIs) ---------------- */
+/* ---------------- RECORDS (All KPIs / My KPIs) ---------------- */
 function vRecords(){
-  let rows=filteredRecords();
+  const mine=APP.view==='mykpis';
+  let base=mine?recordsForEmp(APP.meId):B().records;
+  if(mine&&!APP.meId)return vPickMe();
+  let rows=filteredRecords(base);
   const s=APP.table.sort,dir=APP.table.dir;
-  const gv={employee:r=>r.employee,department:r=>r.department,subTeam:r=>r.subTeam||'',kra:r=>r.kra,kpi:r=>r.kpi,weight:r=>r.weightShown==null?-1:r.weightShown,target:r=>r.target==null?-1e9:r.target,actual:r=>r.actual==null?-1e9:r.actual,rating:r=>r.rating==null?-1:r.rating};
+  const gv={employee:r=>r.employee,department:r=>r.department,subTeam:r=>r.subTeam||'',kra:r=>r.kra,kpi:r=>r.kpi,type:r=>r.metricType||'',weight:r=>r.weightShown==null?-1:r.weightShown,target:r=>r.target==null?-1e9:r.target,actual:r=>r.actual==null?-1e9:r.actual,rating:r=>r.rating==null?-1:r.rating};
   rows.sort((a,b)=>{const va=(gv[s]||gv.employee)(a),vb=(gv[s]||gv.employee)(b);if(typeof va==='string')return va.localeCompare(vb)*dir;return (va-vb)*dir;});
   const per=APP.table.per,pages=Math.max(1,Math.ceil(rows.length/per)),page=Math.min(APP.table.page,pages-1),slice=rows.slice(page*per,page*per+per);
   const th=(id,l,num)=>`<th class="${num?'num ':''}${s===id?'sorted':''}" data-sort="${id}">${l}<span class="sc">${s===id?(dir>0?'▲':'▼'):'⇅'}</span></th>`;
-  return `<div class="page-head"><h1>All KPIs</h1><p>Every Department × Sub-team × Person × KRA × KPI line in the framework — definitions, weightage, target, actual, rating and status. ${rows.length} records${APP.filters.dept||APP.filters.subTeam||APP.filters.status||APP.filters.search?' (filtered)':''}. Tap any row for detail &amp; to enter an actual.</p></div>
-  <div class="panel pad"><div class="panel-h"><h3>${rows.length} record${rows.length===1?'':'s'}</h3><span class="sub">${withData(rows).length} with ${esc(APP.period)} actuals</span></div>
-  <div class="tbl-wrap stack"><table class="tbl"><thead><tr>${th('employee','Person')}${th('department','Dept')}${th('subTeam','Sub-team')}${th('kpi','KRA / KPI')}${th('weight','Wt',1)}${th('target','Target',1)}${th('actual','Actual',1)}${th('rating','Rating',1)}<th>Status</th></tr></thead>
-  <tbody>${slice.length?slice.map(r=>`<tr data-rec="${r.kpiId}"><td class="kname">${esc(r.employee)}</td><td>${esc(r.department)}</td><td>${esc(r.subTeam||'—')}</td><td class="kname">${esc(r.kpi||r.kra||'—')}<small>${esc(r.kra&&r.kpi&&r.kra!==r.kpi?r.kra:(r.perspective||''))}</small></td><td class="num">${r.weightShown==null?'—':n1(r.weightShown)+'%'}</td><td class="num">${r.target==null?'—':esc(unitStr(r,r.target))}</td><td class="num">${r.actual==null?'—':esc(unitStr(r,r.actual))}</td><td class="num" style="color:${sc(r.status.k)};font-weight:800">${r.rating==null?'—':ratingStr(r.rating)}</td><td>${statusPill(r.status)}</td></tr>`).join(''):'<tr><td colspan="9" class="empty">No records match the filters.</td></tr>'}</tbody></table></div>
+  const me=mine?empById(APP.meId):null;
+  const title=mine?('My KPIs'+(me?' · '+esc(me.name):'')):'All KPIs';
+  const intro=mine?'Your KRA/KPI lines — definition, weightage, target, actual, rating and status. Tap any row to enter an actual.':'Every Department × Sub-team × Person × KRA × KPI line — definition, rule-layer type, weightage, target, actual, rating and status.';
+  return `<div class="page-head"><h1>${title}</h1><p>${intro} ${rows.length} records${!mine&&(APP.filters.dept||APP.filters.subTeam||APP.filters.status||APP.filters.search)?' (filtered)':''}. Tap any row for detail &amp; to enter an actual.</p></div>
+  <div class="panel pad"><div class="panel-h"><h3>${rows.length} record${rows.length===1?'':'s'}</h3><span class="sub">${withData(rows).length} with ${esc(periodShort(APP.period))} actuals</span></div>
+  <div class="tbl-wrap stack"><table class="tbl"><thead><tr>${mine?'':th('employee','Person')}${mine?'':th('department','Team')}${th('kpi','KRA / KPI')}${th('type','Type')}${th('weight','Wt',1)}${th('target','Target',1)}${th('actual','Actual',1)}${th('rating','Rating',1)}<th>Status</th></tr></thead>
+  <tbody>${slice.length?slice.map(r=>`<tr data-rec="${r.kpiId}">${mine?'':'<td class="kname">'+esc(r.employee)+'</td>'}${mine?'':'<td>'+esc(r.department)+(r.subTeam?' · '+esc(r.subTeam):'')+'</td>'}<td class="kname">${esc(r.kpi||r.kra||'—')}<small>${esc(r.kra&&r.kpi&&r.kra!==r.kpi?r.kra:(r.perspective||''))}</small></td><td><span class="tag mt">${esc(r.metricType||'—')}</span></td><td class="num">${r.weightShown==null?'—':n1(r.weightShown)+'%'}</td><td class="num">${r.target==null?'—':esc(fmtVal(r,r.target))}</td><td class="num">${r.actual==null?'—':esc(fmtVal(r,r.actual))}</td><td class="num" style="color:${sc(r.status.k)};font-weight:800">${r.rating==null?'—':ratingStr(r.rating)}</td><td>${statusPill(r.status)}</td></tr>`).join(''):'<tr><td colspan="'+(mine?7:9)+'" class="empty">No records match the filters.</td></tr>'}</tbody></table></div>
   <div class="pager"><span>Page ${page+1} of ${pages} · ${slice.length} of ${rows.length}</span><div><button data-page="prev" ${page===0?'disabled':''}>Prev</button><button data-page="next" ${page>=pages-1?'disabled':''}>Next</button></div></div></div>`;
 }
 
-/* ---------------- SETTINGS ---------------- */
-function vSettings(){
-  const src=B().source,o=B().rollups.org,th=B().settings.thresholds;
-  return `<div class="page-head"><h1>Data &amp; Settings</h1><p>Connection, the separate actuals source, scoring thresholds and parser diagnostics.</p></div>
+/* ---------------- HEALTH & DATA ---------------- */
+function vHealth(){
+  const src=B().source,o=B().rollups.org,th=TH(),h=B().health;
+  const checks=[];
+  checks.push({ok:h.unmappedActuals===0,t:'All actual rows map to a KPI',s:h.unmappedActuals?h.unmappedActuals+' orphaned actual rows (KpiId not in framework)':'every KpiId in the actuals source resolves',v:h.unmappedActuals});
+  checks.push({ok:h.weightIssues.length===0,warn:h.weightIssues.length>0,t:'Weightage totals 100% per person',s:h.weightIssues.length?h.weightIssues.length+' person-blocks off 100%':'every block sums to 100%',v:h.weightIssues.length});
+  checks.push({ok:h.qualitative===0,warn:h.qualitative>0,t:'KPIs have numeric target bands',s:h.qualitative?h.qualitative+' qualitative KPIs need a manual rating':'all KPIs numeric',v:h.qualitative});
+  checks.push({ok:h.coverage>=67,warn:h.coverage>0&&h.coverage<67,bad:h.coverage===0,t:'Actuals coverage',s:h.withData+' of '+h.kpis+' KPIs have actuals',v:pct(h.coverage)});
+  const checkHtml=checks.map(c=>{const k=c.ok?'ok':(c.warn?'warn':'bad');const ic=c.ok?'<path d="M20 6L9 17l-5-5"/>':(c.warn?'<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/>':'<path d="M6 6l12 12M18 6L6 18"/>');return `<div class="hcheck ${k}"><div class="hc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ic}</svg></div><div class="hc-t">${esc(c.t)}<small>${esc(c.s)}</small></div><div class="r" style="color:${sc(k)}">${c.v}</div></div>`;}).join('');
+  const weightRows=h.weightIssues.length?('<div class="sect-t">Weightage anomalies<span class="r">expected 100% per person-block</span></div><div class="panel pad"><div class="tbl-wrap"><table class="info-tbl"><thead><tr><th>Person</th><th>Team</th><th>Sub-team</th><th>KPIs</th><th>Weight sum</th></tr></thead><tbody>'+h.weightIssues.map(w=>'<tr><td>'+esc(w.employee)+'</td><td>'+esc(w.dept)+'</td><td>'+esc(w.subTeam||'—')+'</td><td>'+w.kpis+'</td><td style="color:var(--warn-ink);font-weight:700">'+w.sum+'%</td></tr>').join('')+'</tbody></table></div></div>'):'';
+  return `<div class="page-head"><h1>Health &amp; Data</h1><p>Master-data validation, the separate actuals source, scoring thresholds and parser diagnostics. Validation is for admins — fix these before an overall score is trusted.</p></div>
   <div class="kc-grid c3">
     ${kpiCard('Master sheet',esc(src.title),src.tabs.length+' tabs',{})}
     ${kpiCard('Actuals source',B().source.actuals.type,esc(B().source.actuals.tab)+' · '+B().source.actuals.rows+' rows',{tone:B().source.actuals.rows?'good':'none'})}
-    ${kpiCard('Coverage',pct(o.coverage),o.kpisWithData+' of '+o.kpis+' KPIs',{tone:'none'})}
+    ${kpiCard('Coverage',pct(o.coverage),o.kpisWithData+' of '+o.kpis+' KPIs',{tone:o.coverage>=67?'good':o.coverage>0?'warn':'none'})}
   </div>
-  <div class="two-col">
+  <div class="panel pad"><div class="panel-h"><h3>Master-data health</h3><span class="sub">validated before scoring is trusted</span></div><div class="stack" style="margin-top:2px">${checkHtml}</div></div>
+  ${weightRows}
+  <div class="two-eq" style="margin-top:16px">
     <div class="panel pad"><div class="panel-h"><h3>Actuals &amp; period</h3><span class="sub">the separate target/metric source</span></div>
-      <div class="stack" style="font-size:13px;color:var(--ink-2);line-height:1.7">
-        Definitions come from the master sheet's tabs; <b>targets &amp; actuals</b> are kept separately in <b>${esc(B().source.actuals.tab)}</b> (${esc(B().source.actuals.type)}), joined by a stable <code>KpiId</code>. Actuals are entered per <b>period</b> (${esc(APP.period)}).
-      </div>
-      <div class="stack"><button class="btn primary sm" data-act="scaffold">Create / refresh actuals for ${esc(APP.period)}</button>
+      <div class="stack" style="font-size:13px;color:var(--ink-2);line-height:1.7">Definitions come from the master tabs; <b>targets &amp; actuals</b> live separately in <b>${esc(B().source.actuals.tab)}</b> (${esc(B().source.actuals.type)}), joined by a stable <code>KpiId</code>. Actuals are entered per <b>period</b> (${esc(periodLong(APP.period))}).</div>
+      <div class="stack"><button class="btn primary sm" data-act="scaffold">Create / refresh actuals for ${esc(periodShort(APP.period))}</button>
       <div style="font-size:11.5px;color:var(--faint);margin-top:8px">Adds one blank row per KPI (target pre-filled from the "Meets" band). Never overwrites existing values.</div></div>
     </div>
     <div class="panel pad"><div class="panel-h"><h3>Scoring thresholds</h3><span class="sub">on the 1–5 rating scale</span></div>
@@ -589,27 +917,35 @@ function vSettings(){
 
 /* ---------------- DRAWER (KPI detail + edit) ---------------- */
 function openRec(id){
-  const r=recById(id);if(!r)return;const e=empById(r.employeeId);
+  const r=recById(id);if(!r)return;
   const meets=r.bands&&r.bands[2]?r.bands[2].raw:'';
+  const m=nextMilestone(r);
+  let msHtml='';
+  if(m&&!m.done){const p=clamp((r.rating-1)/4*100,0,100);const gapTxt=m.gap!=null?('<b>'+fmtVal(r,m.gap)+'</b> to go'):('reach the next band');msHtml=`<div class="section-t">Next milestone</div><div class="ms"><div class="ms-h"><div class="ms-t">${esc(m.band.label||('Band '+m.toRating))}${m.band.raw?'<small>'+esc(m.band.raw)+'</small>':''}</div></div><div class="ms-track"><span style="width:${p}%"></span></div><div class="ms-foot"><span>${gapTxt}</span><span>·</span><span><b>${r.weightShown==null?'—':n1(r.weightShown)+'%'}</b> weight</span></div></div>`;}
+  else if(m&&m.done)msHtml=`<div class="section-t">Next milestone</div><div class="ms done"><div class="ms-h"><div class="ms-t">Top band reached 🎉<small>Hold performance to keep the rating</small></div></div></div>`;
+  const spark=kpiSpark(r);
   $('#drawerContent').innerHTML=`
     <div class="drawer-h"><div style="min-width:0">${statusPill(r.status)}<h2 style="margin-top:9px">${esc(r.kpi||r.kra||'KPI')}</h2>
       <div class="sub"><span class="tag brand">${esc(r.department)}</span>${r.subTeam?'<span class="tag">'+esc(r.subTeam)+'</span>':''}<span>${esc(r.employee)}</span></div></div>
       <button class="icon-btn close" data-act="close-drawer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div class="drawer-body">
-      ${r.kra&&r.kpi&&r.kra!==r.kpi?'<div class="section-t">KRA</div><div style="font-size:13px;font-weight:600;color:var(--ink-2)">'+esc(r.kra)+'</div>':''}
-      ${r.definition?'<div class="section-t">Definition / goal</div><div class="def-box">'+esc(r.definition)+'</div>':''}
-      <div class="section-t">Rubric — 5 band scale</div>
+      <div class="section-t">What is it?</div>
+      <div class="def-box">${esc(r.definition||r.kpi||r.kra||'—')}<div class="dm"><span>Type <b>${esc(r.metricType||'—')}</b></span>${r.unit?'<span>Unit <b>'+esc(r.unit)+'</b></span>':''}<span>Direction <b>${r.qualitative?'manual':(r.direction<0?'lower better':'higher better')}</b></span>${r.perspective?'<span>Perspective <b>'+esc(r.perspective)+'</b></span>':''}${r.kra&&r.kra!==r.kpi?'<span>KRA <b>'+esc(r.kra)+'</b></span>':''}</div></div>
+      <div class="section-t">Where should I be? <span class="r">5-band rubric</span></div>
       ${ladder(r)}
-      <div class="section-t">Scoring</div>
+      <div class="section-t">Score explanation</div>
       <div class="metric-grid">
-        <div class="metric"><div class="l">Weightage</div><div class="v">${r.weightShown==null?'—':n1(r.weightShown)+'<small>%</small>'}</div></div>
-        <div class="metric"><div class="l">Rating</div><div class="v" style="color:${sc(r.status.k)}">${r.rating==null?'—':ratingStr(r.rating)}<small>/5</small></div></div>
+        <div class="metric"><div class="l">Actual</div><div class="v" style="font-size:15px">${r.actual==null?'—':esc(fmtVal(r,r.actual))}</div></div>
+        <div class="metric"><div class="l">Target (Meets)</div><div class="v" style="font-size:14px">${esc(meets||(r.target==null?'—':fmtVal(r,r.target)))}</div></div>
+        <div class="metric"><div class="l">Achievement</div><div class="v">${r.attainment==null?'—':pct(r.attainment)}</div></div>
         <div class="metric"><div class="l">Achieved band</div><div class="v" style="font-size:13px">${esc(r.achievedBand||'—')}</div></div>
-        <div class="metric"><div class="l">Target (Meets)</div><div class="v" style="font-size:14px">${esc(meets||(r.target==null?'—':r.target))}</div></div>
-        <div class="metric"><div class="l">Actual</div><div class="v" style="font-size:15px">${r.actual==null?'—':esc(unitStr(r,r.actual))}</div></div>
-        <div class="metric"><div class="l">Attainment</div><div class="v">${r.attainment==null?'—':pct(r.attainment)}</div></div>
+        <div class="metric"><div class="l">Rating</div><div class="v" style="color:${sc(r.status.k)}">${r.rating==null?'—':ratingStr(r.rating)}<small>/5</small></div></div>
+        <div class="metric"><div class="l">Weight × rating</div><div class="v">${r.weighted==null?'—':n2(r.weighted*5)}<small>/${r.weightShown==null?'5':n1(r.weightShown/20)}</small></div></div>
       </div>
-      <div class="section-t">Enter ${esc(APP.period)} actual</div>
+      ${spark?'<div class="section-t">Trend <span class="r">'+esc(r.qualitative?'rating':(r.unit||'actual'))+' over time</span></div><div class="panel pad" style="padding:10px 12px">'+spark+'</div>':''}
+      ${msHtml}
+      ${r.comment||r.evidence?'<div class="section-t">Review</div><div class="review"><div class="rv-h">'+rchip(r.rating,r.status)+'<span class="tag">'+esc(periodShort(APP.period))+'</span></div>'+(r.comment?'<div class="rv-txt">'+esc(r.comment)+'</div>':'')+'<div class="rv-meta">'+(r.evidence?'<a class="link" href="'+esc(r.evidence)+'" target="_blank" rel="noopener">Evidence ↗</a>':'')+(r.updatedAt?'<span>Updated '+esc(relTime(r.updatedAt))+'</span>':'')+'</div></div>':''}
+      <div class="section-t">Enter ${esc(periodShort(APP.period))} actual</div>
       <div class="row2">
         <div class="field"><label>Actual ${r.unit?'('+esc(r.unit)+')':''}</label><input id="edActual" type="number" step="any" value="${r.actual==null?'':r.actual}" ${r.qualitative?'disabled placeholder="qualitative"':''}></div>
         ${r.qualitative?'<div class="field"><label>Manual rating (1–5)</label><select id="edRating"><option value="">—</option>'+[1,2,3,4,5].map(n=>'<option value="'+n+'"'+(Math.round(r.rating)===n?' selected':'')+'>'+n+'</option>').join('')+'</select></div>':'<div class="field"><label>Target override</label><input id="edTarget" type="number" step="any" value="'+(r.target==null?'':r.target)+'"></div>'}
@@ -617,8 +953,7 @@ function openRec(id){
       <div class="field"><label>Comment</label><textarea id="edComment" placeholder="Context, blockers, evidence notes…">${esc(r.comment||'')}</textarea></div>
       <div class="field"><label>Evidence link</label><input id="edEvidence" type="url" placeholder="https://…" value="${esc(r.evidence||'')}"></div>
       <button class="btn primary" data-act="save-actual" data-rec="${r.kpiId}">Save actual</button>
-      ${r.updatedAt?'<div style="font-size:11.5px;color:var(--faint);margin-top:12px">Last updated '+esc(relTime(r.updatedAt))+'</div>':''}
-      <div style="font-size:11.5px;color:var(--faint);margin-top:10px">Source of tracking: ${esc(r.source||'—')}. Saved to the ${esc(B().source.actuals.tab)} source; this view recomputes on refresh.</div>
+      <div style="font-size:11.5px;color:var(--faint);margin-top:10px">Source of tracking: ${esc(r.source||'—')}. Saved to the ${esc(B().source.actuals.tab)} source; recomputes on refresh.</div>
     </div>`;
   $('#drawer').classList.add('on');$('#scrim').classList.add('on');
 }
@@ -645,23 +980,27 @@ function showState(kind,msg){
   if(kind==='offline'){c.innerHTML=stateCard('link','Connect to the Google Sheet','This dashboard runs live via Apps Script reading your master KRA/KPI sheet. Open it from the deployed web-app URL (Extensions → Apps Script → Deploy → Web app). It carries no offline data by design.','<button class="btn primary" data-act="refresh">Retry connection</button>');return;}
   if(kind==='error'){c.innerHTML=stateCard('alert','Couldn’t load the dashboard',esc(msg||'Something went wrong reading the sheet.'),'<button class="btn primary" data-act="refresh">Try again</button>',true);return;}
 }
-function renderEmpty(){$('#filterbar').style.display='none';buildChrome();$('#content').innerHTML=stateCard('doc','No KRA/KPI framework detected',esc((B()&&B().message)||'The parser found no KRA/KPI tabs (Perspective / KRA / KPI / Weightage / band columns). Check the master sheet and refresh — see Data & Settings for what each tab was classified as.'),'<button class="btn primary" data-act="refresh">Refresh</button>');}
+function renderEmpty(){$('#filterbar').style.display='none';buildChrome();$('#content').innerHTML=stateCard('doc','No KRA/KPI framework detected',esc((B()&&B().message)||'The parser found no KRA/KPI tabs (Perspective / KRA / KPI / Weightage / band columns). Check the master sheet and refresh — see Health & Data for what each tab was classified as.'),'<button class="btn primary" data-act="refresh">Refresh</button>');}
 function stateCard(icon,title,body,action,err){const ic={link:'<path d="M9 12a4 4 0 0 1 4-4h3a4 4 0 1 1 0 8h-1"/><path d="M15 12a4 4 0 0 1-4 4H8a4 4 0 1 1 0-8h1"/>',alert:'<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/>',doc:'<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/>'}[icon]||'';return '<div class="state '+(err?'err':'')+'"><div class="state-card"><div class="state-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+ic+'</svg></div><h2>'+esc(title)+'</h2><p>'+body+'</p>'+(action||'')+'</div></div>';}
 function skeleton(){const c='<div class="skl" style="height:126px"></div>';return '<div style="padding:4px 0 18px"><div class="skl" style="height:26px;width:280px;margin-bottom:10px"></div><div class="skl" style="height:14px;width:440px"></div></div><div class="kc-grid c4">'+c+c+c+c+'</div><div class="skl" style="height:240px"></div>';}
 
 /* ---------------- helpers using settings ---------------- */
-function statusFromRating(r){const th=B().settings.thresholds;if(r==null||isNaN(r))return {k:'none',label:'Pending'};if(r>=4.25)return {k:'good',label:'Exceeding'};if(r>=th.onTrack)return {k:'good',label:'On Track'};if(r>=th.atRisk)return {k:'warn',label:'At Risk'};return {k:'bad',label:'Off Track'};}
+function statusFromRating(r){const th=TH();if(r==null||isNaN(r))return {k:'none',label:'Pending'};if(r>=4.25)return {k:'good',label:'Exceeding'};if(r>=th.onTrack)return {k:'good',label:'On Track'};if(r>=th.atRisk)return {k:'warn',label:'At Risk'};return {k:'bad',label:'Off Track'};}
 
 /* ---------------- events ---------------- */
 document.addEventListener('click',e=>{
   const act=e.target.closest('[data-act]');if(act){handleAct(act.dataset.act,act);return;}
-  const nav=e.target.closest('[data-nav]');if(nav){go(nav.dataset.nav);closeNav();return;}
+  const md=e.target.closest('[data-mode]');if(md){setMode(md.dataset.mode);return;}
+  const nv=e.target.closest('[data-nav]');if(nv){go(nv.dataset.nav);closeNav();return;}
   const cr=e.target.closest('[data-crumb]');if(cr){go(cr.dataset.crumb);return;}
+  const tb=e.target.closest('[data-tab]');if(tb){APP.tab=tb.dataset.tab;render();return;}
   const cl=e.target.closest('[data-clear]');if(cl){APP.filters[cl.dataset.clear]='';APP.table.page=0;render();return;}
   const fs=e.target.closest('[data-fstatus]');if(fs){APP.filters.status=fs.dataset.fstatus;APP.table.page=0;render();return;}
-  const so=e.target.closest('[data-sort]');if(so){const k=so.dataset.sort;if(APP.table.sort===k)APP.table.dir*=-1;else{APP.table.sort=k;APP.table.dir=(['employee','department','subTeam','kra','kpi'].indexOf(k)>=0)?1:-1;}render();return;}
+  const so=e.target.closest('[data-sort]');if(so){const k=so.dataset.sort;if(APP.table.sort===k)APP.table.dir*=-1;else{APP.table.sort=k;APP.table.dir=(['employee','department','subTeam','kra','kpi','type'].indexOf(k)>=0)?1:-1;}render();return;}
   const pg=e.target.closest('[data-page]');if(pg){APP.table.page+=(pg.dataset.page==='next'?1:-1);render();return;}
+  const pk=e.target.closest('[data-pick]');if(pk){APP.meId=pk.dataset.pick;APP.view='me';APP.tab='';scrollTop();render();return;}
   const rc=e.target.closest('[data-rec]');if(rc){openRec(rc.dataset.rec);return;}
+  const pv=e.target.closest('[data-persp]');if(pv){go('perspective',{name:pv.dataset.persp});return;}
   const sb=e.target.closest('[data-subteam]');if(sb){APP.filters.subTeam=sb.dataset.subteam;APP.filters.dept=(subById(sb.dataset.subteam)||{}).deptId||'';go('people');return;}
   const dp=e.target.closest('[data-dept]');if(dp){go('dept',{deptId:dp.dataset.dept});return;}
   const pc=e.target.closest('[data-person]');if(pc){go('person',{empId:pc.dataset.person});return;}
@@ -669,6 +1008,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('change',e=>{
   const fl=e.target.closest('[data-filter]');if(fl){APP.filters[fl.dataset.filter]=fl.value;if(fl.dataset.filter==='dept')APP.filters.subTeam='';APP.table.page=0;render();return;}
   if(e.target&&e.target.id==='periodSel'){APP.period=e.target.value;doRefresh();return;}
+  const ks=e.target.closest('[data-act="kpisel"]');if(ks){APP.ctx.kpiName=e.target.value;render();return;}
 });
 let searchT;document.addEventListener('input',e=>{if(e.target&&e.target.id==='fSearch'){clearTimeout(searchT);const v=e.target.value.trim();searchT=setTimeout(()=>{APP.filters.search=v;APP.table.page=0;const el=document.activeElement,was=el&&el.id==='fSearch',pos=was?el.selectionStart:null;render();if(was){const s=$('#fSearch');if(s){s.focus();try{s.setSelectionRange(pos,pos);}catch(x){}}}},200);}});
 function handleAct(a,el){
@@ -679,6 +1019,7 @@ function handleAct(a,el){
   else if(a==='save-actual')saveActual(el.dataset.rec);
   else if(a==='scaffold')doScaffold();
   else if(a==='save-settings')doSaveSettings();
+  else if(a==='switch-me'){APP.view='pickme';scrollTop();render();}
 }
 function closeNav(){$('#sidebar').classList.remove('open');}
 async function doRefresh(){toast('Refreshing…');try{const b=await call('apiBootstrap',{force:true,period:APP.period||undefined});if(b&&b.ok&&b.connected!==false){applyBoot(b);toast('Up to date');}else showState('error',b&&b.error||'Refresh failed');}catch(e){if(e&&e.__offline)showState('offline');else toast('Error',true);}}
