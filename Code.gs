@@ -65,6 +65,21 @@ var DEFAULT_STATUS_SCALE = [
   { key: 'elite',  label: 'Exceeding', min: 4.5 }
 ];
 
+/* ---- PINNED TEAM REGISTRY ----
+ * The org has exactly these 5 teams, each with a named lead. The engine still
+ * parses the sheet generically, but every raw tab is mapped onto one of these
+ * canonical teams (so "Plastic (Supply KRAKPI)" and "Plastic (Demand KRAKPI)"
+ * both land under "Plastics", and the truncated "Open Marketplace - Control
+ * Towe" reads as "Marketplace – Control Tower"). Editable via apiSaveTeams;
+ * member rosters fill in when the separate roster sheets are provided. */
+var DEFAULT_TEAMS = [
+  { key: 'metal',       name: 'Metal',                       lead: 'Amit Jha',           patterns: ['metal'],                                     members: [] },
+  { key: 'plastics',    name: 'Plastics',                    lead: 'Tabesh Mohammad',    patterns: ['plastic'],                                   members: [] },
+  { key: 'onboarding',  name: 'Onboarding',                  lead: 'Ajay',               patterns: ['onboarding'],                                members: [] },
+  { key: 'collections', name: 'Collections',                 lead: 'Srinivas',           patterns: ['collection'],                                members: [] },
+  { key: 'marketplace', name: 'Marketplace – Control Tower', lead: 'Ashwin Kumar Singh', patterns: ['open marketplace', 'control tow', 'marketplace', 'control tower'], members: [] }
+];
+
 // Cycle lifecycle. A locked cycle is immutable — no check-ins, no reviews.
 var CYCLE_STATES = ['Draft', 'Active', 'Review', 'Locked'];
 // Review workflow states, in order.
@@ -231,6 +246,27 @@ function apiSaveSettings(p) {
   } catch (err) { return { ok: false, error: String(err && err.message || err) }; }
 }
 
+/** Persist the pinned team registry (names, leads, tab patterns, members). */
+function apiSaveTeams(p) {
+  try {
+    p = p || {};
+    var teams = (typeof p.teams === 'string') ? JSON.parse(p.teams) : p.teams;
+    if (!teams || !teams.length) throw new Error('At least one team is required.');
+    var s = readSettings_();
+    s.teams = teams.map(function (t, i) {
+      return {
+        key: String(t.key || slug_(t.name) || ('team' + i)),
+        name: String(t.name || 'Team ' + (i + 1)),
+        lead: String(t.lead || ''),
+        patterns: (Array.isArray(t.patterns) ? t.patterns : String(t.patterns || '').split(',')).map(function (x) { return String(x).trim(); }).filter(Boolean),
+        members: Array.isArray(t.members) ? t.members.map(function (m) { return String(m).trim(); }).filter(Boolean) : []
+      };
+    });
+    writeSettings_(s); bustCache_(s.period);
+    return { ok: true, settings: s };
+  } catch (err) { return { ok: false, error: String(err && err.message || err) }; }
+}
+
 /** ========================================================= BUILD MODEL */
 function buildModel_(period, settings) {
   settings = settings || readSettings_();
@@ -251,7 +287,7 @@ function buildModel_(period, settings) {
   });
 
   // ---- PASS 2: departments / people / KPI records.
-  var ctx = { depts: [], deptById: {}, subTeams: [], subById: {}, employees: [], empById: {}, records: [], seenKpiId: {}, order: 0, notes: [], statusScale: settings.statusScale };
+  var ctx = { depts: [], deptById: {}, subTeams: [], subById: {}, employees: [], empById: {}, records: [], seenKpiId: {}, order: 0, notes: [], statusScale: settings.statusScale, teams: settings.teams };
   sheets.forEach(function (sh) {
     var name = sh.getName();
     if (isManaged_(name)) return;
@@ -263,6 +299,9 @@ function buildModel_(period, settings) {
     else if (cls.kind === 'blocks') parseBlocksTab_(grid, name, cls, ctx);
     else parseGenericTab_(grid, name, ctx);
   });
+
+  // ---- reconcile against the pinned team registry.
+  finalizeTeams_(ctx, settings);
 
   // ---- the product layer: cycles, assignments, check-ins, reviews.
   var cycles = readCycles_();
@@ -305,6 +344,7 @@ function buildModel_(period, settings) {
       ratingMax: RATING_MAX,
       scoring: settings.scoring,
       statusScale: normalizeScale_(settings.statusScale),
+      teams: settings.teams,
       cycleStates: CYCLE_STATES, reviewStates: REVIEW_STATES
     },
     cycle: cycle,
@@ -494,8 +534,9 @@ function parseRoster_(grid, rosterByTeam) {
 
 /** ==================================================== TEMPLATE PARSER */
 function parseTemplateTab_(grid, tabName, cls, rosterByTeam, ctx) {
-  var ds = splitDeptSub_(tabName);
-  var dept = getDept_(ctx, ds.dept, 'scorecard');
+  var rd = resolveDeptSub_(ctx, tabName, 'scorecard');
+  var ds = { dept: rd.dept.name, sub: rd.sub };
+  var dept = rd.dept;
   var headers = cls.headerRows;
   var sections = [];
   headers.forEach(function (hr, i) {
@@ -528,15 +569,15 @@ function parseTemplateTab_(grid, tabName, cls, rosterByTeam, ctx) {
 
 /** ==================================================== BLOCKS PARSER */
 function parseBlocksTab_(grid, tabName, cls, ctx) {
-  var ds = splitDeptSub_(tabName);
-  var dept = getDept_(ctx, ds.dept, 'individuals');
-  var subTeam = ds.sub ? getSubTeam_(ctx, dept, ds.sub) : null;   // e.g. a "… - Supply" blocks tab
+  var rd = resolveDeptSub_(ctx, tabName, 'individuals');
+  var dept = rd.dept;
+  var subTeam = rd.sub ? getSubTeam_(ctx, dept, rd.sub) : null;   // e.g. a "… - Supply" blocks tab
   var headers = cls.headerRows;
   headers.forEach(function (hr, i) {
     var end = (i + 1 < headers.length) ? headers[i + 1] : grid.length;
     var cols = mapCols_(grid[hr]);
     var person = personForHeader_(grid, hr);
-    var emp = getEmployee_(ctx, dept, person.name || ('Member ' + (i + 1)), person.role || '', '', false);
+    var emp = getEmployee_(ctx, dept, person.name || ('Member ' + (i + 1)), person.role || '', person.region || '', false);
     for (var r = hr + 1; r < end; r++) {
       var row = grid[r];
       if (isKpiHeader_(row) || personForHeader_(grid, r).name) break;
@@ -551,7 +592,7 @@ function parseBlocksTab_(grid, tabName, cls, ctx) {
 
 /** ==================================================== GENERIC PARSER */
 function parseGenericTab_(grid, tabName, ctx) {
-  var dept = getDept_(ctx, tabName, 'info');
+  var dept = resolveDeptSub_(ctx, tabName, 'info').dept;
   // detect the header row: first row with >=3 non-empty, mostly-text cells.
   var hr = -1;
   for (var r = 0; r < Math.min(grid.length, 15); r++) {
@@ -1205,11 +1246,49 @@ function computeHealth_(ctx, all, assignments, reviews, period) {
   };
 }
 
+/* Reconcile parsed departments against the pinned registry: drop the phantom
+ * "scorecard" placeholders a template tab creates once a team has real people,
+ * resolve each team's declared lead to an actual employee where possible, and
+ * order the departments to match the registry. */
+function finalizeTeams_(ctx, settings) {
+  // 1) suppress template-placeholder employees (and their records) for any dept
+  //    that also carries real, named people — a shared template is a framework,
+  //    not a headcount.
+  var realByDept = {};
+  ctx.employees.forEach(function (e) { if (!e.isTemplate) realByDept[e.deptId] = true; });
+  var drop = {};
+  ctx.employees = ctx.employees.filter(function (e) {
+    if (e.isTemplate && realByDept[e.deptId]) { drop[e.id] = true; delete ctx.empById[e.id]; return false; }
+    return true;
+  });
+  ctx.records = ctx.records.filter(function (r) { return !drop[r.employeeId]; });
+
+  // 2) resolve declared leads to a real employee in the same team (by name).
+  ctx.depts.forEach(function (d) {
+    if (!d.lead) return;
+    var want = norm_(d.lead);
+    var hit = ctx.employees.filter(function (e) { return e.deptId === d.id; })
+      .filter(function (e) { return norm_(e.name) === want || norm_(e.name).indexOf(want) >= 0 || want.indexOf(norm_(e.name)) >= 0; })[0];
+    if (hit) { d.leadEmployeeId = hit.id; d.leadRole = hit.role || 'Team Lead'; d.leadResolved = true; hit.isLead = true; }
+    else { d.leadResolved = false; }
+  });
+
+  // 3) order departments by the registry, unregistered tabs last.
+  var order = {};
+  (settings.teams || DEFAULT_TEAMS).forEach(function (t, i) { order[t.key] = i; });
+  ctx.depts.sort(function (a, b) {
+    var oa = a.teamKey && order[a.teamKey] != null ? order[a.teamKey] : 900 + a.order;
+    var ob = b.teamKey && order[b.teamKey] != null ? order[b.teamKey] : 900 + b.order;
+    return oa - ob;
+  });
+}
+
 /** ==================================================== CTX GETTERS */
 function getDept_(ctx, name, kind) {
   var id = slug_(name);
   if (!ctx.deptById[id]) {
-    var d = { id: id, name: cleanCell_(name), kind: kind, order: ctx.order++, kpiCount: 0, employeeCount: 0, rating: null, status: statusFromRating_(null), subTeamIds: [], rawTable: null, weightNote: null };
+    var d = { id: id, name: cleanCell_(name), kind: kind, order: ctx.order++, kpiCount: 0, employeeCount: 0, rating: null, status: statusFromRating_(null), subTeamIds: [], rawTable: null, weightNote: null,
+              teamKey: '', lead: '', leadEmployeeId: null, leadRole: '', leadResolved: false, registered: false, registeredMembers: [] };
     ctx.deptById[id] = d; ctx.depts.push(d);
   }
   return ctx.deptById[id];
@@ -1243,19 +1322,36 @@ function personForHeader_(grid, hr) {
     var p = personName_(f);
     return p;    // first non-empty title row above decides
   }
-  return { name: '', role: '' };
+  return { name: '', role: '', region: '' };
 }
+/* Parse a block-owner title into { name, role, region }. Real sheets are messy:
+ * the title often carries a trailing "| Region - South", the parenthetical role
+ * can be anything ("Management Trainee", not just manager/executive), and only
+ * the name before the "(" needs to look like a person — so we anchor on the
+ * LEADING "Name (Role)" shape and tolerate whatever trails it, instead of
+ * requiring the string to end at the ")". */
 function personName_(text) {
   var t = String(text || '').replace(/\s+/g, ' ').trim();
-  if (!t) return { name: '', role: '' };
+  if (!t) return { name: '', role: '', region: '' };
+
+  // pull a trailing "| Region - South" / "Region: North" off first
+  var region = '';
+  var rg = t.match(/[|,;]\s*region\s*[-–:]\s*([A-Za-z .&]+?)\s*$/i);
+  if (rg) { region = cleanName_(rg[1]); t = t.slice(0, rg.index).trim(); }
+  // then drop any remaining trailing "| …" segment (region without a label, etc.)
+  var pipe = t.indexOf('|');
+  if (pipe > 0) t = t.slice(0, pipe).trim();
+
   var m = t.match(/^individual\s*[-–:]\s*(.+)$/i);
-  if (m) return { name: cleanName_(m[1]), role: '' };
+  if (m) return { name: cleanName_(m[1]), role: '', region: region };
   m = t.match(/^(?:collections?|onboarding|supply|demand)[^-–:]*[-–:]\s*(.+)$/i);
-  if (m && looksLikeName_(m[1])) return { name: cleanName_(m[1]), role: '' };
-  m = t.match(/^(.+?)\s*\(([^)]*)\)\s*$/);
-  if (m && /poc|head|lead|manager|executive|senior|regional|analyst|associate|officer|specialist/i.test(m[2])) return { name: cleanName_(m[1]), role: m[2].trim() };
-  if (looksLikeName_(t)) return { name: cleanName_(t), role: '' };
-  return { name: '', role: '' };
+  if (m && looksLikeName_(m[1])) return { name: cleanName_(m[1]), role: '', region: region };
+  // "Name (Role)…"  — accept any parenthetical role once the name reads as a
+  // person; the ")" no longer has to be the end of the string.
+  m = t.match(/^([A-Za-z][A-Za-z.\s]{1,40}?)\s*\(([^)]{1,80})\)/);
+  if (m && looksLikeName_(m[1])) return { name: cleanName_(m[1]), role: cleanName_(m[2]), region: region };
+  if (looksLikeName_(t)) return { name: cleanName_(t), role: '', region: region };
+  return { name: '', role: '', region: region };
 }
 function looksLikeName_(s) {
   s = String(s || '').trim();
@@ -1283,13 +1379,52 @@ function classifySection_(title, nSections) {
  * department + sub-team, so Demand/Supply that live in SEPARATE tabs still roll
  * up under one department. A plain "Metal" (both sections inside) → sub = null. */
 function splitDeptSub_(name) {
-  var m = String(name || '').match(/^(.*?)[\s\-–—:(]+\s*(supply|demand|seller|buyer)\b.*$/i);
-  if (m) {
-    var base = m[1].replace(/[\-–—:(]+$/, '').trim();
-    var tok = m[2].toLowerCase();
-    if (base) return { dept: base, sub: (tok === 'supply' || tok === 'seller') ? 'Supply' : 'Demand' };
+  var s = String(name || '');
+  // A tab that names BOTH sides ("Metal (Supply & Demand KRAKPI)") is a combined
+  // scorecard, not a sub-team — only split when exactly one side is named.
+  var hasSupply = /\b(supply|seller)\b/i.test(s), hasDemand = /\b(demand|buyer)\b/i.test(s);
+  if (hasSupply !== hasDemand) {
+    var m = s.match(/^(.*?)[\s\-–—:(]+\s*(supply|demand|seller|buyer)\b.*$/i);
+    if (m) {
+      var base = m[1].replace(/[\-–—:(]+$/, '').trim();
+      var tok = m[2].toLowerCase();
+      if (base) return { dept: base, sub: (tok === 'supply' || tok === 'seller') ? 'Supply' : 'Demand' };
+    }
   }
   return { dept: cleanCell_(name), sub: null };
+}
+
+/* ---- canonical team resolution ---- */
+/* Map a raw tab name onto a registered team by pattern. Returns the team or
+ * null (an unregistered tab keeps its own name, e.g. a stray reference tab). */
+function canonicalTeam_(rawName, teams) {
+  var n = norm_(rawName);
+  teams = teams && teams.length ? teams : DEFAULT_TEAMS;
+  for (var i = 0; i < teams.length; i++) {
+    var pats = teams[i].patterns || [];
+    for (var p = 0; p < pats.length; p++) {
+      if (pats[p] && n.indexOf(norm_(pats[p])) >= 0) return teams[i];
+    }
+  }
+  return null;
+}
+/* Resolve a tab to its canonical department (+ sub-team), attaching the team's
+ * declared lead. Every parser routes through this so tabs collapse into the
+ * fixed 5 teams. */
+function resolveDeptSub_(ctx, tabName, kind) {
+  var ds = splitDeptSub_(tabName);
+  var team = canonicalTeam_(tabName, ctx.teams);
+  var deptName = team ? team.name : ds.dept;
+  var dept = getDept_(ctx, deptName, kind);
+  if (team) {
+    dept.teamKey = team.key;
+    dept.lead = team.lead || '';
+    dept.registered = true;
+    dept.registeredMembers = team.members || [];
+  }
+  // template scorecards are only a framework; a real blocks tab upgrades the kind
+  if (kind === 'individuals') dept.kind = 'individuals';
+  return { dept: dept, sub: ds.sub, team: team };
 }
 function matchRoster_(rosterByTeam, deptName) {
   var k = norm_(deptName);
@@ -1757,6 +1892,7 @@ function readSettings_() {
     thresholds: { onTrack: DEFAULT_THRESHOLDS.onTrack, atRisk: DEFAULT_THRESHOLDS.atRisk },
     scoring: { ratingPct: DEFAULT_SCORING.ratingPct.slice(), interpolate: DEFAULT_SCORING.interpolate },
     statusScale: DEFAULT_STATUS_SCALE.map(function (x) { return { key: x.key, label: x.label, min: x.min }; }),
+    teams: DEFAULT_TEAMS.map(function (t) { return { key: t.key, name: t.name, lead: t.lead, patterns: t.patterns.slice(), members: (t.members || []).slice() }; }),
     actualsSheetId: '', actualsTab: ''
   };
   try {
@@ -1769,6 +1905,7 @@ function readSettings_() {
         if (o.thresholds) s.thresholds = o.thresholds;
         if (o.scoring && o.scoring.ratingPct && o.scoring.ratingPct.length === 5) s.scoring = o.scoring;
         if (o.statusScale && o.statusScale.length) s.statusScale = o.statusScale;
+        if (o.teams && o.teams.length) s.teams = o.teams;
         s.actualsSheetId = o.actualsSheetId || '';
         s.actualsTab = o.actualsTab || '';
       }
