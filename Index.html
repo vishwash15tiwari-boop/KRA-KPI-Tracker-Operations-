@@ -522,6 +522,8 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
 .drow:hover{background:var(--surface-2)}
 .drow.static{cursor:default}.drow.static:hover{background:transparent}
 .drow .nm{font-size:12.5px;font-weight:550;flex:0 0 118px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.drow.wide .nm{flex:0 0 210px}
+@media(max-width:720px){.drow.wide .nm{flex:0 0 130px}}
 .drow .nm small{display:block;font-size:10.5px;color:var(--faint);font-weight:500}
 .drow .bar{flex:1;height:8px;background:var(--line-soft);border-radius:20px;overflow:hidden;min-width:40px}
 .drow .bar i{display:block;height:100%;border-radius:20px;background:var(--ink)}
@@ -569,6 +571,29 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
 .mini .n{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap}
 .tile .empty{padding:16px 4px;font-size:12px}
 
+/* ---- team lead ---- */
+.lead-chip{display:inline-flex;align-items:center;gap:5px;font-weight:600;color:var(--ink-2);cursor:pointer}
+.lead-chip.static{cursor:default}
+.lead-chip svg{width:13px;height:13px}
+.lead-chip b{color:var(--ink);font-weight:700}
+.lead-chip:not(.static):hover b{text-decoration:underline}
+.lead-tile{display:flex;align-items:center;gap:11px;min-width:0}
+.lead-tile .lt-name{font-size:16px;font-weight:700;letter-spacing:-.015em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lead-tile .lt-role{font-size:11.5px;color:var(--muted);font-weight:500;margin-top:1px}
+.lavatar.lg{width:40px;height:40px;font-size:14px;flex:0 0 40px}
+
+/* ---- teams editor ---- */
+.team-edit{border:1px solid var(--line);border-radius:13px;padding:14px 15px;background:var(--card)}
+.team-edit+.team-edit{margin-top:10px}
+.te-h{display:flex;align-items:center;gap:11px}
+.te-name{flex:1;min-width:0;border:1px solid transparent;border-radius:8px;padding:6px 9px;font-size:16px;font-weight:700;letter-spacing:-.015em;color:var(--ink);background:var(--surface-2);outline:none;width:100%}
+.te-name:focus{border-color:var(--brand);background:#fff;box-shadow:0 0 0 3px var(--brand-soft)}
+.te-stat{font-size:11.5px;color:var(--muted);font-weight:600;white-space:nowrap;flex:0 0 auto}
+.te-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+@media(max-width:640px){.te-grid{grid-template-columns:1fr}}
+.te-note{font-size:11px;color:var(--muted);margin-top:5px;line-height:1.4}
+.te-subs{margin-top:11px;padding-top:10px;border-top:1px solid var(--line-soft);font-size:11.5px;color:var(--muted);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-delay:0ms!important;transition-duration:.05ms!important}}
 </style>
 </head>
@@ -615,9 +640,20 @@ function relTime(iso){if(!iso)return '';const d=new Date(iso);if(isNaN(d))return
 function ratingStr(r){return r==null?'—':(Math.round(r*10)/10).toFixed(1);}
 function periodShort(p){const m=/^(\d{4})-(\d{2})$/.exec(p||'');return m?(MONTHS[+m[2]]||m[2]):(p||'');}
 function periodLong(p){const m=/^(\d{4})-(\d{2})$/.exec(p||'');return m?(periodShort(p)+" '"+m[1].slice(2)):(p||'');}
-/* type-adaptive value formatting from the KPI rule layer */
-function fmtVal(rec,v){if(v==null||v==='')return '—';const mt=rec&&rec.metricType;if(mt==='Percentage')return n2(v)+'%';if(mt==='Days')return n2(v)+' d';if(mt==='Amount')return '₹'+n2(v)+' Cr';return String(n2(v));}
+/* type-adaptive value formatting from the KPI rule layer. The master sheet
+   stores percentages as fractions (0.96 = 96%, 0.013 = 1.3%), so any Percentage
+   value at fractional scale is shown ×100 — otherwise a layman reads "0.96%". */
+function pctScale(v){return Math.abs(v)<=1.5?v*100:v;}
+function pctStr(v){const p=pctScale(v);const r=Math.round(p*10)/10;return (r===Math.round(r)?String(Math.round(r)):r.toFixed(1))+'%';}
+function fmtVal(rec,v){if(v==null||v==='')return '—';const mt=rec&&rec.metricType;if(mt==='Percentage')return pctStr(v);if(mt==='Days')return n2(v)+' d';if(mt==='Amount')return '₹'+n2(v)+' Cr';return String(n2(v));}
 function unitStr(rec,v){return fmtVal(rec,v);}
+/* Prettify a band's raw cell for display: bare fractional numbers on a
+   Percentage KPI become "60%", but rich labels ("≥ ₹9 Cr", "12 Days") stay. */
+function bandDisplay(rec,b){
+  const raw=(b&&b.raw!=null)?String(b.raw):'';
+  if(rec&&rec.metricType==='Percentage'&&/^-?\d*\.?\d+$/.test(raw.trim())&&b.num!=null)return pctStr(b.num);
+  return raw||'—';
+}
 
 function backend(){return (typeof google!=='undefined'&&google.script&&google.script.run)?google.script.run:null;}
 function call(fn,payload){return new Promise((resolve,reject)=>{const b=backend();if(!b){reject({__offline:true});return;}b.withSuccessHandler(resolve).withFailureHandler(reject)[fn](payload);});}
@@ -826,7 +862,7 @@ function ladder(rec){
   if(!rec.bands||!rec.bands.length)return '';
   const active=rec.rating==null?-1:clamp(Math.round(rec.rating),1,rec.bands.length)-1;
   const meetsIdx=rec.bands.length>=3?2:Math.floor(rec.bands.length/2);
-  const cells=rec.bands.map((b,i)=>{const on=i===active;const g='g'+(i+1);const inner=rec.qualitative?'<div class="qd"></div>':'<div class="lbv" title="'+esc(b.raw||'')+'">'+esc(b.raw||'—')+'</div>';return '<div class="lb '+g+(on?' on':'')+(i===meetsIdx?' meets':'')+'"><div class="lbn">'+esc(b.label?shortBand(b.label):(i+1)+'')+'</div>'+inner+'</div>';}).join('');
+  const cells=rec.bands.map((b,i)=>{const on=i===active;const g='g'+(i+1);const disp=bandDisplay(rec,b);const inner=rec.qualitative?'<div class="qd"></div>':'<div class="lbv" title="'+esc(b.raw||'')+'">'+esc(disp)+'</div>';return '<div class="lb '+g+(on?' on':'')+(i===meetsIdx?' meets':'')+'"><div class="lbn">'+esc(b.label?shortBand(b.label):(i+1)+'')+'</div>'+inner+'</div>';}).join('');
   const typ=rec.metricType||(rec.qualitative?'Qualitative':'Number');
   const dir=rec.qualitative?'manual assessment':dirLabel(rec.directionKey).toLowerCase();
   let mark='';
@@ -868,13 +904,13 @@ function priorityRecords(base){
 function priorityList(base,limit){
   const items=priorityRecords(base).slice(0,limit||6);
   if(!items.length)return '<div class="empty">Nothing below target — everyone is on track 🎉</div>';
-  return items.map((x,i)=>{const r=x.r;const impact=x.w>=25?'High impact':(x.w>=15?'Medium':'Low');return '<div class="lrow" data-rec="'+r.kpiId+'"><span class="rank'+(i===0?' top':'')+'">'+(i+1)+'</span><div class="lrow-id"><span class="sdot s-'+r.status.k+'"></span><div class="lrow-name">'+esc(r.kpi||r.kra)+'<span class="lrow-sub">'+esc(r.employee)+' · '+esc(r.department)+(r.subTeam?' · '+esc(r.subTeam):'')+'</span></div></div><span class="tag">'+(r.weightShown==null?'—':n1(r.weightShown)+'% · '+impact)+'</span>'+rchip(r.rating,r.status)+'<span class="chev">›</span></div>';}).join('');
+  return items.map((x,i)=>{const r=x.r;const impact=x.w>=25?'High impact':(x.w>=15?'Medium':'Low');return '<div class="lrow" data-rec="'+r.kpiId+'"><span class="rank'+(i===0?' top':'')+'">'+(i+1)+'</span><div class="lrow-id"><span class="sdot s-'+r.status.k+'"></span><div class="lrow-name">'+esc(r.kpi||r.kra)+'<span class="lrow-sub">'+esc(titleName(r.employee))+' · '+esc(r.department)+(r.subTeam?' · '+esc(r.subTeam):'')+'</span></div></div><span class="tag">'+(r.weightShown==null?'—':n1(r.weightShown)+'% · '+impact)+'</span>'+rchip(r.rating,r.status)+'<span class="chev">›</span></div>';}).join('');
 }
 function moversList(movers,limit){
   const arr=(movers||[]).filter(m=>Math.abs(m.delta)>=0.01);
   if(!arr.length)return '<div class="empty">No period-over-period change to compare yet.</div>';
   const top=arr.slice(0,Math.ceil((limit||6)/2)),bottom=arr.slice(-Math.floor((limit||6)/2)).reverse().filter(b=>top.indexOf(b)<0);
-  return top.concat(bottom).map(m=>'<div class="lrow" data-person="'+m.id+'"><div class="lrow-id"><div class="lavatar">'+initials(m.name)+'</div><div class="lrow-name">'+esc(m.name)+'<span class="lrow-sub">'+esc(m.department)+'</span></div></div>'+deltaChip(m.delta)+rchip(m.rating,m.status)+'<span class="chev">›</span></div>').join('');
+  return top.concat(bottom).map(m=>'<div class="lrow" data-person="'+m.id+'"><div class="lrow-id"><div class="lavatar">'+initials(m.name)+'</div><div class="lrow-name">'+esc(titleName(m.name))+'<span class="lrow-sub">'+esc(m.department)+'</span></div></div>'+deltaChip(m.delta)+rchip(m.rating,m.status)+'<span class="chev">›</span></div>').join('');
 }
 
 /* ==================== DASHBOARD COMPONENTS ====================
@@ -913,6 +949,24 @@ function radialMeter(score){
     +(score==null?'':'<circle cx="42" cy="42" r="'+r+'" fill="none" stroke="var(--ink)" stroke-width="8" stroke-linecap="round"'
     +' stroke-dasharray="'+(C*sweep*p).toFixed(1)+' '+C.toFixed(1)+'" transform="rotate(135 42 42)"/>')
     +'</svg>';
+}
+/* Title-case ALL-CAPS sheet names for display (AMIT JHA -> Amit Jha), leaving
+   already-mixed names alone. Keys/ids are untouched — this is display only. */
+function titleName(s){s=String(s||'');if(!/[a-z]/.test(s))return s.toLowerCase().replace(/\b([a-z])/g,(m,c)=>c.toUpperCase());return s;}
+/* Inline "Lead: Name" chip for a team's sub-header. */
+function leadChip(d){
+  if(!d||!d.lead)return '';
+  const nm=titleName(d.lead);
+  return (d.leadEmployeeId?'<span class="lead-chip" data-person="'+d.leadEmployeeId+'">':'<span class="lead-chip static">')
+    +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.4"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg>Lead · <b>'+esc(nm)+'</b></span> · ';
+}
+/* A dedicated Team lead tile for the team dashboard. */
+function leadTile(d){
+  const nm=titleName(d.lead||'—');
+  const sub=d.leadResolved?esc(titleName(d.leadRole||'Team Lead')):'declared lead'+(d.lead?' · not in this sheet':'');
+  const inner='<div class="lead-tile"><div class="lavatar lg">'+initials(nm)+'</div><div style="min-width:0">'
+    +'<div class="lt-name">'+esc(nm)+'</div><div class="lt-role">'+sub+'</div></div></div>';
+  return tile('t2','Team lead',inner,d.leadEmployeeId?{attr:'data-person="'+d.leadEmployeeId+'"'}:{});
 }
 /* Stat tile: label · value · delta · optional sparkline. */
 function statTile(span,label,value,unit,sub,opts){
@@ -962,8 +1016,9 @@ function areaChart(series,opts){
     +g+'<path class="ar" d="'+area+'"/><path class="ln" d="'+line+'"/>'+pts+xl+bands+'</svg>';
 }
 /* Magnitude on nominal categories: one ink for every bar, length is the value. */
-function dRow(name,sub,value,unit,pct01,attr,delta){
-  return '<div class="drow"'+(attr||'')+' data-tip="'+esc(name+(sub?' · '+sub:'')+' · '+(value==null?'no data':value+(unit||'')))+'">'
+function dRow(name,sub,value,unit,pct01,attr,delta,opts){
+  opts=opts||{};
+  return '<div class="drow'+(opts.wide?' wide':'')+'"'+(attr||'')+' data-tip="'+esc(name+(sub?' · '+sub:'')+' · '+(value==null?'no data':value+(unit||'')))+'">'
     +'<div class="nm">'+esc(name)+(sub?'<small>'+esc(sub)+'</small>':'')+'</div>'
     +'<div class="bar"><i style="width:'+clamp(pct01*100,0,100).toFixed(1)+'%"></i></div>'
     +(delta!=null?'<span class="d">'+deltaChip(delta)+'</span>':'')
@@ -1021,13 +1076,13 @@ function vOverview(){
 
   const priority=priorityRecords(null).slice(0,6);
   const priorityRows=priority.length?priority.map(x=>{const r=x.r;
-    return `<tr data-rec="${r.kpiId}"><td class="nm"><span class="sdot s-${r.status.k}"></span> ${esc(r.kpi||r.kra)}<small>${esc(r.employee)} · ${esc(r.department)}</small></td>
+    return `<tr data-rec="${r.kpiId}"><td class="nm"><span class="sdot s-${r.status.k}"></span> ${esc(r.kpi||r.kra)}<small>${esc(titleName(r.employee))} · ${esc(r.department)}</small></td>
       <td class="n">${r.weightShown==null?'—':n1(r.weightShown)+'%'}</td><td class="n">${r.rating==null?'—':ratingStr(r.rating)}</td></tr>`;
   }).join(''):'<tr><td class="empty" colspan="3">Nothing below target.</td></tr>';
 
   const movers=(o.movers||[]).filter(m=>Math.abs(m.delta)>=.01);
   const moverRows=movers.length?movers.slice(0,3).concat(movers.slice(-3).reverse().filter(m=>movers.slice(0,3).indexOf(m)<0)).map(m=>
-    `<tr data-person="${m.id}"><td class="nm">${esc(m.name)}<small>${esc(m.department)}</small></td>
+    `<tr data-person="${m.id}"><td class="nm">${esc(titleName(m.name))}<small>${esc(m.department)}</small></td>
       <td class="n">${deltaChip(m.delta)}</td><td class="n">${m.score==null?'—':n1(m.score)+'%'}</td></tr>`).join('')
     :'<tr><td class="empty" colspan="3">No period-over-period change yet.</td></tr>';
 
@@ -1103,7 +1158,7 @@ function vDept(){
   const prev=esc(periodShort(B().rollups.org.previousPeriod)||'');
 
   const head=`<div class="dash-head"><h1>${esc(d.name)}</h1>
-    <span class="sub">${d.kind==='scorecard'?'Shared market scorecard':'Individual KRA/KPI blocks'} · ${emps.length} people · ${d.kpiCount} KPIs${subs.length?' · '+subs.length+' sub-teams':''}</span>
+    <span class="sub">${leadChip(d)}${emps.length} people · ${d.kpiCount} KPIs${subs.length?' · '+subs.length+' sub-teams':''}</span>
     <div class="r"><span class="link" data-nav="teams">All teams ›</span></div></div>`;
 
   if(!hasData) return head+`<div class="dash">
@@ -1122,13 +1177,13 @@ function vDept(){
   const bins=scale.map(x=>({label:x.label,short:x.label,n:emps.filter(e=>e.rating!=null&&e.status.k===x.key).length}));
   const pr=priorityRecords(recs).slice(0,6);
   const prRows=pr.length?pr.map(x=>{const r=x.r;
-    return `<tr data-rec="${r.kpiId}"><td class="nm"><span class="sdot s-${r.status.k}"></span> ${esc(r.kpi||r.kra)}<small>${esc(r.employee)}</small></td>
+    return `<tr data-rec="${r.kpiId}"><td class="nm"><span class="sdot s-${r.status.k}"></span> ${esc(r.kpi||r.kra)}<small>${esc(titleName(r.employee))}</small></td>
       <td class="n">${r.weightShown==null?'—':n1(r.weightShown)+'%'}</td><td class="n">${r.rating==null?'—':ratingStr(r.rating)}</td></tr>`;
   }).join(''):'<tr><td class="empty" colspan="3">Nothing below target.</td></tr>';
 
   return head+`<div class="dash">
     ${heroTile(d.score,d.rating,d.status,d.delta,'Weighted across '+withData(recs).length+' scored KPIs'+(prev?', vs '+prev:'')+'.')}
-    ${statTile('t2','People',String(emps.length),'',d.kind==='scorecard'?'POCs on this scorecard':'individual scorecards',{nav:'employees'})}
+    ${d.lead?leadTile(d):statTile('t2','People',String(emps.length),'','members',{nav:'employees'})}
     ${statTile('t2','KPIs on track',String(d.recOnTrack),'',d.recAtRisk+' at risk · '+d.recOffTrack+' off',{meter:recs.length?d.recOnTrack/recs.length*100:0})}
     ${statTile('t2','Pending updates',String(pending),'',withData(recs).length+' of '+recs.length+' updated',{meter:recs.length?withData(recs).length/recs.length*100:0,nav:'checkins'})}
     ${statTile('t2','Reviews complete',String(done),'/'+emps.length,'this cycle',{meter:emps.length?done/emps.length*100:0,nav:'reviews'})}
@@ -1147,8 +1202,8 @@ function vDept(){
 function peopleRows(emps){
   if(!emps.length)return '<div class="empty">No people mapped for this team.</div>';
   return emps.slice().sort((a,b)=>(b.score==null?-1:b.score)-(a.score==null?-1:a.score)).map(e=>
-    dRow(e.name,[e.role,e.region].filter(Boolean).join(' · ')||e.department,
-      e.score==null?null:n1(e.score),'%',(e.score||0)/100,' data-person="'+e.id+'"',e.delta)).join('');
+    dRow(titleName(e.name),[titleName(e.role),e.region].filter(Boolean).join(' · ')||e.department,
+      e.score==null?null:n1(e.score),'%',(e.score||0)/100,' data-person="'+e.id+'"',e.delta,{wide:true})).join('');
 }
 function teamPerspectives(recs){
   const map={};recs.forEach(r=>{const p=r.perspective||r.kra||'General';const m=map[p]||(map[p]={sw:0,sr:0,n:0});m.n++;if(r.rating!=null&&r.weightNorm!=null){m.sw+=r.weightNorm;m.sr+=r.weightNorm*r.rating;}});
@@ -1233,7 +1288,7 @@ function vPerspective(){
   body+='<div class="sect-t">KPI lines</div><div class="panel pad"><div class="list stack" style="margin-top:2px">'+recs.slice().sort((a,b)=>(a.rating==null?99:a.rating)-(b.rating==null?99:b.rating)).slice(0,20).map(r=>recRow(r)).join('')+'</div></div>';
   return `<div class="page-head"><h1>${esc(name)}</h1><p>Everything under the ${esc(name)} perspective, across all teams.</p></div>${cards}${body}`;
 }
-function recRow(r){return `<div class="lrow" data-rec="${r.kpiId}"><div class="lrow-id"><span class="sdot s-${r.status.k}"></span><div class="lrow-name">${esc(r.kpi||r.kra)}<span class="lrow-sub">${esc(r.employee)} · ${esc(r.department)}${r.subTeam?' · '+esc(r.subTeam):''}</span></div></div>${r.metricType?'<span class="tag mt">'+esc(r.metricType)+'</span>':''}${rchip(r.rating,r.status)}<span class="chev">›</span></div>`;}
+function recRow(r){return `<div class="lrow" data-rec="${r.kpiId}"><div class="lrow-id"><span class="sdot s-${r.status.k}"></span><div class="lrow-name">${esc(r.kpi||r.kra)}<span class="lrow-sub">${esc(titleName(r.employee))} · ${esc(r.department)}${r.subTeam?' · '+esc(r.subTeam):''}</span></div></div>${r.metricType?'<span class="tag mt">'+esc(r.metricType)+'</span>':''}${rchip(r.rating,r.status)}<span class="chev">›</span></div>`;}
 
 /* ---------------- KPI ANALYSIS ---------------- */
 function kpiNameGroups(){
@@ -1262,7 +1317,7 @@ function vKpiAnalysis(){
   </div>
   <div class="two-eq">
     <div class="panel pad"><div class="panel-h"><h3>By team</h3><span class="sub">average rating</span></div><div class="stack" style="margin-top:4px">${teamRows||'<div class="empty">No data.</div>'}</div></div>
-    <div class="panel pad"><div class="panel-h"><h3>Owners</h3><span class="sub">ranked</span></div><div class="list stack" style="margin-top:2px">${owners.map(r=>`<div class="lrow" data-rec="${r.kpiId}"><div class="lrow-id"><div class="lavatar">${initials(r.employee)}</div><div class="lrow-name">${esc(r.employee)}<span class="lrow-sub">${esc(r.department)}${r.subTeam?' · '+esc(r.subTeam):''}</span></div></div><span class="lrow-meta">${r.actual==null?'—':esc(fmtVal(r,r.actual))}</span>${rchip(r.rating,r.status)}<span class="chev">›</span></div>`).join('')}</div></div>
+    <div class="panel pad"><div class="panel-h"><h3>Owners</h3><span class="sub">ranked</span></div><div class="list stack" style="margin-top:2px">${owners.map(r=>`<div class="lrow" data-rec="${r.kpiId}"><div class="lrow-id"><div class="lavatar">${initials(r.employee)}</div><div class="lrow-name">${esc(titleName(r.employee))}<span class="lrow-sub">${esc(r.department)}${r.subTeam?' · '+esc(r.subTeam):''}</span></div></div><span class="lrow-meta">${r.actual==null?'—':esc(fmtVal(r,r.actual))}</span>${rchip(r.rating,r.status)}<span class="chev">›</span></div>`).join('')}</div></div>
   </div>`;
 }
 
@@ -1285,7 +1340,7 @@ function distributionBlock(emps){
 function personRow(e,rank){
   const r=e.rating;const sub=[e.department,e.role,e.region].filter(Boolean).join(' · ');
   return `<div class="lrow" data-person="${e.id}"><span class="rank${rank===1?' top':''}">${rank}</span>
-    <div class="lrow-id"><div class="lavatar">${initials(e.name)}</div><div class="lrow-name">${esc(e.name)}${e.isTemplate?'<span class="mini-tag">RUBRIC</span>':''}<span class="lrow-sub">${esc(sub||'—')}</span></div></div>
+    <div class="lrow-id"><div class="lavatar">${initials(e.name)}</div><div class="lrow-name">${esc(titleName(e.name))}${e.isTemplate?'<span class="mini-tag">RUBRIC</span>':''}<span class="lrow-sub">${esc(sub||'—')}</span></div></div>
     ${ratingBar(r)}${e.delta!=null?deltaChip(e.delta):''}<div class="lrow-meta">${e.score==null?'—':n1(e.score)+'%'}</div>${rchip(r,e.status)}<span class="chev">›</span></div>`;
 }
 
@@ -1294,7 +1349,7 @@ function vPickMe(){
   const es=B().employees.filter(e=>!e.isTemplate).slice().sort((a,b)=>a.name.localeCompare(b.name));
   return `<div class="page-head"><h1>My Performance</h1><p>Pick your profile to see your personal scorecard — your level, journey, KRAs, KPIs and next milestones. The same data and scoring engine, framed for you.</p></div>
   <div class="panel pad"><div class="panel-h"><h3>Select your profile</h3><span class="sub">${es.length} people</span></div>
-  <div class="list stack">${es.map(e=>`<div class="lrow" data-pick="${e.id}"><div class="lrow-id"><div class="lavatar">${initials(e.name)}</div><div class="lrow-name">${esc(e.name)}<span class="lrow-sub">${esc([e.department,e.role].filter(Boolean).join(' · ')||'—')}</span></div></div>${rchip(e.rating,e.status)}<span class="chev">›</span></div>`).join('')}</div></div>`;
+  <div class="list stack">${es.map(e=>`<div class="lrow" data-pick="${e.id}"><div class="lrow-id"><div class="lavatar">${initials(e.name)}</div><div class="lrow-name">${esc(titleName(e.name))}<span class="lrow-sub">${esc([e.department,e.role].filter(Boolean).join(' · ')||'—')}</span></div></div>${rchip(e.rating,e.status)}<span class="chev">›</span></div>`).join('')}</div></div>`;
 }
 
 /* ---------------- PERSON / MY SCORECARD ---------------- */
@@ -1305,7 +1360,7 @@ function vPerson(){
   const tab=APP.tab||'scorecard';
   const nextLvl=e.rating==null?null:(e.rating>=4.5?null:(e.rating>=3.75?4.5:(e.rating>=3?3.75:(e.rating>=2?3:2))));
   const toNext=nextLvl==null?null:Math.round((nextLvl-e.rating)*100)/100;
-  const head=`<div class="page-head"><div class="person-hd"><div class="pa">${initials(e.name)}</div><div style="min-width:0"><h1>${esc(e.name)}${e.rating!=null?levelChip(e.level):''}</h1>
+  const head=`<div class="page-head"><div class="person-hd"><div class="pa">${initials(e.name)}</div><div style="min-width:0"><h1>${esc(titleName(e.name))}${e.rating!=null?levelChip(e.level):''}</h1>
     <div class="meta"><span class="tag brand">${esc(e.department)}</span>${e.role?'<span>'+esc(e.role)+'</span>':''}${e.region?'<span>· '+esc(e.region)+'</span>':''}<span>· ${recs.length} KPIs</span>${e.consistency>=2?'<span class="tag">'+e.consistency+'-period streak</span>':''}${e.isTemplate?'<span class="tag">Shared rubric — roster not mapped</span>':''}</div></div>
     <div class="r">${isMe?'<button class="btn ghost sm" data-act="switch-me">Switch profile</button>':''}</div></div></div>`;
   const rv=e.review||{status:'Not Started'};
@@ -1427,7 +1482,7 @@ function vRecords(){
   return `<div class="page-head"><h1>${title}</h1><p>${intro} ${rows.length} records${!mine&&(APP.filters.dept||APP.filters.subTeam||APP.filters.status||APP.filters.search)?' (filtered)':''}. Tap any row for detail &amp; to enter an actual.</p></div>
   <div class="panel pad"><div class="panel-h"><h3>${rows.length} record${rows.length===1?'':'s'}</h3><span class="sub">${withData(rows).length} with ${esc(periodShort(APP.period))} actuals</span></div>
   <div class="tbl-wrap stack"><table class="tbl"><thead><tr>${mine?'':th('employee','Person')}${mine?'':th('department','Team')}${th('kpi','KRA / KPI')}${th('type','Type')}${th('weight','Wt',1)}${th('target','Target',1)}${th('actual','Actual',1)}${th('rating','Rating',1)}<th>Status</th></tr></thead>
-  <tbody>${slice.length?slice.map(r=>`<tr data-rec="${r.kpiId}">${mine?'':'<td class="kname">'+esc(r.employee)+'</td>'}${mine?'':'<td>'+esc(r.department)+(r.subTeam?' · '+esc(r.subTeam):'')+'</td>'}<td class="kname">${esc(r.kpi||r.kra||'—')}<small>${esc(r.kra&&r.kpi&&r.kra!==r.kpi?r.kra:(r.perspective||''))}</small></td><td><span class="tag mt">${esc(r.metricType||'—')}</span></td><td class="num">${r.weightShown==null?'—':n1(r.weightShown)+'%'}</td><td class="num">${r.target==null?'—':esc(fmtVal(r,r.target))}</td><td class="num">${r.actual==null?'—':esc(fmtVal(r,r.actual))}</td><td class="num" style="color:${sc(r.status.k)};font-weight:800">${r.rating==null?'—':ratingStr(r.rating)}</td><td>${statusPill(r.status)}</td></tr>`).join(''):'<tr><td colspan="'+(mine?7:9)+'" class="empty">No records match the filters.</td></tr>'}</tbody></table></div>
+  <tbody>${slice.length?slice.map(r=>`<tr data-rec="${r.kpiId}">${mine?'':'<td class="kname">'+esc(titleName(r.employee))+'</td>'}${mine?'':'<td>'+esc(r.department)+(r.subTeam?' · '+esc(r.subTeam):'')+'</td>'}<td class="kname">${esc(r.kpi||r.kra||'—')}<small>${esc(r.kra&&r.kpi&&r.kra!==r.kpi?r.kra:(r.perspective||''))}</small></td><td><span class="tag mt">${esc(r.metricType||'—')}</span></td><td class="num">${r.weightShown==null?'—':n1(r.weightShown)+'%'}</td><td class="num">${r.target==null?'—':esc(fmtVal(r,r.target))}</td><td class="num">${r.actual==null?'—':esc(fmtVal(r,r.actual))}</td><td class="num" style="color:${sc(r.status.k)};font-weight:800">${r.rating==null?'—':ratingStr(r.rating)}</td><td>${statusPill(r.status)}</td></tr>`).join(''):'<tr><td colspan="'+(mine?7:9)+'" class="empty">No records match the filters.</td></tr>'}</tbody></table></div>
   <div class="pager"><span>Page ${page+1} of ${pages} · ${slice.length} of ${rows.length}</span><div><button data-page="prev" ${page===0?'disabled':''}>Prev</button><button data-page="next" ${page>=pages-1?'disabled':''}>Next</button></div></div></div>`;
 }
 
@@ -1462,7 +1517,7 @@ function vCheckins(){
       <div class="list stack" style="margin-top:4px">${shown.length?shown.slice(0,14).map(checkinRow).join(''):'<div class="empty">No check-ins recorded for '+esc(periodLong(APP.period))+' yet. Open any KPI to add the first.</div>'}</div></div>
     <div class="panel pad"><div class="panel-h"><h3>Needs an update</h3><span class="sub">no actual this period</span></div>
       <div class="q">Who still owes a number?</div>
-      <div class="list stack" style="margin-top:4px">${stale.length?stale.slice(0,14).map(r=>`<div class="lrow" data-rec="${r.kpiId}"><div class="lrow-id"><span class="sdot s-none"></span><div class="lrow-name">${esc(r.kpi||r.kra)}<span class="lrow-sub">${esc(r.employee)} · ${esc(r.department)}</span></div></div><span class="tag">${r.weightShown==null?'—':n1(r.weightShown)+'%'}</span><span class="chev">›</span></div>`).join(''):'<div class="empty">Every assigned KPI has an actual for this period.</div>'}</div></div>
+      <div class="list stack" style="margin-top:4px">${stale.length?stale.slice(0,14).map(r=>`<div class="lrow" data-rec="${r.kpiId}"><div class="lrow-id"><span class="sdot s-none"></span><div class="lrow-name">${esc(r.kpi||r.kra)}<span class="lrow-sub">${esc(titleName(r.employee))} · ${esc(r.department)}</span></div></div><span class="tag">${r.weightShown==null?'—':n1(r.weightShown)+'%'}</span><span class="chev">›</span></div>`).join(''):'<div class="empty">Every assigned KPI has an actual for this period.</div>'}</div></div>
   </div>`;
 }
 function checkinRow(c){
@@ -1508,7 +1563,7 @@ function reviewRow(e){
   const done=st==='Complete';
   const fin=e.review&&e.review.finalRating!=null?e.review.finalRating:null;
   return `<div class="lrow" data-review="${e.id}">
-    <div class="lrow-id"><div class="lavatar">${initials(e.name)}</div><div class="lrow-name">${esc(e.name)}<span class="lrow-sub">${esc([e.department,e.role].filter(Boolean).join(' · ')||'—')}</span></div></div>
+    <div class="lrow-id"><div class="lavatar">${initials(e.name)}</div><div class="lrow-name">${esc(titleName(e.name))}<span class="lrow-sub">${esc([e.department,e.role].filter(Boolean).join(' · ')||'—')}</span></div></div>
     <span class="stage ${done?'done':''}">${esc(st)}</span>
     <div class="lrow-meta">${e.score==null?'—':n1(e.score)+'%'}</div>
     ${fin!=null?'<span class="tag">final '+ratingStr(fin)+'</span>':''}
@@ -1557,7 +1612,7 @@ function vReview(){
   };
 
   return `<div class="page-head"><div class="person-hd"><div class="pa">${initials(e.name)}</div><div style="min-width:0">
-      <h1>${esc(e.name)}</h1><div class="meta"><span class="tag brand">${esc(e.department)}</span>${e.role?'<span>'+esc(e.role)+'</span>':''}<span>· ${esc(periodLong(APP.period))}</span><span class="stage ${rv.status==='Complete'?'done':''}">${esc(rv.status)}</span></div></div>
+      <h1>${esc(titleName(e.name))}</h1><div class="meta"><span class="tag brand">${esc(e.department)}</span>${e.role?'<span>'+esc(e.role)+'</span>':''}<span>· ${esc(periodLong(APP.period))}</span><span class="stage ${rv.status==='Complete'?'done':''}">${esc(rv.status)}</span></div></div>
       <div class="r"><button class="btn ghost sm" data-person="${e.id}">Full scorecard</button></div></div></div>
     ${locked?banner('Cycle locked','This review is read-only until the cycle is reopened.'):''}
     <div class="wf">${steps}</div>
@@ -1804,17 +1859,36 @@ function weightIssueTable(h){
 
 /* ---------------- TEAMS (administration view) ---------------- */
 function vTeamAdmin(){
+  const teams=(B().settings&&B().settings.teams)||[];
   const depts=B().departments;
+  const deptByKey={};depts.forEach(d=>{if(d.teamKey)deptByKey[d.teamKey]=d;});
+  const unregistered=depts.filter(d=>!d.teamKey&&d.kind!=='info');
+  const rows=teams.map((t,i)=>{
+    const d=deptByKey[t.key];
+    const resolved=d&&d.leadResolved;
+    return `<div class="team-edit" data-key="${esc(t.key)}">
+      <div class="te-h"><div class="lavatar lg">${initials(titleName(t.name))}</div>
+        <div style="flex:1;min-width:0"><input class="te-name" id="tmName${i}" value="${esc(t.name)}"></div>
+        <div class="te-stat">${d?(d.employeeCount+' people · '+d.kpiCount+' KPIs'):'<span style="color:var(--warn-ink)">no matching tab</span>'}</div></div>
+      <div class="te-grid">
+        <div class="field"><label>Team lead</label><input id="tmLead${i}" value="${esc(t.lead||'')}" placeholder="Lead name">
+          <div class="te-note">${d?(resolved?'✓ resolves to '+esc(titleName(d.lead)):(t.lead?'⚠ not found among this team’s members yet':'no lead set')):''}</div></div>
+        <div class="field"><label>Tab match patterns <small>comma-separated</small></label><input id="tmPat${i}" value="${esc((t.patterns||[]).join(', '))}">
+          <div class="te-note">${d?('matched: '+esc(d.name)):'matches no tab'}</div></div>
+      </div>
+      ${d&&(d.subTeamIds||[]).length?'<div class="te-subs">Sub-teams: '+deptSubTeams(d.id).map(s=>'<span class="tag">'+esc(s.name)+' · '+s.people+'</span>').join(' ')+'</div>':''}
+    </div>`;
+  }).join('');
   return `<div class="page-head"><h1>Teams</h1>
-    <p>The organisational structure as the parser reads it from the master sheet — teams, sub-teams, headcount and how each tab is being interpreted.</p></div>
-  <div class="panel pad"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Team</th><th>Shape</th><th class="num">Sub-teams</th><th class="num">People</th><th class="num">KPIs</th><th>Weightage</th></tr></thead>
-  <tbody>${depts.map(d=>`<tr data-dept="${d.id}"><td class="kname">${esc(d.name)}</td>
-    <td><span class="tag">${esc(d.kind==='scorecard'?'Shared scorecard':d.kind==='individuals'?'Individual blocks':d.kind==='info'?'Reference tab':d.kind)}</span></td>
-    <td class="num">${(d.subTeamIds||[]).length}</td><td class="num">${d.employeeCount}</td><td class="num">${d.kpiCount}</td>
-    <td>${d.weightNote?('<span class="tag'+(d.weightNote.ok?'':' brand')+'">'+n1(d.weightNote.sum)+'%'+(d.weightNote.ok?'':' — not 100')+'</span>'):'—'}</td></tr>`).join('')}</tbody></table></div></div>
+    <p>The five teams the whole product is organised around. Each maps one or more sheet tabs to a canonical team and a named lead. Members and sub-teams are read live from the mapped tabs; edit a name, lead or match pattern and save.</p></div>
+  <div class="panel pad"><div class="panel-h"><h3>${teams.length} teams</h3><span class="sub">canonical name · lead · tab mapping</span>
+    <div class="r"><button class="btn primary sm" data-act="save-teams">Save teams</button></div></div>
+    <div class="stack" style="margin-top:6px">${rows}</div>
+  </div>
+  ${unregistered.length?'<div class="sect-t">Unmapped tabs</div><div class="panel pad"><div class="stack" style="font-size:13px;color:var(--ink-2)">These tabs matched no team pattern and appear as their own group: '+unregistered.map(d=>'<b>'+esc(d.name)+'</b>').join(', ')+'. Add a pattern above to fold them into a team.</div></div>':''}
   <div class="sect-t">Sub-teams</div>
   <div class="panel pad"><div class="tbl-wrap"><table class="info-tbl"><thead><tr><th>Team</th><th>Sub-team</th><th class="num">People</th><th class="num">KPIs</th></tr></thead>
-  <tbody>${B().subTeams.length?B().subTeams.map(s=>'<tr><td>'+esc(s.deptName)+'</td><td>'+esc(s.name)+'</td><td class="num">'+s.people+'</td><td class="num">'+s.kpiCount+'</td></tr>').join(''):'<tr><td colspan="4" class="empty">No sub-teams detected.</td></tr>'}</tbody></table></div></div>`;
+  <tbody>${B().subTeams.length?B().subTeams.map(s=>'<tr><td>'+esc(s.deptName)+'</td><td>'+esc(s.name)+'</td><td class="num">'+s.people+'</td><td class="num">'+s.kpiCount+'</td></tr>').join(''):'<tr><td colspan="4" class="empty">No sub-teams — all teams are single-track.</td></tr>'}</tbody></table></div></div>`;
 }
 
 /* ---------------- REPORTS ---------------- */
@@ -1859,7 +1933,7 @@ function openRec(id){
   const spark=kpiSpark(r);
   $('#drawerContent').innerHTML=`
     <div class="drawer-h"><div style="min-width:0">${statusPill(r.status)}<h2 style="margin-top:9px">${esc(r.kpi||r.kra||'KPI')}</h2>
-      <div class="sub"><span class="tag brand">${esc(r.department)}</span>${r.subTeam?'<span class="tag">'+esc(r.subTeam)+'</span>':''}<span>${esc(r.employee)}</span></div></div>
+      <div class="sub"><span class="tag brand">${esc(r.department)}</span>${r.subTeam?'<span class="tag">'+esc(r.subTeam)+'</span>':''}<span>${esc(titleName(r.employee))}</span></div></div>
       <button class="icon-btn close" data-act="close-drawer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div class="drawer-body">
       <div class="section-t">What is it?</div>
@@ -1921,7 +1995,7 @@ function assignmentBox(r){
   const b=i=>{const x=(r.bands||[])[i];return x?esc(x.raw||''):'';};
   return `<div class="section-t">Assignment <span class="r">${r.bandSource==='assignment'?'overridden for this cycle':'inheriting the master ladder'}</span></div>
     <details class="asg"${r.bandSource==='assignment'||r.weightSource==='assignment'?' open':''}>
-      <summary>Weightage, direction and target bands for <b>${esc(r.employee)}</b> · ${esc(periodLong(APP.period))}</summary>
+      <summary>Weightage, direction and target bands for <b>${esc(titleName(r.employee))}</b> · ${esc(periodLong(APP.period))}</summary>
       <div class="row2" style="margin-top:10px">
         <div class="field"><label>Weightage %</label><input id="asgWeight" type="number" step="any" min="0" max="100" value="${r.weightShown==null?'':r.weightShown}"${lk}></div>
         <div class="field"><label>Direction</label><select id="asgDirection"${lk}>
@@ -2078,6 +2152,7 @@ function handleAct(a,el){
   else if(a==='save-scoring')doSaveScoring();
   else if(a==='save-statuses')doSaveStatuses();
   else if(a==='save-cycle')doSaveCycle(el.dataset.period);
+  else if(a==='save-teams')doSaveTeams();
   else if(a==='save-review')doSaveReview(el.dataset.emp,el.dataset.stage,el.dataset.submit==='1');
   else if(a==='save-assignment')doSaveAssignment(el.dataset.rec);
   else if(a==='switch-me')go('pickme');
@@ -2105,6 +2180,18 @@ async function pushSettings(payload,okMsg){
   toast('Saving…');
   try{const res=await call('apiSaveSettings',payload);
     if(res&&res.ok){toast(okMsg||'Saved');doRefresh();}else toast((res&&res.error)||'Save failed',true);
+  }catch(e){if(e&&e.__offline)toast('Connect to the sheet to save',true);else toast('Save failed',true);}
+}
+async function doSaveTeams(){
+  const teams=((B().settings&&B().settings.teams)||[]).map((t,i)=>{
+    const nm=$('#tmName'+i),ld=$('#tmLead'+i),pt=$('#tmPat'+i);
+    return {key:t.key,name:nm?nm.value.trim()||t.name:t.name,lead:ld?ld.value.trim():t.lead,
+      patterns:pt?pt.value.split(',').map(x=>x.trim()).filter(Boolean):t.patterns,members:t.members||[]};
+  });
+  if(!teams.length)return toast('No teams to save',true);
+  toast('Saving teams…');
+  try{const res=await call('apiSaveTeams',{teams:teams});
+    if(res&&res.ok){toast('Teams saved');doRefresh();}else toast((res&&res.error)||'Save failed',true);
   }catch(e){if(e&&e.__offline)toast('Connect to the sheet to save',true);else toast('Save failed',true);}
 }
 async function doSaveCycle(period){

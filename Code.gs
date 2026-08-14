@@ -1263,6 +1263,14 @@ function finalizeTeams_(ctx, settings) {
   });
   ctx.records = ctx.records.filter(function (r) { return !drop[r.employeeId]; });
 
+  // 1b) prune sub-teams no surviving record references — a template tab's
+  //     "Business Development" section otherwise leaves an empty "Supply · 0".
+  var subUsed = {};
+  ctx.records.forEach(function (r) { if (r.subTeamId) subUsed[r.subTeamId] = true; });
+  ctx.subTeams = ctx.subTeams.filter(function (s) { return subUsed[s.id]; });
+  Object.keys(ctx.subById).forEach(function (k) { if (!subUsed[k]) delete ctx.subById[k]; });
+  ctx.employees.forEach(function (e) { e.subTeamIds = (e.subTeamIds || []).filter(function (id) { return subUsed[id]; }); });
+
   // 2) resolve declared leads to a real employee in the same team (by name).
   ctx.depts.forEach(function (d) {
     if (!d.lead) return;
