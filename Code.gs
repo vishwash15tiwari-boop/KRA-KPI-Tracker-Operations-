@@ -300,6 +300,11 @@ function buildModel_(period, settings) {
     else parseGenericTab_(grid, name, ctx);
   });
 
+  // ---- TARGET-INPUT LAYER: the plan workbooks assign a target to a person, so
+  //      a KPI can read Target → Actual → Achievement % → Rating. Injected here,
+  //      before finalizeTeams_, so these teams get lead resolution + ordering.
+  var targets = injectTargetPlan_(ctx, period);
+
   // ---- reconcile against the pinned team registry.
   finalizeTeams_(ctx, settings);
 
@@ -314,7 +319,11 @@ function buildModel_(period, settings) {
   var all = readAllActuals_(settings);
   ctx.records.forEach(function (r) {
     var asg = assignments.byKey[r.kpiId + '|' + period] || assignments.byKey[r.kpiId + '|'] || null;
-    computeRecord_(r, all.byKey[r.kpiId + '|' + period] || all.byKey[r.kpiId + '|'] || null, settings, asg);
+    // A target-sourced record already carries its assigned target and actual from
+    // the plan workbook. computeRecord_ would reset target to the "Meets" band
+    // (90% of plan) and null the actual, so score it on its own terms instead.
+    if (r.targetSourced) scoreTargetRecord_(r, settings, all.byKey[r.kpiId + '|' + period] || null);
+    else computeRecord_(r, all.byKey[r.kpiId + '|' + period] || all.byKey[r.kpiId + '|'] || null, settings, asg);
     var log = checkins.byKey[r.kpiId + '|' + period] || [];
     r.checkins = log.slice(-8);
     r.checkinCount = log.length;
@@ -360,8 +369,126 @@ function buildModel_(period, settings) {
     checkinTotal: checkins.rows,
     assignmentCount: assignments.rows,
     health: health,
+    targets: targets,
     notes: ctx.notes
   };
+}
+
+/** ==================================================== TARGET-INPUT LAYER */
+/**
+ * Pull the per-team target plans for `period` and register them as real
+ * departments / people / KPI records, using the same ctx getters the sheet
+ * parsers use so ids and shapes stay native. Returns the plan hierarchy for the
+ * management "Targets" view (team target → individual allocation → buyer lines).
+ */
+function injectTargetPlan_(ctx, period) {
+  var tp;
+  try { tp = targetRecordsFor_(period); }
+  catch (e) { ctx.notes.push('Target plan unavailable: ' + (e && e.message || e)); return { teams: [], periods: [], available: false }; }
+
+  var deptIds = {};
+  tp.plan.teams.forEach(function (t) {
+    if (!t.connected || !t.allocation.length) return;
+    var dept = getDept_(ctx, t.team, 'targets');
+    dept.targetPlan = t.summary;
+    dept.targetMode = t.mode;
+    dept.qtyUnit = t.qtyUnit;
+    deptIds[t.key] = dept.id;
+
+    t.allocation.forEach(function (m) {
+      var region = m.region || '—';
+      var sub = getSubTeam_(ctx, dept, region);
+      var emp = getEmployee_(ctx, dept, m.name, m.rh ? (region + ' POC · RH ' + m.rh) : (region + ' POC'), region, false);
+      if (emp.subTeamIds.indexOf(sub.id) < 0) emp.subTeamIds.push(sub.id);
+      emp.targetPlan = {
+        gmvTarget: m.gmvTarget, gmvActual: m.gmvActual, qtyTarget: m.qtyTarget, qtyActual: m.qtyActual,
+        qtyUnit: t.qtyUnit, txnTarget: m.txnTarget, txnActual: m.txnActual,
+        supTarget: m.supTarget, buyTarget: m.buyTarget,
+        achievementPct: m.achievementPct, qtyAchievementPct: m.qtyAchievementPct,
+        share: m.share, rh: m.rh, region: region,
+        buyerCount: m.buyerCount, buyerLines: m.buyerLines, buyers: m.buyers || []
+      };
+
+      TARGET_KPIS.forEach(function (k) {
+        var target = m[k.tKey];
+        if (target == null) return;                 // nothing assigned ⇒ no KPI line
+        var actual = k.aKey ? m[k.aKey] : null;
+        var base = [dept.id, sub.id, slug_(m.name), slug_(k.kra), slug_(k.kpi)].join('.');
+        var kpiId = base, i = 2;
+        while (ctx.seenKpiId[kpiId]) kpiId = base + '.' + (i++);
+        ctx.seenKpiId[kpiId] = true;
+        var rec = {
+          kpiId: kpiId,
+          deptId: dept.id, department: dept.name,
+          subTeamId: sub.id, subTeam: sub.name,
+          employeeId: emp.id, employee: emp.name, role: emp.role, region: region,
+          perspective: k.persp, kra: k.kra, kpi: k.kpi,
+          definition: k.definition, method: k.method, source: k.method,
+          weight: k.weight, weightShown: k.weight, weightNorm: null,
+          metricType: k.type, unit: k.unit || t.qtyUnit,
+          qualitative: false, direction: 1, directionKey: 'higher', directionSource: 'declared',
+          bands: gmvBands_(target),
+          meetsValue: Math.round(target * 0.9 * 1000) / 1000,
+          planTarget: target, target: target,
+          actual: actual, hasActual: actual != null,
+          targetSourced: true, primaryMetric: !!k.primary,
+          targetSource: t.team + ' target plan · ' + (t.tabs[0] || 'workbook'),
+          bandSource: 'target-plan', weightSource: 'target-plan',
+          comment: '', evidence: '', updatedAt: null,
+          checkins: [], checkinCount: 0
+        };
+        emp.kpiIds.push(kpiId);
+        sub.kpiCount++; dept.kpiCount++;
+        ctx.records.push(rec);
+      });
+    });
+  });
+
+  return {
+    available: tp.plan.teams.some(function (t) { return t.connected; }),
+    periods: tsPeriods_(),
+    teams: tp.plan.teams.map(function (t) {
+      return { key: t.key, team: t.team, deptId: deptIds[t.key] || null, configured: t.configured,
+               connected: t.connected, mode: t.mode, qtyUnit: t.qtyUnit, error: t.error,
+               summary: t.summary, concentration: t.concentration, tabs: t.tabs,
+               buyerLines: t.buyerLines, unownedBuyers: t.unownedBuyers,
+               allocation: t.allocation.map(function (m) {
+                 return { name: m.name, region: m.region, rh: m.rh, share: m.share,
+                          gmvTarget: m.gmvTarget, gmvActual: m.gmvActual, achievementPct: m.achievementPct,
+                          qtyTarget: m.qtyTarget, qtyActual: m.qtyActual, qtyAchievementPct: m.qtyAchievementPct,
+                          txnTarget: m.txnTarget, txnActual: m.txnActual,
+                          supTarget: m.supTarget, buyTarget: m.buyTarget,
+                          buyerCount: m.buyerCount, buyerLines: m.buyerLines, buyers: m.buyers || [],
+                          employeeId: (deptIds[t.key] ? deptIds[t.key] + '::' + slug_(m.name) : null) };
+               }) };
+    })
+  };
+}
+
+/**
+ * Score a target-sourced record. The KPI's own rating logic is reused verbatim
+ * (its band ladder + direction), but ACHIEVEMENT is measured against the
+ * assigned plan target rather than the "Meets" band — so ₹5.80 Cr against a
+ * ₹6.50 Cr target reads 89.2%, not 99%. An actuals-sheet row for the same KPI
+ * still wins, so a manual correction is always possible.
+ */
+function scoreTargetRecord_(r, settings, a) {
+  if (a) {
+    if (a.actual != null) { r.actual = a.actual; r.hasActual = true; r.actualSource = 'actuals-sheet'; }
+    if (a.target != null) { r.planTarget = a.target; r.target = a.target; r.bands = gmvBands_(a.target); r.meetsValue = Math.round(a.target * 0.9 * 1000) / 1000; }
+    if (a.comment) r.comment = a.comment;
+    if (a.evidence) r.evidence = a.evidence;
+    if (a.updatedAt) r.updatedAt = a.updatedAt;
+  }
+  r.target = r.planTarget;
+  var rating = null;
+  if (r.actual != null) rating = ratingFromBands_(r.bands, r.actual, r.directionKey);
+  else if (a && a.rating != null) rating = clamp_(a.rating, 1, 5);
+  r.rating = rating;
+  r.achievedBand = bandLabelForRating_(r.bands, rating);
+  r.attainment = (r.actual != null && r.planTarget) ? round1_(r.actual / r.planTarget * 100) : null;
+  r.scorePct = scoreFromRating_(rating, settings.scoring);
+  r.status = statusFromRating_(rating, settings.statusScale);
 }
 
 /* KPI DEFINITION vs KPI ASSIGNMENT. The library is the master list — one entry

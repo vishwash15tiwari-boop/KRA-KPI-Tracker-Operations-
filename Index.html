@@ -721,6 +721,17 @@ button.sb-gt.open .cv{transform:rotate(180deg)}
 .lrow:nth-child(4){animation-delay:.11s}.lrow:nth-child(5){animation-delay:.14s}.lrow:nth-child(6){animation-delay:.17s}
 .lrow:nth-child(7){animation-delay:.19s}.lrow:nth-child(8){animation-delay:.21s}.lrow:nth-child(n+9){animation-delay:.23s}
 @keyframes rowIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+/* Targets — individual allocation rows carry two figures (target + achievement),
+   which is one too many for a phone. Drop the chevron, let the name shrink, and
+   keep both numbers legible. Scoped so shared .bc-row usage is untouched. */
+.tgt-alloc .bc-val{min-width:0}
+@media(max-width:760px){
+  .tgt-alloc .bc-row{gap:8px;flex-wrap:wrap}
+  .tgt-alloc .bc-label{flex:1 1 100%;width:auto}
+  .tgt-alloc .bc-track{flex:1 1 60px;min-width:40px}
+  .tgt-alloc .bc-val{flex:0 0 auto;white-space:nowrap}
+  .tgt-alloc .bc-chev{display:none}
+}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-delay:0ms!important;transition-duration:.05ms!important}}
 </style>
 </head>
@@ -842,6 +853,7 @@ const ICONS={overview:'<path d="M3 12l2-2 4 4 5-6 4 4 3-3"/><path d="M3 20h18" o
  * which is where people look for their own scorecard anyway. */
 const NAV_MAIN=[
   {id:'overview',label:'Overview'},
+  {id:'targets',label:'Targets'},
   {id:'teams',label:'Teams'},
   {id:'employees',label:'People'},
   {id:'records',label:'KPIs'},
@@ -861,6 +873,8 @@ const NAV_GROUPS=[
 const NAV_ICON={
   overview:'<path d="M3 12l2-2 4 4 5-6 4 4 3-3"/><path d="M3 20h18" opacity=".45"/>',
   goals:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2"/><path d="M12 2.4v2.6M12 19v2.6M21.6 12H19M5 12H2.4"/>',
+  targets:'<circle cx="12" cy="12" r="8.2"/><circle cx="12" cy="12" r="4.6" opacity=".55"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/>',
+  /* (icon map continues below) */
   checkins:'<rect x="3" y="4.5" width="18" height="16.5" rx="2.5"/><path d="M3 9.6h18M8 2.6v3.8M16 2.6v3.8"/><path d="M8.6 14.6l2.2 2.2 4.4-4.4"/>',
   records:'<path d="M4 6h16M4 12h16M4 18h10"/><circle cx="19.2" cy="18" r="2.1"/>',
   me:'<circle cx="12" cy="8" r="3.4"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/>',
@@ -877,6 +891,7 @@ const navIcon=id=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 /* Which nav entry lights up for a drill-down view. */
 /* Which rail entry lights up for a view that is not itself in the rail. */
 const NAV_PARENT={
+  targetteam:'targets', targetperson:'targets',
   dept:'teams', teamadmin:'teams',
   person:'employees', review:'employees', pickme:'employees',
   goals:'records', reports:'overview',
@@ -976,14 +991,15 @@ function render(){
     reviews:vReviews, review:vReview, reports:vReports,
     perspectives:vPerspectives, perspective:vPerspective, kpianalysis:vKpiAnalysis, records:vRecords,
     employees:vPeople, teamadmin:vTeamAdmin, library:vLibrary, kpidef:vKpiDef,
-    cycles:vCycles, settings:vSettings, health:vHealth
+    cycles:vCycles, settings:vSettings, health:vHealth,
+    targets:vTargets, targetteam:vTargetTeam, targetperson:vTargetPerson
   }[APP.view]||vOverview;
   c.innerHTML=v();
   countUp();
 }
 function renderCrumbs(){
   let cr;
-  const LAB={overview:'Overview',goals:'Goals & KPIs',checkins:'Check-ins',teams:'Teams',
+  const LAB={overview:'Overview',targets:'Targets',goals:'Goals & KPIs',checkins:'Check-ins',teams:'Teams',
     reviews:'Reviews',reports:'Reports',perspectives:'Perspectives',kpianalysis:'KPI Analysis',
     records:'All KPIs',employees:'People',teamadmin:'Team setup',library:'KRA / KPI Library',
     cycles:'Performance Cycles',settings:'Settings',health:'Data Health'};
@@ -992,6 +1008,8 @@ function renderCrumbs(){
     cr=[{t:'Overview',v:'overview'}];
     if(ADMIN_VIEWS.indexOf(APP.view)>=0)cr=[{t:'Administration'}];
     if(LAB[APP.view]&&APP.view!=='overview')cr.push({t:LAB[APP.view]});
+    if(APP.view==='targetteam'){const t=tgtTeam(APP.ctx.teamKey);cr=[{t:'Targets',v:'targets'}];if(t)cr.push({t:t.team});}
+    if(APP.view==='targetperson'){const t=tgtTeam(APP.ctx.teamKey);cr=[{t:'Targets',v:'targets'}];if(t)cr.push({t:t.team,v:'targetteam',ctx:{teamKey:t.key}});cr.push({t:APP.ctx.name||'Member'});}
     if(APP.view==='dept'){const d=deptById(APP.ctx.deptId);cr=[{t:'Teams',v:'teams'}];if(d)cr.push({t:d.name});}
     if(APP.view==='person'){const e=empById(APP.ctx.empId);cr=[{t:'People',v:'employees'}];if(e&&e.department)cr.push({t:e.department,v:'dept',ctx:{deptId:e.deptId}});if(e)cr.push({t:e.name});}
     if(APP.view==='perspective'){cr=[{t:'Overview',v:'overview'},{t:'Perspectives',v:'perspectives'},{t:APP.ctx.name||''}];}
@@ -1828,6 +1846,111 @@ function groupWeight(g){
 }
 
 /* ---------------- HEALTH & DATA ---------------- */
+/* ═══════════════ TARGETS — the input layer, not a spreadsheet view ═══════════
+   Drill order is fixed: TEAM target → INDIVIDUAL allocation → BUYER lines.
+   Buyer detail is deliberately second-level; it never reaches this dashboard's
+   front page. Each individual target links straight to the KPI it feeds.      */
+function TG(){return (B()&&B().targets)||{available:false,teams:[]};}
+function tgtTeam(k){return (TG().teams||[]).filter(t=>t.key===k)[0]||null;}
+const tCr=v=>v==null||isNaN(v)?'—':'₹'+(Math.round(v*100)/100).toFixed(2)+' Cr';
+const tQty=(v,u)=>v==null||isNaN(v)?'—':Math.round(v).toLocaleString('en-IN')+' '+(u||'MT');
+const tPct=v=>v==null||isNaN(v)?'—':(Math.round(v*10)/10)+'%';
+function tgtModeChip(t){return '<span class="tag">'+(t.mode==='performance'?'Target vs achievement':'Plan · target &amp; allocation')+'</span>';}
+/* one horizontal allocation row: label · share bar · target · achievement */
+function tgtRow(a,t,max,attr){
+  const w=max?clamp((a.gmvTarget||0)/max*100,0,100):0;
+  const ach=t.mode==='performance'
+    ? '<div class="bc-val">'+tCr(a.gmvActual)+'<small> '+tPct(a.achievementPct)+'</small></div>'
+    : '<div class="bc-val" style="color:var(--faint)">'+tQty(a.qtyTarget,t.qtyUnit)+'</div>';
+  return '<div class="bc-row" '+(attr||'')+'><div class="bc-label">'+esc(a.name)
+    +'<small> · '+esc(a.region||'—')+(a.rh?' · RH '+esc(a.rh):'')+'</small></div>'
+    +'<div class="bc-track"><div class="bc-fill" style="width:'+w+'%"></div></div>'
+    +'<div class="bc-val">'+tCr(a.gmvTarget)+'<small> '+(a.share==null?'':a.share+'%')+'</small></div>'
+    +ach+'<span class="bc-chev">›</span></div>';
+}
+function vTargets(){
+  const T=TG();
+  if(!T.available)return '<div class="page-head"><h1>Targets</h1><p>No target plan is connected yet. Each team\'s monthly plan workbook supplies the GMV and quantity targets that its KPIs are measured against.</p></div>'
+    +'<div class="panel pad">'+(T.teams||[]).map(t=>'<div class="hcheck warn"><div class="hc-ic">!</div><div class="hc-t">'+esc(t.team)+'<small>'+esc(t.error||'Not configured')+'</small></div></div>').join('')+'</div>';
+  const teams=T.teams.filter(t=>t.connected);
+  const notCon=T.teams.filter(t=>!t.connected);
+  const totT=teams.reduce((s,t)=>s+(t.summary.gmvTarget||0),0);
+  const totQ=teams.reduce((s,t)=>s+(t.summary.qtyTarget||0),0);
+  const totP=teams.reduce((s,t)=>s+(t.summary.employees||0),0);
+  const totB=teams.reduce((s,t)=>s+(t.summary.buyerLines||0),0);
+  const anyPerf=teams.some(t=>t.mode==='performance');
+  const totA=anyPerf?teams.reduce((s,t)=>s+(t.summary.gmvActual||0),0):null;
+  const cards='<div class="kc-grid c4">'
+    +kpiCard('GMV target',tCr(totT),teams.map(t=>t.team).join(' + ')||'—',{})
+    +kpiCard('Quantity target',tQty(totQ,'MT'),'across '+teams.length+' team'+(teams.length===1?'':'s'),{})
+    +kpiCard(anyPerf?'GMV achieved':'Employees carrying target',anyPerf?tCr(totA):String(totP),anyPerf?tPct(totT?totA/totT*100:null)+' of target':totB+' buyer target lines',{})
+    +kpiCard('Buyer target lines',String(totB),'second-level detail',{})
+    +'</div>';
+  const body=teams.map(t=>{
+    const s=t.summary,max=Math.max.apply(null,t.allocation.map(a=>a.gmvTarget||0).concat([0]));
+    return '<div class="sect-t">'+esc(t.team)+' — '+esc(periodLong(APP.period))+'<span class="r">'+tgtModeChip(t)+'</span></div>'
+      +'<div class="panel pad"><div class="kc-grid c4" style="margin-bottom:4px">'
+      +kpiCard('Team GMV target',tCr(s.gmvTarget),s.employees+' employees · '+s.buyerLines+' buyer lines',{attr:'data-tgtteam="'+esc(t.key)+'"'})
+      +kpiCard('Quantity target',tQty(s.qtyTarget,s.qtyUnit),'secondary metric',{})
+      +kpiCard(t.mode==='performance'?'Achieved':'Concentration',
+          t.mode==='performance'?tCr(s.gmvActual):(t.concentration?t.concentration.share+'%':'—'),
+          t.mode==='performance'?(tPct(s.achievementPct)+' of target'+(s.actualBasis==='stated'?' · team-level figure':'')):(t.concentration?'with '+esc(t.concentration.name):''),{})
+      +kpiCard('Individual allocation',String(t.allocation.length),'click a name to drill',{attr:'data-tgtteam="'+esc(t.key)+'"'})
+      +'</div>'
+      +'<div class="stack tgt-alloc">'+t.allocation.map(a=>tgtRow(a,t,max,'data-tgtperson="'+esc(t.key)+'|'+esc(a.name)+'"')).join('')+'</div></div>';
+  }).join('');
+  const missing=notCon.length?'<div class="sect-t">Not connected</div><div class="panel pad">'
+    +notCon.map(t=>'<div class="hcheck warn"><div class="hc-ic">!</div><div class="hc-t">'+esc(t.team)+'<small>'+esc(t.error||'')+'</small></div></div>').join('')+'</div>':'';
+  return '<div class="page-head"><h1>Targets</h1><p>The monthly business target, how it is allocated to each person, and where it is concentrated. Targets feed the KPI scorecard — the KPI keeps its own definition, weightage and rating logic.</p></div>'
+    +cards+body+missing;
+}
+function vTargetTeam(){
+  const t=tgtTeam(APP.ctx.teamKey);
+  if(!t||!t.connected)return '<div class="empty" style="padding:60px">No target plan for this team in '+esc(periodLong(APP.period))+'.</div>';
+  const s=t.summary,max=Math.max.apply(null,t.allocation.map(a=>a.gmvTarget||0).concat([0]));
+  const cards='<div class="kc-grid c4">'
+    +kpiCard('GMV target',tCr(s.gmvTarget),t.mode==='performance'?(tCr(s.gmvActual)+' achieved · '+tPct(s.achievementPct)):'plan for '+esc(periodLong(APP.period)),{})
+    +kpiCard('Quantity target',tQty(s.qtyTarget,s.qtyUnit),t.mode==='performance'?(tQty(s.qtyActual,s.qtyUnit)+' · '+tPct(s.qtyAchievementPct)):'secondary metric',{})
+    +kpiCard('Employees',String(s.employees),'carrying this target',{})
+    +kpiCard('Buyer target lines',String(s.buyerLines),'second-level detail',{})
+    +'</div>';
+  const alloc='<div class="sect-t">Individual target allocation<span class="r">'+tgtModeChip(t)+'</span></div>'
+    +'<div class="panel pad"><div class="stack tgt-alloc">'+t.allocation.map(a=>tgtRow(a,t,max,'data-tgtperson="'+esc(t.key)+'|'+esc(a.name)+'"')).join('')+'</div></div>';
+  const unowned=(t.unownedBuyers&&t.unownedBuyers.length)?'<div class="sect-t">Buyer plan<span class="r">team-level · no owner column in the source</span></div>'
+    +'<div class="panel pad"><div class="tbl-wrap"><table class="tbl" style="min-width:520px"><thead><tr><th>Buyer</th><th>Region</th><th>Commodity</th><th class="num">Txn target</th><th class="num">Completed</th></tr></thead><tbody>'
+    +t.unownedBuyers.map(b=>'<tr><td class="kname">'+esc(b.buyer)+'</td><td>'+esc(b.region||'—')+'</td><td>'+esc(b.category||'—')+'</td><td class="num">'+(b.txnTarget==null?'—':b.txnTarget)+'</td><td class="num">'+(b.txnActual==null?'—':b.txnActual)+'</td></tr>').join('')
+    +'</tbody></table></div></div>':'';
+  return '<div class="page-head"><h1>'+esc(t.team)+' targets</h1><p>'+esc(periodLong(APP.period))+' business target and how it is split across the team. Click a person for their target and the buyers behind it.</p></div>'
+    +cards+alloc+unowned;
+}
+function vTargetPerson(){
+  const t=tgtTeam(APP.ctx.teamKey);
+  const a=t&&t.allocation.filter(x=>x.name===APP.ctx.name)[0];
+  if(!a)return '<div class="empty" style="padding:60px">Target not found.</div>';
+  const perf=t.mode==='performance';
+  const cards='<div class="kc-grid c4">'
+    +kpiCard('GMV target',tCr(a.gmvTarget),(a.share==null?'':a.share+'% of the team target'),{})
+    +kpiCard(perf?'GMV achieved':'Quantity target',perf?tCr(a.gmvActual):tQty(a.qtyTarget,t.qtyUnit),perf?tPct(a.achievementPct)+' of target':'secondary metric',{})
+    +kpiCard('Target buyers',String(a.buyerCount||0),(a.buyerLines||0)+' plan lines',{})
+    +kpiCard('Region',esc(a.region||'—'),a.rh?'RH '+esc(a.rh):'',{})
+    +'</div>';
+  // the KPI lines this target feeds
+  const recs=(B().records||[]).filter(r=>r.targetSourced&&r.employee===a.name&&r.department===t.team);
+  const kpis=recs.length?('<div class="sect-t">KPIs this target feeds<span class="r">Target → Actual → Achievement % → Rating</span></div>'
+    +'<div class="panel pad"><div class="tbl-wrap"><table class="tbl" style="min-width:720px"><thead><tr><th>KPI</th><th>KRA</th><th class="num">Weight</th><th class="num">Target</th><th class="num">Actual</th><th class="num">Achievement</th><th class="num">Rating</th><th>Status</th></tr></thead><tbody>'
+    +recs.map(r=>'<tr data-rec="'+esc(r.kpiId)+'"><td class="kname">'+esc(r.kpi)+(r.primaryMetric?'<small>primary metric</small>':'')+'</td><td>'+esc(r.kra)+'</td><td class="num">'+r.weight+'%</td><td class="num">'+(r.unit==='Cr'?tCr(r.planTarget):tQty(r.planTarget,r.unit||''))+'</td><td class="num">'+(r.actual==null?'—':(r.unit==='Cr'?tCr(r.actual):tQty(r.actual,r.unit||'')))+'</td><td class="num">'+tPct(r.attainment)+'</td><td class="num">'+(r.rating==null?'—':(Math.round(r.rating*10)/10))+'</td><td>'+statusPill(r.status)+'</td></tr>').join('')
+    +'</tbody></table></div></div>'):'';
+  // second-level buyer breakdown
+  const buyers=(a.buyers&&a.buyers.length)?('<div class="sect-t">Buyer-wise target<span class="r">second-level detail</span></div>'
+    +'<div class="panel pad"><div class="tbl-wrap"><table class="tbl" style="min-width:560px"><thead><tr><th>Buyer</th><th>Region</th><th>Category</th><th class="num">Quantity</th><th class="num">GMV target</th>'+(perf?'<th class="num">Achieved</th>':'')+'</tr></thead><tbody>'
+    +a.buyers.map(b=>'<tr><td class="kname">'+esc(b.buyer)+(b.placeholder?'<small>unnamed placeholder</small>':(b.bundled?'<small>several buyers in one cell</small>':''))+'</td><td>'+esc(b.region||'—')+'</td><td>'+esc(b.category||'—')+'</td><td class="num">'+tQty(b.qty,t.qtyUnit)+'</td><td class="num">'+tCr(b.gmvTarget)+'</td>'+(perf?'<td class="num">'+tCr(b.gmvActual)+'</td>':'')+'</tr>').join('')
+    +'</tbody></table></div></div>'):'';
+  const emp=(B().employees||[]).filter(e=>e.name===a.name&&e.department===t.team)[0];
+  const link=emp?'<div class="linkrow" style="margin-top:16px"><span class="link" data-person="'+esc(emp.id)+'">Open '+esc(a.name)+'’s full scorecard →</span></div>':'';
+  return '<div class="page-head"><h1>'+esc(a.name)+'</h1><p>'+esc(t.team)+' · '+esc(a.region||'—')+' · '+esc(periodLong(APP.period))+' target allocation.</p></div>'
+    +cards+kpis+buyers+link;
+}
+
 function vHealth(){
   const src=B().source,o=B().rollups.org,th=TH(),h=B().health;
   const checks=[];
@@ -2299,6 +2422,8 @@ document.addEventListener('click',e=>{
   const pv=e.target.closest('[data-persp]');if(pv){go('perspective',{name:pv.dataset.persp});return;}
   const sb=e.target.closest('[data-subteam]');if(sb){APP.filters.subTeam=sb.dataset.subteam;APP.filters.dept=(subById(sb.dataset.subteam)||{}).deptId||'';go('employees');return;}
   const dp=e.target.closest('[data-dept]');if(dp){go('dept',{deptId:dp.dataset.dept});return;}
+  const tt=e.target.closest('[data-tgtteam]');if(tt){go('targetteam',{teamKey:tt.dataset.tgtteam});return;}
+  const tpn=e.target.closest('[data-tgtperson]');if(tpn){const parts=String(tpn.dataset.tgtperson).split('|');go('targetperson',{teamKey:parts[0],name:parts.slice(1).join('|')});return;}
   const pc=e.target.closest('[data-person]');if(pc){go('person',{empId:pc.dataset.person});return;}
   const rv=e.target.closest('[data-review]');if(rv){go('review',{empId:rv.dataset.review});return;}
   const kd=e.target.closest('[data-def]');if(kd){go('kpidef',{defId:kd.dataset.def});return;}
