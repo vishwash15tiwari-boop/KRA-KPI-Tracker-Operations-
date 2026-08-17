@@ -1,6 +1,14 @@
 {
   "timeZone": "Asia/Kolkata",
-  "dependencies": {},
+  "dependencies": {
+    "enabledAdvancedServices": [
+      {
+        "userSymbol": "Drive",
+        "serviceId": "drive",
+        "version": "v2"
+      }
+    ]
+  },
   "exceptionLogging": "STACKDRIVER",
   "runtimeVersion": "V8",
   "webapp": {
@@ -12,6 +20,6 @@
     "https://www.googleapis.com/auth/script.external_request",
     "https://www.googleapis.com/auth/userinfo.email",
     "https://www.googleapis.com/auth/script.scriptapp",
-    "https://www.googleapis.com/auth/drive.file"
+    "https://www.googleapis.com/auth/drive"
   ]
 }
