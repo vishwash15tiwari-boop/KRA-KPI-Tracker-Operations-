@@ -721,6 +721,23 @@ button.sb-gt.open .cv{transform:rotate(180deg)}
 .lrow:nth-child(4){animation-delay:.11s}.lrow:nth-child(5){animation-delay:.14s}.lrow:nth-child(6){animation-delay:.17s}
 .lrow:nth-child(7){animation-delay:.19s}.lrow:nth-child(8){animation-delay:.21s}.lrow:nth-child(n+9){animation-delay:.23s}
 @keyframes rowIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+/* Achievement bar — one component, used everywhere achievement is listed, so a
+   manager can scan a column and see who is behind without reading a number.
+   The track runs 0–125% of target with a hairline TICK at 100%: without that
+   reference a bar means nothing. Over-achievement stays visible (a caret past
+   the tick) instead of being clipped at full. Colour comes from the KPI's own
+   status band, and the number is always printed too — never colour alone. */
+.achcell{display:flex;flex-direction:column;align-items:flex-end;gap:5px;min-width:66px}
+.kbar{position:relative;height:5px;width:100%;min-width:58px;border-radius:20px;background:var(--surface-2)}
+.kbar>span{position:absolute;left:0;top:0;bottom:0;border-radius:20px;transform-origin:left;
+  animation:kbargrow .55s cubic-bezier(.22,.61,.36,1) backwards}
+.kbar>i{position:absolute;top:-3px;bottom:-3px;left:80%;width:1px;background:var(--line-2);border-radius:1px}
+.kbar.none{background:repeating-linear-gradient(90deg,var(--line) 0 3px,transparent 3px 7px)}
+.kbar.over>span::after{content:"";position:absolute;right:-4px;top:50%;transform:translateY(-50%);
+  border:3.5px solid transparent;border-left-color:inherit}
+@keyframes kbargrow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@media(prefers-reduced-motion:reduce){.kbar>span{animation:none}}
+
 /* Targets — a team's facts as one quiet line, not a row of competing cards. */
 .tgt-facts{display:flex;flex-wrap:wrap;gap:6px 22px;margin-bottom:16px;
   font-size:13px;color:var(--ink-2);font-variant-numeric:tabular-nums}
@@ -1789,7 +1806,7 @@ function personSummary(e,recs){
     <td class="num">${r.weightShown==null?'—':n1(r.weightShown)+'%'}</td>
     <td class="num">${tgt==null?'—':esc(fmtVal(r,tgt))}</td>
     <td class="num">${r.actual==null?'—':esc(fmtVal(r,r.actual))}</td>
-    <td class="num">${r.attainment==null?'—':n1(r.attainment)+'%'}</td>
+    <td class="num">${achCell(r.attainment,r.status&&r.status.k,tgt==null?'':'Target '+fmtVal(r,tgt))}</td>
     <td class="num" style="font-weight:800">${r.rating==null?'—':ratingStr(r.rating)+'<small>/5</small>'}</td>
     <td class="num">${r.points==null?'—':n1(r.points)}</td>
     <td>${statusPill(r.status)}</td></tr>`;}).join('');
@@ -1873,7 +1890,7 @@ function vRecords(){
   if(mine&&!APP.meId)return vPickMe();
   let rows=filteredRecords(base);
   const s=APP.table.sort,dir=APP.table.dir;
-  const gv={employee:r=>r.employee,department:r=>r.department,subTeam:r=>r.subTeam||'',kra:r=>r.kra,kpi:r=>r.kpi,type:r=>r.metricType||'',weight:r=>r.weightShown==null?-1:r.weightShown,target:r=>r.target==null?-1e9:r.target,actual:r=>r.actual==null?-1e9:r.actual,rating:r=>r.rating==null?-1:r.rating};
+  const gv={employee:r=>r.employee,department:r=>r.department,subTeam:r=>r.subTeam||'',kra:r=>r.kra,kpi:r=>r.kpi,type:r=>r.metricType||'',weight:r=>r.weightShown==null?-1:r.weightShown,target:r=>r.target==null?-1e9:r.target,actual:r=>r.actual==null?-1e9:r.actual,ach:r=>r.attainment==null?-1:r.attainment,rating:r=>r.rating==null?-1:r.rating};
   rows.sort((a,b)=>{const va=(gv[s]||gv.employee)(a),vb=(gv[s]||gv.employee)(b);if(typeof va==='string')return va.localeCompare(vb)*dir;return (va-vb)*dir;});
   const per=APP.table.per,pages=Math.max(1,Math.ceil(rows.length/per)),page=Math.min(APP.table.page,pages-1),slice=rows.slice(page*per,page*per+per);
   const th=(id,l,num)=>`<th class="${num?'num ':''}${s===id?'sorted':''}" data-sort="${id}">${l}<span class="sc">${s===id?(dir>0?'▲':'▼'):'⇅'}</span></th>`;
@@ -1881,8 +1898,8 @@ function vRecords(){
   const title=mine?('My KPIs'+(me?' · '+esc(me.name):'')):'All KPIs';
   return `<div class="page-head"><h1>${title}</h1><p>${rows.length} records${!mine&&(APP.filters.dept||APP.filters.subTeam||APP.filters.status||APP.filters.search)?' (filtered)':''} · tap a row to enter an actual.</p></div>
   <div class="panel pad"><div class="panel-h"><h3>${rows.length} record${rows.length===1?'':'s'}</h3><span class="sub">${withData(rows).length} with ${esc(periodShort(APP.period))} actuals</span></div>
-  <div class="tbl-wrap stack"><table class="tbl"><thead><tr>${mine?'':th('employee','Person')}${mine?'':th('department','Team')}${th('kpi','KRA / KPI')}${th('type','Type')}${th('weight','Wt',1)}${th('target','Target',1)}${th('actual','Actual',1)}${th('rating','Rating',1)}<th>Status</th></tr></thead>
-  <tbody>${slice.length?slice.map(r=>`<tr data-rec="${r.kpiId}">${mine?'':'<td class="kname">'+esc(titleName(r.employee))+'</td>'}${mine?'':'<td>'+esc(r.department)+(r.subTeam?' · '+esc(r.subTeam):'')+'</td>'}<td class="kname">${esc(r.kpi||r.kra||'—')}<small>${esc(r.kra&&r.kpi&&r.kra!==r.kpi?r.kra:(r.perspective||''))}</small></td><td><span class="tag mt">${esc(r.metricType||'—')}</span></td><td class="num">${r.weightShown==null?'—':n1(r.weightShown)+'%'}</td><td class="num">${r.target==null?'—':esc(fmtVal(r,r.target))}</td><td class="num">${r.actual==null?'—':esc(fmtVal(r,r.actual))}</td><td class="num" style="color:${sc(r.status.k)};font-weight:800">${r.rating==null?'—':ratingStr(r.rating)}</td><td>${statusPill(r.status)}</td></tr>`).join(''):'<tr><td colspan="'+(mine?7:9)+'" class="empty">No records match the filters.</td></tr>'}</tbody></table></div>
+  <div class="tbl-wrap stack"><table class="tbl"><thead><tr>${mine?'':th('employee','Person')}${mine?'':th('department','Team')}${th('kpi','KRA / KPI')}${th('type','Type')}${th('weight','Wt',1)}${th('target','Target',1)}${th('actual','Actual',1)}${th('ach','Achieved',1)}${th('rating','Rating',1)}<th>Status</th></tr></thead>
+  <tbody>${slice.length?slice.map(r=>`<tr data-rec="${r.kpiId}">${mine?'':'<td class="kname">'+esc(titleName(r.employee))+'</td>'}${mine?'':'<td>'+esc(r.department)+(r.subTeam?' · '+esc(r.subTeam):'')+'</td>'}<td class="kname">${esc(r.kpi||r.kra||'—')}<small>${esc(r.kra&&r.kpi&&r.kra!==r.kpi?r.kra:(r.perspective||''))}</small></td><td><span class="tag mt">${esc(r.metricType||'—')}</span></td><td class="num">${r.weightShown==null?'—':n1(r.weightShown)+'%'}</td><td class="num">${r.target==null?'—':esc(fmtVal(r,r.target))}</td><td class="num">${r.actual==null?'—':esc(fmtVal(r,r.actual))}</td><td class="num">${achCell(r.attainment,r.status.k,r.target==null?'':'Target '+fmtVal(r,r.target))}</td><td class="num" style="color:${sc(r.status.k)};font-weight:800">${r.rating==null?'—':ratingStr(r.rating)}</td><td>${statusPill(r.status)}</td></tr>`).join(''):'<tr><td colspan="'+(mine?8:10)+'" class="empty">No records match the filters.</td></tr>'}</tbody></table></div>
   <div class="pager"><span>Page ${page+1} of ${pages} · ${slice.length} of ${rows.length}</span><div><button data-page="prev" ${page===0?'disabled':''}>Prev</button><button data-page="next" ${page>=pages-1?'disabled':''}>Next</button></div></div></div>`;
 }
 
@@ -2166,7 +2183,7 @@ function moTargetPlan(teamKey,name){
             '<span class="nm">'+esc(r.kpi)+(r.primaryMetric?'<small>primary metric</small>':'')+'</span>',
             esc(r.kra),r.weight+'%',
             tKpiVal(r.planTarget,r.unit),tKpiVal(r.actual,r.unit),
-            tPct(r.attainment),statusPill(r.status)]})) ),'Target → Actual → Achievement')
+            achCell(r.attainment,r.status&&r.status.k),statusPill(r.status)]})) ),'Target → Actual → Achievement')
           +'<div class="mo-note">The target is assigned here; the weightage, band ladder and rating logic belong to the KPI and are unaffected by re-planning.</div>'
           :'<div class="empty">No KPI lines yet.</div>';
         return head;
@@ -2232,6 +2249,21 @@ const tCr=v=>v==null||isNaN(v)?'—':'₹'+(Math.round(v*100)/100).toFixed(2)+' 
 const tQty=(v,u)=>v==null||isNaN(v)?'—':Math.round(v).toLocaleString('en-IN')+(u?' '+u:'');
 /* Format a KPI figure in its own unit — ₹ Cr, a tonnage, or a bare count. */
 const tKpiVal=(v,unit)=>v==null||isNaN(v)?'—':(unit==='Cr'?tCr(v):tQty(v,unit||''));
+
+/* Achievement against target, as a bar the eye can scan down a column.
+   Track = 0–125% of target, tick at 100%. Attainment is already direction-aware
+   from the backend, so a lower-is-better KPI (DSO, DN%) reads the same way. */
+function pctTone(p){return p==null?'none':(p>=100?'good':(p>=90?'warn':'bad'));}
+function kpiBar(pct,tone){
+  if(pct==null)return '<div class="kbar none" title="No actual recorded yet"></div>';
+  const w=clamp(pct/125*100,0,100),over=pct>125,c=sc(tone||pctTone(pct));
+  return '<div class="kbar'+(over?' over':'')+'" role="img" aria-label="'+n1(pct)+'% of target">'
+    +'<span style="width:'+w+'%;background:'+c+';border-left-color:'+c+'"></span><i></i></div>';
+}
+/* The cell used in every achievement column: the number, then the bar. */
+function achCell(pct,tone,title){
+  return '<div class="achcell"'+(title?' title="'+esc(title)+'"':'')+'><span>'+(pct==null?'—':n1(pct)+'%')+'</span>'+kpiBar(pct,tone)+'</div>';
+}
 const tPct=v=>v==null||isNaN(v)?'—':(Math.round(v*10)/10)+'%';
 function tgtModeChip(t){return '<span class="tag">'+(t.mode==='performance'?'Target vs achievement':'Plan · target &amp; allocation')+'</span>';}
 /* one horizontal allocation row: label · share bar · target · achievement */
@@ -2280,7 +2312,7 @@ function vTargets(){
         t.allocation.map(a=>({attr:' data-tgtperson="'+esc(t.key)+'|'+esc(a.name)+'" style="cursor:pointer"',
           c:['<span class="nm">'+esc(titleName(a.name))+(a.rh?'<small>RH '+esc(titleName(a.rh))+'</small>':'')+'</span>',
              esc(a.region||'—'),tCr(a.gmvTarget),(a.share==null?'—':a.share+'%'),tQty(a.qtyTarget,t.qtyUnit)]
-             .concat(perf?[tCr(a.gmvActual),tPct(a.achievementPct)]:[])})),
+             .concat(perf?[tCr(a.gmvActual),achCell(a.achievementPct,null,'Target '+tCr(a.gmvTarget))]:[])})),
         ['Total','',tCr(s.gmvTarget),'100%',tQty(s.qtyTarget,s.qtyUnit)].concat(perf?[tCr(s.gmvActual),tPct(s.achievementPct)]:[]))
       +'</div>';
   }).join('');
