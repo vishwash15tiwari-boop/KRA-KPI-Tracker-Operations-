@@ -37,16 +37,55 @@
 var SOURCE_SPREADSHEET_ID = '1c0_pP4Mmye5s5D_vzoxrvJ-utkLb6JhD69TvvOBbjoo';
 
 // Managed tabs (created on demand). ACTUALS is the "separate source" for
-// targets + actual performance; SETTINGS holds thresholds / period / an
-// optional external actuals spreadsheet id. Both are ignored by the parser.
-var ACTUALS_TAB  = 'KKT_Actuals';
-var SETTINGS_TAB = 'KKT_Settings';
+// targets + actual performance; the rest carry the product layer that the
+// master sheet has no place for. All are ignored by the framework parser.
+var ACTUALS_TAB     = 'KKT_Actuals';
+var SETTINGS_TAB    = 'KKT_Settings';
+var CYCLES_TAB      = 'KKT_Cycles';        // performance cycles (dates + lifecycle)
+var ASSIGNMENTS_TAB = 'KKT_Assignments';   // per employee × cycle KPI overrides
+var CHECKINS_TAB    = 'KKT_Checkins';      // append-only progress history
+var REVIEWS_TAB     = 'KKT_Reviews';       // self → manager → final → lock
 
 // Rating thresholds (on the 1–5 scale) → semantic status. Editable in Settings.
-var DEFAULT_THRESHOLDS = { onTrack: 3.0, atRisk: 2.0 };   // >=3 On Track, >=2 At Risk, else Off Track
+var DEFAULT_THRESHOLDS = { onTrack: 3.0, atRisk: 2.0 };   // >=3 On Track, >=2 At Risk
 var RATING_MAX = 5;
 
-var CACHE_PREFIX = 'kkt_v3_';
+/* ONE system-wide conversion from the 1–5 rating to a performance percentage.
+ * It is deliberately NOT embedded per-KPI: change it here (or in Settings) and
+ * every score in the product moves together. ratingPct[i] = % for rating i+1. */
+var DEFAULT_SCORING = { ratingPct: [20, 40, 60, 80, 100], interpolate: true };
+
+/* Status is a SEPARATE concept from rating: the rating is the measurement, the
+ * status is how the business talks about it. Ordered worst→best by `min`. */
+var DEFAULT_STATUS_SCALE = [
+  { key: 'bad',    label: 'At Risk',   min: 0 },
+  { key: 'warn',   label: 'Watch',     min: 2 },
+  { key: 'good',   label: 'On Track',  min: 3 },
+  { key: 'strong', label: 'Strong',    min: 4 },
+  { key: 'elite',  label: 'Exceeding', min: 4.5 }
+];
+
+/* ---- PINNED TEAM REGISTRY ----
+ * The org has exactly these 5 teams, each with a named lead. The engine still
+ * parses the sheet generically, but every raw tab is mapped onto one of these
+ * canonical teams (so "Plastic (Supply KRAKPI)" and "Plastic (Demand KRAKPI)"
+ * both land under "Plastics", and the truncated "Open Marketplace - Control
+ * Towe" reads as "Marketplace – Control Tower"). Editable via apiSaveTeams;
+ * member rosters fill in when the separate roster sheets are provided. */
+var DEFAULT_TEAMS = [
+  { key: 'metal',       name: 'Metal',                       lead: 'Amit Jha',           patterns: ['metal'],                                     members: [] },
+  { key: 'plastics',    name: 'Plastics',                    lead: 'Tabesh Mohammad',    patterns: ['plastic'],                                   members: [] },
+  { key: 'onboarding',  name: 'Onboarding',                  lead: 'Ajay',               patterns: ['onboarding'],                                members: [] },
+  { key: 'collections', name: 'Collections',                 lead: 'Srinivas',           patterns: ['collection'],                                members: [] },
+  { key: 'marketplace', name: 'Marketplace – Control Tower', lead: 'Ashwin Kumar Singh', patterns: ['open marketplace', 'control tow', 'marketplace', 'control tower'], members: [] }
+];
+
+// Cycle lifecycle. A locked cycle is immutable — no check-ins, no reviews.
+var CYCLE_STATES = ['Draft', 'Active', 'Review', 'Locked'];
+// Review workflow states, in order.
+var REVIEW_STATES = ['Not Started', 'Self Review', 'Manager Review', 'Final Review', 'Complete'];
+
+var CACHE_PREFIX = 'kkt_v5_';
 var CACHE_TTL    = 900;   // 15 min; busted on any save/scaffold
 
 /** -------------------------------------------------------------- WEB ENTRY */
@@ -117,28 +156,33 @@ function apiScaffoldActuals(opts) {
   try {
     var settings = readSettings_();
     var period = opts.period || settings.period || currentPeriod_();
+    assertUnlocked_(period);
     var model = buildModel_(period, settings);           // framework (+ any existing actuals)
-    var sh = ensureActualsSheet_();
-    var existing = {};
+    var sh = ensureActualsSheet_(settings);
     var data = sh.getDataRange().getValues();
     var head = data.length ? data[0] : ACTUALS_HEADERS_();
-    var idIdx = head.indexOf('KpiId'), perIdx = head.indexOf('Period');
-    for (var i = 1; i < data.length; i++) existing[data[i][idIdx] + '|' + data[i][perIdx]] = true;
+    var col = actualsCols_(head, sh.getName());
+    var existing = {};
+    for (var i = 1; i < data.length; i++) existing[cleanCell_(data[i][col.kpiid]) + '|' + String(data[i][col.period]).trim()] = true;
 
+    // Build each row against the sheet's OWN column positions, so a source with
+    // a different column order still receives the right values.
     var rows = [];
     model.records.forEach(function (r) {
-      var key = r.kpiId + '|' + period;
-      if (existing[key]) return;
-      rows.push([
-        r.kpiId, period, r.department, r.subTeam || '', r.employee, r.kra, r.kpi,
-        r.unit || '', r.weightShown == null ? '' : r.weightShown,
-        r.meetsValue == null ? '' : r.meetsValue, '', '', '', '',
-        nowIso_(), safeEmail_()
-      ]);
+      if (existing[r.kpiId + '|' + period]) return;
+      var row = blankRow_(head.length);
+      var put = function (key, val) { if (col[key] != null) row[col[key]] = val; };
+      put('kpiid', r.kpiId);         put('period', period);
+      put('department', r.department); put('subteam', r.subTeam || '');
+      put('employee', r.employee);   put('kra', r.kra); put('kpi', r.kpi);
+      put('unit', r.unit || '');     put('weight%', r.weightShown == null ? '' : r.weightShown);
+      put('target', r.meetsValue == null ? '' : r.meetsValue);
+      put('updatedat', nowIso_());   put('updatedby', safeEmail_());
+      rows.push(row);
     });
-    if (rows.length) sh.getRange(sh.getLastRow() + 1, 1, rows.length, ACTUALS_HEADERS_().length).setValues(rows);
-    bustCache_();
-    return { ok: true, added: rows.length, period: period, total: sh.getLastRow() - 1, tab: ACTUALS_TAB };
+    if (rows.length) sh.getRange(sh.getLastRow() + 1, 1, rows.length, head.length).setValues(rows);
+    bustCache_(period);
+    return { ok: true, added: rows.length, period: period, total: sh.getLastRow() - 1, tab: sh.getName() };
   } catch (err) { return { ok: false, error: String(err && err.message || err) }; }
 }
 
@@ -147,30 +191,35 @@ function apiSaveActual(p) {
   p = p || {};
   try {
     if (!p.kpiId) throw new Error('Missing kpiId.');
-    var period = p.period || readSettings_().period || currentPeriod_();
-    var sh = ensureActualsSheet_();
+    var settings = readSettings_();
+    var period = p.period || settings.period || currentPeriod_();
+    assertUnlocked_(period);
+    var sh = ensureActualsSheet_(settings);
     var data = sh.getDataRange().getValues();
     var head = data[0];
-    var col = {}; head.forEach(function (h, i) { col[h] = i; });
+    var col = actualsCols_(head, sh.getName());
     var row = -1;
-    for (var i = 1; i < data.length; i++) if (data[i][col.KpiId] === p.kpiId && String(data[i][col.Period]) === String(period)) { row = i; break; }
+    for (var i = 1; i < data.length; i++) if (cleanCell_(data[i][col.kpiid]) === p.kpiId && String(data[i][col.period]).trim() === String(period)) { row = i; break; }
 
-    var rec = row >= 0 ? data[row].slice() : newActualRow_(p, period);
-    if (p.actual   !== undefined) rec[col.Actual]   = p.actual   === '' ? '' : num_(p.actual);
-    if (p.target   !== undefined) rec[col.Target]   = p.target   === '' ? '' : num_(p.target);
-    if (p.rating   !== undefined) rec[col.Rating]   = p.rating   === '' ? '' : clamp_(num_(p.rating), 1, 5);
-    if (p.comment  !== undefined) rec[col.Comment]  = String(p.comment || '');
-    if (p.evidence !== undefined) rec[col.Evidence] = String(p.evidence || '');
-    rec[col.UpdatedAt] = nowIso_(); rec[col.UpdatedBy] = safeEmail_();
+    var rec = row >= 0 ? data[row].slice() : blankRow_(head.length);
+    while (rec.length < head.length) rec.push('');
+    var put = function (key, val) { if (col[key] != null) rec[col[key]] = val; };
+    put('kpiid', p.kpiId); put('period', period);
+    if (p.actual   !== undefined) put('actual',   p.actual === '' ? '' : num_(p.actual));
+    if (p.target   !== undefined) put('target',   p.target === '' ? '' : num_(p.target));
+    if (p.rating   !== undefined) put('rating',   p.rating === '' ? '' : clamp_(num_(p.rating), 1, 5));
+    if (p.comment  !== undefined) put('comment',  String(p.comment || ''));
+    if (p.evidence !== undefined) put('evidence', String(p.evidence || ''));
+    put('updatedat', nowIso_()); put('updatedby', safeEmail_());
 
     if (row >= 0) sh.getRange(row + 1, 1, 1, head.length).setValues([rec]);
     else          sh.getRange(sh.getLastRow() + 1, 1, 1, head.length).setValues([rec]);
-    bustCache_();
+    bustCache_(period);
     return { ok: true, kpiId: p.kpiId, period: period };
   } catch (err) { return { ok: false, error: String(err && err.message || err) }; }
 }
 
-/** Persist settings (thresholds / active period / external actuals source). */
+/** Persist settings (scoring / statuses / active period / actuals source). */
 function apiSaveSettings(p) {
   try {
     var s = readSettings_();
@@ -180,8 +229,40 @@ function apiSaveSettings(p) {
     if (p.atRisk      !== undefined) s.thresholds.atRisk  = num_(p.atRisk);
     if (p.actualsSheetId !== undefined) s.actualsSheetId = String(p.actualsSheetId || '');
     if (p.actualsTab     !== undefined) s.actualsTab     = String(p.actualsTab || '');
-    if (p.planSheetId    !== undefined) s.planSheetId    = String(p.planSheetId || '').replace(/^.*\/d\/([-\w]{20,}).*$/, '$1');
-    writeSettings_(s); bustCache_();
+    // the ONE rating→percentage conversion, as five ascending values.
+    if (p.ratingPct !== undefined) {
+      var arr = (typeof p.ratingPct === 'string') ? p.ratingPct.split(',') : p.ratingPct;
+      if (!arr || arr.length !== 5) throw new Error('Scoring needs exactly 5 percentages (rating 1 → 5).');
+      s.scoring.ratingPct = arr.map(function (x) { return clamp_(num_(x), 0, 100); });
+    }
+    if (p.interpolate !== undefined) s.scoring.interpolate = !!(p.interpolate === true || p.interpolate === 'true');
+    // status labels + cut-offs; thresholds re-derive from these on next read.
+    if (p.statusScale !== undefined && p.statusScale) {
+      var sc = (typeof p.statusScale === 'string') ? JSON.parse(p.statusScale) : p.statusScale;
+      if (sc && sc.length) s.statusScale = sc.map(function (x) { return { key: String(x.key), label: String(x.label || x.key), min: clamp_(num_(x.min), 0, 5) }; });
+    }
+    writeSettings_(s); bustCache_(s.period);
+    return { ok: true, settings: s };
+  } catch (err) { return { ok: false, error: String(err && err.message || err) }; }
+}
+
+/** Persist the pinned team registry (names, leads, tab patterns, members). */
+function apiSaveTeams(p) {
+  try {
+    p = p || {};
+    var teams = (typeof p.teams === 'string') ? JSON.parse(p.teams) : p.teams;
+    if (!teams || !teams.length) throw new Error('At least one team is required.');
+    var s = readSettings_();
+    s.teams = teams.map(function (t, i) {
+      return {
+        key: String(t.key || slug_(t.name) || ('team' + i)),
+        name: String(t.name || 'Team ' + (i + 1)),
+        lead: String(t.lead || ''),
+        patterns: (Array.isArray(t.patterns) ? t.patterns : String(t.patterns || '').split(',')).map(function (x) { return String(x).trim(); }).filter(Boolean),
+        members: Array.isArray(t.members) ? t.members.map(function (m) { return String(m).trim(); }).filter(Boolean) : []
+      };
+    });
+    writeSettings_(s); bustCache_(s.period);
     return { ok: true, settings: s };
   } catch (err) { return { ok: false, error: String(err && err.message || err) }; }
 }
@@ -205,9 +286,8 @@ function buildModel_(period, settings) {
     if (classifyTab_(grid, sh.getName()).kind === 'roster') parseRoster_(grid, rosterByTeam);
   });
 
-  // ---- PASS 2: departments / people / KPI records (+ collect PLAN tabs).
-  var ctx = { depts: [], deptById: {}, subTeams: [], subById: {}, employees: [], empById: {}, records: [], seenKpiId: {}, order: 0, notes: [] };
-  var planTabs = [];
+  // ---- PASS 2: departments / people / KPI records.
+  var ctx = { depts: [], deptById: {}, subTeams: [], subById: {}, employees: [], empById: {}, records: [], seenKpiId: {}, order: 0, notes: [], statusScale: settings.statusScale, teams: settings.teams };
   sheets.forEach(function (sh) {
     var name = sh.getName();
     if (isManaged_(name)) return;
@@ -215,44 +295,41 @@ function buildModel_(period, settings) {
     if (!hasContent_(grid)) return;
     var cls = classifyTab_(grid, name);
     if (cls.kind === 'roster') return;                       // already consumed
-    if (PLAN_KINDS_[cls.kind]) { planTabs.push({ grid: grid, name: name, cls: cls, source: ss.getName() }); return; }
     if (cls.kind === 'template') parseTemplateTab_(grid, name, cls, rosterByTeam, ctx);
     else if (cls.kind === 'blocks') parseBlocksTab_(grid, name, cls, ctx);
     else parseGenericTab_(grid, name, ctx);
   });
 
-  // ---- optional SECOND source holding the GMV/onboarding plan workbook.
-  var planSource = null;
-  if (settings.planSheetId) {
-    try {
-      var ps = SpreadsheetApp.openById(settings.planSheetId);
-      planSource = { title: ps.getName(), id: settings.planSheetId };
-      ps.getSheets().forEach(function (sh) {
-        if (isManaged_(sh.getName())) return;
-        var g = safeValues_(sh);
-        if (!hasContent_(g)) return;
-        var c = classifyTab_(g, sh.getName());
-        if (PLAN_KINDS_[c.kind]) planTabs.push({ grid: g, name: sh.getName(), cls: c, source: ps.getName() });
-      });
-    } catch (e) { ctx.notes.push('Could not open the plan spreadsheet: ' + (e && e.message || e)); }
-  }
+  // ---- reconcile against the pinned team registry.
+  finalizeTeams_(ctx, settings);
+
+  // ---- the product layer: cycles, assignments, check-ins, reviews.
+  var cycles = readCycles_();
+  var cycle = cycleFor_(cycles, period);
+  var assignments = readAssignments_();
+  var checkins = readCheckins_();
+  var reviews = readReviews_();
 
   // ---- join the SEPARATE actuals source (all periods) & compute performance.
   var all = readAllActuals_(settings);
-  ctx.records.forEach(function (r) { computeRecord_(r, all.byKey[r.kpiId + '|' + period] || all.byKey[r.kpiId + '|'] || null, settings); });
+  ctx.records.forEach(function (r) {
+    var asg = assignments.byKey[r.kpiId + '|' + period] || assignments.byKey[r.kpiId + '|'] || null;
+    computeRecord_(r, all.byKey[r.kpiId + '|' + period] || all.byKey[r.kpiId + '|'] || null, settings, asg);
+    var log = checkins.byKey[r.kpiId + '|' + period] || [];
+    r.checkins = log.slice(-8);
+    r.checkinCount = log.length;
+  });
 
   // ---- roll-ups, then trends / levels / perspectives / master-health.
   rollUp_(ctx, settings);
   computeTrends_(ctx, all, period, settings);
+  attachReviews_(ctx, reviews, period, cycle);
   var perspectives = perspectiveRollup_(ctx, settings);
-  var health = computeHealth_(ctx, all);
+  var health = computeHealth_(ctx, all, assignments, reviews, period);
 
-  // ---- PLAN layer (GMV targets / onboarding / buyer-supplier mapping).
-  var plan = buildPlan_(planTabs, planSource);
-
-  var empty = ctx.records.length === 0 && !plan.hasData && ctx.depts.every(function (d) { return !d.rawTable; });
+  var empty = ctx.records.length === 0 && ctx.depts.every(function (d) { return !d.rawTable; });
   return {
-    ok: true, connected: true, empty: empty, plan: plan,
+    ok: true, connected: true, empty: empty,
     generatedAt: nowIso_(), lastUpdated: fileUpdated_(),
     user: { email: safeEmail_() },
     period: period,
@@ -261,25 +338,102 @@ function buildModel_(period, settings) {
       tabs: sheets.map(function (s) { return { name: s.getName(), rows: s.getLastRow(), cols: s.getLastColumn() }; }),
       actuals: actualsSourceInfo_(settings, all)
     },
-    settings: { thresholds: settings.thresholds, period: settings.period, periods: mergePeriods_(knownPeriods_(all, period), plan.periods), ratingMax: RATING_MAX, planSheetId: settings.planSheetId || '' },
+    settings: {
+      thresholds: settings.thresholds, period: settings.period,
+      periods: knownPeriods_(all, period, cycles, assignments),
+      ratingMax: RATING_MAX,
+      scoring: settings.scoring,
+      statusScale: normalizeScale_(settings.statusScale),
+      teams: settings.teams,
+      cycleStates: CYCLE_STATES, reviewStates: REVIEW_STATES
+    },
+    cycle: cycle,
+    cycles: cycles.list,
     departments: ctx.depts,
     subTeams: ctx.subTeams,
     employees: ctx.employees,
     records: ctx.records,
+    library: buildLibrary_(ctx, settings),
     rollups: ctx.rollups,
     perspectives: perspectives,
+    checkins: checkins.recent.slice(0, 200),
+    checkinTotal: checkins.rows,
+    assignmentCount: assignments.rows,
     health: health,
     notes: ctx.notes
   };
 }
 
+/* KPI DEFINITION vs KPI ASSIGNMENT. The library is the master list — one entry
+ * per distinct KPI definition — with the assignments that reference it. The
+ * same definition can carry a different weight and ladder per person, which is
+ * exactly what the workbook already does. */
+function buildLibrary_(ctx, settings) {
+  var map = {};
+  ctx.records.forEach(function (r) {
+    var m = map[r.defId] || (map[r.defId] = {
+      defId: r.defId, kpi: r.kpi, kra: r.kra, perspective: r.perspective,
+      definition: r.definition, unit: r.unit, source: r.source,
+      metricType: r.metricType, targetLogic: r.targetLogic,
+      directionKey: r.directionKey, directionSource: r.directionSource,
+      qualitative: r.qualitative,
+      assignments: [], departments: {}, weights: [], ladders: {}
+    });
+    m.assignments.push({
+      kpiId: r.kpiId, employeeId: r.employeeId, employee: r.employee,
+      department: r.department, subTeam: r.subTeam,
+      weight: r.weightShown, rating: r.rating, scorePct: r.scorePct,
+      status: r.status, bandSource: r.bandSource, reviewer: r.reviewer
+    });
+    m.departments[r.department] = true;
+    if (r.weightShown != null) m.weights.push(r.weightShown);
+    m.ladders[(r.bands || []).map(function (b) { return b.raw || ''; }).join(' | ')] = true;
+  });
+  return Object.keys(map).map(function (k) {
+    var m = map[k];
+    var rated = m.assignments.filter(function (a) { return a.rating != null; });
+    m.owners = m.assignments.length;
+    m.teams = Object.keys(m.departments).length;
+    m.variants = Object.keys(m.ladders).length;      // >1 ⇒ the ladder differs by assignment
+    m.weightMin = m.weights.length ? round1_(Math.min.apply(null, m.weights)) : null;
+    m.weightMax = m.weights.length ? round1_(Math.max.apply(null, m.weights)) : null;
+    m.rating = rated.length ? round2_(avg_(rated.map(function (a) { return a.rating; }))) : null;
+    m.scorePct = scoreFromRating_(m.rating, settings.scoring);
+    m.status = statusFromRating_(m.rating, settings.statusScale);
+    delete m.departments; delete m.ladders; delete m.weights;
+    return m;
+  }).sort(function (a, b) { return b.owners - a.owners; });
+}
+
+/* Attach each person's review state for the period, and roll the cycle-level
+ * review progress the Reviews screen needs. */
+function attachReviews_(ctx, reviews, period, cycle) {
+  var counts = { total: 0, notStarted: 0, self: 0, manager: 0, final: 0, complete: 0 };
+  ctx.employees.forEach(function (e) {
+    var rv = reviews.byKey[e.id + '|' + period] || null;
+    e.review = rv ? {
+      status: rv.status,
+      selfRating: rv.selfRating, selfComment: rv.selfComment, selfBy: rv.selfBy, selfAt: rv.selfAt,
+      managerRating: rv.managerRating, managerComment: rv.managerComment, managerBy: rv.managerBy, managerAt: rv.managerAt,
+      finalRating: rv.finalRating, finalComment: rv.finalComment, updatedAt: rv.updatedAt
+    } : { status: 'Not Started', selfRating: null, managerRating: null, finalRating: null };
+    counts.total++;
+    var s = e.review.status;
+    if (s === 'Complete') counts.complete++;
+    else if (s === 'Final Review') counts.final++;
+    else if (s === 'Manager Review') counts.manager++;
+    else if (s === 'Self Review') counts.self++;
+    else counts.notStarted++;
+  });
+  counts.pending = counts.total - counts.complete;
+  counts.progress = counts.total ? round1_(counts.complete / counts.total * 100) : 0;
+  ctx.rollups.reviews = counts;
+  ctx.rollups.cycle = cycle;
+}
+
 /** ==================================================== TAB CLASSIFICATION */
 function classifyTab_(grid, name) {
   if (!hasContent_(grid)) return { kind: 'empty' };
-  // PLAN layer first: a GMV/onboarding/mapping tab must not be mistaken for a
-  // roster (the onboarding tab carries Region + POC columns) or a generic tab.
-  var plan = classifyPlanTab_(grid, name);
-  if (plan) return plan;
   var headerRows = [];
   for (var r = 0; r < grid.length; r++) if (isKpiHeader_(grid[r])) headerRows.push(r);
 
@@ -340,6 +494,7 @@ function mapCols_(header) {
   var weight      = find(['weightage', 'weight']);
   var source      = find(['source']);
   var unit        = find(['unit']);
+  var direction   = find(['direction', 'polarity', 'better']);
   var bandCols    = findBandCols_(header);
   var def         = find(['definition', 'goal description', 'goal']);
 
@@ -351,7 +506,7 @@ function mapCols_(header) {
   if (kpiExact >= 0) { style = 'blocks'; nameCol = kpiExact; }         // BLOCKS: KPI is the metric name
   else { style = 'template'; nameCol = kraCol; if (def < 0) def = find(['kpi']); } // TEMPLATE: KRA is the KPI name; def = "KPI / Definition"
 
-  return { style: style, perspective: perspective, role: role, kra: kraCol, name: nameCol, def: def, weight: weight, source: source, unit: unit, bands: bandCols };
+  return { style: style, perspective: perspective, role: role, kra: kraCol, name: nameCol, def: def, weight: weight, source: source, unit: unit, direction: direction, bands: bandCols };
 }
 
 /** ==================================================== ROSTER PARSER */
@@ -379,8 +534,9 @@ function parseRoster_(grid, rosterByTeam) {
 
 /** ==================================================== TEMPLATE PARSER */
 function parseTemplateTab_(grid, tabName, cls, rosterByTeam, ctx) {
-  var ds = splitDeptSub_(tabName);
-  var dept = getDept_(ctx, ds.dept, 'scorecard');
+  var rd = resolveDeptSub_(ctx, tabName, 'scorecard');
+  var ds = { dept: rd.dept.name, sub: rd.sub };
+  var dept = rd.dept;
   var headers = cls.headerRows;
   var sections = [];
   headers.forEach(function (hr, i) {
@@ -413,15 +569,15 @@ function parseTemplateTab_(grid, tabName, cls, rosterByTeam, ctx) {
 
 /** ==================================================== BLOCKS PARSER */
 function parseBlocksTab_(grid, tabName, cls, ctx) {
-  var ds = splitDeptSub_(tabName);
-  var dept = getDept_(ctx, ds.dept, 'individuals');
-  var subTeam = ds.sub ? getSubTeam_(ctx, dept, ds.sub) : null;   // e.g. a "… - Supply" blocks tab
+  var rd = resolveDeptSub_(ctx, tabName, 'individuals');
+  var dept = rd.dept;
+  var subTeam = rd.sub ? getSubTeam_(ctx, dept, rd.sub) : null;   // e.g. a "… - Supply" blocks tab
   var headers = cls.headerRows;
   headers.forEach(function (hr, i) {
     var end = (i + 1 < headers.length) ? headers[i + 1] : grid.length;
     var cols = mapCols_(grid[hr]);
     var person = personForHeader_(grid, hr);
-    var emp = getEmployee_(ctx, dept, person.name || ('Member ' + (i + 1)), person.role || '', '', false);
+    var emp = getEmployee_(ctx, dept, person.name || ('Member ' + (i + 1)), person.role || '', person.region || '', false);
     for (var r = hr + 1; r < end; r++) {
       var row = grid[r];
       if (isKpiHeader_(row) || personForHeader_(grid, r).name) break;
@@ -436,7 +592,7 @@ function parseBlocksTab_(grid, tabName, cls, ctx) {
 
 /** ==================================================== GENERIC PARSER */
 function parseGenericTab_(grid, tabName, ctx) {
-  var dept = getDept_(ctx, tabName, 'info');
+  var dept = resolveDeptSub_(ctx, tabName, 'info').dept;
   // detect the header row: first row with >=3 non-empty, mostly-text cells.
   var hr = -1;
   for (var r = 0; r < Math.min(grid.length, 15); r++) {
@@ -461,11 +617,11 @@ function parseGenericTab_(grid, tabName, ctx) {
 function readKpi_(row, cols, name) {
   var bands = cols.bands.map(function (b) { var raw = cleanCell_(row[b.c]); return { label: b.label, raw: raw, num: parseBandNum_(raw) }; });
   var nums = bands.map(function (b) { return b.num; }).filter(function (x) { return x != null; });
-  var direction = nums.length >= 2 ? (nums[nums.length - 1] > nums[0] ? 1 : (nums[nums.length - 1] < nums[0] ? -1 : 0)) : 0;
-  var meets = bands.length >= 3 ? bands[2].num : (nums.length ? nums[Math.floor(nums.length / 2)] : null);
   var def = cell_(row, cols.def);
   var unit = cell_(row, cols.unit) || inferUnit_(name, def, bands);
-  var mc = classifyMetric_(unit, bands, name, def, direction);
+  var dir = resolveDirection_(cell_(row, cols.direction), bands, name, def);
+  var mc = classifyMetric_(unit, bands, name, def, dir.sign);
+  var meets = bands.length >= 3 ? bands[2].num : (nums.length ? nums[Math.floor(nums.length / 2)] : null);
   return {
     perspective: cell_(row, cols.perspective),
     role: cell_(row, cols.role),
@@ -476,7 +632,9 @@ function readKpi_(row, cols, name) {
     unit: unit,
     weight: parseNum_(cell_(row, cols.weight)),
     bands: bands,
-    direction: direction,
+    direction: dir.sign,           // -1 | 0 | 1 — kept for existing maths
+    directionKey: dir.key,         // 'higher' | 'lower' | 'exact'
+    directionSource: dir.source,   // 'declared' | 'inferred'
     metricType: mc.metricType,
     targetLogic: mc.targetLogic,
     qualitative: nums.length < 2,
@@ -484,20 +642,65 @@ function readKpi_(row, cols, name) {
   };
 }
 
+/* Direction decides how an actual is read against the band ladder, and the
+ * rating cannot be computed reliably without it. A declared value always wins;
+ * otherwise it is inferred from whether the bands ascend or descend. */
+function resolveDirection_(declared, bands, name, def) {
+  var d = norm_(declared);
+  if (d) {
+    if (/lower|less|below|desc|down|reverse|-1/.test(d)) return { key: 'lower', sign: -1, source: 'declared' };
+    if (/higher|greater|more|above|asc|up|1$/.test(d)) return { key: 'higher', sign: 1, source: 'declared' };
+    if (/exact|binary|equal|yes\/no|match|target only/.test(d)) return { key: 'exact', sign: 0, source: 'declared' };
+  }
+  var nums = (bands || []).map(function (b) { return b.num; }).filter(function (x) { return x != null; });
+  if (nums.length >= 2) {
+    var last = nums[nums.length - 1], first = nums[0];
+    if (last > first) return { key: 'higher', sign: 1, source: 'inferred' };
+    if (last < first) return { key: 'lower', sign: -1, source: 'inferred' };
+    return { key: 'exact', sign: 0, source: 'inferred' };   // flat ladder = hit the number
+  }
+  // No usable ladder: fall back to the KPI's own language.
+  var s = norm_((name || '') + ' ' + (def || ''));
+  if (/\b(dso|tat|pdd|ageing|aging|delay|defect|leakage|rejection|dn)\b|days outstanding|turnaround/.test(s)) return { key: 'lower', sign: -1, source: 'inferred' };
+  return { key: 'higher', sign: 1, source: 'inferred' };
+}
+
 /* KPI "rule layer": derive a metric TYPE and TARGET LOGIC from the unit, the
  * band cells and the KPI text, so the front-end can score & visualise each KPI
  * by its own nature instead of forcing every KPI into a percentage bar. */
+/* Evidence is ranked, strongest first: an explicit Unit column beats what the
+ * band cells look like, which beats guessing from the KPI's name. Without that
+ * ordering a KPI like "PDD Recovered" measured in ₹ Cr gets read as Days purely
+ * because "pdd" appears in the days-ish name pattern. */
 function classifyMetric_(unit, bands, name, def, direction) {
   var u = norm_(unit);
   var s = norm_((name || '') + ' ' + (def || ''));
   var numeric = bands.filter(function (b) { return b.num != null; }).length;
   if (numeric < 2) return { metricType: 'Qualitative', targetLogic: 'text' };
-  var mt = 'Number';
   var bandHas = function (re) { return bands.some(function (b) { return re.test(String(b.raw || '')); }); };
-  if (u.indexOf('day') >= 0 || /\b(dso|tat|pdd)\b|days/.test(s) || bandHas(/day/i)) mt = 'Days';
-  else if (u.indexOf('cr') >= 0 || u.indexOf('₹') >= 0 || /gmv|revenue|recover|amount|collection value|\bvalue\b/.test(s) || bandHas(/₹|cr\b/i)) mt = 'Amount';
-  else if (u.indexOf('percent') >= 0 || u.indexOf('%') >= 0 || bandHas(/%/) || /\brate\b|retention|adherence|coverage|\bdn\b|automation|accuracy/.test(s)) mt = 'Percentage';
-  else if (u.indexOf('count') >= 0 || /count|number of|no\.? of|# of|cases|tickets|escalations/.test(s)) mt = 'Count';
+
+  var mt = null;
+  // 1) the declared unit.
+  if (u) {
+    if (u.indexOf('day') >= 0) mt = 'Days';
+    else if (u.indexOf('cr') >= 0 || u.indexOf('₹') >= 0 || u.indexOf('inr') >= 0 || u.indexOf('lakh') >= 0 || u.indexOf('amount') >= 0) mt = 'Amount';
+    else if (u.indexOf('percent') >= 0 || u.indexOf('%') >= 0) mt = 'Percentage';
+    else if (u.indexOf('count') >= 0 || u.indexOf('number') >= 0 || u.indexOf('nos') >= 0) mt = 'Count';
+  }
+  // 2) what the band cells actually contain.
+  if (!mt) {
+    if (bandHas(/₹|\bcr\b|lakh/i)) mt = 'Amount';
+    else if (bandHas(/%/)) mt = 'Percentage';
+    else if (bandHas(/day/i)) mt = 'Days';
+  }
+  // 3) the KPI's own language, last.
+  if (!mt) {
+    if (/\b(dso|tat|pdd)\b|days/.test(s)) mt = 'Days';
+    else if (/gmv|revenue|recover|amount|collection value|\bvalue\b/.test(s)) mt = 'Amount';
+    else if (/\brate\b|retention|adherence|coverage|\bdn\b|automation|accuracy/.test(s)) mt = 'Percentage';
+    else if (/count|number of|no\.? of|# of|cases|tickets|escalations/.test(s)) mt = 'Count';
+    else mt = 'Number';
+  }
   var tl = 'numeric';
   if (bandHas(/\d\s*[–—-]\s*\d/)) tl = 'range';
   else if (bandHas(/[<>≤≥]|less than|greater than|more than|within/i)) tl = 'threshold';
@@ -518,14 +721,21 @@ function pushRecord_(ctx, dept, subTeam, emp, k, sectionTitle) {
     isTemplate: !!emp.isTemplate,
     perspective: k.perspective || '', kra: k.kra || '', kpi: k.kpi || '', definition: k.definition || '',
     source: k.source || '', unit: k.unit || '', section: sectionTitle || '',
-    weight: k.weight, weightShown: null, weightNorm: null,
-    bands: k.bands, direction: k.direction, metricType: k.metricType, targetLogic: k.targetLogic,
+    // definition-level identity: the same KPI assigned to several people shares this.
+    defId: slug_((k.perspective || '') + '|' + (k.kra || '') + '|' + (k.kpi || '')),
+    weight: k.weight, weightShown: null, weightNorm: null, weightSource: 'master',
+    bands: k.bands, bandSource: 'master',
+    direction: k.direction, directionKey: k.directionKey, directionSource: k.directionSource,
+    metricType: k.metricType, targetLogic: k.targetLogic,
     qualitative: k.qualitative, meetsValue: k.meets,
-    // performance (filled by computeRecord_)
+    // assignment (filled by applyAssignment_)
+    assigned: false, reviewer: '', assignmentNote: '',
+    // performance (filled by computeRecord_ / rollUp_)
     hasActual: false, target: null, actual: null, rating: null, achievedBand: null,
-    attainment: null, weighted: null, status: statusFromRating_(null, ctx.thresholds || DEFAULT_THRESHOLDS),
-    // trend (filled by computeTrends_)
-    history: [], delta: null,
+    attainment: null, scorePct: null, weighted: null, points: null, maxPoints: null,
+    status: statusFromRating_(null, ctx.statusScale || DEFAULT_STATUS_SCALE),
+    // trend (filled by computeTrends_) and check-in history
+    history: [], delta: null, checkins: [], checkinCount: 0,
     comment: '', evidence: '', updatedAt: null
   };
   emp.kpiIds.push(kpiId);
@@ -535,8 +745,13 @@ function pushRecord_(ctx, dept, subTeam, emp, k, sectionTitle) {
 }
 
 /** ==================================================== PERFORMANCE / SCORING */
-function computeRecord_(r, a, settings) {
-  var th = settings.thresholds;
+/* One KPI line for one period. `asg` is the KPI ASSIGNMENT (this person, this
+ * cycle) — it may override the weight, the direction and the whole band ladder,
+ * which is what keeps a historical cycle scored against the bands that actually
+ * applied at the time rather than today's master sheet. */
+function computeRecord_(r, a, settings, asg) {
+  applyAssignment_(r, asg);
+
   if (a) {
     r.hasActual = (a.actual != null) || (a.rating != null);
     r.actual = a.actual != null ? a.actual : null;
@@ -550,23 +765,59 @@ function computeRecord_(r, a, settings) {
   if (r.qualitative) {
     rating = (a && a.rating != null) ? clamp_(a.rating, 1, 5) : null;   // manual only
   } else if (r.actual != null) {
-    rating = ratingFromBands_(r.bands, r.actual);
+    rating = ratingFromBands_(r.bands, r.actual, r.directionKey);
   } else if (a && a.rating != null) {
     rating = clamp_(a.rating, 1, 5);                                     // manual override allowed
   }
   r.rating = rating;
   r.achievedBand = bandLabelForRating_(r.bands, rating);
   r.attainment = attainment_(r, r.actual, r.target);
-  r.status = statusFromRating_(rating, th);
-  // weightNorm is set in rollUp_ (needs the block sum); weighted computed there.
+  r.scorePct = scoreFromRating_(rating, settings.scoring);   // rating → % via the ONE system config
+  r.status = statusFromRating_(rating, settings.statusScale);
+  // weightNorm / points are set in rollUp_ (they need the block weight sum).
+}
+
+/* Overlay the assignment onto the definition. Anything the assignment leaves
+ * blank keeps the master-sheet value, so a partial override is safe. */
+function applyAssignment_(r, asg) {
+  r.assigned = !!asg;
+  r.reviewer = asg && asg.reviewer ? asg.reviewer : '';
+  r.assignmentNote = asg && asg.note ? asg.note : '';
+  if (!asg) return;
+
+  if (asg.weight != null) { r.weight = asg.weight; r.weightSource = 'assignment'; }
+  if (asg.bands && asg.bands.length) {
+    var override = [];
+    for (var i = 0; i < Math.max(r.bands.length, asg.bands.length); i++) {
+      var base = r.bands[i] || { label: 'Target ' + (i + 1), raw: '', num: null };
+      var raw = asg.bands[i];
+      override.push((raw == null || raw === '')
+        ? { label: base.label, raw: base.raw, num: base.num }
+        : { label: base.label, raw: String(raw), num: parseBandNum_(raw) });
+    }
+    r.bands = override;
+    r.bandSource = 'assignment';
+    var nums = override.map(function (b) { return b.num; }).filter(function (x) { return x != null; });
+    r.qualitative = nums.length < 2;
+    r.meetsValue = override.length >= 3 ? override[2].num : (nums.length ? nums[Math.floor(nums.length / 2)] : null);
+  }
+  if (asg.direction) {
+    var d = resolveDirection_(asg.direction, r.bands, r.kpi, r.definition);
+    r.direction = d.sign; r.directionKey = d.key; r.directionSource = 'declared';
+  } else if (r.bandSource === 'assignment') {
+    var d2 = resolveDirection_(r.directionSource === 'declared' ? r.directionKey : '', r.bands, r.kpi, r.definition);
+    r.direction = d2.sign; r.directionKey = d2.key;
+  }
 }
 
 /* Interpolate an actual across the (rating 1..5 ↔ band value) ladder. Works for
- * both higher- and lower-is-better because it brackets on the monotonic values. */
-function ratingFromBands_(bands, actual) {
+ * both higher- and lower-is-better because it brackets on the monotonic values.
+ * An 'exact' KPI never interpolates — the actual must land on a band value. */
+function ratingFromBands_(bands, actual, directionKey) {
   if (actual == null || isNaN(actual)) return null;
   var pts = [];
   for (var i = 0; i < bands.length; i++) if (bands[i].num != null && !isNaN(bands[i].num)) pts.push({ r: i + 1, v: bands[i].num });
+  if (directionKey === 'exact') return exactRating_(pts, actual);
   if (pts.length < 2) return null;
   var asc = pts[pts.length - 1].v >= pts[0].v;
   var first = pts[0], last = pts[pts.length - 1];
@@ -582,8 +833,18 @@ function ratingFromBands_(bands, actual) {
   return null;
 }
 
+/* Exact / binary KPIs: the actual either matches a band or it does not. No
+ * partial credit between bands — the nearest band wins only on an exact hit,
+ * otherwise the KPI scores at the bottom of the ladder. */
+function exactRating_(pts, actual) {
+  if (!pts.length) return null;
+  for (var i = 0; i < pts.length; i++) if (Math.abs(pts[i].v - actual) < 1e-9) return pts[i].r;
+  return pts[0].r;
+}
+
 function attainment_(r, actual, target) {
   if (actual == null || target == null || isNaN(actual) || isNaN(target) || target === 0) return null;
+  if (r.directionKey === 'exact') return Math.abs(actual - target) < 1e-9 ? 100 : 0;
   var ratio = r.direction < 0 ? (target / actual) : (actual / target);   // lower-is-better inverts
   if (!isFinite(ratio) || ratio < 0) return null;
   return round1_(ratio * 100);
@@ -595,20 +856,57 @@ function bandLabelForRating_(bands, rating) {
   return bands[idx] ? (bands[idx].label || ('Band ' + (idx + 1))) : null;
 }
 
-function statusFromRating_(rating, th) {
-  th = th || DEFAULT_THRESHOLDS;
-  if (rating == null || isNaN(rating)) return { k: 'none', label: 'Pending' };
-  if (rating >= 4.25) return { k: 'good', label: 'Exceeding' };
-  if (rating >= th.onTrack) return { k: 'good', label: 'On Track' };
-  if (rating >= th.atRisk) return { k: 'warn', label: 'At Risk' };
-  return { k: 'bad', label: 'Off Track' };
+/* Status ≠ rating. The rating is the measurement; the status is the word the
+ * business puts on it. Driven entirely by the configurable scale in Settings,
+ * so labels and cut-offs can be retuned without touching scoring. */
+function statusFromRating_(rating, scaleOrTh) {
+  if (rating == null || isNaN(rating)) return { k: 'none', label: 'Pending', tier: 0 };
+  var scale = normalizeScale_(scaleOrTh);
+  var pick = scale[0];
+  for (var i = 0; i < scale.length; i++) if (rating >= num_(scale[i].min)) pick = scale[i];
+  return { k: pick.key, label: pick.label, tier: scale.indexOf(pick) + 1 };
+}
+/* Accepts a status scale, a legacy {onTrack,atRisk} thresholds object, or a
+ * whole settings object — so every existing call site keeps working. */
+function normalizeScale_(x) {
+  if (!x) return DEFAULT_STATUS_SCALE;
+  if (x.length) return x.slice().sort(function (a, b) { return num_(a.min) - num_(b.min); });
+  if (x.statusScale && x.statusScale.length) return normalizeScale_(x.statusScale);
+  if (x.onTrack != null || x.atRisk != null) {
+    var atR = x.atRisk == null ? 2 : num_(x.atRisk), onT = x.onTrack == null ? 3 : num_(x.onTrack);
+    return [
+      { key: 'bad', label: 'At Risk', min: 0 },
+      { key: 'warn', label: 'Watch', min: atR },
+      { key: 'good', label: 'On Track', min: onT },
+      { key: 'strong', label: 'Strong', min: Math.max(onT + 1, 4) },
+      { key: 'elite', label: 'Exceeding', min: Math.max(onT + 1.5, 4.5) }
+    ];
+  }
+  return DEFAULT_STATUS_SCALE;
+}
+
+/* ONE system conversion: rating 1–5 → performance percentage. With
+ * interpolate on, a rating of 4.4 sits proportionally between the band-4 and
+ * band-5 percentages instead of snapping down to 80%. */
+function scoreFromRating_(rating, scoring) {
+  if (rating == null || isNaN(rating)) return null;
+  var map = (scoring && scoring.ratingPct && scoring.ratingPct.length === 5) ? scoring.ratingPct : DEFAULT_SCORING.ratingPct;
+  var r = clamp_(rating, 1, 5);
+  if (!(scoring && scoring.interpolate === false)) {
+    var lo = Math.floor(r), hi = Math.ceil(r);
+    if (lo === hi) return round1_(num_(map[lo - 1]));
+    var a = num_(map[lo - 1]), b = num_(map[hi - 1]);
+    return round1_(a + (r - lo) * (b - a));
+  }
+  return round1_(num_(map[Math.round(r) - 1]));
 }
 
 /** ==================================================== ROLL-UPS */
 function rollUp_(ctx, settings) {
-  var th = settings.thresholds;
+  var th = settings.thresholds, scale = settings.statusScale, scoring = settings.scoring;
 
-  // 1) weight-normalise per (employee × sub-team) block, then compute weighted.
+  // 1) weight-normalise per (employee × sub-team) block, then compute the
+  //    weighted contribution in BOTH currencies: rating (1–5) and points (/100).
   var blocks = {};   // employeeId|subTeamId -> [records]
   ctx.records.forEach(function (r) {
     var key = r.employeeId + '|' + (r.subTeamId || 'na');
@@ -621,6 +919,9 @@ function rollUp_(ctx, settings) {
       r.weightNorm = (sum > 0 && r.weight != null) ? r.weight / sum : (r.weight != null ? null : null);
       r.weightShown = r.weightNorm != null ? round1_(r.weightNorm * 100) : (r.weight != null ? round1_(r.weight) : null);
       r.weighted = (r.weightNorm != null && r.rating != null) ? round3_(r.weightNorm * r.rating) : null;
+      // points = (rating → %) × weight — the KPI's contribution to a /100 score.
+      r.maxPoints = r.weightShown == null ? null : round2_(r.weightShown);
+      r.points = (r.weightNorm != null && r.scorePct != null) ? round2_(r.scorePct * r.weightNorm) : null;
     });
   });
 
@@ -628,87 +929,149 @@ function rollUp_(ctx, settings) {
   var blockScore = {};
   Object.keys(blocks).forEach(function (key) {
     var recs = blocks[key];
-    var sw = 0, sr = 0, withData = 0;
-    recs.forEach(function (r) { if (r.rating != null && r.weightNorm != null) { sw += r.weightNorm; sr += r.weightNorm * r.rating; withData++; } });
-    blockScore[key] = { rating: sw > 0 ? round2_(sr / sw) : null, total: recs.length, withData: withData };
+    var sw = 0, sr = 0, sp = 0, withData = 0;
+    recs.forEach(function (r) {
+      if (r.rating != null && r.weightNorm != null) { sw += r.weightNorm; sr += r.weightNorm * r.rating; sp += r.weightNorm * r.scorePct; withData++; }
+    });
+    blockScore[key] = { rating: sw > 0 ? round2_(sr / sw) : null, score: sw > 0 ? round1_(sp / sw) : null, total: recs.length, withData: withData };
   });
 
-  // 3) employees.
+  // 3) employees — including the KRA and perspective breakdown behind the score.
   ctx.employees.forEach(function (e) {
     var subs = e.subTeamIds.length ? e.subTeamIds : ['na'];
-    var ratings = [], total = 0, withData = 0, onTrack = 0, atRisk = 0, off = 0;
+    var ratings = [], scores = [], total = 0, withData = 0;
     subs.forEach(function (sid) {
       var bs = blockScore[e.id + '|' + sid]; if (!bs) return;
       if (bs.rating != null) ratings.push(bs.rating);
+      if (bs.score != null) scores.push(bs.score);
       total += bs.total; withData += bs.withData;
     });
-    ctx.records.filter(function (r) { return r.employeeId === e.id; }).forEach(function (r) {
-      if (r.rating == null) return;
-      if (r.status.k === 'good') onTrack++; else if (r.status.k === 'warn') atRisk++; else if (r.status.k === 'bad') off++;
-    });
+    var mine = ctx.records.filter(function (r) { return r.employeeId === e.id; });
+    var tally = statusTally_(mine);
     e.rating = ratings.length ? round2_(avg_(ratings)) : null;
+    e.score = scores.length ? round1_(avg_(scores)) : null;
+    e.points = round1_(sumBy_(mine, 'points'));
+    e.maxPoints = round1_(sumBy_(mine, 'maxPoints'));
     e.kpiTotal = total; e.kpiWithData = withData;
     e.coverage = total ? round1_(withData / total * 100) : 0;
-    e.onTrack = onTrack; e.atRisk = atRisk; e.offTrack = off;
-    e.status = statusFromRating_(e.rating, th);
+    e.onTrack = tally.onTrack; e.atRisk = tally.atRisk; e.offTrack = tally.offTrack;
+    e.status = statusFromRating_(e.rating, scale);
     e.level = levelFromRating_(e.rating);
+    e.kras = groupScore_(mine, 'kra', settings);                 // KRA score (spec §13)
+    e.perspectives = groupScore_(mine, 'perspective', settings); // perspective score (spec §9)
     e.trend = []; e.delta = null; e.consistency = 0;   // filled by computeTrends_
   });
 
   // 4) sub-teams.
   ctx.subTeams.forEach(function (s) {
-    var rs = [], people = 0, withData = 0;
+    var rs = [], ss = [], people = 0, withData = 0;
     ctx.employees.forEach(function (e) {
       var bs = blockScore[e.id + '|' + s.id]; if (!bs) return;
-      people++; if (bs.rating != null) { rs.push(bs.rating); withData++; }
+      people++;
+      if (bs.rating != null) { rs.push(bs.rating); withData++; }
+      if (bs.score != null) ss.push(bs.score);
     });
     s.rating = rs.length ? round2_(avg_(rs)) : null;
+    s.score = ss.length ? round1_(avg_(ss)) : null;
     s.people = people; s.peopleWithData = withData;
-    s.status = statusFromRating_(s.rating, th);
+    s.status = statusFromRating_(s.rating, scale);
   });
 
   // 5) departments.
   ctx.depts.forEach(function (d) {
     var emps = ctx.employees.filter(function (e) { return e.deptId === d.id; });
     var rs = emps.map(function (e) { return e.rating; }).filter(function (x) { return x != null; });
+    var ss = emps.map(function (e) { return e.score; }).filter(function (x) { return x != null; });
     d.employeeCount = emps.length;
     d.rating = rs.length ? round2_(avg_(rs)) : null;
+    d.score = ss.length ? round1_(avg_(ss)) : null;
     d.peopleWithData = rs.length;
-    d.status = statusFromRating_(d.rating, th);
+    d.status = statusFromRating_(d.rating, scale);
     d.level = levelFromRating_(d.rating);
     d.trend = []; d.delta = null;                      // filled by computeTrends_
     var drecs = ctx.records.filter(function (r) { return r.deptId === d.id; });
-    d.recOnTrack = drecs.filter(function (r) { return r.status.k === 'good'; }).length;
-    d.recAtRisk = drecs.filter(function (r) { return r.status.k === 'warn'; }).length;
-    d.recOffTrack = drecs.filter(function (r) { return r.status.k === 'bad'; }).length;
+    var dt = statusTally_(drecs);
+    d.recOnTrack = dt.onTrack; d.recAtRisk = dt.atRisk; d.recOffTrack = dt.offTrack;
+    d.perspectives = groupScore_(drecs, 'perspective', settings);
     d.subTeamIds = ctx.subTeams.filter(function (s) { return s.deptId === d.id; }).map(function (s) { return s.id; });
   });
 
   // 6) org.
   var allR = ctx.employees.map(function (e) { return e.rating; }).filter(function (x) { return x != null; });
+  var allS = ctx.employees.map(function (e) { return e.score; }).filter(function (x) { return x != null; });
   var recWith = ctx.records.filter(function (r) { return r.hasActual; }).length;
   var orgRating = allR.length ? round2_(avg_(allR)) : null;
+  var peopleTally = statusTally_(ctx.employees);
+  var recTally = statusTally_(ctx.records);
   ctx.rollups = {
     org: {
       rating: orgRating,
-      status: statusFromRating_(orgRating, th),
+      score: allS.length ? round1_(avg_(allS)) : null,
+      status: statusFromRating_(orgRating, scale),
       level: levelFromRating_(orgRating),
       departments: ctx.depts.filter(function (d) { return d.kind !== 'info'; }).length,
       people: ctx.employees.length, peopleWithData: allR.length,
       kpis: ctx.records.length, kpisWithData: recWith,
       coverage: ctx.records.length ? round1_(recWith / ctx.records.length * 100) : 0,
       // people-level status counts
-      onTrack: ctx.employees.filter(function (e) { return e.status.k === 'good'; }).length,
-      atRisk: ctx.employees.filter(function (e) { return e.status.k === 'warn'; }).length,
-      offTrack: ctx.employees.filter(function (e) { return e.status.k === 'bad'; }).length,
+      onTrack: peopleTally.onTrack, atRisk: peopleTally.atRisk, offTrack: peopleTally.offTrack,
+      peopleOnTrackPct: allR.length ? round1_(peopleTally.onTrack / allR.length * 100) : 0,
       // KPI-instance status counts (the "How are we performing" tallies)
-      recOnTrack: ctx.records.filter(function (r) { return r.status.k === 'good'; }).length,
-      recAtRisk: ctx.records.filter(function (r) { return r.status.k === 'warn'; }).length,
-      recOffTrack: ctx.records.filter(function (r) { return r.status.k === 'bad'; }).length,
+      recOnTrack: recTally.onTrack, recAtRisk: recTally.atRisk, recOffTrack: recTally.offTrack,
+      recOnTrackPct: recWith ? round1_(recTally.onTrack / recWith * 100) : 0,
       // filled by computeTrends_
       trend: [], delta: null, periods: [], movers: []
     }
   };
+}
+
+/* On Track counts everything at or above the On Track cut-off — Strong and
+ * Exceeding are better than On Track, not separate from it. */
+function statusTally_(items) {
+  var t = { onTrack: 0, atRisk: 0, offTrack: 0, pending: 0 };
+  items.forEach(function (x) {
+    var k = x.status && x.status.k;
+    if (!k || k === 'none') { t.pending++; return; }
+    if (k === 'good' || k === 'strong' || k === 'elite') t.onTrack++;
+    else if (k === 'warn') t.atRisk++;
+    else t.offTrack++;
+  });
+  return t;
+}
+function sumBy_(items, field) {
+  var s = 0, any = false;
+  items.forEach(function (x) { if (x[field] != null) { s += x[field]; any = true; } });
+  return any ? s : null;
+}
+/* Weighted score for an arbitrary grouping of records (KRA, perspective, …),
+ * in both currencies, so any tier of the hierarchy can be read the same way. */
+function groupScore_(recs, field, settings) {
+  var map = {};
+  recs.forEach(function (r) {
+    var key = r[field] || (field === 'kra' ? (r.kpi || 'General') : (r.kra || 'General'));
+    var m = map[key] || (map[key] = { name: key, sw: 0, sr: 0, sp: 0, kpis: 0, withData: 0, weight: 0, points: 0, people: {} });
+    m.kpis++; m.people[r.employeeId] = true;
+    if (r.weightShown != null) m.weight += r.weightShown;
+    if (r.points != null) m.points += r.points;
+    if (r.rating != null && r.weightNorm != null) { m.sw += r.weightNorm; m.sr += r.weightNorm * r.rating; m.sp += r.weightNorm * r.scorePct; m.withData++; }
+  });
+  return Object.keys(map).map(function (k) {
+    var m = map[k];
+    var rating = m.sw > 0 ? round2_(m.sr / m.sw) : null;
+    var people = Object.keys(m.people).length;
+    return {
+      name: m.name, rating: rating,
+      score: m.sw > 0 ? round1_(m.sp / m.sw) : null,
+      kpis: m.kpis, withData: m.withData, people: people,
+      // Weightage is only additive inside ONE person's scorecard. Across several
+      // people the sum is meaningless, so expose the per-person average instead
+      // and let the caller say which it is showing.
+      weight: people === 1 ? round1_(m.weight) : null,
+      avgWeight: people ? round1_(m.weight / people) : null,
+      points: people === 1 ? round1_(m.points) : null,
+      status: statusFromRating_(rating, settings.statusScale)
+    };
+  }).sort(function (a, b) { return (b.rating == null ? -1 : b.rating) - (a.rating == null ? -1 : a.rating); });
 }
 
 /* Map a 1–5 rating to a performance LEVEL with a label (subtle gamification). */
@@ -737,7 +1100,7 @@ function computeTrends_(ctx, all, current, settings) {
     if (!a && p === current) a = all.byKey[r.kpiId + '|'];
     if (!a) return null;
     if (r.qualitative) return a.rating != null ? clamp_(a.rating, 1, 5) : null;
-    if (a.actual != null) return ratingFromBands_(r.bands, a.actual);
+    if (a.actual != null) return ratingFromBands_(r.bands, a.actual, r.directionKey);
     if (a.rating != null) return clamp_(a.rating, 1, 5);
     return null;
   }
@@ -747,9 +1110,13 @@ function computeTrends_(ctx, all, current, settings) {
   var prev = null; for (var i = show.length - 1; i >= 0; i--) { if (show[i] === current && i > 0) { prev = show[i - 1]; break; } }
   if (prev == null && show.length >= 2 && show[show.length - 1] === current) prev = show[show.length - 2];
   ctx.records.forEach(function (r) {
-    r.history = show.map(function (p) { return { period: p, rating: recRatingAt(r, p), actual: actualAt(r, p) }; });
+    r.history = show.map(function (p) {
+      var rt = recRatingAt(r, p);
+      return { period: p, rating: rt, score: scoreFromRating_(rt, settings.scoring), actual: actualAt(r, p) };
+    });
     var cur = recRatingAt(r, current), pr = prev ? recRatingAt(r, prev) : null;
     r.delta = (cur != null && pr != null) ? round2_(cur - pr) : null;
+    r.scoreDelta = (cur != null && pr != null) ? round1_(scoreFromRating_(cur, settings.scoring) - scoreFromRating_(pr, settings.scoring)) : null;
   });
 
   // per-period employee rating (weightNorm-weighted, same contract as rollUp_).
@@ -766,9 +1133,10 @@ function computeTrends_(ctx, all, current, settings) {
 
   var th = settings.thresholds;
   ctx.employees.forEach(function (e) {
-    e.trend = show.map(function (p) { return { period: p, rating: empPer[e.id][p] }; });
+    e.trend = show.map(function (p) { return { period: p, rating: empPer[e.id][p], score: scoreFromRating_(empPer[e.id][p], settings.scoring) }; });
     var cur = empPer[e.id][current], pr = prev ? empPer[e.id][prev] : null;
     e.delta = (cur != null && pr != null) ? round2_(cur - pr) : null;
+    e.scoreDelta = (cur != null && pr != null) ? round1_(scoreFromRating_(cur, settings.scoring) - scoreFromRating_(pr, settings.scoring)) : null;
     // consistency streak: consecutive periods (ending at current) rated On Track.
     var streak = 0; for (var i = show.length - 1; i >= 0; i--) { var v = empPer[e.id][show[i]]; if (v != null && v >= th.onTrack) streak++; else break; }
     e.consistency = streak;
@@ -778,19 +1146,20 @@ function computeTrends_(ctx, all, current, settings) {
   function meanAt(emps, p) { var xs = emps.map(function (e) { return empPer[e.id][p]; }).filter(function (x) { return x != null; }); return xs.length ? round2_(avg_(xs)) : null; }
   ctx.depts.forEach(function (d) {
     var emps = ctx.employees.filter(function (e) { return e.deptId === d.id; });
-    d.trend = show.map(function (p) { return { period: p, rating: meanAt(emps, p) }; });
+    d.trend = show.map(function (p) { var v = meanAt(emps, p); return { period: p, rating: v, score: scoreFromRating_(v, settings.scoring) }; });
     var cur = meanAt(emps, current), pr = prev ? meanAt(emps, prev) : null;
     d.delta = (cur != null && pr != null) ? round2_(cur - pr) : null;
   });
   var org = ctx.rollups.org;
   org.periods = show;
-  org.trend = show.map(function (p) { return { period: p, rating: meanAt(ctx.employees, p) }; });
+  org.trend = show.map(function (p) { var v = meanAt(ctx.employees, p); return { period: p, rating: v, score: scoreFromRating_(v, settings.scoring) }; });
   var oc = meanAt(ctx.employees, current), op = prev ? meanAt(ctx.employees, prev) : null;
   org.delta = (oc != null && op != null) ? round2_(oc - op) : null;
+  org.scoreDelta = (oc != null && op != null) ? round1_(scoreFromRating_(oc, settings.scoring) - scoreFromRating_(op, settings.scoring)) : null;
 
   // biggest movers (people with a computable delta), best & worst.
   org.movers = ctx.employees.filter(function (e) { return e.delta != null; })
-    .map(function (e) { return { id: e.id, name: e.name, department: e.department, rating: e.rating, delta: e.delta, status: e.status }; })
+    .map(function (e) { return { id: e.id, name: e.name, department: e.department, rating: e.rating, score: e.score, delta: e.delta, status: e.status }; })
     .sort(function (a, b) { return b.delta - a.delta; });
   org.previousPeriod = prev;
 }
@@ -799,19 +1168,27 @@ function computeTrends_(ctx, all, current, settings) {
 /* Preserve BOTH Perspective and KRA — aggregate ratings by Perspective across
  * the whole framework (weightNorm-weighted), with the KRAs that sit under each. */
 function perspectiveRollup_(ctx, settings) {
-  var th = settings.thresholds;
   var map = {};
   ctx.records.forEach(function (r) {
     var p = r.perspective || r.kra || 'General';
-    var m = map[p] || (map[p] = { perspective: p, sw: 0, sr: 0, kpis: 0, withData: 0, people: {}, kras: {} });
-    m.kpis++; m.people[r.employeeId] = true;
+    var m = map[p] || (map[p] = { perspective: p, sw: 0, sr: 0, sp: 0, kpis: 0, withData: 0, weight: 0, people: {}, kras: {}, recs: [] });
+    m.kpis++; m.people[r.employeeId] = true; m.recs.push(r);
     if (r.kra) m.kras[r.kra] = true;
-    if (r.rating != null && r.weightNorm != null) { m.sw += r.weightNorm; m.sr += r.weightNorm * r.rating; m.withData++; }
+    if (r.weightShown != null) m.weight += r.weightShown;
+    if (r.rating != null && r.weightNorm != null) { m.sw += r.weightNorm; m.sr += r.weightNorm * r.rating; m.sp += r.weightNorm * r.scorePct; m.withData++; }
   });
   return Object.keys(map).map(function (k) {
     var m = map[k];
     var rating = m.sw > 0 ? round2_(m.sr / m.sw) : null;
-    return { perspective: k, rating: rating, kpis: m.kpis, withData: m.withData, people: Object.keys(m.people).length, kras: Object.keys(m.kras), status: statusFromRating_(rating, th) };
+    return {
+      perspective: k, rating: rating,
+      score: m.sw > 0 ? round1_(m.sp / m.sw) : null,
+      kpis: m.kpis, withData: m.withData,
+      people: Object.keys(m.people).length,
+      kras: Object.keys(m.kras),
+      kraScores: groupScore_(m.recs, 'kra', settings),
+      status: statusFromRating_(rating, settings.statusScale)
+    };
   }).sort(function (a, b) { return (b.rating == null ? -1 : b.rating) - (a.rating == null ? -1 : a.rating); });
 }
 
@@ -819,19 +1196,23 @@ function perspectiveRollup_(ctx, settings) {
 /* Admin validation surfaced before an overall score is trusted: weightage that
  * doesn't total 100% per person-block, KPIs without numeric bands, actual rows
  * that map to no KPI, and coverage. */
-function computeHealth_(ctx, all) {
+function computeHealth_(ctx, all, assignments, reviews, period) {
   var blocks = {};
   ctx.records.forEach(function (r) {
     var k = r.employeeId + '|' + (r.subTeamId || 'na');
     (blocks[k] = blocks[k] || { recs: [], emp: r.employee, dept: r.department, sub: r.subTeam }).recs.push(r);
   });
+  /* Spec §6: total KPI weightage per person per cycle must be 100%. This is
+   * validation logic, not a manual rule — every block is checked and the ones
+   * that fail are named, because an overall score built on a block that does
+   * not total 100% is not comparable with one that does. */
   var weightIssues = [];
   Object.keys(blocks).forEach(function (k) {
     var b = blocks[k], sum = 0, has = false;
     b.recs.forEach(function (r) { if (r.weight != null) { sum += r.weight; has = true; } });
     if (has) {
       var norm = sum > 2 ? sum : sum * 100;            // handle fraction-weighted sheets
-      if (Math.abs(norm - 100) >= 0.5) weightIssues.push({ employee: b.emp, dept: b.dept, subTeam: b.sub || '', sum: round1_(norm), kpis: b.recs.length });
+      if (Math.abs(norm - 100) >= 0.5) weightIssues.push({ employee: b.emp, dept: b.dept, subTeam: b.sub || '', sum: round1_(norm), kpis: b.recs.length, gap: round1_(norm - 100) });
     }
   });
   var missingBands = ctx.records.filter(function (r) { return r.qualitative; }).length;
@@ -840,11 +1221,23 @@ function computeHealth_(ctx, all) {
   Object.keys(all.byKey).forEach(function (key) { var id = key.slice(0, key.lastIndexOf('|')); if (id && !ids[id] && !seen[id]) { seen[id] = true; unmapped++; } });
   var withData = ctx.records.filter(function (r) { return r.hasActual; }).length;
   var noWeight = ctx.records.filter(function (r) { return r.weight == null; }).length;
+  // Direction drives the rating; an inferred one is a guess worth surfacing.
+  var inferredDirection = ctx.records.filter(function (r) { return r.directionSource !== 'declared' && !r.qualitative; }).length;
+  var lowerIsBetter = ctx.records.filter(function (r) { return r.directionKey === 'lower'; }).length;
+  var exactKpis = ctx.records.filter(function (r) { return r.directionKey === 'exact'; }).length;
+  var assignedThisPeriod = 0;
+  Object.keys((assignments && assignments.byKey) || {}).forEach(function (k) { if (k.slice(k.lastIndexOf('|') + 1) === period) assignedThisPeriod++; });
+
   return {
     weightIssues: weightIssues,
     qualitative: missingBands,
     noWeight: noWeight,
     unmappedActuals: unmapped,
+    inferredDirection: inferredDirection,
+    lowerIsBetter: lowerIsBetter,
+    exactKpis: exactKpis,
+    assignments: assignedThisPeriod,
+    bandOverrides: ctx.records.filter(function (r) { return r.bandSource === 'assignment'; }).length,
     templateRoster: ctx.employees.filter(function (e) { return e.isTemplate; }).length,
     kpis: ctx.records.length,
     withData: withData,
@@ -853,11 +1246,57 @@ function computeHealth_(ctx, all) {
   };
 }
 
+/* Reconcile parsed departments against the pinned registry: drop the phantom
+ * "scorecard" placeholders a template tab creates once a team has real people,
+ * resolve each team's declared lead to an actual employee where possible, and
+ * order the departments to match the registry. */
+function finalizeTeams_(ctx, settings) {
+  // 1) suppress template-placeholder employees (and their records) for any dept
+  //    that also carries real, named people — a shared template is a framework,
+  //    not a headcount.
+  var realByDept = {};
+  ctx.employees.forEach(function (e) { if (!e.isTemplate) realByDept[e.deptId] = true; });
+  var drop = {};
+  ctx.employees = ctx.employees.filter(function (e) {
+    if (e.isTemplate && realByDept[e.deptId]) { drop[e.id] = true; delete ctx.empById[e.id]; return false; }
+    return true;
+  });
+  ctx.records = ctx.records.filter(function (r) { return !drop[r.employeeId]; });
+
+  // 1b) prune sub-teams no surviving record references — a template tab's
+  //     "Business Development" section otherwise leaves an empty "Supply · 0".
+  var subUsed = {};
+  ctx.records.forEach(function (r) { if (r.subTeamId) subUsed[r.subTeamId] = true; });
+  ctx.subTeams = ctx.subTeams.filter(function (s) { return subUsed[s.id]; });
+  Object.keys(ctx.subById).forEach(function (k) { if (!subUsed[k]) delete ctx.subById[k]; });
+  ctx.employees.forEach(function (e) { e.subTeamIds = (e.subTeamIds || []).filter(function (id) { return subUsed[id]; }); });
+
+  // 2) resolve declared leads to a real employee in the same team (by name).
+  ctx.depts.forEach(function (d) {
+    if (!d.lead) return;
+    var want = norm_(d.lead);
+    var hit = ctx.employees.filter(function (e) { return e.deptId === d.id; })
+      .filter(function (e) { return norm_(e.name) === want || norm_(e.name).indexOf(want) >= 0 || want.indexOf(norm_(e.name)) >= 0; })[0];
+    if (hit) { d.leadEmployeeId = hit.id; d.leadRole = hit.role || 'Team Lead'; d.leadResolved = true; hit.isLead = true; }
+    else { d.leadResolved = false; }
+  });
+
+  // 3) order departments by the registry, unregistered tabs last.
+  var order = {};
+  (settings.teams || DEFAULT_TEAMS).forEach(function (t, i) { order[t.key] = i; });
+  ctx.depts.sort(function (a, b) {
+    var oa = a.teamKey && order[a.teamKey] != null ? order[a.teamKey] : 900 + a.order;
+    var ob = b.teamKey && order[b.teamKey] != null ? order[b.teamKey] : 900 + b.order;
+    return oa - ob;
+  });
+}
+
 /** ==================================================== CTX GETTERS */
 function getDept_(ctx, name, kind) {
   var id = slug_(name);
   if (!ctx.deptById[id]) {
-    var d = { id: id, name: cleanCell_(name), kind: kind, order: ctx.order++, kpiCount: 0, employeeCount: 0, rating: null, status: statusFromRating_(null), subTeamIds: [], rawTable: null, weightNote: null };
+    var d = { id: id, name: cleanCell_(name), kind: kind, order: ctx.order++, kpiCount: 0, employeeCount: 0, rating: null, status: statusFromRating_(null), subTeamIds: [], rawTable: null, weightNote: null,
+              teamKey: '', lead: '', leadEmployeeId: null, leadRole: '', leadResolved: false, registered: false, registeredMembers: [] };
     ctx.deptById[id] = d; ctx.depts.push(d);
   }
   return ctx.deptById[id];
@@ -891,19 +1330,36 @@ function personForHeader_(grid, hr) {
     var p = personName_(f);
     return p;    // first non-empty title row above decides
   }
-  return { name: '', role: '' };
+  return { name: '', role: '', region: '' };
 }
+/* Parse a block-owner title into { name, role, region }. Real sheets are messy:
+ * the title often carries a trailing "| Region - South", the parenthetical role
+ * can be anything ("Management Trainee", not just manager/executive), and only
+ * the name before the "(" needs to look like a person — so we anchor on the
+ * LEADING "Name (Role)" shape and tolerate whatever trails it, instead of
+ * requiring the string to end at the ")". */
 function personName_(text) {
   var t = String(text || '').replace(/\s+/g, ' ').trim();
-  if (!t) return { name: '', role: '' };
+  if (!t) return { name: '', role: '', region: '' };
+
+  // pull a trailing "| Region - South" / "Region: North" off first
+  var region = '';
+  var rg = t.match(/[|,;]\s*region\s*[-–:]\s*([A-Za-z .&]+?)\s*$/i);
+  if (rg) { region = cleanName_(rg[1]); t = t.slice(0, rg.index).trim(); }
+  // then drop any remaining trailing "| …" segment (region without a label, etc.)
+  var pipe = t.indexOf('|');
+  if (pipe > 0) t = t.slice(0, pipe).trim();
+
   var m = t.match(/^individual\s*[-–:]\s*(.+)$/i);
-  if (m) return { name: cleanName_(m[1]), role: '' };
+  if (m) return { name: cleanName_(m[1]), role: '', region: region };
   m = t.match(/^(?:collections?|onboarding|supply|demand)[^-–:]*[-–:]\s*(.+)$/i);
-  if (m && looksLikeName_(m[1])) return { name: cleanName_(m[1]), role: '' };
-  m = t.match(/^(.+?)\s*\(([^)]*)\)\s*$/);
-  if (m && /poc|head|lead|manager|executive|senior|regional|analyst|associate|officer|specialist/i.test(m[2])) return { name: cleanName_(m[1]), role: m[2].trim() };
-  if (looksLikeName_(t)) return { name: cleanName_(t), role: '' };
-  return { name: '', role: '' };
+  if (m && looksLikeName_(m[1])) return { name: cleanName_(m[1]), role: '', region: region };
+  // "Name (Role)…"  — accept any parenthetical role once the name reads as a
+  // person; the ")" no longer has to be the end of the string.
+  m = t.match(/^([A-Za-z][A-Za-z.\s]{1,40}?)\s*\(([^)]{1,80})\)/);
+  if (m && looksLikeName_(m[1])) return { name: cleanName_(m[1]), role: cleanName_(m[2]), region: region };
+  if (looksLikeName_(t)) return { name: cleanName_(t), role: '', region: region };
+  return { name: '', role: '', region: region };
 }
 function looksLikeName_(s) {
   s = String(s || '').trim();
@@ -931,13 +1387,52 @@ function classifySection_(title, nSections) {
  * department + sub-team, so Demand/Supply that live in SEPARATE tabs still roll
  * up under one department. A plain "Metal" (both sections inside) → sub = null. */
 function splitDeptSub_(name) {
-  var m = String(name || '').match(/^(.*?)[\s\-–—:(]+\s*(supply|demand|seller|buyer)\b.*$/i);
-  if (m) {
-    var base = m[1].replace(/[\-–—:(]+$/, '').trim();
-    var tok = m[2].toLowerCase();
-    if (base) return { dept: base, sub: (tok === 'supply' || tok === 'seller') ? 'Supply' : 'Demand' };
+  var s = String(name || '');
+  // A tab that names BOTH sides ("Metal (Supply & Demand KRAKPI)") is a combined
+  // scorecard, not a sub-team — only split when exactly one side is named.
+  var hasSupply = /\b(supply|seller)\b/i.test(s), hasDemand = /\b(demand|buyer)\b/i.test(s);
+  if (hasSupply !== hasDemand) {
+    var m = s.match(/^(.*?)[\s\-–—:(]+\s*(supply|demand|seller|buyer)\b.*$/i);
+    if (m) {
+      var base = m[1].replace(/[\-–—:(]+$/, '').trim();
+      var tok = m[2].toLowerCase();
+      if (base) return { dept: base, sub: (tok === 'supply' || tok === 'seller') ? 'Supply' : 'Demand' };
+    }
   }
   return { dept: cleanCell_(name), sub: null };
+}
+
+/* ---- canonical team resolution ---- */
+/* Map a raw tab name onto a registered team by pattern. Returns the team or
+ * null (an unregistered tab keeps its own name, e.g. a stray reference tab). */
+function canonicalTeam_(rawName, teams) {
+  var n = norm_(rawName);
+  teams = teams && teams.length ? teams : DEFAULT_TEAMS;
+  for (var i = 0; i < teams.length; i++) {
+    var pats = teams[i].patterns || [];
+    for (var p = 0; p < pats.length; p++) {
+      if (pats[p] && n.indexOf(norm_(pats[p])) >= 0) return teams[i];
+    }
+  }
+  return null;
+}
+/* Resolve a tab to its canonical department (+ sub-team), attaching the team's
+ * declared lead. Every parser routes through this so tabs collapse into the
+ * fixed 5 teams. */
+function resolveDeptSub_(ctx, tabName, kind) {
+  var ds = splitDeptSub_(tabName);
+  var team = canonicalTeam_(tabName, ctx.teams);
+  var deptName = team ? team.name : ds.dept;
+  var dept = getDept_(ctx, deptName, kind);
+  if (team) {
+    dept.teamKey = team.key;
+    dept.lead = team.lead || '';
+    dept.registered = true;
+    dept.registeredMembers = team.members || [];
+  }
+  // template scorecards are only a framework; a real blocks tab upgrades the kind
+  if (kind === 'individuals') dept.kind = 'individuals';
+  return { dept: dept, sub: ds.sub, team: team };
 }
 function matchRoster_(rosterByTeam, deptName) {
   var k = norm_(deptName);
@@ -964,17 +1459,47 @@ function inferUnit_(name, def, bands) {
 function ACTUALS_HEADERS_() {
   return ['KpiId', 'Period', 'Department', 'SubTeam', 'Employee', 'KRA', 'KPI', 'Unit', 'Weight%', 'Target', 'Actual', 'Rating', 'Comment', 'Evidence', 'UpdatedAt', 'UpdatedBy'];
 }
-function ensureActualsSheet_() {
-  var ss = SpreadsheetApp.openById(SOURCE_SPREADSHEET_ID);
-  var sh = ss.getSheetByName(ACTUALS_TAB);
-  if (!sh) { sh = ss.insertSheet(ACTUALS_TAB); sh.getRange(1, 1, 1, ACTUALS_HEADERS_().length).setValues([ACTUALS_HEADERS_()]).setFontWeight('bold'); sh.setFrozenRows(1); }
-  else if (sh.getLastRow() === 0) sh.getRange(1, 1, 1, ACTUALS_HEADERS_().length).setValues([ACTUALS_HEADERS_()]).setFontWeight('bold');
+/* Resolve the actuals sheet the SAME way readAllActuals_ does. When an external
+ * source is configured, reads come from it — so writes must go there too, or a
+ * saved actual lands in the master tab and never appears again. */
+function ensureActualsSheet_(settings) {
+  settings = settings || readSettings_();
+  var headers = ACTUALS_HEADERS_();
+  var ss, tab;
+  if (settings.actualsSheetId) { ss = SpreadsheetApp.openById(settings.actualsSheetId); tab = settings.actualsTab || ACTUALS_TAB; }
+  else { ss = SpreadsheetApp.openById(SOURCE_SPREADSHEET_ID); tab = ACTUALS_TAB; }
+  var sh = ss.getSheetByName(tab);
+  if (!sh) { sh = ss.insertSheet(tab); sh.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold'); sh.setFrozenRows(1); }
+  else if (sh.getLastRow() === 0) sh.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
   return sh;
 }
-function newActualRow_(p, period) {
-  var h = ACTUALS_HEADERS_(), row = h.map(function () { return ''; });
-  row[h.indexOf('KpiId')] = p.kpiId; row[h.indexOf('Period')] = period;
-  return row;
+/* ONE header-matching rule, shared by every reader and writer. Case, spacing
+ * and punctuation are ignored ("KPI Id", "kpi_id" and "KpiId" all match), so
+ * the read and write paths can never disagree about which column is which. */
+function normCols_(head) {
+  var col = {};
+  (head || []).forEach(function (h, i) { var k = norm_(h).replace(/[^a-z0-9%]/g, ''); if (k && col[k] == null) col[k] = i; });
+  return col;
+}
+/* Same mapping, but for writes — where a missing key column must fail loudly
+ * rather than silently write into nothing or append duplicate rows. */
+/* `keys` are [normalisedKey, headerAsWritten] pairs so the error can name the
+ * column the way it appears in the sheet, not the internal key. */
+function requireCols_(head, keys, tab) {
+  var col = normCols_(head);
+  for (var i = 0; i < keys.length; i++) {
+    var k = keys[i][0], label = keys[i][1];
+    if (col[k] == null) throw new Error('The "' + tab + '" sheet has no "' + label + '" column, so rows cannot be matched. Restore that header, or delete the tab and let it be rebuilt.');
+  }
+  return col;
+}
+function actualsCols_(head, tab) { return requireCols_(head, [['kpiid', 'KpiId'], ['period', 'Period']], tab || ACTUALS_TAB); }
+function blankRow_(n) { var r = []; for (var i = 0; i < n; i++) r.push(''); return r; }
+/* Existing row padded to the header width, or a fresh blank row. */
+function blankOr_(data, row, width) {
+  var rec = row >= 0 ? data[row].slice() : [];
+  while (rec.length < width) rec.push('');
+  return rec;
 }
 /* Read ALL actual rows (every period) from the managed tab, or an external
  * sheet if configured. Returns { byKey: {"kpiId|period": rec}, periods: [...] }.
@@ -994,7 +1519,7 @@ function readAllActuals_(settings) {
   if (!sh) return out;
   var data = safeValues_(sh);
   if (!data.length) return out;
-  var head = data[0], col = {}; head.forEach(function (h, i) { col[norm_(h)] = i; });
+  var head = data[0], col = normCols_(head);
   var ci = { id: col['kpiid'], per: col['period'], tgt: col['target'], act: col['actual'], rat: col['rating'], com: col['comment'], ev: col['evidence'], up: col['updatedat'] };
   if (ci.id == null) return out;
   var pset = {};
@@ -1017,6 +1542,338 @@ function readAllActuals_(settings) {
   out.periods = Object.keys(pset).sort();
   return out;
 }
+/** ==================================================== PERFORMANCE CYCLES */
+/* A cycle is the container the whole product hangs off: it owns the window,
+ * the KPI assignments, the actuals, the check-ins and the review. Locking one
+ * freezes it — nothing downstream may write to a locked cycle. */
+function CYCLES_HEADERS_() {
+  return ['Period', 'Name', 'StartDate', 'EndDate', 'Status', 'ReviewDue', 'Note', 'UpdatedAt', 'UpdatedBy'];
+}
+function ensureSheet_(tab, headers) {
+  var ss = SpreadsheetApp.openById(SOURCE_SPREADSHEET_ID);
+  var sh = ss.getSheetByName(tab);
+  if (!sh) { sh = ss.insertSheet(tab); sh.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold'); sh.setFrozenRows(1); }
+  else if (sh.getLastRow() === 0) sh.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
+  return sh;
+}
+function readCycles_() {
+  var out = { byPeriod: {}, list: [] };
+  var sh = null;
+  try { sh = SpreadsheetApp.openById(SOURCE_SPREADSHEET_ID).getSheetByName(CYCLES_TAB); } catch (e) {}
+  if (!sh) return out;
+  var data = safeValues_(sh);
+  if (data.length < 2) return out;
+  var col = normCols_(data[0]);
+  for (var i = 1; i < data.length; i++) {
+    var period = cell_(data[i], col['period']);
+    if (!period) continue;
+    var c = {
+      period: period,
+      name: cell_(data[i], col['name']) || periodLabel_(period),
+      startDate: dateStr_(data[i][col['startdate']]),
+      endDate: dateStr_(data[i][col['enddate']]),
+      status: cell_(data[i], col['status']) || 'Active',
+      reviewDue: dateStr_(data[i][col['reviewdue']]),
+      note: cell_(data[i], col['note']),
+      updatedAt: cell_(data[i], col['updatedat'])
+    };
+    if (CYCLE_STATES.indexOf(c.status) < 0) c.status = 'Active';
+    c.locked = c.status === 'Locked';
+    out.byPeriod[period] = c; out.list.push(c);
+  }
+  out.list.sort(function (a, b) { return a.period < b.period ? 1 : -1; });
+  return out;
+}
+/* A period with no row yet still behaves like a real cycle — derived from the
+ * period itself — so the product works before anyone opens the admin screen. */
+function cycleFor_(cycles, period) {
+  if (cycles.byPeriod[period]) return cycles.byPeriod[period];
+  var m = /^(\d{4})-(\d{2})$/.exec(period || '');
+  var start = '', end = '';
+  if (m) {
+    var y = +m[1], mo = +m[2];
+    start = m[1] + '-' + m[2] + '-01';
+    end = Utilities.formatDate(new Date(y, mo, 0), 'UTC', 'yyyy-MM-dd');
+  }
+  return { period: period, name: periodLabel_(period), startDate: start, endDate: end, status: 'Active', reviewDue: '', note: '', locked: false, implicit: true };
+}
+function apiSaveCycle(p) {
+  p = p || {};
+  try {
+    if (!p.period) throw new Error('Missing period.');
+    if (p.status && CYCLE_STATES.indexOf(p.status) < 0) throw new Error('Unknown cycle status: ' + p.status);
+    var sh = ensureSheet_(CYCLES_TAB, CYCLES_HEADERS_());
+    var data = sh.getDataRange().getValues();
+    var head = data[0], col = requireCols_(head, [['period', 'Period']], CYCLES_TAB);
+    var row = -1;
+    for (var i = 1; i < data.length; i++) if (String(data[i][col.period]).trim() === String(p.period).trim()) { row = i; break; }
+    var rec = blankOr_(data, row, head.length);
+    var put = function (k, v) { if (col[k] != null) rec[col[k]] = v; };
+    put('period', p.period);
+    if (p.name      !== undefined) put('name',      String(p.name || ''));
+    if (p.startDate !== undefined) put('startdate', String(p.startDate || ''));
+    if (p.endDate   !== undefined) put('enddate',   String(p.endDate || ''));
+    if (p.status    !== undefined) put('status',    String(p.status || 'Active'));
+    if (p.reviewDue !== undefined) put('reviewdue', String(p.reviewDue || ''));
+    if (p.note      !== undefined) put('note',      String(p.note || ''));
+    if (col.name != null && !rec[col.name]) rec[col.name] = periodLabel_(p.period);
+    if (col.status != null && !rec[col.status]) rec[col.status] = 'Active';
+    put('updatedat', nowIso_()); put('updatedby', safeEmail_());
+    if (row >= 0) sh.getRange(row + 1, 1, 1, head.length).setValues([rec]);
+    else          sh.getRange(sh.getLastRow() + 1, 1, 1, head.length).setValues([rec]);
+    bustCache_(p.period);
+    return { ok: true, period: p.period, status: col.status != null ? rec[col.status] : 'Active' };
+  } catch (err) { return { ok: false, error: String(err && err.message || err) }; }
+}
+
+/** ==================================================== KPI ASSIGNMENTS */
+/* The assignment is the employee × cycle × KPI join. It is what makes the same
+ * KPI definition carry a different weight — or a different target ladder — for
+ * two people, and what preserves the bands a past cycle was actually judged on. */
+function ASSIGNMENTS_HEADERS_() {
+  return ['KpiId', 'Period', 'Employee', 'KPI', 'Weight%', 'Direction',
+          'Target1', 'Target2', 'Target3', 'Target4', 'Target5',
+          'Reviewer', 'Note', 'UpdatedAt', 'UpdatedBy'];
+}
+function readAssignments_() {
+  var out = { byKey: {}, rows: 0, periods: {} };
+  var sh = null;
+  try { sh = SpreadsheetApp.openById(SOURCE_SPREADSHEET_ID).getSheetByName(ASSIGNMENTS_TAB); } catch (e) {}
+  if (!sh) return out;
+  var data = safeValues_(sh);
+  if (data.length < 2) return out;
+  var col = normCols_(data[0]);
+  if (col['kpiid'] == null) return out;
+  for (var i = 1; i < data.length; i++) {
+    var id = cell_(data[i], col['kpiid']);
+    if (!id) continue;
+    var per = cell_(data[i], col['period']);
+    var bands = [];
+    for (var b = 1; b <= 5; b++) { var ci = col['target' + b]; bands.push(ci == null ? '' : cleanCell_(data[i][ci])); }
+    var hasBand = bands.some(function (x) { return x !== ''; });
+    out.byKey[id + '|' + per] = {
+      weight: col['weight%'] != null ? parseNum_(data[i][col['weight%']]) : null,
+      direction: cell_(data[i], col['direction']),
+      bands: hasBand ? bands : null,
+      reviewer: cell_(data[i], col['reviewer']),
+      note: cell_(data[i], col['note'])
+    };
+    out.rows++;
+    if (per) out.periods[per] = true;
+  }
+  return out;
+}
+function apiSaveAssignment(p) {
+  p = p || {};
+  try {
+    if (!p.kpiId) throw new Error('Missing kpiId.');
+    var settings = readSettings_();
+    var period = p.period || settings.period || currentPeriod_();
+    assertUnlocked_(period);
+    var sh = ensureSheet_(ASSIGNMENTS_TAB, ASSIGNMENTS_HEADERS_());
+    var data = sh.getDataRange().getValues();
+    var head = data[0], col = requireCols_(head, [['kpiid', 'KpiId'], ['period', 'Period']], ASSIGNMENTS_TAB);
+    var row = -1;
+    for (var i = 1; i < data.length; i++) if (cleanCell_(data[i][col.kpiid]) === p.kpiId && String(data[i][col.period]).trim() === String(period)) { row = i; break; }
+    var rec = blankOr_(data, row, head.length);
+    var put = function (k, v) { if (col[k] != null) rec[col[k]] = v; };
+    put('kpiid', p.kpiId); put('period', period);
+    if (p.employee  !== undefined) put('employee',  String(p.employee || ''));
+    if (p.kpi       !== undefined) put('kpi',       String(p.kpi || ''));
+    if (p.weight    !== undefined) put('weight%',   p.weight === '' ? '' : num_(p.weight));
+    if (p.direction !== undefined) put('direction', String(p.direction || ''));
+    if (p.reviewer  !== undefined) put('reviewer',  String(p.reviewer || ''));
+    if (p.note      !== undefined) put('note',      String(p.note || ''));
+    if (p.bands !== undefined && p.bands) for (var b = 1; b <= 5; b++) put('target' + b, p.bands[b - 1] == null ? '' : String(p.bands[b - 1]));
+    put('updatedat', nowIso_()); put('updatedby', safeEmail_());
+    if (row >= 0) sh.getRange(row + 1, 1, 1, head.length).setValues([rec]);
+    else          sh.getRange(sh.getLastRow() + 1, 1, 1, head.length).setValues([rec]);
+    bustCache_(period);
+    return { ok: true, kpiId: p.kpiId, period: period };
+  } catch (err) { return { ok: false, error: String(err && err.message || err) }; }
+}
+
+/** ==================================================== CHECK-INS (HISTORY) */
+/* Append-only. A check-in never overwrites the previous one — the progression
+ * through the period is the point. The latest check-in for a KPI × period is
+ * what the actuals row reflects; the rest is the audit trail. */
+function CHECKINS_HEADERS_() {
+  return ['CheckinId', 'KpiId', 'Period', 'Date', 'Employee', 'KPI', 'Actual', 'Rating', 'Comment', 'Evidence', 'By', 'At'];
+}
+function readCheckins_() {
+  var out = { byKey: {}, rows: 0, recent: [] };
+  var sh = null;
+  try { sh = SpreadsheetApp.openById(SOURCE_SPREADSHEET_ID).getSheetByName(CHECKINS_TAB); } catch (e) {}
+  if (!sh) return out;
+  var data = safeValues_(sh);
+  if (data.length < 2) return out;
+  var col = normCols_(data[0]);
+  if (col['kpiid'] == null) return out;
+  for (var i = 1; i < data.length; i++) {
+    var id = cell_(data[i], col['kpiid']);
+    if (!id) continue;
+    var per = cell_(data[i], col['period']);
+    var c = {
+      id: cell_(data[i], col['checkinid']),
+      kpiId: id, period: per,
+      date: dateStr_(data[i][col['date']]),
+      employee: cell_(data[i], col['employee']),
+      kpi: cell_(data[i], col['kpi']),
+      actual: col['actual'] != null ? parseNum_(data[i][col['actual']]) : null,
+      rating: col['rating'] != null ? parseNum_(data[i][col['rating']]) : null,
+      comment: cell_(data[i], col['comment']),
+      evidence: cell_(data[i], col['evidence']),
+      by: cell_(data[i], col['by']),
+      at: cell_(data[i], col['at'])
+    };
+    (out.byKey[id + '|' + per] = out.byKey[id + '|' + per] || []).push(c);
+    out.recent.push(c);
+    out.rows++;
+  }
+  Object.keys(out.byKey).forEach(function (k) {
+    out.byKey[k].sort(function (a, b) { return String(a.at || a.date) < String(b.at || b.date) ? -1 : 1; });
+  });
+  out.recent.sort(function (a, b) { return String(b.at || b.date) < String(a.at || a.date) ? -1 : 1; });
+  return out;
+}
+/* Record a check-in AND move the actuals row to the latest value, so the two
+ * stay consistent without the caller making two round-trips. */
+function apiSaveCheckin(p) {
+  p = p || {};
+  try {
+    if (!p.kpiId) throw new Error('Missing kpiId.');
+    var settings = readSettings_();
+    var period = p.period || settings.period || currentPeriod_();
+    assertUnlocked_(period);
+    var sh = ensureSheet_(CHECKINS_TAB, CHECKINS_HEADERS_());
+    var head = CHECKINS_HEADERS_(), col = {}; head.forEach(function (h, i) { col[h] = i; });
+    var rec = head.map(function () { return ''; });
+    rec[col.CheckinId] = 'ci_' + new Date().getTime() + '_' + Math.floor(Math.random() * 1000);
+    rec[col.KpiId] = p.kpiId;
+    rec[col.Period] = period;
+    rec[col.Date] = p.date || Utilities.formatDate(new Date(), Session.getScriptTimeZone() || 'Asia/Kolkata', 'yyyy-MM-dd');
+    rec[col.Employee] = String(p.employee || '');
+    rec[col.KPI] = String(p.kpi || '');
+    rec[col.Actual] = (p.actual === '' || p.actual == null) ? '' : num_(p.actual);
+    rec[col.Rating] = (p.rating === '' || p.rating == null) ? '' : clamp_(num_(p.rating), 1, 5);
+    rec[col.Comment] = String(p.comment || '');
+    rec[col.Evidence] = String(p.evidence || '');
+    rec[col.By] = safeEmail_();
+    rec[col.At] = nowIso_();
+    sh.getRange(sh.getLastRow() + 1, 1, 1, head.length).setValues([rec]);
+
+    // Roll the check-in forward into the actuals row (the current position).
+    // If that write fails the log entry still stands, so say so rather than
+    // reporting a clean save the numbers do not reflect.
+    var fwd = { kpiId: p.kpiId, period: period, comment: p.comment, evidence: p.evidence };
+    if (p.actual !== undefined && p.actual !== '') fwd.actual = p.actual;
+    if (p.rating !== undefined && p.rating !== '') fwd.rating = p.rating;
+    var rolled = apiSaveActual(fwd);
+    bustCache_(period);
+    if (!rolled || !rolled.ok) {
+      return { ok: false, checkinId: rec[col.CheckinId], kpiId: p.kpiId, period: period,
+               error: 'Check-in logged, but the current value could not be updated: ' + ((rolled && rolled.error) || 'unknown error') };
+    }
+    return { ok: true, kpiId: p.kpiId, period: period, checkinId: rec[col.CheckinId] };
+  } catch (err) { return { ok: false, error: String(err && err.message || err) }; }
+}
+
+/** ==================================================== REVIEWS */
+/* The review sits on top of the computed score — it never replaces it. The
+ * system result is shown first; self and manager add context and an assessment;
+ * the final rating is an explicit, attributable decision. */
+function REVIEWS_HEADERS_() {
+  return ['Period', 'EmployeeId', 'Employee', 'Department', 'SystemRating', 'SystemScore',
+          'SelfRating', 'SelfComment', 'SelfBy', 'SelfAt',
+          'ManagerRating', 'ManagerComment', 'ManagerBy', 'ManagerAt',
+          'FinalRating', 'FinalComment', 'Status', 'UpdatedAt', 'UpdatedBy'];
+}
+function readReviews_() {
+  var out = { byKey: {}, rows: 0 };
+  var sh = null;
+  try { sh = SpreadsheetApp.openById(SOURCE_SPREADSHEET_ID).getSheetByName(REVIEWS_TAB); } catch (e) {}
+  if (!sh) return out;
+  var data = safeValues_(sh);
+  if (data.length < 2) return out;
+  var col = normCols_(data[0]);
+  if (col['employeeid'] == null) return out;
+  for (var i = 1; i < data.length; i++) {
+    var eid = cell_(data[i], col['employeeid']);
+    if (!eid) continue;
+    var per = cell_(data[i], col['period']);
+    out.byKey[eid + '|' + per] = {
+      employeeId: eid, period: per,
+      selfRating: col['selfrating'] != null ? parseNum_(data[i][col['selfrating']]) : null,
+      selfComment: cell_(data[i], col['selfcomment']),
+      selfBy: cell_(data[i], col['selfby']), selfAt: cell_(data[i], col['selfat']),
+      managerRating: col['managerrating'] != null ? parseNum_(data[i][col['managerrating']]) : null,
+      managerComment: cell_(data[i], col['managercomment']),
+      managerBy: cell_(data[i], col['managerby']), managerAt: cell_(data[i], col['managerat']),
+      finalRating: col['finalrating'] != null ? parseNum_(data[i][col['finalrating']]) : null,
+      finalComment: cell_(data[i], col['finalcomment']),
+      status: cell_(data[i], col['status']) || 'Not Started',
+      updatedAt: cell_(data[i], col['updatedat'])
+    };
+    out.rows++;
+  }
+  return out;
+}
+/* stage: 'self' | 'manager' | 'final'. Each stage advances the workflow state
+ * but never rewrites an earlier stage's comment or attribution. */
+function apiSaveReview(p) {
+  p = p || {};
+  try {
+    if (!p.employeeId) throw new Error('Missing employeeId.');
+    var stage = String(p.stage || '').toLowerCase();
+    if (['self', 'manager', 'final'].indexOf(stage) < 0) throw new Error('Unknown review stage: ' + p.stage);
+    var settings = readSettings_();
+    var period = p.period || settings.period || currentPeriod_();
+    assertUnlocked_(period);
+    var sh = ensureSheet_(REVIEWS_TAB, REVIEWS_HEADERS_());
+    var data = sh.getDataRange().getValues();
+    var head = data[0], col = requireCols_(head, [['employeeid', 'EmployeeId'], ['period', 'Period']], REVIEWS_TAB);
+    var row = -1;
+    for (var i = 1; i < data.length; i++) if (cleanCell_(data[i][col.employeeid]) === p.employeeId && String(data[i][col.period]).trim() === String(period)) { row = i; break; }
+    var rec = blankOr_(data, row, head.length);
+    var put = function (k, v) { if (col[k] != null) rec[col[k]] = v; };
+    var statusNow = function () { return col.status != null ? rec[col.status] : ''; };
+    put('period', period); put('employeeid', p.employeeId);
+    if (p.employee   !== undefined) put('employee',   String(p.employee || ''));
+    if (p.department !== undefined) put('department', String(p.department || ''));
+    if (p.systemRating !== undefined) put('systemrating', p.systemRating === '' ? '' : num_(p.systemRating));
+    if (p.systemScore  !== undefined) put('systemscore',  p.systemScore === '' ? '' : num_(p.systemScore));
+
+    var now = nowIso_(), who = safeEmail_();
+    if (stage === 'self') {
+      if (p.rating  !== undefined) put('selfrating',  p.rating === '' ? '' : clamp_(num_(p.rating), 1, 5));
+      if (p.comment !== undefined) put('selfcomment', String(p.comment || ''));
+      put('selfby', who); put('selfat', now);
+      if (p.submit) put('status', 'Manager Review');
+      else if (!statusNow() || statusNow() === 'Not Started') put('status', 'Self Review');
+    } else if (stage === 'manager') {
+      if (p.rating  !== undefined) put('managerrating',  p.rating === '' ? '' : clamp_(num_(p.rating), 1, 5));
+      if (p.comment !== undefined) put('managercomment', String(p.comment || ''));
+      put('managerby', who); put('managerat', now);
+      put('status', p.submit ? 'Final Review' : 'Manager Review');
+    } else {
+      if (p.rating  !== undefined) put('finalrating',  p.rating === '' ? '' : clamp_(num_(p.rating), 1, 5));
+      if (p.comment !== undefined) put('finalcomment', String(p.comment || ''));
+      put('status', p.submit ? 'Complete' : 'Final Review');
+    }
+    put('updatedat', now); put('updatedby', who);
+    if (row >= 0) sh.getRange(row + 1, 1, 1, head.length).setValues([rec]);
+    else          sh.getRange(sh.getLastRow() + 1, 1, 1, head.length).setValues([rec]);
+    bustCache_(period);
+    return { ok: true, employeeId: p.employeeId, period: period, status: statusNow() };
+  } catch (err) { return { ok: false, error: String(err && err.message || err) }; }
+}
+
+/* Guard every downstream write. A locked cycle is a closed book. */
+function assertUnlocked_(period) {
+  var c = readCycles_().byPeriod[period];
+  if (c && c.status === 'Locked') throw new Error('Cycle ' + period + ' is locked. Reopen it in Performance Cycles to make changes.');
+}
+
 function actualsSourceInfo_(settings, all) {
   return {
     type: settings.actualsSheetId ? 'external' : 'managed',
@@ -1025,22 +1882,54 @@ function actualsSourceInfo_(settings, all) {
     rows: all ? all.rows : 0
   };
 }
-function knownPeriods_(all, current) {
+/* Every period the product knows about: from actuals, from declared cycles and
+ * from assignments — so a cycle set up in advance is selectable before a single
+ * actual has been entered against it. */
+function knownPeriods_(all, current, cycles, assignments) {
   var set = {}; set[current] = true;
   (all && all.periods || []).forEach(function (p) { if (p) set[p] = true; });
+  ((cycles && cycles.list) || []).forEach(function (c) { if (c.period) set[c.period] = true; });
+  Object.keys((assignments && assignments.periods) || {}).forEach(function (p) { if (p) set[p] = true; });
   return Object.keys(set).sort().reverse();
 }
 
 /** ==================================================== SETTINGS */
 function readSettings_() {
-  var s = { period: '', thresholds: { onTrack: DEFAULT_THRESHOLDS.onTrack, atRisk: DEFAULT_THRESHOLDS.atRisk }, actualsSheetId: '', actualsTab: '', planSheetId: '' };
+  var s = {
+    period: '',
+    thresholds: { onTrack: DEFAULT_THRESHOLDS.onTrack, atRisk: DEFAULT_THRESHOLDS.atRisk },
+    scoring: { ratingPct: DEFAULT_SCORING.ratingPct.slice(), interpolate: DEFAULT_SCORING.interpolate },
+    statusScale: DEFAULT_STATUS_SCALE.map(function (x) { return { key: x.key, label: x.label, min: x.min }; }),
+    teams: DEFAULT_TEAMS.map(function (t) { return { key: t.key, name: t.name, lead: t.lead, patterns: t.patterns.slice(), members: (t.members || []).slice() }; }),
+    actualsSheetId: '', actualsTab: ''
+  };
   try {
     var raw = PropertiesService.getDocumentProperties().getProperty('KKT_SETTINGS') ||
               PropertiesService.getScriptProperties().getProperty('KKT_SETTINGS');
-    if (raw) { var o = JSON.parse(raw); if (o) { s.period = o.period || ''; if (o.thresholds) s.thresholds = o.thresholds; s.actualsSheetId = o.actualsSheetId || ''; s.actualsTab = o.actualsTab || ''; s.planSheetId = o.planSheetId || ''; } }
+    if (raw) {
+      var o = JSON.parse(raw);
+      if (o) {
+        s.period = o.period || '';
+        if (o.thresholds) s.thresholds = o.thresholds;
+        if (o.scoring && o.scoring.ratingPct && o.scoring.ratingPct.length === 5) s.scoring = o.scoring;
+        if (o.statusScale && o.statusScale.length) s.statusScale = o.statusScale;
+        if (o.teams && o.teams.length) s.teams = o.teams;
+        s.actualsSheetId = o.actualsSheetId || '';
+        s.actualsTab = o.actualsTab || '';
+      }
+    }
   } catch (e) {}
   if (!s.period) s.period = currentPeriod_();
+  // keep the derived thresholds in step with the status scale, so the priority
+  // maths and streak logic never disagree with the labels people see.
+  var onT = statusMin_(s.statusScale, 'good'), atR = statusMin_(s.statusScale, 'warn');
+  if (onT != null) s.thresholds.onTrack = onT;
+  if (atR != null) s.thresholds.atRisk = atR;
   return s;
+}
+function statusMin_(scale, key) {
+  for (var i = 0; i < scale.length; i++) if (scale[i].key === key) return num_(scale[i].min);
+  return null;
 }
 function writeSettings_(s) {
   try { PropertiesService.getScriptProperties().setProperty('KKT_SETTINGS', JSON.stringify(s)); } catch (e) {}
@@ -1080,683 +1969,29 @@ function nowIso_() { return new Date().toISOString(); }
 function currentPeriod_() { try { return Utilities.formatDate(new Date(), Session.getScriptTimeZone() || 'Asia/Kolkata', 'yyyy-MM'); } catch (e) { return ('' + new Date().getFullYear()) + '-' + ('0' + (new Date().getMonth() + 1)).slice(-2); } }
 function fileUpdated_() { try { return DriveApp.getFileById(SOURCE_SPREADSHEET_ID).getLastUpdated().toISOString(); } catch (e) { return nowIso_(); } }
 function safeEmail_() { var e = ''; try { e = Session.getActiveUser().getEmail() || ''; } catch (x) {} if (!e) { try { e = Session.getEffectiveUser().getEmail() || ''; } catch (y) {} } return e; }
-function bustCache_() { try { var c = CacheService.getScriptCache(); var s = readSettings_(); c.remove(CACHE_PREFIX + (s.period || currentPeriod_())); } catch (e) {} }
-function errModel_(err) { return { ok: false, connected: false, empty: true, error: String(err && err.message || err), generatedAt: nowIso_() }; }
-
-/*==============================================================================
- * PLAN LAYER — GMV targets · onboarding plan · buyer-supplier mapping
- * =============================================================================
- * A second, independent family of tab shapes found in the marketplace planning
- * workbook. Same rules as the KRA/KPI engine: nothing hard-coded, aggregates are
- * always recomputed from the ATOMIC rows (never read from TEAM GRAND TOTAL /
- * SUMMARY / TOTAL rows), blanks and "-" stay missing rather than becoming zero,
- * and any disagreement between the sheet's own stated totals and the recomputed
- * ones is surfaced as a reconciliation finding instead of being silently hidden.
- *
- *   • GMV          — Team | Buyer | Region | Category | Qty | GMV target [| GMV
- *                    achievement]. Achievement present ⇒ the period is scored as
- *                    PERFORMANCE (target→achievement→variance); absent ⇒ PLAN
- *                    (target→allocation→coverage), so a plan month never shows a
- *                    fabricated achievement %.
- *   • ONBOARDING   — region-wise supplier/buyer targets, the named supplier and
- *                    buyer pipelines, plus an unlabelled buyer REQUISITION
- *                    tracker (Region | Buyer | Requisition | POC | Remarks).
- *   • MAPPING      — buyer intelligence: owner, supplier network (Supplier 1..N),
- *                    category, est. volume/GMV, status, NBFC pitch, payment
- *                    terms, monthly capacity. Inverted to a supplier view too.
- *============================================================================*/
-
-var PLAN_KINDS_ = { gmv: 1, onboarding: 1, mapping: 1 };
-var MONTHS_ = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+/* A sheet date cell arrives as a Date; a typed one arrives as text. Normalise
+ * both to yyyy-MM-dd so the UI never has to guess. */
+function dateStr_(v) {
+  if (v == null || v === '') return '';
+  if (Object.prototype.toString.call(v) === '[object Date]' && !isNaN(v)) {
+    try { return Utilities.formatDate(v, Session.getScriptTimeZone() || 'Asia/Kolkata', 'yyyy-MM-dd'); } catch (e) { return ''; }
+  }
+  return cleanCell_(v);
+}
 var MONTH_NAMES_ = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-/* Rows that are aggregates, not data. */
-var TOTAL_ROW_RE_ = /^(team\s*grand\s*total|grand\s*total|team\s*total|sub\s*total|total|summary)\b/i;
-/* Placeholder buyer/supplier names that stand for "someone new, not yet named". */
-var PLACEHOLDER_RE_ = /^(new\s+buyer|new\s+supplier|new|tbd|to\s*be\s*decided|na)$/i;
-
-/** ---------------------------------------------------- tab classification */
-function classifyPlanTab_(grid, name) {
-  for (var r = 0; r < Math.min(grid.length, 25); r++) {
-    var n = grid[r].map(norm_);
-    var has = function (t) { return n.some(function (c) { return c.indexOf(t) >= 0; }); };
-    var hasBuyerName = has('buyer name');
-    if (hasBuyerName && has('supplier 1')) return { kind: 'mapping', header: r };
-    if (hasBuyerName && (has('gmv target') || has('qty target') || has('quantity target'))) return { kind: 'gmv', header: r };
-    if (has('new suppliers') && has('new buyers')) return { kind: 'onboarding', header: r };
-  }
-  if (/onboarding\s*plan/i.test(name || '')) return { kind: 'onboarding', header: -1 };
-  if (/gmv\s*(target|plan)/i.test(name || '')) return { kind: 'gmv', header: -1 };
-  if (/(buyer|supplier)[\s\-–—]*(supplier|buyer)\s*mapping/i.test(name || '')) return { kind: 'mapping', header: -1 };
-  return null;
+function periodLabel_(p) {
+  var m = /^(\d{4})-(\d{2})$/.exec(String(p || ''));
+  return m ? (MONTH_NAMES_[+m[2]] + ' ' + m[1]) : String(p || '');
 }
-
-/** Period for a plan tab: from its name ("July26 …"), else from a title row. */
-function periodFromText_(text) {
-  var m = String(text || '').match(/([A-Za-z]{3,9})\s*'?\s*(\d{2,4})\b/);
-  if (!m) return null;
-  var mo = MONTHS_[m[1].slice(0, 3).toLowerCase()];
-  if (!mo) return null;
-  var y = Number(m[2]); if (y < 100) y = 2000 + y;
-  if (y < 2000 || y > 2100) return null;
-  return { key: y + '-' + ('0' + mo).slice(-2), label: MONTH_NAMES_[mo] + ' ' + y };
+/* Scoring now depends on cycles, assignments, check-ins and reviews too, so any
+ * write must clear the period it touched — plus the active one. */
+function bustCache_(period) {
+  try {
+    var c = CacheService.getScriptCache(), s = readSettings_();
+    var keys = {};
+    keys[CACHE_PREFIX + (s.period || currentPeriod_())] = true;
+    if (period) keys[CACHE_PREFIX + period] = true;
+    c.removeAll(Object.keys(keys));
+  } catch (e) {}
 }
-function periodForTab_(grid, name) {
-  var p = periodFromText_(name);
-  if (p) return p;
-  for (var r = 0; r < Math.min(grid.length, 5); r++) {
-    for (var c = 0; c < grid[r].length; c++) {
-      var t = cleanCell_(grid[r][c]);
-      if (!t) continue;
-      p = periodFromText_(t);
-      if (p) return p;
-    }
-  }
-  return null;
-}
-
-/** Map a header row's columns by keyword, first match wins. */
-function planCols_(header, spec) {
-  var n = header.map(norm_), out = {};
-  Object.keys(spec).forEach(function (key) {
-    out[key] = -1;
-    var words = spec[key];
-    for (var w = 0; w < words.length && out[key] < 0; w++)
-      for (var c = 0; c < n.length; c++)
-        if (n[c] && n[c].indexOf(words[w]) >= 0) { out[key] = c; break; }
-  });
-  return out;
-}
-function isTotalRow_(row) {
-  for (var c = 0; c < Math.min(row.length, 3); c++) { var t = cleanCell_(row[c]); if (t && TOTAL_ROW_RE_.test(t)) return true; }
-  return false;
-}
-function blankRow_(row) { return row.every(function (c) { return cleanCell_(c) === ''; }); }
-/* "-" / "" / "na" all mean MISSING, never zero. */
-function planVal_(raw) { var s = cleanCell_(raw); if (!s || s === '-' || s === '—' || /^n\/?a$/i.test(s)) return null; return s; }
-function planNum_(raw) { var s = planVal_(raw); return s == null ? null : parseNum_(s); }
-
-/** ---------------------------------------------------------- GMV parser */
-function parseGmvTab_(grid, name, cls, period, acc) {
-  var hr = cls.header;
-  if (hr < 0) return;
-  var cols = planCols_(grid[hr], {
-    team: ['team'], buyer: ['buyer name', 'buyer'], region: ['region'],
-    category: ['category', 'product'], qty: ['qty', 'quantity'],
-    target: ['gmv target', 'target'], actual: ['achievement', 'actual', 'achieved']
-  });
-  // The achievement column must be a *distinct* column from target.
-  if (cols.actual === cols.target) cols.actual = -1;
-  var end = grid.length;
-  for (var r = hr + 1; r < grid.length; r++) {
-    var row = grid[r];
-    if (isTotalRow_(row)) { end = r; break; }
-    if (blankRow_(row)) { var nx = grid[r + 1]; if (!nx || blankRow_(nx)) { end = r; break; } }
-  }
-  for (var i = hr + 1; i < end; i++) {
-    var row = grid[i];
-    if (blankRow_(row)) continue;
-    var buyer = planVal_(row[cols.buyer]);
-    var team = planVal_(row[cols.team]);
-    if (!buyer && !team) continue;
-    var qty = planNum_(row[cols.qty]);
-    var tgt = planNum_(row[cols.target]);
-    var act = cols.actual >= 0 ? planNum_(row[cols.actual]) : null;
-    if (!buyer && qty == null && tgt == null) continue;
-    acc.gmv.push({
-      period: period.key, team: team || '', buyer: buyer || '',
-      placeholder: !!(buyer && PLACEHOLDER_RE_.test(buyer)),
-      bundled: !!(buyer && buyer.indexOf('/') >= 0),
-      region: planVal_(row[cols.region]) || '', category: planVal_(row[cols.category]) || '',
-      qty: qty, target: tgt, actual: act, tab: name
-    });
-  }
-  // stated aggregates, kept only for reconciliation
-  var stated = { total: null, summary: [], onboarding: {} };
-  for (var r2 = end; r2 < grid.length; r2++) {
-    var row2 = grid[r2];
-    if (isTotalRow_(row2) && stated.total == null) {
-      var q = null, t = null, a = null;
-      if (cols.qty >= 0) q = planNum_(row2[cols.qty]);
-      if (cols.target >= 0) t = planNum_(row2[cols.target]);
-      if (cols.actual >= 0) a = planNum_(row2[cols.actual]);
-      if (q != null || t != null) stated.total = { qty: q, target: t, actual: a };
-    }
-  }
-  parseStatedSummary_(grid, end, stated);
-  parseTargetVsAchievement_(grid, end, stated);
-  acc.stated[period.key] = acc.stated[period.key] || {};
-  acc.stated[period.key].gmv = stated;
-}
-
-/* A "SUMMARY" sub-table (Team Member | # Buyers | # Suppliers | Qty | GMV). */
-function parseStatedSummary_(grid, from, stated) {
-  for (var r = from; r < grid.length; r++) {
-    var n = grid[r].map(norm_);
-    var hasTeam = n.some(function (c) { return c.indexOf('team member') >= 0; });
-    var hasNum = n.some(function (c) { return c.indexOf('# buyers') >= 0 || c.indexOf('buyers') >= 0 || c.indexOf('qty') >= 0; });
-    if (!hasTeam || !hasNum) continue;
-    var cols = planCols_(grid[r], { team: ['team member'], buyers: ['# buyers', 'buyers'], suppliers: ['# suppliers', 'suppliers'], qty: ['qty', 'quantity'], gmv: ['gmv'] });
-    var unitNote = null;
-    if (cols.gmv >= 0) { var h = norm_(grid[r][cols.gmv]); if (h.indexOf('₹ l') >= 0 || h.indexOf('(l)') >= 0 || /\bl\b/.test(h.replace(/[()]/g, ' '))) unitNote = cleanCell_(grid[r][cols.gmv]); }
-    stated.summaryUnitLabel = unitNote;
-    for (var i = r + 1; i < grid.length; i++) {
-      var row = grid[i];
-      if (blankRow_(row)) break;
-      var t = planVal_(row[cols.team]);
-      if (!t) break;
-      if (TOTAL_ROW_RE_.test(t)) break;
-      stated.summary.push({ team: t, buyers: planNum_(row[cols.buyers]), suppliers: planNum_(row[cols.suppliers]), qty: planNum_(row[cols.qty]), gmv: planNum_(row[cols.gmv]) });
-    }
-    return;
-  }
-}
-
-/* A free-form "Target vs Achievement" block: a carried-forward label plus rows
- * tagged Target / Achievement (labels may be merged across two rows). */
-function parseTargetVsAchievement_(grid, from, stated) {
-  var label = '';
-  for (var r = from; r < grid.length; r++) {
-    var row = grid[r];
-    if (blankRow_(row)) continue;
-    var texts = row.map(cleanCell_).filter(function (t) { return t !== ''; });
-    if (!texts.length) continue;
-    var isT = texts.some(function (t) { return /^target$/i.test(t); });
-    var isA = texts.some(function (t) { return /^achievement|^achieved|^actual/i.test(t); });
-    var lead = texts.find(function (t) { return !/^target$|^achievement|^achieved|^actual/i.test(t) && !/^-?[\d.,]+\s*(cr|mt|l)?$/i.test(t); });
-    if (lead && !TOTAL_ROW_RE_.test(lead)) label = lead;
-    if (!isT && !isA) continue;
-    var val = null;
-    for (var c = row.length - 1; c >= 0; c--) { var v = planNum_(row[c]); if (v != null) { val = v; break; } }
-    if (val == null || !label) continue;
-    var key = slug_(label);
-    var e = stated.onboarding[key] || (stated.onboarding[key] = { label: label, target: null, actual: null });
-    if (isT) e.target = val; else e.actual = val;
-  }
-}
-
-/** -------------------------------------------------- ONBOARDING parser */
-function parseOnboardingTab_(grid, name, cls, period, acc) {
-  var hr = -1;
-  for (var r = 0; r < grid.length && hr < 0; r++) {
-    var n = grid[r].map(norm_);
-    if (n.some(function (c) { return c.indexOf('new suppliers') >= 0; }) && n.some(function (c) { return c.indexOf('new buyers') >= 0; })) hr = r;
-  }
-  if (hr >= 0) {
-    var cols = planCols_(grid[hr], { team: ['team member', 'team'], region: ['region'], suppliers: ['new suppliers'], buyers: ['new buyers'], total: ['total onboard', 'total'], notes: ['notes', 'focus'] });
-    for (var i = hr + 1; i < grid.length; i++) {
-      var row = grid[i];
-      if (blankRow_(row)) break;
-      if (isTotalRow_(row)) break;
-      var t = planVal_(row[cols.team]);
-      if (!t) break;
-      acc.onboarding.push({
-        period: period.key, team: t, region: planVal_(row[cols.region]) || '',
-        suppliers: planNum_(row[cols.suppliers]), buyers: planNum_(row[cols.buyers]),
-        notes: planVal_(row[cols.notes]) || '', tab: name
-      });
-    }
-  }
-  // Named pipelines: "Supplier 1..N" and "Buyer 1..N" blocks.
-  acc.pipeline = acc.pipeline.concat(parseNameBlock_(grid, 'supplier', period, name));
-  acc.pipeline = acc.pipeline.concat(parseNameBlock_(grid, 'buyer', period, name));
-  // Unlabelled buyer requisition / status tracker.
-  parseRequisitionBlock_(grid, period, name, acc);
-}
-
-/* Rows of "Team | Region | <Thing> 1 | <Thing> 2 | …" → one record per name. */
-function parseNameBlock_(grid, thing, period, tab) {
-  var out = [];
-  for (var r = 0; r < grid.length; r++) {
-    var n = grid[r].map(norm_);
-    if (!n.some(function (c) { return c === thing + ' 1'; })) continue;
-    var nameCols = [];
-    for (var c = 0; c < n.length; c++) if (new RegExp('^' + thing + '\\s*\\d+$').test(n[c])) nameCols.push(c);
-    if (!nameCols.length) continue;
-    var cols = planCols_(grid[r], { team: ['team member', 'team'], region: ['region'] });
-    for (var i = r + 1; i < grid.length; i++) {
-      var row = grid[i];
-      if (blankRow_(row)) break;
-      var t = planVal_(row[cols.team]);
-      if (!t || TOTAL_ROW_RE_.test(t)) break;
-      var names = [];
-      nameCols.forEach(function (cc) { var v = planVal_(row[cc]); if (v) names.push(v); });
-      // A single cell may hold several names crammed together.
-      out.push({ period: period.key, team: t, region: planVal_(row[cols.region]) || '', type: thing, names: names, tab: tab });
-    }
-    break;
-  }
-  return out;
-}
-
-/* The requisition tracker: Region | Buyer | Requisition | POC | Remarks. */
-function parseRequisitionBlock_(grid, period, tab, acc) {
-  for (var r = 0; r < grid.length; r++) {
-    var n = grid[r].map(norm_);
-    if (!n.some(function (c) { return c.indexOf('requisition') >= 0; })) continue;
-    var cols = planCols_(grid[r], { region: ['region'], buyer: ['buyer'], req: ['requisition'], poc: ['poc', 'owner'], remarks: ['remark', 'status'] });
-    if (cols.buyer < 0) continue;
-    for (var i = r + 1; i < grid.length; i++) {
-      var row = grid[i];
-      if (blankRow_(row)) continue;
-      var b = planVal_(row[cols.buyer]);
-      if (!b || TOTAL_ROW_RE_.test(b)) continue;
-      acc.requisitions.push({
-        period: period.key, region: planVal_(row[cols.region]) || '', buyer: b,
-        requisition: planVal_(row[cols.req]) || '', poc: planVal_(row[cols.poc]) || '',
-        remarks: planVal_(row[cols.remarks]) || '', tab: tab
-      });
-    }
-    return;
-  }
-}
-
-/** ------------------------------------------------------ MAPPING parser */
-function parseMappingTab_(grid, name, cls, period, acc) {
-  var hr = cls.header;
-  if (hr < 0) return;
-  var header = grid[hr], n = header.map(norm_);
-  var supCols = [];
-  for (var c = 0; c < n.length; c++) if (/^supplier\s*\d+$/.test(n[c])) supCols.push(c);
-  var cols = planCols_(header, {
-    buyer: ['buyer name', 'buyer'], team: ['team'], category: ['category', 'product'],
-    volume: ['volume'], gmv: ['gmv'], status: ['status'], nbfc: ['nbfc'],
-    terms: ['payment'], capacity: ['capacity']
-  });
-  var volLabel = cols.volume >= 0 ? cleanCell_(header[cols.volume]) : '';
-  for (var i = hr + 1; i < grid.length; i++) {
-    var row = grid[i];
-    if (blankRow_(row)) continue;
-    var buyer = planVal_(row[cols.buyer]);
-    if (!buyer || TOTAL_ROW_RE_.test(buyer)) continue;
-    var sups = [];
-    supCols.forEach(function (cc) { var v = planVal_(row[cc]); if (v) sups.push(v); });
-    acc.mapping.push({
-      period: period ? period.key : null, buyer: buyer, team: planVal_(row[cols.team]) || '',
-      suppliers: sups, category: planVal_(row[cols.category]) || '',
-      volume: planNum_(row[cols.volume]), estGmv: planNum_(row[cols.gmv]),
-      status: planVal_(row[cols.status]) || '', nbfc: planVal_(row[cols.nbfc]) || '',
-      terms: planVal_(row[cols.terms]) || '', capacity: planNum_(row[cols.capacity]), tab: name
-    });
-  }
-  acc.mappingMeta = { volumeLabel: volLabel, supplierSlots: supCols.length, tab: name, period: period ? period.key : null };
-}
-
-/** ============================================ BUILD THE PLAN MODEL */
-function buildPlan_(planTabs, planSource) {
-  var acc = { gmv: [], onboarding: [], pipeline: [], requisitions: [], mapping: [], stated: {}, mappingMeta: null, tabs: [] };
-  if (!planTabs.length) return { hasData: false, periods: [], byPeriod: {}, buyers: [], suppliers: [], findings: [], tabs: [], source: planSource };
-
-  planTabs.forEach(function (t) {
-    var period = periodForTab_(t.grid, t.name) || { key: 'unscoped', label: 'Unscoped' };
-    acc.tabs.push({ name: t.name, kind: t.cls.kind, period: period.key, periodLabel: period.label, source: t.source });
-    if (t.cls.kind === 'gmv') parseGmvTab_(t.grid, t.name, t.cls, period, acc);
-    else if (t.cls.kind === 'onboarding') parseOnboardingTab_(t.grid, t.name, t.cls, period, acc);
-    else if (t.cls.kind === 'mapping') parseMappingTab_(t.grid, t.name, t.cls, period, acc);
-  });
-
-  // ---- canonical team identity (ABHISEK / Abhisek / Abhishek → one person).
-  var roster = buildRoster_(acc);
-  var canon = function (raw) { return canonTeam_(roster, raw); };
-  acc.gmv.forEach(function (g) { g.teamId = canon(g.team).id; g.teamName = canon(g.team).name; });
-  acc.onboarding.forEach(function (o) { o.teamId = canon(o.team).id; o.teamName = canon(o.team).name; });
-  acc.pipeline.forEach(function (p) { p.teamId = canon(p.team).id; p.teamName = canon(p.team).name; });
-  acc.requisitions.forEach(function (q) { q.teamId = canon(q.poc).id; q.teamName = canon(q.poc).name; });
-  acc.mapping.forEach(function (m) { m.teamId = canon(m.team).id; m.teamName = canon(m.team).name; });
-
-  // ---- per-period aggregation, recomputed from atomic rows only.
-  var pset = {};
-  acc.gmv.forEach(function (g) { pset[g.period] = 1; });
-  acc.onboarding.forEach(function (o) { pset[o.period] = 1; });
-  acc.requisitions.forEach(function (q) { pset[q.period] = 1; });
-  var periods = Object.keys(pset).filter(function (p) { return p !== 'unscoped'; }).sort();
-
-  var byPeriod = {};
-  periods.forEach(function (pk) { byPeriod[pk] = aggregatePeriod_(pk, acc, roster); });
-
-  // ---- buyer + supplier intelligence from the mapping layer.
-  var buyers = buildBuyerIntel_(acc, roster);
-  var suppliers = buildSupplierNetwork_(acc);
-
-  // ---- reconciliation + data-quality findings.
-  var findings = planFindings_(acc, byPeriod, periods, roster, buyers);
-
-  return {
-    hasData: true,
-    periods: periods.map(function (pk) { return { key: pk, label: periodLabel_(pk), mode: byPeriod[pk].mode }; }),
-    byPeriod: byPeriod, team: roster.list, buyers: buyers, suppliers: suppliers,
-    mappingMeta: acc.mappingMeta, findings: findings, tabs: acc.tabs, source: planSource,
-    counts: { gmvRows: acc.gmv.length, onboardingRows: acc.onboarding.length, mappingRows: acc.mapping.length, requisitionRows: acc.requisitions.length }
-  };
-}
-function periodLabel_(pk) {
-  var m = /^(\d{4})-(\d{2})$/.exec(pk);
-  return m ? (MONTH_NAMES_[Number(m[2])] + ' ' + m[1]) : pk;
-}
-
-/* Roster: canonical team members, seeded from the GMV/onboarding tabs (which use
- * consistent upper-case names) then fuzzy-matched for mapping/tracker variants. */
-function buildRoster_(acc) {
-  var byId = {}, list = [];
-  function add(raw) {
-    var s = cleanCell_(raw); if (!s) return;
-    var id = slug_(s);
-    if (!byId[id]) { var o = { id: id, name: titleCase_(s), variants: {} }; byId[id] = o; list.push(o); }
-    byId[id].variants[s] = 1;
-  }
-  acc.gmv.forEach(function (g) { add(g.team); });
-  acc.onboarding.forEach(function (o) { add(o.team); });
-  return { byId: byId, list: list };
-}
-function canonTeam_(roster, raw) {
-  var s = cleanCell_(raw);
-  if (!s) return { id: '', name: '' };
-  var id = slug_(s);
-  if (roster.byId[id]) { roster.byId[id].variants[s] = 1; return roster.byId[id]; }
-  // fuzzy: nearest roster name within edit distance 2 (Abhisek ↔ Abhishek)
-  var best = null, bestD = 99;
-  roster.list.forEach(function (m) {
-    var d = editDist_(id, m.id);
-    if (d < bestD) { bestD = d; best = m; }
-  });
-  if (best && bestD <= 2) { best.variants[s] = 1; best.fuzzy = true; return best; }
-  var o = { id: id, name: titleCase_(s), variants: {} }; o.variants[s] = 1;
-  roster.byId[id] = o; roster.list.push(o);
-  return o;
-}
-function editDist_(a, b) {
-  a = String(a); b = String(b);
-  if (a === b) return 0;
-  if (Math.abs(a.length - b.length) > 3) return 99;
-  var prev = [], cur = [];
-  for (var j = 0; j <= b.length; j++) prev[j] = j;
-  for (var i = 1; i <= a.length; i++) {
-    cur[0] = i;
-    for (var j2 = 1; j2 <= b.length; j2++) {
-      cur[j2] = Math.min(prev[j2] + 1, cur[j2 - 1] + 1, prev[j2 - 1] + (a.charAt(i - 1) === b.charAt(j2 - 1) ? 0 : 1));
-    }
-    prev = cur.slice();
-  }
-  return prev[b.length];
-}
-function titleCase_(s) {
-  return String(s || '').toLowerCase().replace(/\b([a-z])/g, function (m, c) { return c.toUpperCase(); }).replace(/\s+/g, ' ').trim();
-}
-
-/** Aggregate one period from atomic rows: team / region / category rollups. */
-function aggregatePeriod_(pk, acc, roster) {
-  var rows = acc.gmv.filter(function (g) { return g.period === pk; });
-  var onb = acc.onboarding.filter(function (o) { return o.period === pk; });
-  var reqs = acc.requisitions.filter(function (q) { return q.period === pk; });
-  var pipe = acc.pipeline.filter(function (p) { return p.period === pk; });
-
-  var hasActual = rows.some(function (r) { return r.actual != null; });
-  var stated = (acc.stated[pk] && acc.stated[pk].gmv) || null;
-  var statedOnb = stated ? stated.onboarding : {};
-  var statedHasActual = Object.keys(statedOnb).some(function (k) { return statedOnb[k].actual != null; });
-
-  function sum(list, f) { var s = null; list.forEach(function (x) { var v = f(x); if (v != null) s = (s == null ? 0 : s) + v; }); return s; }
-  function group(list, keyFn) {
-    var m = {}, order = [];
-    list.forEach(function (x) {
-      var k = keyFn(x); if (k === '' || k == null) k = '—';
-      if (!m[k]) { m[k] = { key: k, rows: [] }; order.push(k); }
-      m[k].rows.push(x);
-    });
-    return order.map(function (k) {
-      var g = m[k];
-      return {
-        key: k, rows: g.rows.length,
-        qty: round2_(sum(g.rows, function (x) { return x.qty; })),
-        target: round2_(sum(g.rows, function (x) { return x.target; })),
-        actual: hasActual ? round2_(sum(g.rows, function (x) { return x.actual; })) : null,
-        buyers: g.rows.filter(function (x) { return x.buyer && !x.placeholder; }).length,
-        placeholders: g.rows.filter(function (x) { return x.placeholder; }).length
-      };
-    });
-  }
-
-  var totalTarget = round2_(sum(rows, function (x) { return x.target; }));
-  var totalQty = round2_(sum(rows, function (x) { return x.qty; }));
-  var totalActual = hasActual ? round2_(sum(rows, function (x) { return x.actual; })) : null;
-
-  var byTeam = group(rows, function (x) { return x.teamName; }).sort(function (a, b) { return (b.target || 0) - (a.target || 0); });
-  var byRegion = group(rows, function (x) { return titleCase_(x.region); }).sort(function (a, b) { return (b.target || 0) - (a.target || 0); });
-  var byCategory = group(rows, function (x) { return titleCase_(x.category); }).sort(function (a, b) { return (b.target || 0) - (a.target || 0); });
-  [byTeam, byRegion, byCategory].forEach(function (arr) {
-    arr.forEach(function (g) { g.share = (totalTarget && g.target != null) ? round1_(g.target / totalTarget * 100) : null; });
-  });
-
-  // onboarding rollup (numeric targets) + named pipeline coverage
-  var obSup = sum(onb, function (o) { return o.suppliers; });
-  var obBuy = sum(onb, function (o) { return o.buyers; });
-  var pipeByTeam = {};
-  pipe.forEach(function (p) {
-    var e = pipeByTeam[p.teamId] || (pipeByTeam[p.teamId] = { team: p.teamName, supplier: [], buyer: [] });
-    e[p.type] = e[p.type].concat(p.names);
-  });
-  var onboarding = onb.map(function (o) {
-    var pp = pipeByTeam[o.teamId] || { supplier: [], buyer: [] };
-    return {
-      teamId: o.teamId, team: o.teamName, region: titleCase_(o.region),
-      suppliers: o.suppliers, buyers: o.buyers,
-      total: (o.suppliers == null && o.buyers == null) ? null : (o.suppliers || 0) + (o.buyers || 0),
-      notes: o.notes, supplierNames: pp.supplier, buyerNames: pp.buyer,
-      supplierNamed: pp.supplier.length, buyerNamed: pp.buyer.length
-    };
-  }).sort(function (a, b) { return (b.total || 0) - (a.total || 0); });
-
-  // requisition funnel
-  var funnel = {}, reqYes = 0;
-  reqs.forEach(function (q) {
-    var k = q.remarks || '—';
-    funnel[k] = (funnel[k] || 0) + 1;
-    if (/^y/i.test(q.requisition)) reqYes++;
-  });
-  var funnelList = Object.keys(funnel).map(function (k) { return { label: k, count: funnel[k], share: round1_(funnel[k] / reqs.length * 100) }; }).sort(function (a, b) { return b.count - a.count; });
-
-  var mode = (hasActual || statedHasActual) ? 'performance' : 'plan';
-  /* Headline achievement: the sheet's own stated total is the ONLY real
-   * performance figure when the per-buyer achievement column merely copies
-   * target (which it does in July). Attainment is therefore computed from a
-   * single consistent source pair, and `basis` says which one was used. */
-  var statedTarget = (stated && stated.total && stated.total.target != null) ? stated.total.target
-                   : ((statedOnb.gmv && statedOnb.gmv.target != null) ? statedOnb.gmv.target : null);
-  var statedActual = (stated && stated.total && stated.total.actual != null) ? stated.total.actual
-                   : ((statedOnb.gmv && statedOnb.gmv.actual != null) ? statedOnb.gmv.actual : null);
-  var rowsAreCopies = hasActual && totalActual != null && totalTarget != null && Math.abs(totalActual - totalTarget) < 0.005;
-  var useStated = mode === 'performance' && statedActual != null && statedTarget != null && (rowsAreCopies || !hasActual);
-  var headActual = useStated ? statedActual : totalActual;
-  var attain = null, basis = null;
-  if (mode === 'performance') {
-    if (useStated) { attain = round1_(statedActual / statedTarget * 100); basis = 'stated'; }
-    else if (totalActual != null && totalTarget) { attain = round1_(totalActual / totalTarget * 100); basis = 'rows'; }
-  }
-  return {
-    key: pk, label: periodLabel_(pk), mode: mode,
-    gmv: {
-      target: totalTarget, actual: headActual, actualRows: totalActual, qty: totalQty,
-      statedTarget: statedTarget, statedActual: statedActual,
-      rows: rows.length,
-      buyers: rows.filter(function (r) { return r.buyer && !r.placeholder; }).length,
-      placeholders: rows.filter(function (r) { return r.placeholder; }).length,
-      attainment: attain, attainmentBasis: basis,
-      byTeam: byTeam, byRegion: byRegion, byCategory: byCategory,
-      concentration: byTeam.length ? { team: byTeam[0].key, share: byTeam[0].share, target: byTeam[0].target } : null,
-      records: rows
-    },
-    onboarding: {
-      suppliers: obSup, buyers: obBuy,
-      total: (obSup == null && obBuy == null) ? null : (obSup || 0) + (obBuy || 0),
-      byTeam: onboarding,
-      stated: statedOnb,
-      namedSuppliers: pipe.filter(function (p) { return p.type === 'supplier'; }).reduce(function (s, p) { return s + p.names.length; }, 0),
-      namedBuyers: pipe.filter(function (p) { return p.type === 'buyer'; }).reduce(function (s, p) { return s + p.names.length; }, 0)
-    },
-    requisitions: { rows: reqs, total: reqs.length, yes: reqYes, funnel: funnelList },
-    stated: stated
-  };
-}
-
-/** Buyer intelligence: one card per buyer in the mapping layer. */
-function buildBuyerIntel_(acc, roster) {
-  var byKey = {};
-  acc.mapping.forEach(function (m) {
-    var key = normEntity_(m.buyer);
-    var b = byKey[key];
-    if (!b) { b = byKey[key] = { key: key, name: m.buyer, teamId: m.teamId, team: m.teamName, suppliers: [], category: m.category, volume: m.volume, estGmv: m.estGmv, status: m.status, nbfc: m.nbfc, terms: m.terms, capacity: m.capacity, requisition: null, remarks: null, gmvTarget: null, gmvPeriods: [], names: {} }; }
-    b.names[m.buyer] = 1;
-    m.suppliers.forEach(function (s) { if (b.suppliers.indexOf(s) < 0) b.suppliers.push(s); });
-  });
-  // attach requisition status + GMV-plan linkage by fuzzy entity name
-  acc.requisitions.forEach(function (q) {
-    var b = matchEntity_(byKey, q.buyer);
-    if (b) { b.requisition = q.requisition; b.remarks = q.remarks; b.trackerPoc = q.teamName; b.trackerRegion = titleCase_(q.region); }
-    else byKey['__req_' + normEntity_(q.buyer)] = { key: '__req_' + normEntity_(q.buyer), name: q.buyer, team: q.teamName, teamId: q.teamId, suppliers: [], category: '', volume: null, estGmv: null, status: '', nbfc: '', terms: '', capacity: null, requisition: q.requisition, remarks: q.remarks, trackerPoc: q.teamName, trackerRegion: titleCase_(q.region), gmvTarget: null, gmvPeriods: [], names: {}, mappingMissing: true };
-  });
-  acc.gmv.forEach(function (g) {
-    if (!g.buyer || g.placeholder) return;
-    var b = matchEntity_(byKey, g.buyer);
-    if (!b) return;
-    b.gmvTarget = (b.gmvTarget == null ? 0 : b.gmvTarget) + (g.target || 0);
-    b.gmvByPeriod = b.gmvByPeriod || {};
-    var e = b.gmvByPeriod[g.period] || (b.gmvByPeriod[g.period] = { target: 0, qty: 0, actual: null });
-    e.target = round2_(e.target + (g.target || 0));
-    e.qty = round2_(e.qty + (g.qty || 0));
-    if (g.actual != null) e.actual = round2_((e.actual || 0) + g.actual);
-    if (b.gmvPeriods.indexOf(g.period) < 0) b.gmvPeriods.push(g.period);
-    if (!b.region) b.region = titleCase_(g.region);
-  });
-  return Object.keys(byKey).map(function (k) {
-    var b = byKey[k];
-    b.gmvTarget = round2_(b.gmvTarget);
-    b.active = /^act/i.test(b.status);
-    b.variants = Object.keys(b.names);
-    return b;
-  }).sort(function (a, b) { return (b.gmvTarget || 0) - (a.gmvTarget || 0) || a.name.localeCompare(b.name); });
-}
-/* Entity-name normalisation so "M/S Natraj Iron & Casting Ltd." ≈ "NATRAJ". */
-function normEntity_(s) {
-  return String(s || '').toLowerCase()
-    .replace(/\b(m\/s|messrs)\b/g, ' ')
-    .replace(/\b(private|pvt|limited|ltd|llp|inc|co|company|corporation|corp|industries|industry|enterprises|enterprise|steels?|metals?|ispat|traders?|trading|and|&)\b/g, ' ')
-    .replace(/[^a-z0-9]+/g, '').trim();
-}
-function matchEntity_(byKey, raw) {
-  var k = normEntity_(raw);
-  if (!k) return null;
-  if (byKey[k]) return byKey[k];
-  var keys = Object.keys(byKey);
-  for (var i = 0; i < keys.length; i++) {
-    var kk = keys[i]; if (kk.indexOf('__req_') === 0) continue;
-    if (!kk) continue;
-    if (kk.indexOf(k) === 0 || k.indexOf(kk) === 0) return byKey[kk];
-  }
-  return null;
-}
-
-/** Invert buyer→suppliers into a supplier→buyers network with coverage. */
-function buildSupplierNetwork_(acc) {
-  var by = {};
-  acc.mapping.forEach(function (m) {
-    m.suppliers.forEach(function (s) {
-      var k = normEntity_(s) || slug_(s);
-      var e = by[k] || (by[k] = { key: k, name: s, buyers: [], teams: {}, categories: {}, capacity: null, variants: {} });
-      e.variants[s] = 1;
-      if (e.buyers.indexOf(m.buyer) < 0) e.buyers.push(m.buyer);
-      if (m.teamName) e.teams[m.teamName] = 1;
-      if (m.category) e.categories[titleCase_(m.category)] = 1;
-      if (m.capacity != null) e.capacity = (e.capacity == null ? 0 : e.capacity) + m.capacity;
-    });
-  });
-  return Object.keys(by).map(function (k) {
-    var e = by[k];
-    return { key: k, name: e.name, buyers: e.buyers, buyerCount: e.buyers.length, teams: Object.keys(e.teams), categories: Object.keys(e.categories), reachCapacity: round2_(e.capacity), variants: Object.keys(e.variants) };
-  }).sort(function (a, b) { return b.buyerCount - a.buyerCount || a.name.localeCompare(b.name); });
-}
-
-/** ---------------------------------- RECONCILIATION / DATA QUALITY */
-function planFindings_(acc, byPeriod, periods, roster, buyers) {
-  var out = [];
-  function add(sev, title, detail) { out.push({ severity: sev, title: title, detail: detail }); }
-
-  periods.forEach(function (pk) {
-    var p = byPeriod[pk], st = p.stated, L = p.label;
-    if (st && st.total) {
-      if (st.total.target != null && p.gmv.target != null && Math.abs(st.total.target - p.gmv.target) > 0.005)
-        add('high', L + ' — GMV total disagrees with its own rows', 'The sheet states ₹' + st.total.target + ' Cr but the buyer rows sum to ₹' + p.gmv.target + ' Cr (difference ₹' + round2_(st.total.target - p.gmv.target) + ' Cr). The dashboard uses the row sum.');
-      if (st.total.qty != null && p.gmv.qty != null && Math.abs(st.total.qty - p.gmv.qty) > 0.5)
-        add('high', L + ' — quantity total disagrees with its own rows', 'Stated ' + st.total.qty + ' MT vs ' + p.gmv.qty + ' MT from the rows.');
-      if (st.total.actual != null && p.gmv.actual != null && Math.abs(st.total.actual - p.gmv.actual) > 0.005)
-        add('high', L + ' — GMV achievement total disagrees with its own rows', 'Stated ₹' + st.total.actual + ' Cr achieved but the per-buyer achievement column sums to ₹' + p.gmv.actual + ' Cr. Per-buyer achievement looks like a copy of target, so only the stated total carries real performance.');
-    }
-    // stated SUMMARY buyer counts vs atomic rows
-    if (st && st.summary && st.summary.length) {
-      var mism = [];
-      st.summary.forEach(function (s) {
-        var t = canonTeam_(roster, s.team);
-        var g = p.gmv.byTeam.filter(function (x) { return x.key === t.name; })[0];
-        if (!g) return;
-        if (s.buyers != null && s.buyers !== g.rows) mism.push(t.name + ' (says ' + s.buyers + ', rows show ' + g.rows + ')');
-      });
-      if (mism.length) add('medium', L + ' — SUMMARY "# Buyers" is not a count of the GMV rows', 'Mismatch for ' + mism.join('; ') + '. These figures match the onboarding targets instead, so the dashboard counts buyers from the rows.');
-      if (st.summaryUnitLabel) add('medium', L + ' — summary GMV column is labelled "' + st.summaryUnitLabel + '"', 'The values are in ₹ Cr, matching the detail rows. Everything is standardised to ₹ Cr.');
-    }
-    // named pipeline vs numeric onboarding targets
-    var gaps = [];
-    p.onboarding.byTeam.forEach(function (o) {
-      if (o.suppliers != null && o.supplierNamed !== o.suppliers) gaps.push(o.team + ' suppliers ' + o.supplierNamed + '/' + o.suppliers);
-      if (o.buyers != null && o.buyerNamed !== o.buyers) gaps.push(o.team + ' buyers ' + o.buyerNamed + '/' + o.buyers);
-    });
-    if (gaps.length) add('medium', L + ' — named onboarding pipeline does not match the targets', 'Named vs target: ' + gaps.join('; ') + '. Targets drive the totals; names are shown as the pipeline.');
-  });
-
-  // team-name variants folded together
-  roster.list.forEach(function (m) {
-    var v = Object.keys(m.variants);
-    if (v.length > 1) {
-      var distinct = {};
-      v.forEach(function (x) { if (!distinct[x.toLowerCase()]) distinct[x.toLowerCase()] = x; });
-      var keys = Object.keys(distinct);
-      if (keys.length > 1) add('low', 'Team name spelled ' + keys.length + ' ways: ' + keys.map(function (k) { return distinct[k]; }).join(' / '), 'All folded into one person (' + m.name + ').');
-    }
-  });
-
-  // missing vs zero in the mapping layer
-  if (acc.mapping.length) {
-    var noGmv = acc.mapping.filter(function (m) { return m.estGmv == null; }).length;
-    var noVol = acc.mapping.filter(function (m) { return m.volume == null; }).length;
-    var noCap = acc.mapping.filter(function (m) { return m.capacity == null; }).length;
-    if (noGmv) add('medium', noGmv + ' of ' + acc.mapping.length + ' mapped buyers have no Est. GMV', 'Shown as "—", never as ₹0, and excluded from averages.');
-    if (noVol) add('low', noVol + ' mapped buyers have no Est. Volume', 'Blank and "-" are both treated as missing.');
-    if (noCap) add('low', noCap + ' mapped buyers have no monthly capacity', 'Excluded from capacity coverage.');
-    if (acc.mappingMeta && /july/i.test(acc.mappingMeta.volumeLabel || '') && acc.mappingMeta.period && !/-07$/.test(acc.mappingMeta.period))
-      add('medium', 'Mapping volume column is labelled "' + acc.mappingMeta.volumeLabel + '"', 'The tab itself is dated ' + periodLabel_(acc.mappingMeta.period) + ', so the column heading and the tab disagree on the month.');
-    // capacity outliers (order-of-magnitude)
-    var caps = acc.mapping.map(function (m) { return m.capacity; }).filter(function (x) { return x != null; }).sort(function (a, b) { return a - b; });
-    if (caps.length >= 4) {
-      var med = caps[Math.floor(caps.length / 2)];
-      var big = acc.mapping.filter(function (m) { return m.capacity != null && med > 0 && m.capacity >= med * 10; });
-      if (big.length) add('medium', big.length + ' buyer(s) report a monthly capacity 10×+ the median', big.map(function (m) { return m.buyer + ' (' + m.capacity + ' MT)'; }).join('; ') + ' vs a median of ' + med + ' MT — worth confirming the unit.');
-    }
-  }
-
-  // buyers known to the tracker but absent from the mapping, and owner conflicts
-  var missing = buyers.filter(function (b) { return b.mappingMissing; });
-  if (missing.length) add('medium', missing.length + ' buyer(s) in the requisition tracker are missing from the mapping', missing.map(function (b) { return b.name; }).join('; '));
-  var conflicts = buyers.filter(function (b) { return b.trackerPoc && b.team && normEntity_(b.trackerPoc) !== normEntity_(b.team); });
-  if (conflicts.length) add('medium', conflicts.length + ' buyer(s) have a different owner in the tracker vs the mapping', conflicts.slice(0, 12).map(function (b) { return b.name + ' (' + b.trackerPoc + ' → ' + b.team + ')'; }).join('; ') + (conflicts.length > 12 ? '; …' : '') + '. This may be a genuine reassignment between months — worth confirming.');
-  var variants = buyers.filter(function (b) { return b.variants && b.variants.length > 1; });
-  if (variants.length) add('low', variants.length + ' buyer(s) appear under more than one spelling', variants.slice(0, 10).map(function (b) { return b.variants.join(' / '); }).join('; '));
-  var bundled = acc.gmv.filter(function (g) { return g.bundled; });
-  if (bundled.length) add('medium', bundled.length + ' GMV row(s) hold several buyers in one cell', bundled.map(function (g) { return g.buyer + ' (' + g.teamName + ')'; }).join('; ') + ' — counted as one row; split them to track each buyer.');
-  var ph = acc.gmv.filter(function (g) { return g.placeholder; });
-  if (ph.length) add('low', ph.length + ' GMV row(s) are unnamed placeholders', ph.map(function (g) { return g.teamName + ' · ' + g.buyer + ' (₹' + (g.target == null ? '—' : g.target) + ' Cr)'; }).join('; ') + '. Their targets count toward the plan but they are excluded from named-buyer counts.');
-  return out;
-}
-
-function mergePeriods_(a, b) {
-  var set = {};
-  (a || []).forEach(function (p) { if (p) set[p] = 1; });
-  (b || []).forEach(function (p) { var k = p && p.key ? p.key : p; if (k) set[k] = 1; });
-  return Object.keys(set).sort().reverse();
-}
+function errModel_(err) { return { ok: false, connected: false, empty: true, error: String(err && err.message || err), generatedAt: nowIso_() }; }
