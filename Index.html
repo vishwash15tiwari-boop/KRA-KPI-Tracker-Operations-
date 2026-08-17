@@ -547,7 +547,11 @@ button.sb-gt.open .cv{transform:rotate(180deg)}
 .t1{grid-column:span 1}.t2{grid-column:span 2}.t3{grid-column:span 3}.t4{grid-column:span 4}
 .t5{grid-column:span 5}.t6{grid-column:span 6}.t7{grid-column:span 7}.t8{grid-column:span 8}
 .t9{grid-column:span 9}.t12{grid-column:span 12}
-@media(max-width:1180px){.t3{grid-column:span 6}.t4{grid-column:span 6}.t5,.t7,.t8,.t9{grid-column:span 12}}
+/* Below 1180 a 6-col hero + four 2-col stats overflows to 14 and strands the
+   fourth stat alone. Hero takes its own row and the stats go 4-up, then 2-up. */
+@media(max-width:1180px){.t2{grid-column:span 3}.t3{grid-column:span 6}.t4{grid-column:span 6}.t5,.t7,.t8,.t9{grid-column:span 12}
+  .dash>.tile.t4:first-child{grid-column:span 12}}
+@media(max-width:980px){.t2{grid-column:span 6}}
 @media(max-width:720px){.dash{gap:10px}.t2,.t3,.t4,.t5,.t6{grid-column:span 12}}
 
 /* compact page header — a dashboard states what it is in one line */
@@ -1222,16 +1226,16 @@ function vOverview(){
     :'<tr><td class="empty" colspan="3">'+(hasData?'No period-over-period change yet.':'Awaiting the backend sheet.')+'</td></tr>';
 
   return head+banner
-  +band('Where we stand',periodLong(APP.period)+' at a glance')
+  +band('Where we stand')
   +`<div class="dash">
     ${heroTile(o.score,o.rating,o.status,o.delta,
-      hasData?('Weightage × rating across '+o.kpisWithData+' scored KPIs'+(o.previousPeriod?', vs '+prev:'')+'.'):'Awaiting the backend sheet — the framework is ready.')}
+      hasData?(o.kpisWithData+' scored KPIs'+(o.previousPeriod?' · vs '+prev:'')):'Awaiting the backend sheet.')}
     ${statTile('t2','Employees on track',n1(o.peopleOnTrackPct),'%',o.onTrack+' of '+o.peopleWithData+' rated',{meter:o.peopleOnTrackPct,nav:'employees'})}
     ${statTile('t2','KPIs on track',n1(o.recOnTrackPct),'%',o.recOnTrack+' of '+o.kpisWithData+' scored',{meter:o.recOnTrackPct,nav:'goals'})}
     ${statTile('t2','KPIs at risk',String(o.recAtRisk+o.recOffTrack),'',o.recAtRisk+' at risk · '+o.recOffTrack+' off track',{nav:'goals'})}
     ${statTile('t2','Reviews pending',String(rv.pending),'',rv.total?rv.complete+' of '+rv.total+' complete':'no reviews yet',{meter:rv.progress,nav:'reviews'})}
   </div>`
-  +band('How it breaks down','trend, teams, perspectives and spread')
+  +band('How it breaks down')
   +`<div class="dash">
     ${tile('t7','Performance trend',areaChart(o.trend,{h:150}),{right:o.delta!=null?(o.delta>0?'▲':'▼')+' vs '+prev:'rating / 5'})}
     ${tile('t5','Team performance','<div>'+(teamRows||'<div class="empty">No teams.</div>')+'</div>',{right:'score / 100'})}
@@ -1239,7 +1243,7 @@ function vOverview(){
     ${tile('t3','Performance distribution',distCols(bins),{right:o.peopleWithData+' rated'})}
     ${tile('t4','Coverage','<div class="stat"><div class="v">'+n1(o.coverage)+'<span class="u">%</span></div><div class="sub">'+o.kpisWithData+' of '+o.kpis+' KPIs have '+esc(periodShort(APP.period))+' actuals</div><div class="meter"><span style="width:'+clamp(o.coverage,0,100)+'%"></span></div></div>',{nav:'checkins'})}
   </div>`
-  +band('What needs attention','where a nudge moves the score most')
+  +band('What needs attention')
   +`<div class="dash">
     ${tile('t6','Priority actions','<table class="mini"><tbody>'+priorityRows+'</tbody></table>',{right:'gap × weight'})}
     ${tile('t6','Biggest movers','<table class="mini"><tbody>'+moverRows+'</tbody></table>',{right:o.previousPeriod?'vs '+prev:''})}
@@ -1275,7 +1279,7 @@ function coveragePanel(){
 /* ---------------- TEAMS ---------------- */
 function vTeams(){
   const depts=B().departments;const hasData=B().rollups.org.kpisWithData>0;
-  return `<div class="page-head"><h1>Team Performance</h1><p>Every team in the framework, exactly as structured in the master sheet. ${realDepts().length} teams mapped. Tap a card to drill into sub-teams, perspectives and each person's scorecard.</p></div>
+  return `<div class="page-head"><h1>Team Performance</h1><p>${realDepts().length} teams · tap to drill in.</p></div>
   <div class="dgrid">${depts.map((d,i)=>deptCard(d,hasData,i)).join('')}</div>`;
 }
 function deptCard(d,hasData,i){
@@ -1325,7 +1329,7 @@ function vDept(){
   }).join(''):'<tr><td class="empty" colspan="3">'+(hasData?'Nothing below target.':'Awaiting the backend sheet.')+'</td></tr>';
 
   return head+banner+`<div class="dash">
-    ${heroTile(d.score,d.rating,d.status,d.delta,hasData?('Weighted across '+withData(recs).length+' scored KPIs'+(prev?', vs '+prev:'')+'.'):'Awaiting the backend sheet — this team’s framework is ready.')}
+    ${heroTile(d.score,d.rating,d.status,d.delta,hasData?(withData(recs).length+' scored KPIs'+(prev?' · vs '+prev:'')):'Awaiting the backend sheet.')}
     ${d.lead?leadTile(d):statTile('t2','People',String(emps.length),'','members',{nav:'employees'})}
     ${statTile('t2','KPIs on track',String(d.recOnTrack),'',d.recAtRisk+' at risk · '+d.recOffTrack+' off',{meter:recs.length?d.recOnTrack/recs.length*100:0})}
     ${statTile('t2','Pending updates',String(pending),'',withData(recs).length+' of '+recs.length+' updated',{meter:recs.length?withData(recs).length/recs.length*100:0,nav:'checkins'})}
@@ -1355,7 +1359,7 @@ function teamPerspectives(recs){
 }
 function vInfoDept(d){
   const t=d.rawTable;
-  return `<div class="page-head"><h1>${esc(d.name)}</h1><p>Reference tab surfaced read-only exactly as it appears in the sheet — ${t.rows.length} rows × ${t.headers.length} columns. No scoring is applied to this tab.</p></div>
+  return `<div class="page-head"><h1>${esc(d.name)}</h1><p>Read-only reference · ${t.rows.length} rows × ${t.headers.length} columns · not scored.</p></div>
   <div class="panel pad"><div class="tbl-wrap"><table class="info-tbl"><thead><tr>${t.headers.map(h=>'<th>'+esc(h||'')+'</th>').join('')}</tr></thead><tbody>${t.rows.map(row=>'<tr>'+row.map(c=>'<td>'+esc(c||'')+'</td>').join('')+'</tr>').join('')||'<tr><td colspan="'+t.headers.length+'" class="empty">Empty</td></tr>'}</tbody></table></div></div>`;
 }
 
@@ -1368,7 +1372,7 @@ function vGoals(){
   const ps=B().perspectives||[];
   const kraCount=new Set(B().records.map(r=>r.kra).filter(Boolean)).size;
   return `<div class="page-head"><h1>Goals &amp; KPIs</h1>
-    <p>The complete framework, in the shape the master sheet defines it: <b>Perspective → KRA → KPI</b>, each KPI carrying its own weightage and five-band target ladder. Nothing here is hard-coded — perspectives differ by team, and that is preserved.</p></div>
+    <p><b>Perspective → KRA → KPI</b> · each with its own weightage and target bands.</p></div>
   <div class="kc-grid c4">
     ${kpiCard('Perspectives',String(ps.length),'role dimensions in use',{nav:'perspectives'})}
     ${kpiCard('KRAs',String(kraCount),'result areas defined',{})}
@@ -1404,7 +1408,7 @@ function slugKey(s){return String(s).replace(/[^a-z0-9]+/gi,'_').toLowerCase();}
 /* ---------------- PERSPECTIVES ---------------- */
 function vPerspectives(){
   const ps=B().perspectives;
-  return `<div class="page-head"><h1>Perspectives</h1><p>The framework preserves both <b>Perspective</b> and <b>KRA</b>. This is the org rolled up by perspective — the part of everyone's role that drives the score. Tap one to see its KRAs and the people who own it.</p></div>
+  return `<div class="page-head"><h1>Perspectives</h1><p>The org rolled up by perspective · tap for KRAs and owners.</p></div>
   <div class="kc-grid c3">
     ${kpiCard('Perspectives',String(ps.length),'distinct role dimensions',{})}
     ${kpiCard('Strongest',ps.length&&ps[0].rating!=null?esc(ps[0].perspective):'—',ps.length&&ps[0].rating!=null?ratingStr(ps[0].rating)+' / 5':'no data',{tone:'good'})}
@@ -1450,7 +1454,7 @@ function vKpiAnalysis(){
   const teamRows=Object.keys(byTeam).map(t=>{const rs=withData(byTeam[t]);const r=rs.length?rs.reduce((s,x)=>s+x.rating,0)/rs.length:null;const st=statusFromRating(r);const p=r==null?0:clamp((r-1)/4*100,0,100);return `<div class="bc-row static"><div class="bc-label">${esc(t)}<small> · ${byTeam[t].length}</small></div><div class="bc-track"><div class="bc-fill" style="width:${p}%;background:${sc(st.k)}"></div></div><div class="bc-val" style="color:${sc(st.k)}">${r==null?'—':ratingStr(r)}</div></div>`;}).join('');
   const owners=recs.slice().sort((a,b)=>(b.rating==null?-1:b.rating)-(a.rating==null?-1:a.rating));
   const mt=recs[0].metricType,unit=recs[0].unit;
-  return `<div class="page-head"><h1>KPI Analysis</h1><p>Compare a single KPI across every team and person who owns it — where the same metric is strong and where it lags.</p></div>
+  return `<div class="page-head"><h1>KPI Analysis</h1><p>One KPI across every team and owner.</p></div>
   <div class="panel pad"><div class="panel-h"><h3>Choose a KPI</h3><div class="r"><div class="selectwrap"><select class="pill-select" data-kpisel>${opts}</select></div></div></div></div>
   <div class="kc-grid c4" style="margin-top:16px">
     ${kpiCard('Average rating',avg==null?'—':ratingStr(avg)+'<small>/5</small>',statusPill(statusFromRating(avg)),{tone:statusFromRating(avg).k,bar:avg==null?null:(avg-1)/4*100})}
@@ -1469,7 +1473,7 @@ function vPeople(){
   let es=filteredEmployees().sort((a,b)=>{const ra=a.rating==null?-1:a.rating,rb=b.rating==null?-1:b.rating;if(rb!==ra)return rb-ra;return a.name.localeCompare(b.name);});
   const rated=es.filter(e=>e.rating!=null);
   const dist=`<div class="panel pad"><div class="panel-h"><h3>Performance distribution</h3><span class="sub">people by level · does the average hide variability?</span></div>${distributionBlock(rated)}</div>`;
-  return `<div class="page-head"><h1>Employees</h1><p>Everyone in the framework across all teams. ${es.length} shown${APP.filters.dept||APP.filters.subTeam||APP.filters.status||APP.filters.search?' (filtered)':''}. Tap for the full KRA/KPI scorecard.</p></div>
+  return `<div class="page-head"><h1>Employees</h1><p>${es.length} people${APP.filters.dept||APP.filters.subTeam||APP.filters.status||APP.filters.search?' (filtered)':''} · tap for the full scorecard.</p></div>
   ${rated.length?dist:''}
   <div class="panel pad" style="margin-top:16px"><div class="panel-h"><h3>${es.length} ${es.length===1?'person':'people'}</h3><span class="sub">ranked by rating · Δ vs prior · pending last</span></div>
   <div class="list stack">${es.length?es.map((e,i)=>personRow(e,i+1)).join(''):'<div class="empty">No people match the filters.</div>'}</div></div>`;
@@ -1490,7 +1494,7 @@ function personRow(e,rank){
 /* ---------------- PICK ME ---------------- */
 function vPickMe(){
   const es=B().employees.filter(e=>!e.isTemplate).slice().sort((a,b)=>a.name.localeCompare(b.name));
-  return `<div class="page-head"><h1>My Performance</h1><p>Pick your profile to see your personal scorecard — your level, journey, KRAs, KPIs and next milestones. The same data and scoring engine, framed for you.</p></div>
+  return `<div class="page-head"><h1>My Performance</h1><p>Pick your profile to see your scorecard.</p></div>
   <div class="panel pad"><div class="panel-h"><h3>Select your profile</h3><span class="sub">${es.length} people</span></div>
   <div class="list stack">${es.map(e=>`<div class="lrow" data-pick="${e.id}"><div class="lrow-id"><div class="lavatar">${initials(e.name)}</div><div class="lrow-name">${esc(titleName(e.name))}<span class="lrow-sub">${esc([e.department,e.role].filter(Boolean).join(' · ')||'—')}</span></div></div>${rchip(e.rating,e.status)}<span class="chev">›</span></div>`).join('')}</div></div>`;
 }
@@ -1577,7 +1581,7 @@ function personJourney(e,recs){
   const byKra={};recs.forEach(r=>{const kk=r.kra||r.perspective||'General';const wd=byKra[kk]||(byKra[kk]={s:0,n:0});if(r.rating!=null){wd.s+=r.rating;wd.n++;}});
   Object.keys(byKra).forEach(k=>{const m=byKra[k];if(!m.n)return;const r=m.s/m.n;(r>=TH().onTrack?strong:focus).push({k,r});});
   strong.sort((a,b)=>b.r-a.r);focus.sort((a,b)=>a.r-b.r);
-  const journey=`<div class="panel pad"><div class="panel-h"><h3>Performance journey</h3><span class="sub">your rating over time</span>${e.delta!=null?'<div class="r">'+deltaChip(e.delta)+'</div>':''}</div><div class="q">Am I getting better?</div>${e.rating==null?'<div class="empty">No actuals yet.</div>':trendChart(e.trend,{h:150})}</div>`;
+  const journey=`<div class="panel pad"><div class="panel-h"><h3>Performance journey</h3><span class="sub">your rating over time</span>${e.delta!=null?'<div class="r">'+deltaChip(e.delta)+'</div>':''}</div>${e.rating==null?'<div class="empty">No actuals yet.</div>':trendChart(e.trend,{h:150})}</div>`;
   const kraCol=`<div class="panel pad"><div class="panel-h"><h3>By KRA</h3><span class="sub">strong vs focus</span></div><div class="list stack" style="margin-top:2px">${
     strong.slice(0,4).map(x=>`<div class="lrow static"><div class="lrow-id"><span class="sdot s-good"></span><div class="lrow-name">${esc(x.k)}<span class="lrow-sub">strong</span></div></div><span class="lrow-meta" style="color:${sc('good')}">${ratingStr(x.r)}</span></div>`).join('')
     +focus.slice(0,4).map(x=>`<div class="lrow static"><div class="lrow-id"><span class="sdot s-${statusFromRating(x.r).k}"></span><div class="lrow-name">${esc(x.k)}<span class="lrow-sub">focus area</span></div></div><span class="lrow-meta" style="color:${sc(statusFromRating(x.r).k)}">${ratingStr(x.r)}</span></div>`).join('')||'<div class="empty">No rated KRAs.</div>'}</div></div>`;
@@ -1588,7 +1592,7 @@ function personMilestones(e,recs){
   const rated=recs.filter(r=>r.rating!=null);
   if(!rated.length)return '<div class="empty" style="padding:40px">No rated KPIs yet — enter actuals to unlock milestones.</div>';
   const ranked=rated.map(r=>{const m=nextMilestone(r);const gap=m&&!m.done?(TH().onTrack-r.rating):0;const w=r.weightShown||10;return {r,score:Math.max(0.01,gap)*(w/100),done:m&&m.done};}).sort((a,b)=>(a.done-b.done)||(b.score-a.score));
-  return `<div class="q">What should I improve next — highest weight × biggest gap first.</div><div class="kpigrid" style="grid-template-columns:repeat(auto-fill,minmax(340px,1fr))">${ranked.map(x=>milestoneCard(x.r)).join('')}</div>`;
+  return `<div class="kpigrid" style="grid-template-columns:repeat(auto-fill,minmax(340px,1fr))">${ranked.map(x=>milestoneCard(x.r)).join('')}</div>`;
 }
 function achievements(e){
   const out=[];const recs=recordsForEmp(e.id);
@@ -1621,8 +1625,7 @@ function vRecords(){
   const th=(id,l,num)=>`<th class="${num?'num ':''}${s===id?'sorted':''}" data-sort="${id}">${l}<span class="sc">${s===id?(dir>0?'▲':'▼'):'⇅'}</span></th>`;
   const me=mine?empById(APP.meId):null;
   const title=mine?('My KPIs'+(me?' · '+esc(me.name):'')):'All KPIs';
-  const intro=mine?'Your KRA/KPI lines — definition, weightage, target, actual, rating and status. Tap any row to enter an actual.':'Every Department × Sub-team × Person × KRA × KPI line — definition, rule-layer type, weightage, target, actual, rating and status.';
-  return `<div class="page-head"><h1>${title}</h1><p>${intro} ${rows.length} records${!mine&&(APP.filters.dept||APP.filters.subTeam||APP.filters.status||APP.filters.search)?' (filtered)':''}. Tap any row for detail &amp; to enter an actual.</p></div>
+  return `<div class="page-head"><h1>${title}</h1><p>${rows.length} records${!mine&&(APP.filters.dept||APP.filters.subTeam||APP.filters.status||APP.filters.search)?' (filtered)':''} · tap a row to enter an actual.</p></div>
   <div class="panel pad"><div class="panel-h"><h3>${rows.length} record${rows.length===1?'':'s'}</h3><span class="sub">${withData(rows).length} with ${esc(periodShort(APP.period))} actuals</span></div>
   <div class="tbl-wrap stack"><table class="tbl"><thead><tr>${mine?'':th('employee','Person')}${mine?'':th('department','Team')}${th('kpi','KRA / KPI')}${th('type','Type')}${th('weight','Wt',1)}${th('target','Target',1)}${th('actual','Actual',1)}${th('rating','Rating',1)}<th>Status</th></tr></thead>
   <tbody>${slice.length?slice.map(r=>`<tr data-rec="${r.kpiId}">${mine?'':'<td class="kname">'+esc(titleName(r.employee))+'</td>'}${mine?'':'<td>'+esc(r.department)+(r.subTeam?' · '+esc(r.subTeam):'')+'</td>'}<td class="kname">${esc(r.kpi||r.kra||'—')}<small>${esc(r.kra&&r.kpi&&r.kra!==r.kpi?r.kra:(r.perspective||''))}</small></td><td><span class="tag mt">${esc(r.metricType||'—')}</span></td><td class="num">${r.weightShown==null?'—':n1(r.weightShown)+'%'}</td><td class="num">${r.target==null?'—':esc(fmtVal(r,r.target))}</td><td class="num">${r.actual==null?'—':esc(fmtVal(r,r.actual))}</td><td class="num" style="color:${sc(r.status.k)};font-weight:800">${r.rating==null?'—':ratingStr(r.rating)}</td><td>${statusPill(r.status)}</td></tr>`).join(''):'<tr><td colspan="'+(mine?7:9)+'" class="empty">No records match the filters.</td></tr>'}</tbody></table></div>
@@ -1646,7 +1649,7 @@ function vCheckins(){
   });
   const locked=cycleLocked();
   return `<div class="page-head"><h1>Check-ins</h1>
-    <p>Update actuals, add context and attach evidence as the period runs. Every check-in is kept — the progression through ${esc(periodLong(APP.period))} is the record, not just the latest number.</p></div>
+    <p>Update actuals and attach evidence as ${esc(periodLong(APP.period))} runs · every entry is kept.</p></div>
   ${locked?banner('This cycle is locked','Reopen it in Performance Cycles to record new check-ins.'):''}
   <div class="kc-grid c4">
     ${kpiCard('Check-ins this period',String(shown.length),(B().checkinTotal||0)+' all time',{})}
@@ -1656,10 +1659,8 @@ function vCheckins(){
   </div>
   <div class="two-col" style="margin-top:16px">
     <div class="panel pad"><div class="panel-h"><h3>Recent check-ins</h3><span class="sub">newest first</span></div>
-      <div class="q">What moved, when, and why?</div>
       <div class="list stack" style="margin-top:4px">${shown.length?shown.slice(0,14).map(checkinRow).join(''):'<div class="empty">No check-ins recorded for '+esc(periodLong(APP.period))+' yet. Open any KPI to add the first.</div>'}</div></div>
     <div class="panel pad"><div class="panel-h"><h3>Needs an update</h3><span class="sub">no actual this period</span></div>
-      <div class="q">Who still owes a number?</div>
       <div class="list stack" style="margin-top:4px">${stale.length?stale.slice(0,14).map(r=>`<div class="lrow" data-rec="${r.kpiId}"><div class="lrow-id"><span class="sdot s-none"></span><div class="lrow-name">${esc(r.kpi||r.kra)}<span class="lrow-sub">${esc(titleName(r.employee))} · ${esc(r.department)}</span></div></div><span class="tag">${r.weightShown==null?'—':n1(r.weightShown)+'%'}</span><span class="chev">›</span></div>`).join(''):'<div class="empty">Every assigned KPI has an actual for this period.</div>'}</div></div>
   </div>`;
 }
@@ -1685,7 +1686,7 @@ function vReviews(){
   const stages=[['Not Started',rv.notStarted],['Self Review',rv.self],['Manager Review',rv.manager],['Final Review',rv.final],['Complete',rv.complete]];
   const max=Math.max(1,...stages.map(s=>s[1]));
   return `<div class="page-head"><h1>Reviews</h1>
-    <p>${esc(cy?cy.name:periodLong(APP.period))} review cycle. Each review opens on the system-calculated score — self and manager assessments sit alongside it as context, and the final rating is recorded explicitly.</p></div>
+    <p>${esc(cy?cy.name:periodLong(APP.period))} · self and manager assessment against the calculated score.</p></div>
   ${cy&&cy.locked?banner('Cycle locked','This cycle is closed. Reopen it in Performance Cycles to change a review.'):''}
   <div class="kc-grid c4">
     ${kpiCard('Review progress',n1(rv.progress)+'<small>%</small>',rv.complete+' of '+rv.total+' complete',{tone:rv.progress>=100?'good':'warn',bar:rv.progress})}
@@ -1726,7 +1727,6 @@ function vReview(){
   }).join('<span class="wf-line"></span>');
 
   const system=`<div class="panel pad"><div class="panel-h"><h3>System-calculated performance</h3><span class="sub">weightage × rating, ${esc(periodLong(APP.period))}</span></div>
-    <div class="q">This is the measured result. The review adds context to it — it does not overwrite it.</div>
     <div class="metric-grid g4" style="margin-top:10px">
       <div class="metric"><div class="l">Overall score</div><div class="v">${e.score==null?'—':n1(e.score)+'<small>%</small>'}</div></div>
       <div class="metric"><div class="l">Overall rating</div><div class="v">${e.rating==null?'—':ratingStr(e.rating)+'<small>/5</small>'}</div></div>
@@ -1793,7 +1793,7 @@ function vHealth(){
   checks.push({ok:h.coverage>=67,warn:h.coverage>0&&h.coverage<67,bad:h.coverage===0,t:'Actuals coverage',s:h.withData+' of '+h.kpis+' KPIs have actuals',v:pct(h.coverage)});
   const checkHtml=checks.map(c=>{const k=c.ok?'ok':(c.warn?'warn':'bad');const ic=c.ok?'<path d="M20 6L9 17l-5-5"/>':(c.warn?'<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/>':'<path d="M6 6l12 12M18 6L6 18"/>');return `<div class="hcheck ${k}"><div class="hc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ic}</svg></div><div class="hc-t">${esc(c.t)}<small>${esc(c.s)}</small></div><div class="r" style="color:${sc(k)}">${c.v}</div></div>`;}).join('');
   const weightRows=h.weightIssues.length?('<div class="sect-t">Weightage anomalies<span class="r">expected 100% per person-block</span></div><div class="panel pad"><div class="tbl-wrap"><table class="info-tbl"><thead><tr><th>Person</th><th>Team</th><th>Sub-team</th><th>KPIs</th><th>Weight sum</th></tr></thead><tbody>'+h.weightIssues.map(w=>'<tr><td>'+esc(w.employee)+'</td><td>'+esc(w.dept)+'</td><td>'+esc(w.subTeam||'—')+'</td><td>'+w.kpis+'</td><td style="color:var(--warn-ink);font-weight:700">'+w.sum+'%</td></tr>').join('')+'</tbody></table></div></div>'):'';
-  return `<div class="page-head"><h1>Health &amp; Data</h1><p>Master-data validation, the separate actuals source, scoring thresholds and parser diagnostics. Validation is for admins — fix these before an overall score is trusted.</p></div>
+  return `<div class="page-head"><h1>Health &amp; Data</h1><p>Master-data validation and parser diagnostics · fix these before trusting a score.</p></div>
   <div class="kc-grid c3">
     ${kpiCard('Master sheet',esc(src.title),src.tabs.length+' tabs',{})}
     ${kpiCard('Actuals source',B().source.actuals.type,esc(B().source.actuals.tab)+' · '+B().source.actuals.rows+' rows',{tone:B().source.actuals.rows?'good':'none'})}
@@ -1833,7 +1833,7 @@ function vLibrary(){
   const shared=lib.filter(d=>d.owners>1).length;
   const variants=lib.filter(d=>d.variants>1).length;
   return `<div class="page-head"><h1>KRA / KPI Library</h1>
-    <p>The master definitions — one entry per distinct KPI, independent of who holds it. A definition can be assigned to many people, each with their own weightage and target bands, which is exactly how the workbook already works.</p></div>
+    <p>One entry per KPI definition · assignable to many people, each with their own bands.</p></div>
   <div class="kc-grid c4">
     ${kpiCard('Definitions',String(lib.length),'distinct KPIs',{})}
     ${kpiCard('Shared across people',String(shared),'assigned to more than one person',{})}
@@ -1911,7 +1911,7 @@ function vCycles(){
     <button class="btn primary sm" data-act="save-cycle" data-period="${esc(c.period)}">Save cycle</button>
     <div style="font-size:11.5px;color:var(--faint);margin-top:9px">A <b>Locked</b> cycle rejects every check-in, actual and review until it is reopened — that is what makes a closed period trustworthy.</div></div>`;
   return `<div class="page-head"><h1>Performance Cycles</h1>
-    <p>The cycle owns the window, the KPI assignments, the actuals, the check-ins and the review. Locking one freezes it so a finished period cannot drift.</p></div>
+    <p>Each cycle owns its assignments, actuals and review · lock to freeze it.</p></div>
   <div class="kc-grid c3">
     ${kpiCard('Active cycle',esc(cur?cur.name:periodLong(APP.period)),cur&&cur.startDate?esc(cur.startDate)+' → '+esc(cur.endDate||'—'):'no dates set',{})}
     ${kpiCard('Declared cycles',String(cycles.length),undeclared.length?undeclared.length+' periods not yet declared':'all periods declared',{tone:cycles.length?'good':'none'})}
@@ -1931,7 +1931,7 @@ function vSettings(){
   const exRows=example.map(([w,r])=>{const p=scoreFromRating(r)*(w/100);return `<tr><td class="num">${w}%</td><td class="num">${r}</td><td class="num">${n1(scoreFromRating(r))}%</td><td class="num" style="font-weight:800">${n1(p)}</td></tr>`;}).join('');
   const exTotal=example.reduce((s,[w,r])=>s+scoreFromRating(r)*(w/100),0);
   return `<div class="page-head"><h1>Settings</h1>
-    <p>How a rating becomes a score, and how a score becomes a word. Both are single system-wide configurations — change them here and every screen moves together.</p></div>
+    <p>How a rating becomes a score, and a score becomes a word · system-wide.</p></div>
   <div class="two-eq">
     <div class="panel pad"><div class="panel-h"><h3>Rating → performance %</h3><span class="sub">the one conversion (spec §7)</span></div>
       <div class="q">Weighted KPI score = (rating → %) × weightage. Set the five anchor points.</div>
@@ -1943,7 +1943,7 @@ function vSettings(){
         <tr><td colspan="3" style="text-align:right;font-weight:700">Overall</td><td class="num" style="font-weight:800">${n1(exTotal)} / 100</td></tr></tbody></table></div>
     </div>
     <div class="panel pad"><div class="panel-h"><h3>Performance status</h3><span class="sub">separate from rating (spec §8)</span></div>
-      <div class="q">The rating is the measurement. The status is the word the business puts on it.</div>
+      <div class="q">The rating measures; the status names it.</div>
       <div class="stack">${scale.map((s,i)=>`<div class="status-row"><span class="sdot s-${esc(s.key)}"></span>
         <input class="st-label" id="stLabel${i}" value="${esc(s.label)}" data-key="${esc(s.key)}">
         <span class="st-at">at rating ≥</span>
@@ -2023,7 +2023,7 @@ function vTeamAdmin(){
     </div>`;
   }).join('');
   return `<div class="page-head"><h1>Teams</h1>
-    <p>The five teams the whole product is organised around. Each maps one or more sheet tabs to a canonical team and a named lead. Members and sub-teams are read live from the mapped tabs; edit a name, lead or match pattern and save.</p></div>
+    <p>Maps sheet tabs to a canonical team and lead · members are read live.</p></div>
   <div class="panel pad"><div class="panel-h"><h3>${teams.length} teams</h3><span class="sub">canonical name · lead · tab mapping</span>
     <div class="r"><button class="btn primary sm" data-act="save-teams">Save teams</button></div></div>
     <div class="stack" style="margin-top:6px">${rows}</div>
@@ -2040,7 +2040,7 @@ function vReports(){
   const depts=perfDepts();
   const persp=B().perspectives||[];
   return `<div class="page-head"><h1>Reports</h1>
-    <p>Historical and comparative analysis across ${o.periods.length} period${o.periods.length===1?'':'s'} — how the org, each team and each perspective have moved, and where a single KPI is strong or weak across the business.</p></div>
+    <p>How the org, teams and perspectives have moved across ${o.periods.length} period${o.periods.length===1?'':'s'}.</p></div>
   ${!hasData?stateCard('doc','No actuals to report on yet','Enter actuals for '+esc(periodLong(APP.period))+' and this page fills in.','<button class="btn primary" data-nav="checkins">Go to check-ins</button>'):`
   <div class="kc-grid c4">
     ${kpiCard('Overall score',n1(o.score)+'<small>%</small>',statusPill(o.status),{tone:o.status.k,bar:o.score,delta:o.delta})}
@@ -2049,7 +2049,7 @@ function vReports(){
     ${kpiCard('Coverage',pct(o.coverage),o.kpisWithData+' of '+o.kpis+' KPIs',{tone:o.coverage>=67?'good':'warn',bar:o.coverage})}
   </div>
   <div class="panel pad" style="margin-top:16px"><div class="panel-h"><h3>Organisation trend</h3><span class="sub">rating over the last ${o.periods.length} periods</span>${o.delta!=null?'<div class="r">'+deltaChip(o.delta)+' vs '+esc(periodShort(o.previousPeriod))+'</div>':''}</div>
-    <div class="q">Are we getting better?</div>${trendChart(o.trend,{h:170})}</div>
+    ${trendChart(o.trend,{h:170})}</div>
   <div class="two-eq" style="margin-top:16px">
     <div class="panel pad"><div class="panel-h"><h3>Team comparison</h3><span class="sub">score · Δ vs prior</span></div>
       <div class="stack" style="margin-top:4px">${depts.map(d=>deptBar(d,true)).join('')||'<div class="empty">No teams.</div>'}</div></div>
