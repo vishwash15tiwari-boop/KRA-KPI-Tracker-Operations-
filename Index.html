@@ -721,6 +721,12 @@ button.sb-gt.open .cv{transform:rotate(180deg)}
 .lrow:nth-child(4){animation-delay:.11s}.lrow:nth-child(5){animation-delay:.14s}.lrow:nth-child(6){animation-delay:.17s}
 .lrow:nth-child(7){animation-delay:.19s}.lrow:nth-child(8){animation-delay:.21s}.lrow:nth-child(n+9){animation-delay:.23s}
 @keyframes rowIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+/* Back — sits left of the breadcrumb, appears only when there is somewhere to
+   return to. Present at every width, unlike the crumbs, which collapse. */
+.back-btn{display:grid;flex:0 0 34px}
+.back-btn:hover{border-color:var(--brand);color:var(--brand)}
+.mo-h .mo-x[data-act="mo-back"]{margin-left:0;margin-right:2px}
+
 /* ════════════════ MODAL SYSTEM ════════════════
    One surface for examining a level of the hierarchy (team → employee → KRA →
    target). The drawer stays for editing a single KPI; a modal is for reading a
@@ -852,6 +858,7 @@ button.sb-gt.open .cv{transform:rotate(180deg)}
   <div class="app-main">
     <header class="topbar" id="topbar">
       <button class="icon-btn hamburger" data-act="toggle-nav" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+      <button class="icon-btn back-btn" id="backBtn" data-act="back" title="Back" aria-label="Back" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
       <div class="crumbs" id="crumbs"></div>
       <div class="spacer"></div>
       <div class="tn-right">
@@ -1071,18 +1078,56 @@ function buildFilterbar(){
 }
 function chip(l,k,v){return '<span class="chip">'+esc(l)+' <b>'+esc(v)+'</b><button data-clear="'+k+'">×</button></span>';}
 
-function go(v,ctx){
+/* ── navigation history ───────────────────────────────────────────────────────
+   Breadcrumbs alone left no way back from a drill-down (and they are hidden on
+   narrow screens). A real stack records where you came from, so Back always
+   returns to the exact previous state — same view, same context, same tab, same
+   table page — rather than guessing a parent. The browser/OS back gesture is
+   wired to the same stack via history.pushState.                              */
+const NAVSTACK=[];
+const NAV_MAX=40;
+function navSnapshot(){return {view:APP.view,ctx:APP.ctx,tab:APP.tab,mode:APP.mode,page:APP.table.page};}
+function navSame(a,b){return a&&b&&a.view===b.view&&JSON.stringify(a.ctx||{})===JSON.stringify(b.ctx||{})&&a.tab===b.tab;}
+function go(v,ctx,opts){
   if(v==='me'&&!APP.meId)v='pickme';
-  APP.mode=(v==='me'||v==='mykpis'||v==='pickme')?'me':'mgmt';
-  APP.view=v;APP.ctx=ctx||{};APP.table.page=0;APP.tab='';
+  const next={view:v,ctx:ctx||{},tab:'',mode:(v==='me'||v==='mykpis'||v==='pickme')?'me':'mgmt',page:0};
+  const prev=navSnapshot();
+  // record where we came from, unless this is a Back/replace or a no-op re-render
+  if(!(opts&&opts.replace)&&APP.view&&!navSame(prev,next)){
+    NAVSTACK.push(prev);
+    if(NAVSTACK.length>NAV_MAX)NAVSTACK.shift();
+    try{history.pushState({d:NAVSTACK.length},'',location.href);}catch(e){}
+  }
+  APP.mode=next.mode;APP.view=v;APP.ctx=next.ctx;APP.table.page=0;APP.tab='';
   buildChrome();scrollTop();closeNav();render();
+}
+/* Back: a modal is the top-most layer, so close that first. */
+function goBack(){
+  if($('#mo')&&$('#mo').classList.contains('on')){moBack();return;}
+  const s=NAVSTACK.pop();
+  if(!s){go('overview',{},{replace:true});return;}
+  APP.mode=s.mode||'mgmt';APP.view=s.view;APP.ctx=s.ctx||{};APP.tab=s.tab||'';APP.table.page=s.page||0;
+  buildChrome();scrollTop();closeNav();render();
+}
+function updateBackBtn(){
+  const b=$('#backBtn');if(!b)return;
+  const deep=NAVSTACK.length>0&&APP.view!=='overview';
+  b.style.display=deep?'grid':'none';
+  const s=NAVSTACK[NAVSTACK.length-1];
+  if(s)b.title='Back to '+(navLabel(s.view)||'previous');
+}
+function navLabel(v){
+  const L={overview:'Overview',targets:'Targets',teams:'Teams',employees:'People',records:'KPIs',checkins:'Check-ins',
+    dept:'team',person:'person',targetteam:'team target',targetperson:'target',reports:'Reports',library:'Library',
+    cycles:'Performance Cycles',settings:'Settings',health:'Data Health',reviews:'Reviews'};
+  return L[v]||v;
 }
 function scrollTop(){window.scrollTo(0,0);const s=$('.main-scroll');if(s)s.scrollTop=0;}
 function setMode(m){APP.mode=m;go(m==='me'?(APP.meId?'me':'pickme'):'overview');}
 function render(){
   if(!B()){renderEmpty();return;}
   if(B().empty){renderEmpty();return;}
-  buildFilterbar();renderCrumbs();
+  buildFilterbar();renderCrumbs();updateBackBtn();
   const c=$('#content');c.classList.remove('fade');void c.offsetWidth;c.classList.add('fade');
   const v={
     overview:vOverview, goals:vGoals, checkins:vCheckins,
@@ -1960,7 +2005,11 @@ function groupWeight(g){
 
    Colour appears once, on status. Everything else is type and space.          */
 const MO={key:null,tab:'',ctx:{},build:null,tabs:null};
+/* Opening a modal from inside a modal (team → person) stacks it, so Back steps
+   up one level instead of dismissing the whole thing. */
+const MOSTACK=[];
 function moOpen(spec){
+  if($('#mo')&&$('#mo').classList.contains('on')&&MO.build)MOSTACK.push({key:MO.key,tab:MO.tab,ctx:MO.ctx,build:MO.build,tabs:MO.tabs});
   MO.key=spec.key||null; MO.build=spec.build||null; MO.ctx=spec.ctx||{};
   MO.tabs=spec.tabs||null;
   MO.tab=spec.tab||((spec.tabs&&spec.tabs.length)?spec.tabs[0].id:'');
@@ -1968,6 +2017,13 @@ function moOpen(spec){
   $('#moWrap').style.display='grid';
   requestAnimationFrame(()=>{$('#mo').classList.add('on');$('#moScrim').classList.add('on');});
   document.body.style.overflow='hidden';
+}
+/* Step up one modal level, or dismiss if this is the only one. */
+function moBack(){
+  const p=MOSTACK.pop();
+  if(!p){moClose();return;}
+  MO.key=p.key;MO.tab=p.tab;MO.ctx=p.ctx;MO.build=p.build;MO.tabs=p.tabs;
+  moRender();
 }
 function moRender(){
   if(!MO.build)return;
@@ -1977,8 +2033,9 @@ function moRender(){
   const score=s.score?'<div class="mo-score"><div class="v"'+(s.scoreTone?' style="color:var(--'+s.scoreTone+'-ink)"':'')+'>'+s.score+'</div><div class="l">'+esc(s.scoreLabel||'')+'</div></div>':'';
   const ic=s.icon?('<div class="mo-ic">'+s.icon+'</div>'):'';
   $('#mo').className='mo on'+(s.wide?' wide':'');
+  const backBtn=MOSTACK.length?('<button class="mo-x" data-act="mo-back" title="Back" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>'):'';
   $('#mo').innerHTML=
-    '<div class="mo-h">'+ic+'<div class="mo-id">'
+    '<div class="mo-h">'+backBtn+ic+'<div class="mo-id">'
       +(s.eyebrow?'<div class="mo-eyebrow">'+esc(s.eyebrow)+'</div>':'')
       +'<h2>'+esc(s.title||'')+'</h2>'
       +(s.sub?'<div class="mo-sub">'+s.sub+'</div>':'')
@@ -1989,6 +2046,7 @@ function moRender(){
     +(s.footer?'<div class="mo-f">'+s.footer+'</div>':'');
 }
 function moClose(){
+  MOSTACK.length=0;
   $('#mo').classList.remove('on');$('#moScrim').classList.remove('on');
   document.body.style.overflow='';
   setTimeout(()=>{if(!$('#mo').classList.contains('on'))$('#moWrap').style.display='none';},240);
@@ -2725,6 +2783,8 @@ document.addEventListener('input',e=>{
 });
 function handleAct(a,el){
   if(a==='mo-close')moClose();
+  else if(a==='mo-back')moBack();
+  else if(a==='back')goBack();
   else if(a==='close-drawer')closeDrawer();
   else if(a==='toggle-nav'){const s=$('#sidebar'),sc=$('#sbScrim');if(s){const on=s.classList.toggle('open');if(sc)sc.classList.toggle('on',on);}}
   else if(a==='close-nav')closeNav();
@@ -2850,7 +2910,17 @@ async function doSaveAssignment(id){
   });
   window.addEventListener('scroll',()=>{const el=get();if(el)el.classList.remove('on');},true);
 })();
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){if($('#mo')&&$('#mo').classList.contains('on')){moClose();return;}closeDrawer();closeNav();const t=$('#vtip');if(t)t.classList.remove('on');}});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){if($('#mo')&&$('#mo').classList.contains('on')){moBack();return;}closeDrawer();closeNav();const t=$('#vtip');if(t)t.classList.remove('on');return;}
+  // Alt+← / Backspace (outside a field) go back, matching browser convention
+  const typing=/^(INPUT|TEXTAREA|SELECT)$/.test((e.target&&e.target.tagName)||'');
+  if(!typing&&((e.altKey&&e.key==='ArrowLeft')||e.key==='Backspace')){e.preventDefault();goBack();}
+});
+/* The browser/OS back gesture drives the same stack. */
+window.addEventListener('popstate',()=>{
+  if($('#mo')&&$('#mo').classList.contains('on')){moBack();try{history.pushState({},'',location.href);}catch(e){}return;}
+  if(NAVSTACK.length){goBack();try{history.pushState({},'',location.href);}catch(e){}}
+});
 
 /* ---------------- ReactBits-inspired motion ----------------
  * Spotlight: one delegated listener feeds the hovered card its cursor offset. */
