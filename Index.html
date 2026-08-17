@@ -40,38 +40,71 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
 ::selection{background:rgba(0,0,0,.10)}
 ::-webkit-scrollbar{width:11px;height:11px}::-webkit-scrollbar-thumb{background:#D4DAE3;border-radius:20px;border:3px solid var(--bg);background-clip:padding-box}::-webkit-scrollbar-thumb:hover{background:#BFC7D2}
 
-.app{min-height:100vh;display:flex;flex-direction:column}
-/* top navigation — white, thin bottom border, minimal active state */
-.topnav{position:sticky;top:0;z-index:40;background:rgba(255,255,255,.86);backdrop-filter:saturate(180%) blur(14px);border-bottom:1px solid var(--line)}
-.tn-inner{max-width:1360px;margin:0 auto;padding:0 32px;height:56px;display:flex;align-items:center;gap:28px}
-.brand{display:flex;align-items:center;gap:9px;flex:0 0 auto}
+.app{min-height:100vh;display:flex}
+
+/* ===================== SIDEBAR =====================
+   Persistent left rail: brand → grouped modules → identity.
+   A single sliding indicator (.nav-rail) tracks the active module. */
+.sidebar{width:var(--sbw);flex:0 0 var(--sbw);height:100vh;position:sticky;top:0;background:var(--card);border-right:1px solid var(--line);display:flex;flex-direction:column;z-index:45;transition:width .26s var(--ease),flex-basis .26s var(--ease)}
+.sb-head{display:flex;align-items:center;gap:9px;padding:0 14px;height:56px;flex:0 0 56px;border-bottom:1px solid var(--line-soft)}
+.brand{display:flex;align-items:center;gap:9px;min-width:0;flex:1;cursor:pointer}
 .brand .logo{flex:0 0 auto;display:grid;place-items:center}
 .brand .logo svg{width:26px;height:26px;display:block}
-.wordmark{font-weight:700;font-size:16.5px;letter-spacing:.01em;color:var(--ink);flex:0 0 auto}
-.tn-links{display:flex;align-items:center;gap:4px;flex:1;min-width:0}
-.nav-item{display:flex;align-items:center;padding:8px 14px;border-radius:9px;position:relative;color:var(--ink-2);font-weight:500;cursor:pointer;font-size:14px;letter-spacing:-.006em;white-space:nowrap;transition:color .16s var(--ease)}
-.nav-item:hover{color:var(--ink)}
-.nav-item.active{color:var(--ink);font-weight:600}
-.nav-item.active::after{content:"";position:absolute;left:14px;right:14px;bottom:-17px;height:2px;background:var(--brand);border-radius:2px}
-.nav-item svg{display:none}
-.nav-item .badge{margin-left:7px;font-size:10.5px;font-weight:600;background:var(--surface-3);color:var(--ink-2);border-radius:20px;padding:1px 7px}
-.tn-right{display:flex;align-items:center;gap:12px;flex:0 0 auto;margin-left:auto}
+.wordmark{font-weight:700;font-size:16.5px;letter-spacing:.01em;color:var(--ink);white-space:nowrap;overflow:hidden}
+/* The collapse control lives with identity at the foot, so it is reachable in
+   both states — a rail with no way out is a trap. */
+.sb-collapse{display:flex;align-items:center;gap:11px;width:100%;border:none;background:transparent;color:var(--muted);padding:8px 12px;border-radius:10px;cursor:pointer;font-size:12.5px;font-weight:600;margin-bottom:6px;transition:.15s;font-family:inherit}
+.sb-collapse:hover{background:var(--surface-2);color:var(--ink-2)}
+.sb-collapse svg{width:16px;height:16px;flex:0 0 16px;transition:transform .26s var(--ease)}
+.sb-nav{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:6px 10px 14px;position:relative}
+.sb-nav::-webkit-scrollbar{width:6px}.sb-nav::-webkit-scrollbar-thumb{border:none;background:var(--line-2)}
+.sb-gt{font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);padding:0 12px;margin:16px 0 6px;white-space:nowrap;overflow:hidden}
+.sb-group:first-of-type .sb-gt{margin-top:6px}
+/* the rail that slides between modules — ReactBits "Line Sidebar" idea */
+.nav-rail{position:absolute;left:10px;width:3px;border-radius:3px;background:var(--brand);opacity:0;transition:transform .28s var(--ease),height .28s var(--ease),opacity .2s;pointer-events:none;will-change:transform}
+.nav-item{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:10px;position:relative;color:var(--ink-2);font-weight:550;cursor:pointer;font-size:13.5px;letter-spacing:-.006em;white-space:nowrap;transition:background .16s var(--ease),color .16s var(--ease)}
+.nav-item svg{display:block;width:17px;height:17px;flex:0 0 17px;opacity:.62;transition:.16s}
+.nav-item .lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.nav-item:hover{background:var(--surface-2);color:var(--ink)}
+.nav-item:hover svg{opacity:.9}
+.nav-item.active{background:var(--brand-soft);color:var(--brand-ink);font-weight:650}
+.nav-item.active svg{opacity:1;color:var(--brand)}
+.nav-item .badge{margin-left:auto;font-size:10.5px;font-weight:700;background:var(--surface-3);color:var(--ink-2);border-radius:20px;padding:1px 7px;flex:0 0 auto}
+.nav-item.active .badge{background:#fff;color:var(--brand-ink)}
+.sb-foot{flex:0 0 auto;border-top:1px solid var(--line-soft);padding:10px}
+/* collapsed icon rail */
+.app.rail{--sbw:68px}
+.app.rail .wordmark,.app.rail .sb-gt,.app.rail .nav-item .lbl,.app.rail .nav-item .badge,.app.rail .userchip .u-meta{display:none}
+.app.rail .sb-head{padding:0;justify-content:center}
+.app.rail .brand{flex:0 0 auto;justify-content:center}
+.app.rail .sb-collapse{justify-content:center;padding:8px 0}
+.app.rail .sb-collapse .lbl{display:none}
+.app.rail .sb-collapse svg{transform:rotate(180deg)}
+.app.rail .sb-group+.sb-group{margin-top:10px;padding-top:10px;border-top:1px solid var(--line-soft)}
+.app.rail .nav-item{justify-content:center;padding:10px 0}
+.app.rail .userchip{justify-content:center;padding:5px}
+.app.rail .nav-rail{left:5px}
+
+/* ===================== MAIN COLUMN ===================== */
+.app-main{flex:1;min-width:0;display:flex;flex-direction:column;min-height:100vh}
+.topbar{position:sticky;top:0;z-index:38;background:rgba(255,255,255,.86);backdrop-filter:saturate(180%) blur(14px);border-bottom:1px solid var(--line);min-height:56px;display:flex;align-items:center;gap:12px;padding:0 26px}
+.tn-right{display:flex;align-items:center;gap:10px;flex:0 0 auto;margin-left:auto}
 .icon-btn{border:1px solid var(--line);background:#fff;border-radius:9px;width:34px;height:34px;display:grid;place-items:center;cursor:pointer;color:var(--ink-2);transition:.15s}
-.icon-btn:hover{border-color:var(--ink);color:var(--ink)}.icon-btn svg{width:16px;height:16px}
-.userchip{display:flex;align-items:center;gap:9px;padding:4px 13px 4px 5px;border:1px solid var(--line);border-radius:24px;background:#fff;cursor:pointer;transition:.15s}
-.userchip:hover{border-color:var(--ink)}
+.icon-btn:hover{border-color:var(--brand);color:var(--brand)}.icon-btn svg{width:16px;height:16px}
+.userchip{display:flex;align-items:center;gap:9px;padding:5px 12px 5px 5px;border:1px solid var(--line);border-radius:24px;background:#fff;cursor:pointer;transition:.15s;min-width:0}
+.userchip:hover{border-color:var(--brand)}
 .userchip.active{border-color:transparent;background:var(--brand)}.userchip.active .u-name{color:#fff}.userchip.active .u-sub{color:rgba(255,255,255,.72)}.userchip.active .avatar{background:#fff;color:var(--brand)}
-.avatar{width:28px;height:28px;border-radius:50%;background:var(--brand-grad);color:#fff;font-weight:600;font-size:11px;display:grid;place-items:center}
-.userchip .u-name{font-size:12.5px;font-weight:600;line-height:1.1;color:var(--ink)}.userchip .u-sub{font-size:10.5px;color:var(--muted)}
+.avatar{width:28px;height:28px;flex:0 0 28px;border-radius:50%;background:var(--brand-grad);color:#fff;font-weight:600;font-size:11px;display:grid;place-items:center}
+.userchip .u-meta{min-width:0}
+.userchip .u-name{font-size:12.5px;font-weight:600;line-height:1.15;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.userchip .u-sub{font-size:10.5px;color:var(--muted);white-space:nowrap}
 .main-scroll{flex:1;min-height:0}
-/* sub bar — breadcrumb + freshness */
-.subbar{max-width:1360px;margin:0 auto;width:100%;padding:14px 32px 0;display:flex;align-items:center;gap:12px}
-.subbar:empty{display:none}
-.crumbs{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted);min-width:0;flex-wrap:wrap}
+.crumbs{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted);min-width:0;flex-wrap:wrap;padding:9px 0}
 .crumbs b{color:var(--ink);font-weight:600}.crumbs .sep{color:var(--faint)}.crumbs .c-link{cursor:pointer}.crumbs .c-link:hover{color:var(--ink)}
 .spacer{flex:1}
 .updated{font-size:11.5px;color:var(--muted);white-space:nowrap;display:flex;align-items:center;gap:6px}
-.updated .dot{width:6px;height:6px;border-radius:50%;background:var(--ink)}
+.updated .dot{width:6px;height:6px;border-radius:50%;background:var(--good)}
+.sb-scrim{display:none}
 
 .filterbar{max-width:1360px;margin:16px auto 0;width:100%;padding:0 32px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .selectwrap{position:relative}
@@ -392,28 +425,24 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
 .fade{animation:fade .28s ease}@keyframes fade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
 .hamburger{display:none}
 @media(max-width:900px){
-  .hamburger{display:grid;order:-1}
-  .tn-inner{gap:14px;padding:0 16px}
-  .tn-links{position:absolute;left:0;right:0;top:56px;flex-direction:column;align-items:stretch;gap:2px;background:#fff;border-bottom:1px solid var(--line);padding:8px 12px 12px;box-shadow:var(--shadow);max-height:0;overflow:hidden;transition:max-height .28s var(--ease);z-index:39}
-  .tn-links.open{max-height:70vh}
-  .nav-item{padding:11px 12px;border-radius:10px;font-size:15px}
-  .nav-item.active{background:var(--surface-3)}
-  .nav-item.active::after{display:none}
-  .subbar,.filterbar{padding-left:16px;padding-right:16px}
+  .hamburger{display:grid}
+  /* sidebar becomes an off-canvas drawer */
+  .sidebar{position:fixed;left:0;top:0;transform:translateX(-100%);box-shadow:var(--shadow-lg);transition:transform .28s var(--ease)}
+  .sidebar.open{transform:none}
+  .app.rail{--sbw:246px}
+  .app.rail .wordmark,.app.rail .sb-gt,.app.rail .nav-item .lbl,.app.rail .nav-item .badge,.app.rail .userchip .u-meta,.app.rail .sb-collapse .lbl{display:revert}
+  .app.rail .nav-item{justify-content:flex-start;padding:9px 12px}
+  .app.rail .sb-head{padding:0 14px;justify-content:flex-start}
+  .app.rail .sb-collapse{justify-content:flex-start;padding:8px 12px}
+  .app.rail .sb-collapse svg{transform:none}
+  .sb-scrim{display:block;position:fixed;inset:0;background:rgba(15,23,42,.32);opacity:0;pointer-events:none;transition:.2s;z-index:44}
+  .sb-scrim.on{opacity:1;pointer-events:auto}
+  .topbar{padding:0 16px}
+  .filterbar{padding-left:16px;padding-right:16px}
   .content{padding:22px 16px 64px}
-  .brand{flex:1}
 }
 @media(max-width:620px){.userchip .u-meta{display:none}.updated{display:none}.metric-grid{grid-template-columns:repeat(2,1fr)}.person-hd .r{margin-left:0;width:100%}.fseg{flex-wrap:wrap}.fseg button{padding:6px 9px;font-size:11.5px}.fsearch{flex:1 1 100%}.pill-select{max-width:100%}}
 @media(max-width:480px){.crumbs{display:none}.userchip{display:none}}
-
-/* ---- Administration menu ---- */
-.nav-admin{position:relative}
-.nav-admin .caret{margin-left:5px;font-size:9px;color:var(--faint)}
-.admin-menu{position:absolute;top:calc(100% + 12px);left:0;min-width:200px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-lg);padding:6px;opacity:0;visibility:hidden;transform:translateY(-4px);transition:.16s var(--ease);z-index:50}
-.admin-menu.on{opacity:1;visibility:visible;transform:translateY(0)}
-.am-item{padding:9px 12px;border-radius:8px;font-size:13px;font-weight:550;color:var(--ink-2);cursor:pointer;white-space:nowrap}
-.am-item:hover{background:var(--surface-2);color:var(--ink)}
-.am-item.active{background:var(--surface-3);color:var(--ink);font-weight:650}
 
 /* ---- Cycle chip ---- */
 .cyc-chip{font-size:10.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;border:1px solid var(--line-2);border-radius:20px;padding:2px 9px;color:var(--ink-2);background:#fff;cursor:pointer;margin-right:10px}
@@ -616,29 +645,51 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
 .te-note{font-size:11px;color:var(--muted);margin-top:5px;line-height:1.4}
 .te-subs{margin-top:11px;padding-top:10px;border-top:1px solid var(--line-soft);font-size:11.5px;color:var(--muted);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 
+/* ===== ReactBits-inspired micro-interactions =====
+   Spotlight: a soft brand-tinted glow tracks the cursor across a card.
+   Kept at 7% so it reads as depth, not decoration. */
+.kc,.kcard,.dcard,.tile,.metric{position:relative}
+.kc::before,.kcard::before,.dcard::before,.tile::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .32s var(--ease);background:radial-gradient(320px circle at var(--mx,50%) var(--my,50%),rgba(0,93,255,.075),transparent 62%)}
+.kc:hover::before,.kcard:hover::before,.dcard:hover::before,.tile:hover::before{opacity:1}
+/* Animated list: rows arrive in sequence rather than all at once. */
+.lrow{animation:rowIn .38s var(--ease) backwards}
+.lrow:nth-child(1){animation-delay:.02s}.lrow:nth-child(2){animation-delay:.05s}.lrow:nth-child(3){animation-delay:.08s}
+.lrow:nth-child(4){animation-delay:.11s}.lrow:nth-child(5){animation-delay:.14s}.lrow:nth-child(6){animation-delay:.17s}
+.lrow:nth-child(7){animation-delay:.19s}.lrow:nth-child(8){animation-delay:.21s}.lrow:nth-child(n+9){animation-delay:.23s}
+@keyframes rowIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-delay:0ms!important;transition-duration:.05ms!important}}
 </style>
 </head>
 <body>
-<div class="app">
-  <header class="topnav" id="topnav">
-    <div class="tn-inner">
-      <div class="brand">
+<div class="app" id="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-head">
+      <div class="brand" data-nav="overview" title="Overview">
         <span class="logo" aria-hidden="true"><svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><g transform="rotate(6 20 20)"><path d="M20 3.4 C27.4 8.2 26.2 15.8 20 20 C14.6 15.6 14.2 8.6 20 3.4 Z" fill="#005DFF"/><path d="M20 3.4 C27.4 8.2 26.2 15.8 20 20 C14.6 15.6 14.2 8.6 20 3.4 Z" transform="rotate(90 20 20)" fill="#567DE8"/><path d="M20 3.4 C27.4 8.2 26.2 15.8 20 20 C14.6 15.6 14.2 8.6 20 3.4 Z" transform="rotate(180 20 20)" fill="#1DC797"/><path d="M20 3.4 C27.4 8.2 26.2 15.8 20 20 C14.6 15.6 14.2 8.6 20 3.4 Z" transform="rotate(270 20 20)" fill="#8460D4"/></g></svg></span>
         <span class="wordmark">RECYKAL</span>
       </div>
+    </div>
+    <nav class="sb-nav" id="nav"></nav>
+    <div class="sb-foot">
+      <button class="sb-collapse" data-act="toggle-rail" aria-label="Collapse sidebar" title="Collapse sidebar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg><span class="lbl">Collapse</span></button>
+      <div class="userchip" data-act="go-me" id="profileChip" title="My Performance"><div class="avatar" id="userAv">R</div><div class="u-meta"><div class="u-name" id="userName">User</div><div class="u-sub">My Performance</div></div></div>
+    </div>
+  </aside>
+  <div class="sb-scrim" id="sbScrim" data-act="close-nav"></div>
+  <div class="app-main">
+    <header class="topbar" id="topbar">
       <button class="icon-btn hamburger" data-act="toggle-nav" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
-      <nav class="tn-links" id="nav"></nav>
+      <div class="crumbs" id="crumbs"></div>
+      <div class="spacer"></div>
       <div class="tn-right">
         <div class="selectwrap" id="periodWrap" style="display:none"><select class="pill-select" id="periodSel" data-act="period"></select></div>
         <button class="icon-btn" data-act="refresh" title="Refresh from sheet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg></button>
-        <div class="userchip" data-act="go-me" id="profileChip" title="My Performance"><div class="avatar" id="userAv">R</div><div class="u-meta"><div class="u-name" id="userName">User</div><div class="u-sub">My Performance</div></div></div>
+        <div class="updated" id="updated"></div>
       </div>
-    </div>
-  </header>
-  <div class="subbar" id="subbar"><div class="crumbs" id="crumbs"></div><div class="spacer"></div><div class="updated" id="updated"></div></div>
-  <div class="filterbar" id="filterbar" style="display:none"></div>
-  <div class="main-scroll"><div class="content" id="content"></div></div>
+    </header>
+    <div class="filterbar" id="filterbar" style="display:none"></div>
+    <div class="main-scroll"><div class="content" id="content"></div></div>
+  </div>
 </div>
 <div class="scrim" id="scrim" data-act="close-drawer"></div>
 <aside class="drawer" id="drawer"><div id="drawerContent"></div></aside>
@@ -689,7 +740,7 @@ function B(){return APP.boot;}
 function TH(){return B().settings.thresholds;}
 
 async function boot(){
-  drawBrand();showState('loading');
+  drawBrand();restoreRail();showState('loading');
   try{const b=await call('apiBootstrap',{period:APP.period||undefined});
     if(!b){showState('error','No response from the backend.');return;}
     if(!b.ok||b.connected===false){showState('error',b.error||'Could not connect to the Google Sheet.');return;}
@@ -734,6 +785,24 @@ const NAV_ADMIN=[
   {id:'cycles',label:'Performance Cycles'},
   {id:'settings',label:'Settings'}
 ];
+/* The sidebar reads top-to-bottom in the order the work happens, then the
+   setup that rarely changes. One 17px line icon per module. */
+const NAV_GROUPS=[{t:'Main',items:NAV_MAIN},{t:'Administration',items:NAV_ADMIN}];
+const NAV_ICON={
+  overview:'<path d="M3 12l2-2 4 4 5-6 4 4 3-3"/><path d="M3 20h18" opacity=".45"/>',
+  goals:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2"/><path d="M12 2.4v2.6M12 19v2.6M21.6 12H19M5 12H2.4"/>',
+  checkins:'<rect x="3" y="4.5" width="18" height="16.5" rx="2.5"/><path d="M3 9.6h18M8 2.6v3.8M16 2.6v3.8"/><path d="M8.6 14.6l2.2 2.2 4.4-4.4"/>',
+  me:'<circle cx="12" cy="8" r="3.4"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/>',
+  teams:'<circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="9" r="2.6" opacity=".55"/><path d="M15 20a5 5 0 0 1 6.5-4.8" opacity=".55"/>',
+  reviews:'<rect x="5" y="3.6" width="14" height="17" rx="2.5"/><path d="M9.2 3.6h5.6v3H9.2z"/><path d="M8.8 12.6l2.1 2.1 4.4-4.4"/>',
+  reports:'<path d="M4 20V10.5M10 20V4M16 20v-7M22 20H2"/>',
+  employees:'<circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M16.6 8.4h5M19.1 5.9v5" opacity=".7"/>',
+  teamadmin:'<rect x="3" y="4" width="7" height="7" rx="1.5"/><rect x="14" y="4" width="7" height="7" rx="1.5"/><rect x="3" y="15" width="7" height="5" rx="1.5"/><rect x="14" y="15" width="7" height="5" rx="1.5"/>',
+  library:'<path d="M4 5.6A2.6 2.6 0 0 1 6.6 3H20v15.4H6.6A2.6 2.6 0 0 0 4 21z"/><path d="M4 18.4A2.6 2.6 0 0 1 6.6 15.8H20"/>',
+  cycles:'<path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3.2v5.6h-5.6"/>',
+  settings:'<circle cx="12" cy="12" r="3.1"/><path d="M12 2.6v2.3M12 19.1v2.3M21.4 12h-2.3M4.9 12H2.6M18.6 5.4l-1.6 1.6M7 17l-1.6 1.6M18.6 18.6L17 17M7 7L5.4 5.4"/>'
+};
+const navIcon=id=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(NAV_ICON[id]||NAV_ICON.overview)+'</svg>';
 /* Which nav entry lights up for a drill-down view. */
 const NAV_PARENT={
   dept:'teams', person:'teams',
@@ -755,11 +824,13 @@ function buildChrome(){
     if(id==='goals'&&atRisk)return '<span class="badge">'+atRisk+'</span>';
     return '';
   };
-  nav().forEach(nv=>navEl.insertAdjacentHTML('beforeend','<div class="nav-item'+(nv.id===activeNav?' active':'')+'" data-nav="'+nv.id+'">'+esc(nv.label)+badgeFor(nv.id)+'</div>'));
-  // Administration sits behind one menu so the primary modules stay readable.
-  const adminOn=ADMIN_VIEWS.indexOf(APP.view)>=0;
-  navEl.insertAdjacentHTML('beforeend','<div class="nav-admin"><div class="nav-item'+(adminOn?' active':'')+'" data-act="toggle-admin">Administration<span class="caret">▾</span></div>'
-    +'<div class="admin-menu" id="adminMenu">'+NAV_ADMIN.map(a=>'<div class="am-item'+(a.id===APP.view?' active':'')+'" data-nav="'+a.id+'">'+esc(a.label)+'</div>').join('')+'</div></div>');
+  // Grouped rail: every module is visible at once, so nothing hides behind a menu.
+  navEl.innerHTML='<div class="nav-rail" id="navRail"></div>'+NAV_GROUPS.map(g=>
+    '<div class="sb-group"><div class="sb-gt">'+esc(g.t)+'</div>'
+    +g.items.map(nv=>'<div class="nav-item'+(nv.id===activeNav?' active':'')+'" data-nav="'+nv.id+'" title="'+esc(nv.label)+'">'
+      +navIcon(nv.id)+'<span class="lbl">'+esc(nv.label)+'</span>'+badgeFor(nv.id)+'</div>').join('')
+    +'</div>').join('');
+  moveNavRail();
   const em=(B().user&&B().user.email)||'';const emName=em?em.split('@')[0].replace(/[._]+/g,' '):'You';
   const meName=APP.meId?((empById(APP.meId)||{}).name||emName):emName;
   $('#userName').textContent=meName;$('#userAv').textContent=initials(meName);
@@ -775,6 +846,15 @@ function buildChrome(){
 function CY(){return B()&&B().cycle?B().cycle:null;}
 function cycleLocked(){const c=CY();return !!(c&&c.locked);}
 function drawBrand(){}
+/* Slide the indicator onto the active module instead of redrawing a border. */
+function moveNavRail(){
+  const rail=$('#navRail');if(!rail)return;
+  const act=$('#nav .nav-item.active');
+  if(!act){rail.style.opacity='0';return;}
+  rail.style.opacity='1';
+  rail.style.height=act.offsetHeight+'px';
+  rail.style.transform='translateY('+act.offsetTop+'px)';
+}
 
 function buildFilterbar(){
   const show=!B().empty && ['employees','records','mykpis','checkins','reviews'].indexOf(APP.view)>=0;
@@ -800,7 +880,7 @@ function go(v,ctx){
   if(v==='me'&&!APP.meId)v='pickme';
   APP.mode=(v==='me'||v==='mykpis'||v==='pickme')?'me':'mgmt';
   APP.view=v;APP.ctx=ctx||{};APP.table.page=0;APP.tab='';
-  buildChrome();scrollTop();closeNav();closeAdmin();render();
+  buildChrome();scrollTop();closeNav();render();
 }
 function scrollTop(){window.scrollTo(0,0);const s=$('.main-scroll');if(s)s.scrollTop=0;}
 function setMode(m){APP.mode=m;go(m==='me'?(APP.meId?'me':'pickme'):'overview');}
@@ -2105,7 +2185,7 @@ function scoreBig(score,rating){
 /* subtle count-up on KPI values — animates the leading numeric text node only */
 function countUp(){
   try{if(window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches)return;}catch(e){}
-  $$('#content .kc-value').forEach(el=>{
+  $$('#content .kc-value,#content .hero-fig').forEach(el=>{
     const raw=el.firstChild;if(!raw||raw.nodeType!==3)return;
     const m=/^\s*(\d+(?:\.\d+)?)\s*$/.exec(raw.nodeValue);if(!m)return;
     const to=parseFloat(m[1]),dec=(m[1].split('.')[1]||'').length,t0=performance.now(),dur=420;
@@ -2134,7 +2214,6 @@ document.addEventListener('click',e=>{
   const pc=e.target.closest('[data-person]');if(pc){go('person',{empId:pc.dataset.person});return;}
   const rv=e.target.closest('[data-review]');if(rv){go('review',{empId:rv.dataset.review});return;}
   const kd=e.target.closest('[data-def]');if(kd){go('kpidef',{defId:kd.dataset.def});return;}
-  if(!e.target.closest('.nav-admin'))closeAdmin();
 });
 document.addEventListener('change',e=>{
   const fl=e.target.closest('[data-filter]');if(fl){APP.filters[fl.dataset.filter]=fl.value;if(fl.dataset.filter==='dept')APP.filters.subTeam='';APP.table.page=0;render();return;}
@@ -2159,8 +2238,9 @@ document.addEventListener('input',e=>{
 });
 function handleAct(a,el){
   if(a==='close-drawer')closeDrawer();
-  else if(a==='toggle-nav')$('#nav').classList.toggle('open');
-  else if(a==='toggle-admin'){const m=$('#adminMenu');if(m)m.classList.toggle('on');}
+  else if(a==='toggle-nav'){const s=$('#sidebar'),sc=$('#sbScrim');if(s){const on=s.classList.toggle('open');if(sc)sc.classList.toggle('on',on);}}
+  else if(a==='close-nav')closeNav();
+  else if(a==='toggle-rail')setRail(!$('#app').classList.contains('rail'));
   else if(a==='go-me')go(APP.meId?'me':'pickme');
   else if(a==='refresh')doRefresh();
   else if(a==='clear-filters'){APP.filters={dept:'',subTeam:'',status:'',search:''};APP.table.page=0;render();}
@@ -2176,8 +2256,16 @@ function handleAct(a,el){
   else if(a==='save-assignment')doSaveAssignment(el.dataset.rec);
   else if(a==='switch-me')go('pickme');
 }
-function closeNav(){const n=$('#nav');if(n)n.classList.remove('open');}
-function closeAdmin(){const m=$('#adminMenu');if(m)m.classList.remove('on');}
+function closeNav(){const s=$('#sidebar');if(s)s.classList.remove('open');const sc=$('#sbScrim');if(sc)sc.classList.remove('on');}
+/* Rail preference survives reloads. localStorage can be walled off inside the
+ * Apps Script iframe, so every access is guarded. */
+function setRail(on){
+  const ap=$('#app');if(!ap)return;
+  ap.classList.toggle('rail',!!on);
+  try{localStorage.setItem('kra_rail',on?'1':'0');}catch(_){}
+  moveNavRail();
+}
+function restoreRail(){try{if(localStorage.getItem('kra_rail')==='1')$('#app').classList.add('rail');}catch(_){}}
 async function doRefresh(){toast('Refreshing…');try{const b=await call('apiBootstrap',{force:true,period:APP.period||undefined});if(b&&b.ok&&b.connected!==false){applyBoot(b);toast('Up to date');}else showState('error',b&&b.error||'Refresh failed');}catch(e){if(e&&e.__offline)showState('offline');else toast('Error',true);}}
 async function doScaffold(){toast('Building actuals sheet…');try{const res=await call('apiScaffoldActuals',{period:APP.period});if(res&&res.ok){toast(res.added+' rows added to '+res.tab);doRefresh();}else toast((res&&res.error)||'Failed',true);}catch(e){if(e&&e.__offline)toast('Connect to the sheet first',true);else toast('Failed',true);}}
 async function doSaveSettings(){const on=$('#setOnTrack'),ar=$('#setAtRisk');const p={};if(on)p.onTrack=on.value;if(ar)p.atRisk=ar.value;await pushSettings(p,'Thresholds saved');}
@@ -2268,7 +2356,18 @@ async function doSaveAssignment(id){
   });
   window.addEventListener('scroll',()=>{const el=get();if(el)el.classList.remove('on');},true);
 })();
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeDrawer();const t=$('#vtip');if(t)t.classList.remove('on');}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeDrawer();closeNav();const t=$('#vtip');if(t)t.classList.remove('on');}});
+
+/* ---------------- ReactBits-inspired motion ----------------
+ * Spotlight: one delegated listener feeds the hovered card its cursor offset. */
+document.addEventListener('pointermove',e=>{
+  const c=e.target.closest&&e.target.closest('.kc,.kcard,.dcard,.tile');
+  if(!c)return;
+  const r=c.getBoundingClientRect();
+  c.style.setProperty('--mx',(e.clientX-r.left)+'px');
+  c.style.setProperty('--my',(e.clientY-r.top)+'px');
+},{passive:true});
+window.addEventListener('resize',()=>requestAnimationFrame(moveNavRail));
 let toastT;function toast(m,err){const t=$('#toast');t.textContent=m;t.classList.toggle('err',!!err);t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),err?4000:2200);}
 boot();
 </script>
