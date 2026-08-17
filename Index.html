@@ -24,6 +24,20 @@
   --warn:#C57A00;--warn-soft:#FBF0DA;--warn-ink:#98600A;
   --bad:#E5484D;--bad-soft:#FCEBEC;--bad-ink:#C42B30;
   --none:#C3CDDC;--none-soft:#F2F6FB;
+  /* ===== Pastel grounds =====
+     Each is a guideline primary lifted to ~95% luminance, so every tint is the
+     brand's own hue rather than an invented one. Hue keeps a job — periwinkle
+     = people, blue = the core metric, violet = process, mint = coverage,
+     amber/rose = risk — so colour still reads as meaning, not decoration. */
+  --p-peri:#ECF1FD;--p-peri-bd:#D3DEF9;      /* Periwinkle   #567DE8 */
+  --p-blue:#E9F0FF;--p-blue-bd:#CCDEFF;      /* Bright Blue  #005DFF */
+  --p-violet:#F3EDFD;--p-violet-bd:#E0D3F8;  /* Med Purple   #8460D4 */
+  --p-mint:#E2F7F1;--p-mint-bd:#C1ECDF;      /* Bright Green #1DC797 */
+  --p-green:#E5F5EC;--p-green-bd:#C5E9D5;    /* Duke Green   #049769 */
+  --p-amber:#FCF3E2;--p-amber-bd:#F0DDB4;
+  --p-rose:#FDEDEE;--p-rose-bd:#F6D3D5;
+  /* bar ramp — red → amber → duke green → bright green → brand blue (best) */
+  --bar-bad:#E5484D;--bar-warn:#C57A00;--bar-good:#049769;--bar-strong:#1DC797;--bar-elite:#005DFF;
   --shadow-xs:0 1px 1px rgba(12,26,51,.03);
   --shadow:0 1px 2px rgba(12,26,51,.05),0 12px 28px -18px rgba(12,26,51,.22);
   --shadow-lg:0 28px 64px -28px rgba(12,26,51,.30);
@@ -211,6 +225,13 @@ button.sb-gt.open .cv{transform:rotate(180deg)}
 .dcard:hover{border-color:var(--line-2);box-shadow:var(--shadow);transform:translateY(-2px)}
 .dcard .dc-h{display:flex;align-items:center;gap:10px}
 .dcard .dc-ic{width:38px;height:38px;flex:0 0 38px;border-radius:11px;display:grid;place-items:center;background:var(--brand-soft);color:var(--brand)}
+/* teams cycle the brand hues so each card is identifiable at a glance */
+.dcard .dc-ic.ic-0{background:var(--p-blue);color:#0048C7}
+.dcard .dc-ic.ic-1{background:var(--p-mint);color:#0E8A66}
+.dcard .dc-ic.ic-2{background:var(--p-violet);color:#6742BC}
+.dcard .dc-ic.ic-3{background:var(--p-peri);color:#3A5FC0}
+.dcard .dc-ic.ic-4{background:var(--p-green);color:var(--good-ink)}
+.dcard .dc-ic.ic-n{background:var(--surface-3);color:var(--muted)}
 .dcard .dc-ic svg{width:19px;height:19px}
 .dcard h3{margin:0;font-size:15px;font-weight:750;letter-spacing:-.015em}
 .dcard .dc-kind{font-size:11px;color:var(--muted);font-weight:600}
@@ -562,6 +583,22 @@ button.sb-gt.open .cv{transform:rotate(180deg)}
 
 .tile{border:1px solid var(--line);border-radius:14px;background:var(--card);padding:13px 15px;min-width:0;display:flex;flex-direction:column}
 .tile.pad0{padding:13px 8px 8px}
+/* Pastel tones. Applied per tile category so the grid reads as colour-coded
+   groups rather than a field of identical white boxes. */
+.tile.tn-peri{background:var(--p-peri);border-color:var(--p-peri-bd)}
+.tile.tn-blue{background:var(--p-blue);border-color:var(--p-blue-bd)}
+.tile.tn-violet{background:var(--p-violet);border-color:var(--p-violet-bd)}
+.tile.tn-mint{background:var(--p-mint);border-color:var(--p-mint-bd)}
+.tile.tn-green{background:var(--p-green);border-color:var(--p-green-bd)}
+.tile.tn-amber{background:var(--p-amber);border-color:var(--p-amber-bd)}
+.tile.tn-rose{background:var(--p-rose);border-color:var(--p-rose-bd)}
+/* the tile label needs a step more contrast once it sits on a tint */
+.tile[class*="tn-"] .tile-h .tlb{color:var(--ink-2);opacity:.82}
+.tile[class*="tn-"] .stat .sub{color:var(--ink-2);opacity:.72}
+/* the meter track would disappear into a tint, so give it its own ground */
+.tile[class*="tn-"] .meter{background:rgba(255,255,255,.72)}
+/* a white sheen reads better than a blue glow on a coloured ground */
+.tile[class*="tn-"]::before{background:radial-gradient(320px circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,.62),transparent 64%)}
 .tile-h{display:flex;align-items:center;gap:8px;margin-bottom:9px;min-height:16px}
 .tile-h .tlb{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);white-space:nowrap}
 .tile-h .r{margin-left:auto;font-size:11px;font-weight:600;color:var(--muted);white-space:nowrap}
@@ -612,7 +649,8 @@ button.sb-gt.open .cv{transform:rotate(180deg)}
 /* distribution columns — ordered categories, so the ordinal ramp is legitimate */
 .cols{display:flex;align-items:flex-end;gap:7px;height:104px;padding:0 2px}
 .ccol{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px;height:100%;min-width:0}
-.ccol .cbar{width:100%;max-width:52px;border-radius:4px 4px 0 0;background:var(--ink);position:relative;min-height:2px;transition:opacity .13s}
+.ccol .cbar{width:100%;max-width:52px;border-radius:5px 5px 2px 2px;background:var(--cbar,var(--ink));position:relative;min-height:2px;transition:opacity .13s,filter .13s}
+.ccol:hover .cbar{filter:brightness(1.06)}
 .ccol .cbar b{position:absolute;top:-17px;left:0;right:0;text-align:center;font-size:11px;font-weight:700;color:var(--ink)}
 .ccol .clab{font-size:9.5px;font-weight:600;color:var(--faint);text-align:center;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .ccol.dim .cbar{background:var(--line-2)}
@@ -1070,7 +1108,8 @@ function tile(cls,label,body,opts){
   const right=opts.right?('<span class="r'+(opts.rightNav?' link':'')+'"'+(opts.rightNav?' data-nav="'+opts.rightNav+'"':'')+'>'+opts.right+'</span>'):'';
   const head=label?('<div class="tile-h"><span class="tlb">'+label+'</span>'+right+'</div>'):'';
   const attr=opts.nav?(' data-nav="'+opts.nav+'"'):(opts.attr||'');
-  return '<div class="tile '+cls+(opts.pad0?' pad0':'')+(attr?' clickable':'')+'"'+attr+'>'+head+body+'</div>';
+  const tone=opts.tone?(' tn-'+opts.tone):'';
+  return '<div class="tile '+cls+tone+(opts.pad0?' pad0':'')+(attr?' clickable':'')+'"'+attr+'>'+head+body+'</div>';
 }
 
 /* The single number the view leads with. Exactly one per dashboard. */
@@ -1170,12 +1209,16 @@ function dRow(name,sub,value,unit,pct01,attr,delta,opts){
     +'<div class="val">'+(value==null?'—':value)+(unit?'<small>'+unit+'</small>':'')+'</div></div>';
 }
 /* Ordered categories (performance tiers) — an ordinal scale is legitimate here. */
+/* Each column IS a status bin, so it carries that status's colour — a flat
+ * black ramp made the reader match bar to legend by position alone. */
+const BARC={bad:'var(--bar-bad)',warn:'var(--bar-warn)',good:'var(--bar-good)',strong:'var(--bar-strong)',elite:'var(--bar-elite)'};
 function distCols(bins){
   const max=Math.max(1,...bins.map(b=>b.n));
   return '<div class="cols">'+bins.map(b=>{
     const h=b.n===0?2:clamp(b.n/max*100,10,100);
+    const c=BARC[b.k]||'var(--ink)';
     return '<div class="ccol'+(b.n?'':' dim')+'" data-tip="'+esc(b.n+' '+(b.n===1?'person':'people')+' · '+b.label)+'">'
-      +'<div class="cbar" style="height:'+h+'%">'+(b.n?'<b>'+b.n+'</b>':'')+'</div>'
+      +'<div class="cbar" style="height:'+h+'%;--cbar:'+c+'">'+(b.n?'<b>'+b.n+'</b>':'')+'</div>'
       +'<div class="clab">'+esc(b.short||b.label)+'</div></div>';
   }).join('')+'</div>';
 }
@@ -1210,7 +1253,7 @@ function vOverview(){
 
   // ordered tiers -> an ordinal distribution, read left (weakest) to right
   const scale=SCALE().slice().sort((a,b)=>a.min-b.min);
-  const bins=scale.map(s=>({label:s.label,short:s.label,
+  const bins=scale.map(s=>({label:s.label,short:s.label,k:s.key,
     n:B().employees.filter(e=>e.rating!=null&&e.status.k===s.key).length}));
 
   const priority=priorityRecords(null).slice(0,6);
@@ -1230,10 +1273,10 @@ function vOverview(){
   +`<div class="dash">
     ${heroTile(o.score,o.rating,o.status,o.delta,
       hasData?(o.kpisWithData+' scored KPIs'+(o.previousPeriod?' · vs '+prev:'')):'Awaiting the backend sheet.')}
-    ${statTile('t2','Employees on track',n1(o.peopleOnTrackPct),'%',o.onTrack+' of '+o.peopleWithData+' rated',{meter:o.peopleOnTrackPct,nav:'employees'})}
-    ${statTile('t2','KPIs on track',n1(o.recOnTrackPct),'%',o.recOnTrack+' of '+o.kpisWithData+' scored',{meter:o.recOnTrackPct,nav:'goals'})}
-    ${statTile('t2','KPIs at risk',String(o.recAtRisk+o.recOffTrack),'',o.recAtRisk+' at risk · '+o.recOffTrack+' off track',{nav:'goals'})}
-    ${statTile('t2','Reviews pending',String(rv.pending),'',rv.total?rv.complete+' of '+rv.total+' complete':'no reviews yet',{meter:rv.progress,nav:'reviews'})}
+    ${statTile('t2','Employees on track',n1(o.peopleOnTrackPct),'%',o.onTrack+' of '+o.peopleWithData+' rated',{meter:o.peopleOnTrackPct,nav:'employees',tone:'peri'})}
+    ${statTile('t2','KPIs on track',n1(o.recOnTrackPct),'%',o.recOnTrack+' of '+o.kpisWithData+' scored',{meter:o.recOnTrackPct,nav:'goals',tone:'blue'})}
+    ${statTile('t2','KPIs at risk',String(o.recAtRisk+o.recOffTrack),'',o.recAtRisk+' at risk · '+o.recOffTrack+' off track',{nav:'goals',tone:(o.recAtRisk+o.recOffTrack)?'amber':'green'})}
+    ${statTile('t2','Reviews pending',String(rv.pending),'',rv.total?rv.complete+' of '+rv.total+' complete':'no reviews yet',{meter:rv.progress,nav:'reviews',tone:rv.pending?'violet':'green'})}
   </div>`
   +band('How it breaks down')
   +`<div class="dash">
@@ -1241,7 +1284,7 @@ function vOverview(){
     ${tile('t5','Team performance','<div>'+(teamRows||'<div class="empty">No teams.</div>')+'</div>',{right:'score / 100'})}
     ${tile('t5','Perspective performance','<div>'+(perspRows||'<div class="empty">No perspectives tagged.</div>')+'</div>',{right:'All ›',rightNav:'perspectives'})}
     ${tile('t3','Performance distribution',distCols(bins),{right:o.peopleWithData+' rated'})}
-    ${tile('t4','Coverage','<div class="stat"><div class="v">'+n1(o.coverage)+'<span class="u">%</span></div><div class="sub">'+o.kpisWithData+' of '+o.kpis+' KPIs have '+esc(periodShort(APP.period))+' actuals</div><div class="meter"><span style="width:'+clamp(o.coverage,0,100)+'%"></span></div></div>',{nav:'checkins'})}
+    ${tile('t4','Coverage','<div class="stat"><div class="v">'+n1(o.coverage)+'<span class="u">%</span></div><div class="sub">'+o.kpisWithData+' of '+o.kpis+' KPIs have '+esc(periodShort(APP.period))+' actuals</div><div class="meter"><span style="width:'+clamp(o.coverage,0,100)+'%"></span></div></div>',{nav:'checkins',tone:'mint'})}
   </div>`
   +band('What needs attention')
   +`<div class="dash">
@@ -1286,7 +1329,7 @@ function deptCard(d,hasData,i){
   const isInfo=d.kind==='info';
   const scoreHtml=isInfo?'<span class="tag">Reference</span>':(hasData&&d.rating!=null?rchip(d.rating,d.status)+(d.delta!=null?deltaChip(d.delta):''):'<span class="pill none">Framework</span>');
   return `<div class="dcard" data-dept="${d.id}" style="animation-delay:${Math.min(i*.03,.3)}s">
-    <div class="dc-h"><div class="dc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${deptIcon(d.kind)}</svg></div>
+    <div class="dc-h"><div class="dc-ic ic-${isInfo?'n':(i%5)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${deptIcon(d.kind)}</svg></div>
       <div style="min-width:0"><h3>${esc(d.name)}</h3><div class="dc-kind">${esc(d.kind==='scorecard'?'Market scorecard':d.kind==='individuals'?'Individual KRAs':d.kind==='info'?'Reference tab':d.kind)}</div></div>
       <div class="dc-score">${scoreHtml}</div></div>
     ${isInfo?'<div class="dc-metrics"><div class="dm">Rows<b>'+((d.rawTable&&d.rawTable.rows.length)||0)+'</b></div><div class="dm">Columns<b>'+((d.rawTable&&d.rawTable.headers.length)||0)+'</b></div></div>'
@@ -1321,7 +1364,7 @@ function vDept(){
   const subRows=subs.map(sb=>dRow(sb.name,sb.people+(sb.people===1?' person':' people'),
     sb.score==null?null:n1(sb.score),'%',(sb.score||0)/100,' data-subteam="'+sb.id+'"')).join('');
   const scale=SCALE().slice().sort((a,b)=>a.min-b.min);
-  const bins=scale.map(x=>({label:x.label,short:x.label,n:emps.filter(e=>e.rating!=null&&e.status.k===x.key).length}));
+  const bins=scale.map(x=>({label:x.label,short:x.label,k:x.key,n:emps.filter(e=>e.rating!=null&&e.status.k===x.key).length}));
   const pr=priorityRecords(recs).slice(0,6);
   const prRows=pr.length?pr.map(x=>{const r=x.r;
     return `<tr data-rec="${r.kpiId}"><td class="nm"><span class="sdot s-${r.status.k}"></span> ${esc(r.kpi||r.kra)}<small>${esc(titleName(r.employee))}</small></td>
@@ -1330,10 +1373,10 @@ function vDept(){
 
   return head+banner+`<div class="dash">
     ${heroTile(d.score,d.rating,d.status,d.delta,hasData?(withData(recs).length+' scored KPIs'+(prev?' · vs '+prev:'')):'Awaiting the backend sheet.')}
-    ${d.lead?leadTile(d):statTile('t2','People',String(emps.length),'','members',{nav:'employees'})}
-    ${statTile('t2','KPIs on track',String(d.recOnTrack),'',d.recAtRisk+' at risk · '+d.recOffTrack+' off',{meter:recs.length?d.recOnTrack/recs.length*100:0})}
-    ${statTile('t2','Pending updates',String(pending),'',withData(recs).length+' of '+recs.length+' updated',{meter:recs.length?withData(recs).length/recs.length*100:0,nav:'checkins'})}
-    ${statTile('t2','Reviews complete',String(done),'/'+emps.length,'this cycle',{meter:emps.length?done/emps.length*100:0,nav:'reviews'})}
+    ${d.lead?leadTile(d):statTile('t2','People',String(emps.length),'','members',{nav:'employees',tone:'peri'})}
+    ${statTile('t2','KPIs on track',String(d.recOnTrack),'',d.recAtRisk+' at risk · '+d.recOffTrack+' off',{meter:recs.length?d.recOnTrack/recs.length*100:0,tone:'blue'})}
+    ${statTile('t2','Pending updates',String(pending),'',withData(recs).length+' of '+recs.length+' updated',{meter:recs.length?withData(recs).length/recs.length*100:0,nav:'checkins',tone:pending?'amber':'green'})}
+    ${statTile('t2','Reviews complete',String(done),'/'+emps.length,'this cycle',{meter:emps.length?done/emps.length*100:0,nav:'reviews',tone:done>=emps.length?'green':'violet'})}
 
     ${tile('t7','Team trend',areaChart(d.trend,{h:150}),{right:d.delta!=null?(d.delta>0?'▲':'▼')+' vs '+prev:'rating / 5'})}
     ${tile('t5','Perspective performance','<div>'+(perspRows||'<div class="empty">No perspectives tagged.</div>')+'</div>',{right:'score / 100'})}
