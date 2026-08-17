@@ -998,7 +998,6 @@ const navIcon=id=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 /* Which nav entry lights up for a drill-down view. */
 /* Which rail entry lights up for a view that is not itself in the rail. */
 const NAV_PARENT={
-  targetteam:'targets', targetperson:'targets',
   dept:'teams', teamadmin:'teams',
   person:'employees', review:'employees', pickme:'employees',
   goals:'records', reports:'overview',
@@ -1137,7 +1136,7 @@ function render(){
     perspectives:vPerspectives, perspective:vPerspective, kpianalysis:vKpiAnalysis, records:vRecords,
     employees:vPeople, teamadmin:vTeamAdmin, library:vLibrary, kpidef:vKpiDef,
     cycles:vCycles, settings:vSettings, health:vHealth,
-    targets:vTargets, targetteam:vTargetTeam, targetperson:vTargetPerson
+    targets:vTargets
   }[APP.view]||vOverview;
   c.innerHTML=v();
   countUp();
@@ -1153,8 +1152,6 @@ function renderCrumbs(){
     cr=[{t:'Overview',v:'overview'}];
     if(ADMIN_VIEWS.indexOf(APP.view)>=0)cr=[{t:'Administration'}];
     if(LAB[APP.view]&&APP.view!=='overview')cr.push({t:LAB[APP.view]});
-    if(APP.view==='targetteam'){const t=tgtTeam(APP.ctx.teamKey);cr=[{t:'Targets',v:'targets'}];if(t)cr.push({t:t.team});}
-    if(APP.view==='targetperson'){const t=tgtTeam(APP.ctx.teamKey);cr=[{t:'Targets',v:'targets'}];if(t)cr.push({t:t.team,v:'targetteam',ctx:{teamKey:t.key}});cr.push({t:APP.ctx.name||'Member'});}
     if(APP.view==='dept'){const d=deptById(APP.ctx.deptId);cr=[{t:'Teams',v:'teams'}];if(d)cr.push({t:d.name});}
     if(APP.view==='person'){const e=empById(APP.ctx.empId);cr=[{t:'People',v:'employees'}];if(e&&e.department)cr.push({t:e.department,v:'dept',ctx:{deptId:e.deptId}});if(e)cr.push({t:e.name});}
     if(APP.view==='perspective'){cr=[{t:'Overview',v:'overview'},{t:'Perspectives',v:'perspectives'},{t:APP.ctx.name||''}];}
@@ -1246,9 +1243,43 @@ function milestoneCard(r){
 }
 
 /* priority = gap-below-target × weight (business relevance) */
+/* What management should act on first.
+ * gap × weight alone produced ties — every Plastic GMV line scored exactly 1.0,
+ * so the list showed six identical rows and told you nothing. Two changes:
+ *   • carry the SHORTFALL in the KPI's own unit (target − actual), which is the
+ *     number a manager actually acts on, and break ties on it;
+ *   • collapse the same KPI repeating across a team into one row, so a systemic
+ *     miss reads as one problem with N people, not N problems.                */
 function priorityRecords(base){
   const onT=TH().onTrack;
-  return (base||B().records).filter(r=>r.rating!=null).map(r=>{const gap=Math.max(0,onT-r.rating);const w=r.weightShown!=null?r.weightShown:10;return {r,gap,w,score:gap*(w/100)};}).filter(x=>x.gap>0.01).sort((a,b)=>b.score-a.score);
+  return (base||B().records).filter(r=>r.rating!=null).map(r=>{
+    const gap=Math.max(0,onT-r.rating);
+    const w=r.weightShown!=null?r.weightShown:10;
+    const tgt=r.planTarget!=null?r.planTarget:r.target;
+    const shortfall=(tgt!=null&&r.actual!=null&&tgt>r.actual)?(tgt-r.actual):null;
+    return {r,gap,w,shortfall,score:gap*(w/100)};
+  }).filter(x=>x.gap>0.01)
+    .sort((a,b)=>(b.score-a.score)||((b.shortfall||0)-(a.shortfall||0)));
+}
+/* Group by KPI × team so one systemic miss is one line. */
+function priorityGroups(base,limit){
+  const out=[],idx={};
+  priorityRecords(base).forEach(x=>{
+    const k=(x.r.kpi||x.r.kra)+'|'+x.r.department;
+    if(!idx[k]){idx[k]={key:k,lead:x,n:0,shortfall:null,unit:x.r.unit,score:x.score};out.push(idx[k]);}
+    const g=idx[k];g.n++;
+    if(x.shortfall!=null)g.shortfall=(g.shortfall||0)+x.shortfall;
+    if(x.score>g.score){g.score=x.score;g.lead=x;}
+  });
+  return out.sort((a,b)=>(b.score-a.score)||((b.shortfall||0)-(a.shortfall||0))).slice(0,limit||6);
+}
+/* "₹0.67 Cr short" / "12 MT short" / "3 short" — the actionable magnitude. */
+function shortfallText(g){
+  if(g.shortfall==null)return '';
+  return tKpiVal(Math.round(g.shortfall*100)/100,g.unit)+' short';
+}
+function priorityWho(g){
+  return g.n>1?(g.n+' people · '+esc(g.lead.r.department)):(esc(titleName(g.lead.r.employee))+' · '+esc(g.lead.r.department));
 }
 function priorityList(base,limit){
   const items=priorityRecords(base).slice(0,limit||6);
@@ -1422,10 +1453,10 @@ function vOverview(){
   const bins=scale.map(s=>({label:s.label,short:s.label,k:s.key,
     n:B().employees.filter(e=>e.rating!=null&&e.status.k===s.key).length}));
 
-  const priority=priorityRecords(null).slice(0,6);
-  const priorityRows=priority.length?priority.map(x=>{const r=x.r;
-    return `<tr data-rec="${r.kpiId}"><td class="nm"><span class="sdot s-${r.status.k}"></span> ${esc(r.kpi||r.kra)}<small>${esc(titleName(r.employee))} · ${esc(r.department)}</small></td>
-      <td class="n">${r.weightShown==null?'—':n1(r.weightShown)+'%'}</td><td class="n">${r.rating==null?'—':ratingStr(r.rating)}</td></tr>`;
+  const priority=priorityGroups(null,6);
+  const priorityRows=priority.length?priority.map(g=>{const r=g.lead.r;const sf=shortfallText(g);
+    return `<tr data-rec="${r.kpiId}"><td class="nm"><span class="sdot s-${r.status.k}"></span> ${esc(r.kpi||r.kra)}<small>${priorityWho(g)}</small></td>
+      <td class="n">${sf||(r.weightShown==null?'—':n1(r.weightShown)+'%')}</td><td class="n">${r.rating==null?'—':ratingStr(r.rating)}</td></tr>`;
   }).join(''):'<tr><td class="empty" colspan="3">'+(hasData?'Nothing below target.':'Awaiting the backend sheet.')+'</td></tr>';
 
   const movers=(o.movers||[]).filter(m=>Math.abs(m.delta)>=.01);
@@ -1441,7 +1472,7 @@ function vOverview(){
       hasData?(o.kpisWithData+' scored KPIs'+(o.previousPeriod?' · vs '+prev:'')):'Awaiting the backend sheet.')}
     ${statTile('t2','Employees on track',n1(o.peopleOnTrackPct),'%',o.onTrack+' of '+o.peopleWithData+' rated',{meter:o.peopleOnTrackPct,nav:'employees',tone:'peri'})}
     ${statTile('t2','KPIs on track',n1(o.recOnTrackPct),'%',o.recOnTrack+' of '+o.kpisWithData+' scored',{meter:o.recOnTrackPct,nav:'goals',tone:'blue'})}
-    ${statTile('t2','KPIs at risk',String(o.recAtRisk+o.recOffTrack),'',o.recAtRisk+' at risk · '+o.recOffTrack+' off track',{nav:'goals',tone:(o.recAtRisk+o.recOffTrack)?'amber':'green'})}
+    ${statTile('t2','KPIs below target',String(o.recAtRisk+o.recOffTrack),'',o.recAtRisk+' at risk · '+o.recOffTrack+' off track',{nav:'goals',tone:(o.recAtRisk+o.recOffTrack)?'amber':'green'})}
     ${statTile('t2','Reviews pending',String(rv.pending),'',rv.total?rv.complete+' of '+rv.total+' complete':'no reviews yet',{meter:rv.progress,nav:'reviews',tone:rv.pending?'violet':'green'})}
   </div>`
   +band('How it breaks down')
@@ -1454,7 +1485,7 @@ function vOverview(){
   </div>`
   +band('What needs attention')
   +`<div class="dash">
-    ${tile('t6','Priority actions','<table class="mini"><tbody>'+priorityRows+'</tbody></table>',{right:'gap × weight'})}
+    ${tile('t6','Priority actions','<table class="mini"><tbody>'+priorityRows+'</tbody></table>',{right:'by shortfall'})}
     ${tile('t6','Biggest movers','<table class="mini"><tbody>'+moverRows+'</tbody></table>',{right:o.previousPeriod?'vs '+prev:''})}
   </div>`;
 }
@@ -1739,13 +1770,21 @@ function personSummary(e,recs){
   const persp=e.perspectives||[];
   const log=(B().checkins||[]).filter(c=>c.period===APP.period&&recs.some(r=>r.kpiId===c.kpiId)).slice(0,6);
   const rv=e.review||{status:'Not Started'};
-  const rows=recs.slice().sort((a,b)=>(b.weightShown||0)-(a.weightShown||0)).map(r=>`<tr data-rec="${r.kpiId}">
-    <td class="kname">${esc(r.kpi||r.kra||'—')}<small>${esc(r.perspective||r.kra||'')}</small></td>
-    <td class="num">${r.actual==null?'—':esc(fmtVal(r,r.actual))}</td>
-    <td class="num" style="font-weight:800">${r.rating==null?'—':ratingStr(r.rating)+'<small>/5</small>'}</td>
+  /* The full chain, left to right, in the order management reads it:
+     KRA · KPI → Weight → Target → Actual → Achievement % → Rating → Points →
+     Status. Target and Achievement were missing, which broke the chain at the
+     one place it matters most — the individual's scorecard. */
+  const rows=recs.slice().sort((a,b)=>(b.weightShown||0)-(a.weightShown||0)).map(r=>{
+    const tgt=r.planTarget!=null?r.planTarget:r.target;
+    return `<tr data-rec="${r.kpiId}">
+    <td class="kname">${esc(r.kpi||r.kra||'—')}<small>${esc([r.perspective,r.kra].filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i).join(' · '))}</small></td>
     <td class="num">${r.weightShown==null?'—':n1(r.weightShown)+'%'}</td>
+    <td class="num">${tgt==null?'—':esc(fmtVal(r,tgt))}</td>
+    <td class="num">${r.actual==null?'—':esc(fmtVal(r,r.actual))}</td>
+    <td class="num">${r.attainment==null?'—':n1(r.attainment)+'%'}</td>
+    <td class="num" style="font-weight:800">${r.rating==null?'—':ratingStr(r.rating)+'<small>/5</small>'}</td>
     <td class="num">${r.points==null?'—':n1(r.points)}</td>
-    <td>${statusPill(r.status)}</td></tr>`).join('');
+    <td>${statusPill(r.status)}</td></tr>`;}).join('');
   return `<div class="two-eq">
     <div class="panel pad"><div class="panel-h"><h3>Performance by perspective</h3><span class="sub">what drives the score</span></div>
       <div class="stack" style="margin-top:6px">${persp.map(groupBar).join('')||'<div class="empty">No perspectives tagged.</div>'}</div>
@@ -1762,10 +1801,10 @@ function personSummary(e,recs){
         }).join('')}
       </div></div>
   </div>
-  <div class="sect-t">All KPIs<span class="r">actual · rating · weight · points · status</span></div>
-  <div class="panel pad"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>KPI</th><th class="num">Actual</th><th class="num">Rating</th><th class="num">Weight</th><th class="num">Points</th><th>Status</th></tr></thead>
-  <tbody>${rows||'<tr><td colspan="6" class="empty">No KPIs mapped.</td></tr>'}
-  ${e.points!=null?'<tr class="tot"><td colspan="4" style="text-align:right">Overall</td><td class="num">'+n1(e.points)+'</td><td>'+statusPill(e.status)+'</td></tr>':''}</tbody></table></div></div>`;
+  <div class="sect-t">All KPIs<span class="r">weight → target → actual → achievement → rating → points</span></div>
+  <div class="panel pad"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>KRA · KPI</th><th class="num">Weight</th><th class="num">Target</th><th class="num">Actual</th><th class="num">Achieved</th><th class="num">Rating</th><th class="num">Points</th><th>Status</th></tr></thead>
+  <tbody>${rows||'<tr><td colspan="8" class="empty">No KPIs mapped.</td></tr>'}
+  ${e.points!=null?'<tr class="tot"><td colspan="6" style="text-align:right">Overall</td><td class="num">'+n1(e.points)+'</td><td>'+statusPill(e.status)+'</td></tr>':''}</tbody></table></div></div>`;
 }
 function personScorecard(e,recs){
   const bySub={};recs.forEach(r=>{const k=r.subTeamId||'__';(bySub[k]=bySub[k]||[]).push(r);});
