@@ -721,6 +721,104 @@ button.sb-gt.open .cv{transform:rotate(180deg)}
 .lrow:nth-child(4){animation-delay:.11s}.lrow:nth-child(5){animation-delay:.14s}.lrow:nth-child(6){animation-delay:.17s}
 .lrow:nth-child(7){animation-delay:.19s}.lrow:nth-child(8){animation-delay:.21s}.lrow:nth-child(n+9){animation-delay:.23s}
 @keyframes rowIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+/* ════════════════ MODAL SYSTEM ════════════════
+   One surface for examining a level of the hierarchy (team → employee → KRA →
+   target). The drawer stays for editing a single KPI; a modal is for reading a
+   composite record, so it is centred, quiet, and never nests a card in a card.
+   Hierarchy comes from type and space — colour appears once, on status.        */
+.mo-scrim{position:fixed;inset:0;background:rgba(12,26,51,.38);backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:opacity .22s var(--ease);z-index:70}
+.mo-scrim.on{opacity:1;pointer-events:auto}
+.mo-wrap{position:fixed;inset:0;z-index:71;display:grid;place-items:center;padding:28px;pointer-events:none}
+.mo{width:100%;max-width:720px;max-height:calc(100vh - 56px);background:var(--card);border-radius:18px;
+  box-shadow:0 1px 2px rgba(12,26,51,.06),0 40px 80px -32px rgba(12,26,51,.34);
+  display:flex;flex-direction:column;opacity:0;transform:translateY(10px) scale(.985);
+  transition:opacity .22s var(--ease),transform .26s var(--ease);pointer-events:auto;overflow:hidden}
+.mo.wide{max-width:880px}
+.mo.on{opacity:1;transform:none}
+/* header — identity on the left, the one headline number on the right */
+.mo-h{padding:22px 26px 18px;display:flex;align-items:flex-start;gap:16px;border-bottom:1px solid var(--line)}
+.mo-ic{width:42px;height:42px;flex:0 0 42px;border-radius:12px;display:grid;place-items:center;
+  background:var(--brand-soft);color:var(--brand-ink);font-weight:700;font-size:14px;overflow:hidden}
+.mo-ic svg{width:20px;height:20px}
+.mo-id{min-width:0;flex:1}
+.mo-eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.mo-h h2{margin:4px 0 0;font-size:20px;font-weight:650;letter-spacing:-.025em;line-height:1.2;font-family:var(--font-display)}
+.mo-sub{margin-top:7px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
+.mo-score{flex:0 0 auto;text-align:right}
+.mo-score .v{font-size:26px;font-weight:650;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1}
+.mo-score .l{font-size:10.5px;font-weight:650;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-top:5px}
+.mo-x{border:1px solid var(--line);background:#fff;border-radius:9px;width:32px;height:32px;flex:0 0 32px;
+  display:grid;place-items:center;cursor:pointer;color:var(--muted);transition:.15s;margin-left:2px}
+.mo-x:hover{border-color:var(--ink-2);color:var(--ink)}.mo-x svg{width:15px;height:15px}
+/* tabs */
+.mo-tabs{display:flex;gap:2px;padding:0 26px;border-bottom:1px solid var(--line);overflow-x:auto}
+.mo-tabs button{border:none;background:transparent;padding:12px 2px 11px;margin-right:22px;font:inherit;font-size:13px;
+  font-weight:550;color:var(--muted);cursor:pointer;white-space:nowrap;position:relative;transition:color .15s}
+.mo-tabs button:hover{color:var(--ink)}
+.mo-tabs button.on{color:var(--ink);font-weight:650}
+.mo-tabs button.on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--brand);border-radius:2px}
+/* body */
+.mo-b{padding:22px 26px 26px;overflow-y:auto;flex:1}
+.mo-sec+.mo-sec{margin-top:26px}
+.mo-sec-h{display:flex;align-items:baseline;gap:10px;margin-bottom:12px}
+.mo-sec-h .t{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.mo-sec-h .r{margin-left:auto;font-size:12px;color:var(--muted);font-weight:550}
+/* headline stats — hairline separated, never boxed */
+.mo-stats{display:flex;flex-wrap:wrap;gap:0;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.mo-stat{flex:1 1 0;min-width:132px;padding:14px 16px;border-right:1px solid var(--line)}
+.mo-stat:last-child{border-right:none}
+.mo-stat .l{font-size:11px;font-weight:600;color:var(--muted)}
+.mo-stat .v{font-size:21px;font-weight:650;letter-spacing:-.025em;font-variant-numeric:tabular-nums;margin-top:5px;line-height:1.1}
+.mo-stat .s{font-size:11.5px;color:var(--muted);margin-top:4px;font-weight:500}
+@media(max-width:620px){.mo-stat{flex:1 1 50%;min-width:50%;border-bottom:1px solid var(--line)}.mo-stat:nth-child(2n){border-right:none}}
+/* definition pairs */
+.mo-kv{display:grid;grid-template-columns:minmax(120px,190px) 1fr;gap:0}
+.mo-kv>div{padding:10px 0;border-top:1px solid var(--line-soft);font-size:13px;min-width:0}
+.mo-kv>div:nth-child(-n+2){border-top:none}
+.mo-kv .k{color:var(--muted);font-weight:550}
+.mo-kv .v{color:var(--ink);font-weight:550;overflow-wrap:anywhere}
+@media(max-width:560px){.mo-kv{grid-template-columns:1fr}.mo-kv .k{padding-bottom:2px}.mo-kv .v{padding-top:0;border-top:none}}
+/* rating ladder — the achieved band is marked, the rest recede */
+.mo-lad{display:flex;gap:5px}
+.mo-lad .b{flex:1;min-width:0;border:1px solid var(--line);border-radius:9px;padding:9px 7px 8px;text-align:center;background:var(--surface-2);transition:.16s}
+.mo-lad .b .n{font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
+.mo-lad .b .v{font-size:12px;font-weight:650;color:var(--ink-2);margin-top:3px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mo-lad .b.on{background:var(--brand-soft);border-color:rgba(0,93,255,.28)}
+.mo-lad .b.on .n{color:var(--brand-ink)}.mo-lad .b.on .v{color:var(--brand-ink)}
+.mo-lad-cap{display:flex;justify-content:space-between;gap:10px;margin-top:9px;font-size:11.5px;color:var(--muted);font-weight:550}
+/* the measurement line: target → actual → achievement */
+.mo-meas{display:flex;align-items:center;gap:0;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.mo-meas>div{flex:1 1 0;padding:14px 16px;border-right:1px solid var(--line);min-width:0}
+.mo-meas>div:last-child{border-right:none}
+.mo-meas .l{font-size:11px;font-weight:600;color:var(--muted)}
+.mo-meas .v{font-size:19px;font-weight:650;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin-top:5px}
+.mo-meas .arrow{flex:0 0 26px;padding:0;display:grid;place-items:center;color:var(--faint);border-right:1px solid var(--line)}
+@media(max-width:620px){.mo-meas{flex-wrap:wrap}.mo-meas>div{flex:1 1 50%;border-bottom:1px solid var(--line)}.mo-meas .arrow{display:none}}
+/* compact table */
+.mo-tbl{width:100%;border-collapse:collapse;font-size:13px}
+.mo-tbl th{text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+  padding:0 12px 9px 0;border-bottom:1px solid var(--line);white-space:nowrap}
+.mo-tbl th.n,.mo-tbl td.n{text-align:right;padding-right:0}
+.mo-tbl td{padding:11px 12px 11px 0;border-bottom:1px solid var(--line-soft);vertical-align:middle}
+.mo-tbl td.n{font-variant-numeric:tabular-nums;font-weight:600}
+.mo-tbl tbody tr:last-child td{border-bottom:none}
+.mo-tbl tr.tot td{border-top:1px solid var(--line);border-bottom:none;font-weight:700;padding-top:12px}
+.mo-tbl .nm{font-weight:600}.mo-tbl .nm small{display:block;color:var(--muted);font-weight:500;font-size:11.5px;margin-top:2px}
+.mo-tw{overflow-x:auto}
+/* bars */
+.mo-bars{display:flex;flex-direction:column;gap:11px}
+.mo-bar{display:flex;align-items:center;gap:12px;font-size:13px}
+.mo-bar .l{flex:0 0 132px;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mo-bar .t{flex:1;height:6px;background:var(--line-soft);border-radius:20px;overflow:hidden;min-width:40px}
+.mo-bar .t span{display:block;height:100%;border-radius:20px;background:var(--brand);transform-origin:left;animation:growx .7s var(--ease) backwards}
+.mo-bar .v{flex:0 0 auto;font-weight:650;font-variant-numeric:tabular-nums;min-width:44px;text-align:right}
+@media(max-width:560px){.mo-bar .l{flex-basis:96px}}
+/* footer */
+.mo-f{padding:16px 26px;border-top:1px solid var(--line);display:flex;align-items:center;gap:10px;background:var(--surface-2)}
+.mo-f .sp{flex:1}
+.mo-note{font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.5}
+@media(max-width:720px){.mo-wrap{padding:0}.mo,.mo.wide{max-width:100%;max-height:100vh;height:100vh;border-radius:0}}
+
 /* Targets — individual allocation rows carry two figures (target + achievement),
    which is one too many for a phone. Drop the chevron, let the name shrink, and
    keep both numbers legible. Scoped so shared .bc-row usage is untouched. */
@@ -767,6 +865,8 @@ button.sb-gt.open .cv{transform:rotate(180deg)}
   </div>
 </div>
 <div class="scrim" id="scrim" data-act="close-drawer"></div>
+<div class="mo-scrim" id="moScrim" data-act="mo-close"></div>
+<div class="mo-wrap" id="moWrap" style="display:none"><div class="mo" id="mo" role="dialog" aria-modal="true"></div></div>
 <aside class="drawer" id="drawer"><div id="drawerContent"></div></aside>
 <div class="toast" id="toast"></div>
 <div class="vtip" id="vtip"></div>
@@ -1846,6 +1946,177 @@ function groupWeight(g){
 }
 
 /* ---------------- HEALTH & DATA ---------------- */
+/* ═══════════════════════ MODAL SYSTEM ═══════════════════════
+   moOpen() is the only entry point. Everything below it composes the same few
+   primitives, so every modal in the product reads the same way:
+
+     header (who / what · one headline number)
+     ── optional tabs
+     headline stats      → the numbers you came for
+     measurement         → target → actual → achievement
+     rating ladder       → where that lands on the KPI's own scale
+     detail table/bars   → the breakdown, one level down
+     how it is measured  → definition, kept last because it rarely changes
+
+   Colour appears once, on status. Everything else is type and space.          */
+const MO={key:null,tab:'',ctx:{},build:null,tabs:null};
+function moOpen(spec){
+  MO.key=spec.key||null; MO.build=spec.build||null; MO.ctx=spec.ctx||{};
+  MO.tabs=spec.tabs||null;
+  MO.tab=spec.tab||((spec.tabs&&spec.tabs.length)?spec.tabs[0].id:'');
+  moRender();
+  $('#moWrap').style.display='grid';
+  requestAnimationFrame(()=>{$('#mo').classList.add('on');$('#moScrim').classList.add('on');});
+  document.body.style.overflow='hidden';
+}
+function moRender(){
+  if(!MO.build)return;
+  const s=MO.build(MO.ctx,MO.tab)||{};
+  const tl=s.tabs||MO.tabs;
+  const tabs=(tl&&tl.length)?'<div class="mo-tabs">'+tl.map(t=>'<button data-motab="'+esc(t.id)+'" class="'+(t.id===MO.tab?'on':'')+'">'+esc(t.label)+'</button>').join('')+'</div>':'';
+  const score=s.score?'<div class="mo-score"><div class="v"'+(s.scoreTone?' style="color:var(--'+s.scoreTone+'-ink)"':'')+'>'+s.score+'</div><div class="l">'+esc(s.scoreLabel||'')+'</div></div>':'';
+  const ic=s.icon?('<div class="mo-ic">'+s.icon+'</div>'):'';
+  $('#mo').className='mo on'+(s.wide?' wide':'');
+  $('#mo').innerHTML=
+    '<div class="mo-h">'+ic+'<div class="mo-id">'
+      +(s.eyebrow?'<div class="mo-eyebrow">'+esc(s.eyebrow)+'</div>':'')
+      +'<h2>'+esc(s.title||'')+'</h2>'
+      +(s.sub?'<div class="mo-sub">'+s.sub+'</div>':'')
+    +'</div>'+score
+    +'<button class="mo-x" data-act="mo-close" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>'
+    +tabs
+    +'<div class="mo-b">'+(s.body||'')+'</div>'
+    +(s.footer?'<div class="mo-f">'+s.footer+'</div>':'');
+}
+function moClose(){
+  $('#mo').classList.remove('on');$('#moScrim').classList.remove('on');
+  document.body.style.overflow='';
+  setTimeout(()=>{if(!$('#mo').classList.contains('on'))$('#moWrap').style.display='none';},240);
+}
+/* ---- primitives ---- */
+function moSec(title,content,right){return '<div class="mo-sec"><div class="mo-sec-h"><span class="t">'+esc(title)+'</span>'+(right?'<span class="r">'+right+'</span>':'')+'</div>'+content+'</div>';}
+function moStats(list){return '<div class="mo-stats">'+list.map(s=>'<div class="mo-stat"><div class="l">'+esc(s.l)+'</div><div class="v"'+(s.tone?' style="color:var(--'+s.tone+'-ink)"':'')+'>'+s.v+'</div>'+(s.s?'<div class="s">'+s.s+'</div>':'')+'</div>').join('')+'</div>';}
+function moKV(pairs){return '<div class="mo-kv">'+pairs.map(p=>'<div class="k">'+esc(p[0])+'</div><div class="v">'+p[1]+'</div>').join('')+'</div>';}
+const MO_ARROW='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h13M13 7l5 5-5 5"/></svg>';
+function moMeas(target,actual,ach,tone){
+  return '<div class="mo-meas">'
+    +'<div><div class="l">Target</div><div class="v">'+target+'</div></div>'
+    +'<div class="arrow">'+MO_ARROW+'</div>'
+    +'<div><div class="l">Actual</div><div class="v">'+actual+'</div></div>'
+    +'<div class="arrow">'+MO_ARROW+'</div>'
+    +'<div><div class="l">Achievement</div><div class="v"'+(tone?' style="color:var(--'+tone+'-ink)"':'')+'>'+ach+'</div></div>'
+    +'</div>';
+}
+function moLadder(bands,rating,fmt){
+  if(!bands||!bands.length)return '';
+  const active=rating==null?-1:clamp(Math.round(rating),1,bands.length)-1;
+  const cells=bands.map((b,i)=>'<div class="b'+(i===active?' on':'')+'"><div class="n">'+esc(b.label||('T'+(i+1)))+'</div><div class="v">'+esc(fmt?fmt(b.num):(b.raw||'—'))+'</div></div>').join('');
+  return '<div class="mo-lad">'+cells+'</div><div class="mo-lad-cap"><span>Band 4 = target met</span><span>'+(rating==null?'not yet rated':'achieved '+(bands[active]?bands[active].label:'—'))+'</span></div>';
+}
+function moTbl(cols,rows,total){
+  const th=cols.map(c=>'<th'+(c.n?' class="n"':'')+'>'+esc(c.t)+'</th>').join('');
+  const tr=rows.map(r=>'<tr'+(r.attr||'')+'>'+r.c.map((v,i)=>'<td'+(cols[i]&&cols[i].n?' class="n"':'')+'>'+v+'</td>').join('')+'</tr>').join('');
+  const tt=total?'<tr class="tot">'+total.map((v,i)=>'<td'+(cols[i]&&cols[i].n?' class="n"':'')+'>'+v+'</td>').join('')+'</tr>':'';
+  return '<div class="mo-tw"><table class="mo-tbl"><thead><tr>'+th+'</tr></thead><tbody>'+tr+tt+'</tbody></table></div>';
+}
+function moBars(list){
+  const max=list.reduce((m,x)=>Math.max(m,x.pct==null?0:x.pct),0)||100;
+  return '<div class="mo-bars">'+list.map(x=>'<div class="mo-bar"><span class="l">'+esc(x.l)+'</span><span class="t"><span style="width:'+clamp((x.pct||0)/max*100,0,100)+'%"></span></span><span class="v">'+(x.v!=null?x.v:tPct(x.pct))+'</span></div>').join('')+'</div>';
+}
+
+/* ── Target plan for one person: the plan, the buyers behind it, the KPIs it feeds */
+function moTargetPlan(teamKey,name){
+  moOpen({key:'tplan',ctx:{teamKey,name},
+    tabs:[{id:'plan',label:'Target plan'},{id:'buyers',label:'Buyer breakup'},{id:'kpis',label:'Linked KPIs'}],
+    build:(c,tab)=>{
+      const t=tgtTeam(c.teamKey), a=t&&t.allocation.filter(x=>x.name===c.name)[0];
+      if(!a)return {title:'Not found',body:'<div class="empty">No target for this person.</div>'};
+      const perf=t.mode==='performance';
+      const st=a.achievementPct==null?null:statusFromRating(a.achievementPct>=100?4.2:(a.achievementPct>=90?3.2:(a.achievementPct>=75?2.2:1.5)));
+      const head={eyebrow:t.team+' · '+periodLong(APP.period),title:a.name,
+        icon:'<span>'+initials(a.name)+'</span>',
+        sub:'<span class="tag">'+esc(a.region||'—')+'</span>'+(a.rh?'<span>RH '+esc(a.rh)+'</span>':'')+'<span>'+(a.share==null?'':a.share+'% of team target')+'</span>',
+        score:perf?tPct(a.achievementPct):tCr(a.gmvTarget),scoreLabel:perf?'achievement':'gmv target',
+        scoreTone:perf&&st?st.k:null,wide:tab!=='plan'};
+      if(tab==='buyers'){
+        const bs=a.buyers||[];
+        head.body=bs.length
+          ? moSec('Buyer-wise target',moTbl(
+              [{t:'Buyer'},{t:'Region'},{t:'Category'},{t:'Quantity',n:1},{t:'GMV target',n:1},{t:'% of individual',n:1}],
+              bs.map(b=>({c:[
+                '<span class="nm">'+esc(b.buyer)+(b.placeholder?'<small>unnamed placeholder</small>':(b.bundled?'<small>several buyers in one cell</small>':''))+'</span>',
+                esc(b.region||'—'),esc(b.category||'—'),tQty(b.qty,t.qtyUnit),tCr(b.gmvTarget),
+                a.gmvTarget&&b.gmvTarget!=null?tPct(b.gmvTarget/a.gmvTarget*100):'—']})),
+              ['Total','','',tQty(a.qtyTarget,t.qtyUnit),tCr(a.gmvTarget),'100%']),
+              bs.length+' line'+(bs.length===1?'':'s'))
+            +'<div class="mo-note">Buyer lines are the second level of the plan. They roll up into the individual target above — they are not scored separately.</div>'
+          : '<div class="empty">This team\'s workbook has no owner column on its buyer plan, so buyer lines are held at team level.</div>';
+        return head;
+      }
+      if(tab==='kpis'){
+        const recs=(B().records||[]).filter(r=>r.targetSourced&&r.employee===a.name&&r.department===t.team);
+        head.body=recs.length?moSec('KPIs this target feeds',moTbl(
+          [{t:'KPI'},{t:'KRA'},{t:'Weight',n:1},{t:'Target',n:1},{t:'Actual',n:1},{t:'Achievement',n:1},{t:'Status'}],
+          recs.map(r=>({attr:' data-rec="'+esc(r.kpiId)+'" style="cursor:pointer"',c:[
+            '<span class="nm">'+esc(r.kpi)+(r.primaryMetric?'<small>primary metric</small>':'')+'</span>',
+            esc(r.kra),r.weight+'%',
+            tKpiVal(r.planTarget,r.unit),tKpiVal(r.actual,r.unit),
+            tPct(r.attainment),statusPill(r.status)]})) ),'Target → Actual → Achievement')
+          +'<div class="mo-note">The target is assigned here; the weightage, band ladder and rating logic belong to the KPI and are unaffected by re-planning.</div>'
+          :'<div class="empty">No KPI lines yet.</div>';
+        return head;
+      }
+      head.body=moSec('This month',moStats([
+          {l:'GMV target',v:tCr(a.gmvTarget),s:(a.share==null?'':a.share+'% of team')},
+          {l:'Quantity target',v:tQty(a.qtyTarget,t.qtyUnit),s:'secondary metric'},
+          {l:'Target buyers',v:String(a.buyerCount||0),s:(a.buyerLines||0)+' plan lines'},
+          {l:perf?'Achieved':'Region',v:perf?tCr(a.gmvActual):esc(a.region||'—'),s:perf?tPct(a.achievementPct)+' of target':(a.rh?'RH '+esc(a.rh):'')}
+        ]))
+        +(perf?moSec('GMV achievement',moMeas(tCr(a.gmvTarget),tCr(a.gmvActual),tPct(a.achievementPct),st?st.k:null)):'')
+        +(perf&&a.qtyActual!=null?moSec('Volume achievement',moMeas(tQty(a.qtyTarget,t.qtyUnit),tQty(a.qtyActual,t.qtyUnit),tPct(a.qtyAchievementPct))):'')
+        +moSec('How this target was set',moKV([
+          ['Source',esc(t.team)+' target plan · '+esc((t.tabs&&t.tabs[0])||'workbook')],
+          ['Period',esc(periodLong(APP.period))],
+          ['Basis',t.mode==='performance'?'Target and achievement both present':'Plan only — no achievement recorded yet'],
+          ['Primary metric','GMV (₹ Cr) — quantity is secondary']
+        ]));
+      head.footer='<span class="sp"></span>'+(function(){const e=(B().employees||[]).filter(x=>x.name===a.name&&x.department===t.team)[0];return e?'<button class="btn ghost sm" data-person="'+esc(e.id)+'" data-act="mo-close">Open full scorecard</button>':'';})()
+        +'<button class="btn primary sm" data-act="mo-close">Done</button>';
+      return head;
+    }});
+}
+/* ── Team target: the business target and how it is allocated */
+function moTargetTeam(teamKey){
+  moOpen({key:'tteam',ctx:{teamKey},wide:true,
+    build:(c)=>{
+      const t=tgtTeam(c.teamKey);
+      if(!t||!t.connected)return {title:'Not connected',body:'<div class="empty">'+esc((t&&t.error)||'No target plan.')+'</div>'};
+      const s=t.summary,perf=t.mode==='performance';
+      const max=Math.max.apply(null,t.allocation.map(a=>a.gmvTarget||0).concat([0]));
+      return {wide:true,eyebrow:'Target plan · '+periodLong(APP.period),title:t.team+' team',
+        icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.2"/><circle cx="12" cy="12" r="4.6" opacity=".5"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg>',
+        sub:'<span class="tag">'+(perf?'Target vs achievement':'Plan · target &amp; allocation')+'</span><span>'+s.employees+' employees</span><span>'+s.buyerLines+' buyer target lines</span>',
+        score:perf?tPct(s.achievementPct):tCr(s.gmvTarget),scoreLabel:perf?'achievement':'gmv target',
+        body:moSec('Business target',moStats([
+            {l:'GMV target',v:tCr(s.gmvTarget),s:perf?tCr(s.gmvActual)+' achieved':'primary metric'},
+            {l:'Quantity target',v:tQty(s.qtyTarget,s.qtyUnit),s:perf?tPct(s.qtyAchievementPct)+' achieved':'secondary metric'},
+            {l:'Employees',v:String(s.employees),s:'carrying the target'},
+            {l:'Concentration',v:t.concentration?t.concentration.share+'%':'—',s:t.concentration?'with '+esc(t.concentration.name):''}
+          ]))
+          +moSec('Individual allocation',moTbl(
+            [{t:'Employee'},{t:'Region'},{t:'GMV target',n:1},{t:'% of team',n:1},{t:'Quantity',n:1}].concat(perf?[{t:'Achieved',n:1},{t:'Achievement',n:1}]:[]),
+            t.allocation.map(a=>({attr:' data-tgtperson="'+esc(t.key)+'|'+esc(a.name)+'" style="cursor:pointer"',
+              c:['<span class="nm">'+esc(a.name)+(a.rh?'<small>RH '+esc(a.rh)+'</small>':'')+'</span>',esc(a.region||'—'),
+                 tCr(a.gmvTarget),(a.share==null?'—':a.share+'%'),tQty(a.qtyTarget,t.qtyUnit)]
+                 .concat(perf?[tCr(a.gmvActual),tPct(a.achievementPct)]:[])})),
+            ['Total','',tCr(s.gmvTarget),'100%',tQty(s.qtyTarget,s.qtyUnit)].concat(perf?[tCr(s.gmvActual),tPct(s.achievementPct)]:[])),
+            'click a row to drill')
+          +moSec('Where the target sits',moBars(t.allocation.map(a=>({l:a.name,pct:max?(a.gmvTarget||0)/max*100:0,v:tCr(a.gmvTarget)}))))
+          +(perf&&s.actualBasis==='stated'?'<div class="mo-note">Achievement is the workbook\'s team-level figure. Its per-buyer achievement column repeats the target on every row, so a row-sum would read 100% and is not used here.</div>':''),
+        footer:'<span class="sp"></span><button class="btn primary sm" data-act="mo-close">Done</button>'};
+    }});
+}
+
 /* ═══════════════ TARGETS — the input layer, not a spreadsheet view ═══════════
    Drill order is fixed: TEAM target → INDIVIDUAL allocation → BUYER lines.
    Buyer detail is deliberately second-level; it never reaches this dashboard's
@@ -1853,7 +2124,9 @@ function groupWeight(g){
 function TG(){return (B()&&B().targets)||{available:false,teams:[]};}
 function tgtTeam(k){return (TG().teams||[]).filter(t=>t.key===k)[0]||null;}
 const tCr=v=>v==null||isNaN(v)?'—':'₹'+(Math.round(v*100)/100).toFixed(2)+' Cr';
-const tQty=(v,u)=>v==null||isNaN(v)?'—':Math.round(v).toLocaleString('en-IN')+' '+(u||'MT');
+const tQty=(v,u)=>v==null||isNaN(v)?'—':Math.round(v).toLocaleString('en-IN')+(u?' '+u:'');
+/* Format a KPI figure in its own unit — ₹ Cr, a tonnage, or a bare count. */
+const tKpiVal=(v,unit)=>v==null||isNaN(v)?'—':(unit==='Cr'?tCr(v):tQty(v,unit||''));
 const tPct=v=>v==null||isNaN(v)?'—':(Math.round(v*10)/10)+'%';
 function tgtModeChip(t){return '<span class="tag">'+(t.mode==='performance'?'Target vs achievement':'Plan · target &amp; allocation')+'</span>';}
 /* one horizontal allocation row: label · share bar · target · achievement */
@@ -1938,7 +2211,7 @@ function vTargetPerson(){
   const recs=(B().records||[]).filter(r=>r.targetSourced&&r.employee===a.name&&r.department===t.team);
   const kpis=recs.length?('<div class="sect-t">KPIs this target feeds<span class="r">Target → Actual → Achievement % → Rating</span></div>'
     +'<div class="panel pad"><div class="tbl-wrap"><table class="tbl" style="min-width:720px"><thead><tr><th>KPI</th><th>KRA</th><th class="num">Weight</th><th class="num">Target</th><th class="num">Actual</th><th class="num">Achievement</th><th class="num">Rating</th><th>Status</th></tr></thead><tbody>'
-    +recs.map(r=>'<tr data-rec="'+esc(r.kpiId)+'"><td class="kname">'+esc(r.kpi)+(r.primaryMetric?'<small>primary metric</small>':'')+'</td><td>'+esc(r.kra)+'</td><td class="num">'+r.weight+'%</td><td class="num">'+(r.unit==='Cr'?tCr(r.planTarget):tQty(r.planTarget,r.unit||''))+'</td><td class="num">'+(r.actual==null?'—':(r.unit==='Cr'?tCr(r.actual):tQty(r.actual,r.unit||'')))+'</td><td class="num">'+tPct(r.attainment)+'</td><td class="num">'+(r.rating==null?'—':(Math.round(r.rating*10)/10))+'</td><td>'+statusPill(r.status)+'</td></tr>').join('')
+    +recs.map(r=>'<tr data-rec="'+esc(r.kpiId)+'"><td class="kname">'+esc(r.kpi)+(r.primaryMetric?'<small>primary metric</small>':'')+'</td><td>'+esc(r.kra)+'</td><td class="num">'+r.weight+'%</td><td class="num">'+tKpiVal(r.planTarget,r.unit)+'</td><td class="num">'+(r.actual==null?'—':tKpiVal(r.actual,r.unit))+'</td><td class="num">'+tPct(r.attainment)+'</td><td class="num">'+(r.rating==null?'—':(Math.round(r.rating*10)/10))+'</td><td>'+statusPill(r.status)+'</td></tr>').join('')
     +'</tbody></table></div></div>'):'';
   // second-level buyer breakdown
   const buyers=(a.buyers&&a.buyers.length)?('<div class="sect-t">Buyer-wise target<span class="r">second-level detail</span></div>'
@@ -2422,8 +2695,9 @@ document.addEventListener('click',e=>{
   const pv=e.target.closest('[data-persp]');if(pv){go('perspective',{name:pv.dataset.persp});return;}
   const sb=e.target.closest('[data-subteam]');if(sb){APP.filters.subTeam=sb.dataset.subteam;APP.filters.dept=(subById(sb.dataset.subteam)||{}).deptId||'';go('employees');return;}
   const dp=e.target.closest('[data-dept]');if(dp){go('dept',{deptId:dp.dataset.dept});return;}
-  const tt=e.target.closest('[data-tgtteam]');if(tt){go('targetteam',{teamKey:tt.dataset.tgtteam});return;}
-  const tpn=e.target.closest('[data-tgtperson]');if(tpn){const parts=String(tpn.dataset.tgtperson).split('|');go('targetperson',{teamKey:parts[0],name:parts.slice(1).join('|')});return;}
+  const mtab=e.target.closest('[data-motab]');if(mtab){MO.tab=mtab.dataset.motab;moRender();return;}
+  const tt=e.target.closest('[data-tgtteam]');if(tt){moTargetTeam(tt.dataset.tgtteam);return;}
+  const tpn=e.target.closest('[data-tgtperson]');if(tpn){const parts=String(tpn.dataset.tgtperson).split('|');moTargetPlan(parts[0],parts.slice(1).join('|'));return;}
   const pc=e.target.closest('[data-person]');if(pc){go('person',{empId:pc.dataset.person});return;}
   const rv=e.target.closest('[data-review]');if(rv){go('review',{empId:rv.dataset.review});return;}
   const kd=e.target.closest('[data-def]');if(kd){go('kpidef',{defId:kd.dataset.def});return;}
@@ -2450,7 +2724,8 @@ document.addEventListener('input',e=>{
   else if(e.target.id==='libSearch')runLibSearch(e.target.value.trim());
 });
 function handleAct(a,el){
-  if(a==='close-drawer')closeDrawer();
+  if(a==='mo-close')moClose();
+  else if(a==='close-drawer')closeDrawer();
   else if(a==='toggle-nav'){const s=$('#sidebar'),sc=$('#sbScrim');if(s){const on=s.classList.toggle('open');if(sc)sc.classList.toggle('on',on);}}
   else if(a==='close-nav')closeNav();
   else if(a==='toggle-rail')setRail(!$('#app').classList.contains('rail'));
@@ -2575,7 +2850,7 @@ async function doSaveAssignment(id){
   });
   window.addEventListener('scroll',()=>{const el=get();if(el)el.classList.remove('on');},true);
 })();
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeDrawer();closeNav();const t=$('#vtip');if(t)t.classList.remove('on');}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){if($('#mo')&&$('#mo').classList.contains('on')){moClose();return;}closeDrawer();closeNav();const t=$('#vtip');if(t)t.classList.remove('on');}});
 
 /* ---------------- ReactBits-inspired motion ----------------
  * Spotlight: one delegated listener feeds the hovered card its cursor offset. */

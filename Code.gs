@@ -425,7 +425,8 @@ function injectTargetPlan_(ctx, period) {
           perspective: k.persp, kra: k.kra, kpi: k.kpi,
           definition: k.definition, method: k.method, source: k.method,
           weight: k.weight, weightShown: k.weight, weightNorm: null,
-          metricType: k.type, unit: k.unit || t.qtyUnit,
+          // Counts must stay unitless — inheriting qtyUnit rendered "3 suppliers" as "3 MT".
+          metricType: k.type, unit: k.unit || '',
           qualitative: false, direction: 1, directionKey: 'higher', directionSource: 'declared',
           bands: gmvBands_(target),
           meetsValue: Math.round(target * 0.9 * 1000) / 1000,
