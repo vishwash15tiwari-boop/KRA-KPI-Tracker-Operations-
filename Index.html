@@ -721,6 +721,8 @@ button.sb-gt.open .cv{transform:rotate(180deg)}
 .lrow:nth-child(4){animation-delay:.11s}.lrow:nth-child(5){animation-delay:.14s}.lrow:nth-child(6){animation-delay:.17s}
 .lrow:nth-child(7){animation-delay:.19s}.lrow:nth-child(8){animation-delay:.21s}.lrow:nth-child(n+9){animation-delay:.23s}
 @keyframes rowIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.sp-grow{flex:1 1 auto}
+
 /* Achievement bar — one component, used everywhere achievement is listed, so a
    manager can scan a column and see who is behind without reading a number.
    The track runs 0–125% of target with a hairline TICK at 100%: without that
@@ -941,7 +943,7 @@ function bandDisplay(rec,b){
 function backend(){return (typeof google!=='undefined'&&google.script&&google.script.run)?google.script.run:null;}
 function call(fn,payload){return new Promise((resolve,reject)=>{const b=backend();if(!b){reject({__offline:true});return;}b.withSuccessHandler(resolve).withFailureHandler(reject)[fn](payload);});}
 
-const APP={boot:null,mode:'mgmt',view:'overview',ctx:{},meId:null,tab:'',expanded:{},navOpen:{},filters:{dept:'',subTeam:'',status:'',search:''},table:{sort:'employee',dir:1,page:0,per:14},period:''};
+const APP={boot:null,mode:'mgmt',view:'overview',ctx:{},meId:null,tab:'',expanded:{},navOpen:{},roleOverride:'',filters:{dept:'',subTeam:'',status:'',search:''},table:{sort:'employee',dir:1,page:0,per:14},period:''};
 function B(){return APP.boot;}
 function TH(){return B().settings.thresholds;}
 
@@ -969,7 +971,8 @@ function withData(rs){return rs.filter(r=>r.rating!=null);}
 function realDepts(){return B().departments.filter(d=>d.kind!=='info');}
 function perfDepts(){return B().departments.filter(d=>d.employeeCount>0);}
 function filteredEmployees(){let es=B().employees.slice();const f=APP.filters;if(f.dept)es=es.filter(e=>e.deptId===f.dept);if(f.subTeam)es=es.filter(e=>e.subTeamIds&&e.subTeamIds.indexOf(f.subTeam)>=0);if(f.status)es=es.filter(e=>e.status.k===f.status);if(f.search){const q=f.search.toLowerCase();es=es.filter(e=>(e.name+' '+e.role+' '+e.region+' '+e.department).toLowerCase().includes(q));}return es;}
-function filteredRecords(base){let r=(base||B().records).slice();const f=APP.filters;if(f.dept)r=r.filter(x=>x.deptId===f.dept);if(f.subTeam)r=r.filter(x=>x.subTeamId===f.subTeam);if(f.status)r=r.filter(x=>x.status.k===f.status);if(f.search){const q=f.search.toLowerCase();r=r.filter(x=>(x.employee+' '+x.kpi+' '+x.kra+' '+x.department+' '+(x.subTeam||'')).toLowerCase().includes(q));}return r;}
+/* Four filters only: Team, Employee, Period (the topbar switch) and Status. */
+function filteredRecords(base){let r=(base||scopedRecords()).slice();const f=APP.filters;if(f.dept)r=r.filter(x=>x.deptId===f.dept);if(f.emp)r=r.filter(x=>x.employeeId===f.emp);if(f.status)r=r.filter(x=>x.status.k===f.status);if(f.search){const q=f.search.toLowerCase();r=r.filter(x=>(x.employee+' '+x.kpi+' '+x.kra).toLowerCase().includes(q));}return r;}
 
 /* ---------------- chrome ---------------- */
 const ICONS={overview:'<path d="M3 12l2-2 4 4 5-6 4 4 3-3"/><path d="M3 20h18" opacity=".4"/>',teams:'<rect x="3" y="4" width="7" height="7" rx="1.5"/><rect x="14" y="4" width="7" height="7" rx="1.5"/><rect x="3" y="15" width="7" height="5" rx="1.5"/><rect x="14" y="15" width="7" height="5" rx="1.5"/>',perspectives:'<path d="M12 3l8 4-8 4-8-4z"/><path d="M4 12l8 4 8-4"/><path d="M4 16.5l8 4 8-4" opacity=".5"/>',kpianalysis:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2" opacity=".9"/>',people:'<circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="9" r="2.6" opacity=".55"/><path d="M15 20a5 5 0 0 1 6.5-4.8" opacity=".55"/>',records:'<path d="M4 5h16M4 12h16M4 19h16"/>',health:'<path d="M12 21s-7-4.5-9.5-9C1 9 2.5 5 6 5c2 0 3.2 1.2 4 2.4C10.8 6.2 12 5 14 5c3.5 0 5 4 3.5 7-1 1.9-3 4-5.5 6z" opacity=".25"/><path d="M3 12h4l2-4 3 8 2-5 2 1h5"/>',me:'<circle cx="12" cy="8" r="3.4"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/>',mykpis:'<path d="M4 6h16M4 12h16M4 18h10"/><circle cx="20" cy="18" r="2"/>'};
@@ -982,18 +985,24 @@ const ICONS={overview:'<path d="M3 12l2-2 4 4 5-6 4 4 3-3"/><path d="M3 20h18" o
  * KPI Analysis were third lenses on records already reachable per team and
  * per person. "My Performance" moved to the profile chip in the footer,
  * which is where people look for their own scorecard anyway. */
+/* FOUR sections, and nothing else. Every other capability is reached in the
+   context where it is used, not as a module of its own:
+     Targets       -> the KPI assignment it feeds (employee + KPI Tracking)
+     Scorecard     -> the employee view inside Teams
+     Perspectives  -> a panel on Overview and on the employee
+     Alerts        -> status indicators on the row itself
+     Reports       -> Export, an action on the screen you are already on
+     Libraries     -> Settings, for administrators
+   The test each one had to pass: does it help define, assign, track, evaluate
+   or review a KRA/KPI? */
 const NAV_MAIN=[
   {id:'overview',label:'Overview'},
-  {id:'targets',label:'Targets'},
   {id:'teams',label:'Teams'},
-  {id:'employees',label:'People'},
-  {id:'records',label:'KPIs'},
-  {id:'checkins',label:'Check-ins'}
+  {id:'records',label:'KPI Tracking'},
+  {id:'reviews',label:'Reviews'}
 ];
-/* Administration — how the framework itself is set up. */
+/* Administrators only — definitions, cycles and configuration live behind here. */
 const NAV_ADMIN=[
-  {id:'library',label:'KRA / KPI Library'},
-  {id:'cycles',label:'Performance Cycles'},
   {id:'settings',label:'Settings'}
 ];
 /* The sidebar reads top-to-bottom in the order the work happens, then the
@@ -1031,6 +1040,46 @@ const NAV_PARENT={
   health:'settings', library:'settings', kpidef:'settings', reviews:'settings'
 };
 function nav(){return NAV_MAIN;}
+
+/* ── roles ─────────────────────────────────────────────────────────────────────
+   Four audiences, one product. Scope is enforced in the data helpers, not just
+   hidden in the chrome, so a manager cannot reach another team's people by
+   guessing a view. Resolved from settings by email, defaulting to management so
+   a fresh deployment is usable before roles are configured. */
+function ROLE(){
+  if(APP.roleOverride)return APP.roleOverride;
+  const s=(B()&&B().settings)||{},me=((B()&&B().user&&B().user.email)||'').toLowerCase();
+  const map=s.roles||{};
+  if(map[me])return map[me];
+  const admins=(Array.isArray(s.admins)?s.admins:[]).map(x=>String(x).toLowerCase());
+  if(me&&admins.indexOf(me)>=0)return 'admin';
+  return 'management';
+}
+const isAdmin=()=>ROLE()==='admin';
+const isEmployeeRole=()=>ROLE()==='employee';
+/* Teams this user may see; null means no restriction. */
+function scopedDeptIds(){
+  const r=ROLE();
+  if(r==='admin'||r==='management')return null;
+  const me=APP.meId?empById(APP.meId):null;
+  return me?[me.deptId]:null;
+}
+function scopedEmployees(){
+  const all=B().employees||[];
+  if(isEmployeeRole())return all.filter(e=>e.id===APP.meId);
+  const ids=scopedDeptIds();
+  return ids?all.filter(e=>ids.indexOf(e.deptId)>=0):all;
+}
+function scopedRecords(){
+  const all=B().records||[];
+  if(isEmployeeRole())return all.filter(r=>r.employeeId===APP.meId);
+  const ids=scopedDeptIds();
+  return ids?all.filter(r=>ids.indexOf(r.deptId)>=0):all;
+}
+function scopedDepts(){
+  const ids=scopedDeptIds();
+  return (B().departments||[]).filter(d=>d.kind!=='info'&&(!ids||ids.indexOf(d.id)>=0));
+}
 const ADMIN_VIEWS=NAV_ADMIN.map(x=>x.id).concat(['health','kpidef','library','reviews']);
 function deptIcon(kind){if(kind==='scorecard')return '<path d="M3 3v18h18"/><path d="M7 14l3-3 3 3 4-5" fill="none"/>';if(kind==='individuals')return ICONS.people;if(kind==='info')return '<circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/>';return ICONS.records;}
 function buildChrome(){
@@ -1042,7 +1091,9 @@ function buildChrome(){
   const badgeFor=id=>(id==='checkins'&&awaiting)?('<span class="badge">'+awaiting+'</span>'):'';
   // Day-to-day modules stay open; setup collapses so the rail reads as 7 items,
   // not 12. A section auto-opens when the current view lives inside it.
-  navEl.innerHTML='<div class="nav-rail" id="navRail"></div>'+NAV_GROUPS.map(g=>{
+  navEl.innerHTML='<div class="nav-rail" id="navRail"></div>'+NAV_GROUPS
+    .filter(g=>g.key!=='admin'||isAdmin())          // Settings is administrators only
+    .map(g=>{
     const holdsActive=g.items.some(nv=>nv.id===activeNav);
     const open=g.collapsible?(holdsActive||APP.navOpen[g.key]===true):true;
     const head=g.collapsible
@@ -1091,16 +1142,49 @@ function buildFilterbar(){
   const statuses=[['','All status']].concat(SCALE().slice().sort((a,b)=>b.min-a.min).map(s=>[s.key,s.label])).concat([['none','Pending']]);
   let h='';
   h+='<div class="selectwrap"><select class="pill-select" data-filter="dept"><option value="">All teams</option>'+depts.map(d=>'<option value="'+d.id+'"'+(f.dept===d.id?' selected':'')+'>'+esc(d.name)+'</option>').join('')+'</select></div>';
-  if(subs.length)h+='<div class="selectwrap"><select class="pill-select" data-filter="subTeam"><option value="">All sub-teams</option>'+subs.map(s=>'<option value="'+s.id+'"'+(f.subTeam===s.id?' selected':'')+'>'+esc((f.dept?'':s.deptName+' · ')+s.name)+'</option>').join('')+'</select></div>';
+  // Employee is one of the four filters this product allows; sub-team was a
+  // fifth axis that only restated the team, so it is gone.
+  const emps=scopedEmployees().filter(e=>!f.dept||e.deptId===f.dept)
+    .slice().sort((a,b)=>a.name.localeCompare(b.name));
+  h+='<div class="selectwrap"><select class="pill-select" data-filter="emp"><option value="">All employees</option>'+emps.map(e=>'<option value="'+esc(e.id)+'"'+(f.emp===e.id?' selected':'')+'>'+esc(titleName(e.name))+'</option>').join('')+'</select></div>';
   // A 7-button strip for status was the noisiest thing on screen; the active
   // choice still reads back as a chip below, so nothing is lost.
   h+='<div class="selectwrap"><select class="pill-select" data-filter="status">'+statuses.map(([v,l])=>'<option value="'+esc(v)+'"'+(f.status===v?' selected':'')+'>'+esc(l)+'</option>').join('')+'</select></div>';
-  h+='<div class="fsearch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg><input id="fSearch" placeholder="Search people, KRAs, KPIs…" value="'+esc(f.search)+'"></div>';
-  const chips=[];if(f.dept)chips.push(chip('Team','dept',(deptById(f.dept)||{}).name||''));if(f.subTeam)chips.push(chip('Sub-team','subTeam',(subById(f.subTeam)||{}).name||''));if(f.status)chips.push(chip('Status','status',(statuses.find(s=>s[0]===f.status)||['',''])[1]));if(f.search)chips.push(chip('Search','search','“'+f.search+'”'));
-  if(chips.length)h+='<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+chips.join('')+'<span class="clear-all" data-act="clear-filters">Clear all</span></div>';
+  h+='<div class="fsearch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg><input id="fSearch" placeholder="Search KRAs and KPIs…" value="'+esc(f.search)+'"></div>';
+  h+='<span class="sp-grow"></span><button class="btn ghost sm" data-act="export" title="Download this view as CSV">Export</button>';
+  const chips=[];if(f.dept)chips.push(chip('Team','dept',(deptById(f.dept)||{}).name||''));
+  if(f.emp)chips.push(chip('Employee','emp',titleName((empById(f.emp)||{}).name||'')));
+  if(f.status)chips.push(chip('Status','status',(statuses.find(s=>s[0]===f.status)||['',''])[1]));
+  if(f.search)chips.push(chip('Search','search','“'+f.search+'”'));
+  if(chips.length)h+='<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex-basis:100%">'+chips.join('')+'<span class="clear-all" data-act="clear-filters">Clear all</span></div>';
   $('#filterbar').innerHTML=h;
 }
 function chip(l,k,v){return '<span class="chip">'+esc(l)+' <b>'+esc(v)+'</b><button data-clear="'+k+'">×</button></span>';}
+
+/* Export replaces the Reports module: it exports exactly what is on screen,
+   filters and all, from the screen you are already on. One chain per row. */
+function exportView(){
+  const rows=filteredRecords(null);
+  if(!rows.length){toast('Nothing to export in this view',true);return;}
+  const cols=['Team','Employee','Perspective','KRA','KPI','Weightage %','Target','Actual','Achievement %','Rating','Status','Period'];
+  const csv=[cols.join(',')].concat(rows.map(r=>[
+    r.department,titleName(r.employee),r.perspective||'',r.kra||'',r.kpi||'',
+    r.weightShown==null?'':n1(r.weightShown),
+    (r.planTarget!=null?r.planTarget:r.target)==null?'':(r.planTarget!=null?r.planTarget:r.target),
+    r.actual==null?'':r.actual,
+    r.attainment==null?'':n1(r.attainment),
+    r.rating==null?'':ratingStr(r.rating),
+    (r.status&&r.status.label)||'',APP.period
+  ].map(v=>{const s=String(v==null?'':v);return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}).join(','))).join('\n');
+  try{
+    const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+    const a=document.createElement('a');
+    a.href=url;a.download='kpi-tracking-'+APP.period+'.csv';
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1500);
+    toast(rows.length+' KPI rows exported');
+  }catch(e){toast('Export failed in this browser',true);}
+}
 
 /* ── navigation history ───────────────────────────────────────────────────────
    Breadcrumbs alone left no way back from a drill-down (and they are hidden on
@@ -1455,7 +1539,7 @@ function vOverview(){
 
   const head=`<div class="dash-head"><h1>Performance</h1>
     <span class="sub">${esc(cy?cy.name:periodLong(APP.period))} · ${o.people} people · ${o.kpis} KPIs across ${o.departments} teams</span>
-    <div class="r"><span class="link" data-nav="reports">Reports ›</span></div></div>`;
+    <div class="r"><button class="btn ghost sm" data-act="export">Export</button></div></div>`;
 
   // Blank state keeps the FULL card format — every tile, the modal, and the
   // defined framework (teams, members, KRAs/KPIs) are shown; only the measured
@@ -1490,29 +1574,53 @@ function vOverview(){
       <td class="n">${deltaChip(m.delta)}</td><td class="n">${m.score==null?'—':n1(m.score)+'%'}</td></tr>`).join('')
     :'<tr><td class="empty" colspan="3">'+(hasData?'No period-over-period change yet.':'Awaiting the backend sheet.')+'</td></tr>';
 
+  /* KRA achievement — the layer between perspective and KPI. Rolled up here
+     from the records, weight-averaged, so the chain has no missing rung. */
+  /* An employee never sees the org command centre — they land on themselves. */
+  if(isEmployeeRole()&&APP.meId)return vPerson();
+  const kraRoll=kraRollup(scopedRecords());
+  /* KPI achievement = weight-average of every scored KPI's achievement %. */
+  const kpiAch=(function(){let sw=0,sa=0;scopedRecords().forEach(r=>{if(r.attainment==null)return;
+    const w=(r.weightShown!=null?r.weightShown:10);sw+=w;sa+=w*r.attainment;});
+    return sw>0?Math.round(sa/sw*10)/10:null;})();
+  const kraRows=kraRoll.slice(0,6).map(k=>
+    dRow(k.kra,k.kpis+' KPIs',k.ach==null?null:n1(k.ach),'%',(k.ach||0)/125,'')).join('');
+
   return head+banner
   +band('Where we stand')
   +`<div class="dash">
     ${heroTile(o.score,o.rating,o.status,o.delta,
       hasData?(o.kpisWithData+' scored KPIs'+(o.previousPeriod?' · vs '+prev:'')):'Awaiting the backend sheet.')}
-    ${statTile('t2','Employees on track',n1(o.peopleOnTrackPct),'%',o.onTrack+' of '+o.peopleWithData+' rated',{meter:o.peopleOnTrackPct,nav:'employees',tone:'peri'})}
-    ${statTile('t2','KPIs on track',n1(o.recOnTrackPct),'%',o.recOnTrack+' of '+o.kpisWithData+' scored',{meter:o.recOnTrackPct,nav:'records',tone:'blue'})}
-    ${statTile('t2','KPIs below target',String(o.recAtRisk+o.recOffTrack),'',o.recAtRisk+' at risk · '+o.recOffTrack+' off track',{nav:'records',tone:(o.recAtRisk+o.recOffTrack)?'amber':'green'})}
+    ${statTile('t2','KRA achievement',kraRoll.ach==null?'—':n1(kraRoll.ach),'%',kraRoll.length+' result areas',{meter:kraRoll.ach,tone:'peri'})}
+    ${statTile('t2','KPI achievement',kpiAch==null?'—':n1(kpiAch),'%',o.kpisWithData+' of '+o.kpis+' scored',{meter:kpiAch,nav:'records',tone:'blue'})}
+    ${statTile('t2','On track / at risk / overdue',String(o.recOnTrack),'',o.recAtRisk+' at risk · '+o.recOffTrack+' overdue',{nav:'records',tone:(o.recAtRisk+o.recOffTrack)?'amber':'green'})}
     ${statTile('t2','Reviews pending',String(rv.pending),'',rv.total?rv.complete+' of '+rv.total+' complete':'no reviews yet',{meter:rv.progress,nav:'reviews',tone:rv.pending?'violet':'green'})}
   </div>`
   +band('How it breaks down')
   +`<div class="dash">
-    ${tile('t7','Performance trend',areaChart(o.trend,{h:150}),{right:o.delta!=null?(o.delta>0?'▲':'▼')+' vs '+prev:'rating / 5'})}
     ${tile('t5','Team performance','<div>'+(teamRows||'<div class="empty">No teams.</div>')+'</div>',{right:'score / 100'})}
-    ${tile('t5','Perspective performance','<div>'+(perspRows||'<div class="empty">No perspectives tagged.</div>')+'</div>',{right:'All ›',rightNav:'perspectives'})}
-    ${tile('t3','Performance distribution',distCols(bins),{right:o.peopleWithData+' rated'})}
-    ${tile('t4','Coverage','<div class="stat"><div class="v">'+n1(o.coverage)+'<span class="u">%</span></div><div class="sub">'+o.kpisWithData+' of '+o.kpis+' KPIs have '+esc(periodShort(APP.period))+' actuals</div><div class="meter"><span style="width:'+clamp(o.coverage,0,100)+'%"></span></div></div>',{nav:'checkins',tone:'mint'})}
+    ${tile('t5','KRA performance','<div>'+(kraRows||'<div class="empty">No KRAs tagged.</div>')+'</div>',{right:'achievement %'})}
+    ${tile('t5','Perspective performance','<div>'+(perspRows||'<div class="empty">No perspectives tagged.</div>')+'</div>',{right:'score / 100'})}
   </div>`
-  +band('What needs attention')
+  +band('Management attention')
   +`<div class="dash">
-    ${tile('t6','Priority actions','<table class="mini"><tbody>'+priorityRows+'</tbody></table>',{right:'by shortfall'})}
-    ${tile('t6','Biggest movers','<table class="mini"><tbody>'+moverRows+'</tbody></table>',{right:o.previousPeriod?'vs '+prev:''})}
+    ${tile('t12','Needs intervention','<table class="mini"><tbody>'+priorityRows+'</tbody></table>',{right:'by shortfall'})}
   </div>`;
+}
+/* Weight-averaged achievement per KRA, plus an overall on the array itself. */
+function kraRollup(recs){
+  const m={},order=[];
+  (recs||[]).forEach(r=>{
+    const k=r.kra||r.perspective||'General';
+    if(!m[k]){m[k]={kra:k,kpis:0,sw:0,sa:0};order.push(k);}
+    const g=m[k];g.kpis++;
+    if(r.attainment!=null){const w=(r.weightShown!=null?r.weightShown:10);g.sw+=w;g.sa+=w*r.attainment;}
+  });
+  const out=order.map(k=>{const g=m[k];return {kra:k,kpis:g.kpis,ach:g.sw>0?Math.round(g.sa/g.sw*10)/10:null,sw:g.sw,sa:g.sa};})
+    .sort((a,b)=>(b.ach==null?-1:b.ach)-(a.ach==null?-1:a.ach));
+  const tw=out.reduce((s,x)=>s+x.sw,0),ta=out.reduce((s,x)=>s+x.sa,0);
+  out.ach=tw>0?Math.round(ta/tw*10)/10:null;
+  return out;
 }
 /* One question per band — the heading tells you what the tiles below answer. */
 function band(title,desc){
@@ -1886,7 +1994,7 @@ function fmtActual(r){if(r.actual==null)return r.rating!=null?'rated '+ratingStr
 /* ---------------- RECORDS (All KPIs / My KPIs) ---------------- */
 function vRecords(){
   const mine=APP.view==='mykpis';
-  let base=mine?recordsForEmp(APP.meId):B().records;
+  let base=mine?recordsForEmp(APP.meId):scopedRecords();
   if(mine&&!APP.meId)return vPickMe();
   let rows=filteredRecords(base);
   const s=APP.table.sort,dir=APP.table.dir;
@@ -1898,8 +2006,8 @@ function vRecords(){
   const title=mine?('My KPIs'+(me?' · '+esc(me.name):'')):'All KPIs';
   return `<div class="page-head"><h1>${title}</h1><p>${rows.length} records${!mine&&(APP.filters.dept||APP.filters.subTeam||APP.filters.status||APP.filters.search)?' (filtered)':''} · tap a row to enter an actual.</p></div>
   <div class="panel pad"><div class="panel-h"><h3>${rows.length} record${rows.length===1?'':'s'}</h3><span class="sub">${withData(rows).length} with ${esc(periodShort(APP.period))} actuals</span></div>
-  <div class="tbl-wrap stack"><table class="tbl"><thead><tr>${mine?'':th('employee','Person')}${mine?'':th('department','Team')}${th('kpi','KRA / KPI')}${th('type','Type')}${th('weight','Wt',1)}${th('target','Target',1)}${th('actual','Actual',1)}${th('ach','Achieved',1)}${th('rating','Rating',1)}<th>Status</th></tr></thead>
-  <tbody>${slice.length?slice.map(r=>`<tr data-rec="${r.kpiId}">${mine?'':'<td class="kname">'+esc(titleName(r.employee))+'</td>'}${mine?'':'<td>'+esc(r.department)+(r.subTeam?' · '+esc(r.subTeam):'')+'</td>'}<td class="kname">${esc(r.kpi||r.kra||'—')}<small>${esc(r.kra&&r.kpi&&r.kra!==r.kpi?r.kra:(r.perspective||''))}</small></td><td><span class="tag mt">${esc(r.metricType||'—')}</span></td><td class="num">${r.weightShown==null?'—':n1(r.weightShown)+'%'}</td><td class="num">${r.target==null?'—':esc(fmtVal(r,r.target))}</td><td class="num">${r.actual==null?'—':esc(fmtVal(r,r.actual))}</td><td class="num">${achCell(r.attainment,r.status.k,r.target==null?'':'Target '+fmtVal(r,r.target))}</td><td class="num" style="color:${sc(r.status.k)};font-weight:800">${r.rating==null?'—':ratingStr(r.rating)}</td><td>${statusPill(r.status)}</td></tr>`).join(''):'<tr><td colspan="'+(mine?8:10)+'" class="empty">No records match the filters.</td></tr>'}</tbody></table></div>
+  <div class="tbl-wrap stack"><table class="tbl"><thead><tr>${mine?'':th('employee','Employee')}${th('kra','KRA')}${th('kpi','KPI')}${th('target','Target',1)}${th('actual','Actual',1)}${th('ach','Achievement %',1)}${th('rating','Rating',1)}<th>Status</th></tr></thead>
+  <tbody>${slice.length?slice.map(r=>`<tr data-rec="${r.kpiId}">${mine?'':'<td class="kname">'+esc(titleName(r.employee))+'<small>'+esc(r.department)+'</small></td>'}<td>${esc(r.kra||'—')}</td><td class="kname">${esc(r.kpi||'—')}${r.weightShown!=null?'<small>'+n1(r.weightShown)+'% weight</small>':''}</td><td class="num">${r.target==null?'—':esc(fmtVal(r,r.target))}</td><td class="num">${r.actual==null?'—':esc(fmtVal(r,r.actual))}</td><td class="num">${achCell(r.attainment,r.status.k,r.target==null?'':'Target '+fmtVal(r,r.target))}</td><td class="num" style="color:${sc(r.status.k)};font-weight:800">${r.rating==null?'—':ratingStr(r.rating)}</td><td>${statusPill(r.status)}</td></tr>`).join(''):'<tr><td colspan="'+(mine?7:8)+'" class="empty">No KPIs match the filters.</td></tr>'}</tbody></table></div>
   <div class="pager"><span>Page ${page+1} of ${pages} · ${slice.length} of ${rows.length}</span><div><button data-page="prev" ${page===0?'disabled':''}>Prev</button><button data-page="next" ${page>=pages-1?'disabled':''}>Next</button></div></div></div>`;
 }
 
@@ -2879,7 +2987,8 @@ function handleAct(a,el){
     buildChrome();}
   else if(a==='go-me')go(APP.meId?'me':'pickme');
   else if(a==='refresh')doRefresh();
-  else if(a==='clear-filters'){APP.filters={dept:'',subTeam:'',status:'',search:''};APP.table.page=0;render();}
+  else if(a==='clear-filters'){APP.filters={dept:'',subTeam:'',emp:'',status:'',search:''};APP.table.page=0;render();}
+  else if(a==='export')exportView();
   else if(a==='save-actual')saveActual(el.dataset.rec);
   else if(a==='save-checkin')saveCheckin(el.dataset.rec);
   else if(a==='scaffold')doScaffold();
