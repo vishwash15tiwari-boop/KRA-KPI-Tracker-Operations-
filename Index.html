@@ -41,18 +41,42 @@
   --shadow-xs:0 1px 1px rgba(12,26,51,.03);
   --shadow:0 1px 2px rgba(12,26,51,.05),0 12px 28px -18px rgba(12,26,51,.22);
   --shadow-lg:0 28px 64px -28px rgba(12,26,51,.30);
-  --r-lg:18px;--r-md:14px;--sbw:246px;--ease:cubic-bezier(.22,.61,.36,1);
+  /* ===== Type scale — 7 text rungs plus one display size =====
+     The interface had drifted to 28 distinct sizes, twelve of them inside a 4px
+     band: too close to read as hierarchy, too different to read as consistent.
+     Each rung below has one job, and nothing sits between them. */
+  --fs-hero:44px;   /* the single figure a screen leads with */
+  --fs-page:28px;   /* page title */
+  --fs-xl:20px;     /* supporting metric, stat value */
+  --fs-lg:15px;     /* section title */
+  --fs-md:13px;     /* body, table content */
+  --fs-sm:12px;     /* metadata */
+  --fs-xs:11px;     /* column header, tile label (uppercase) */
+  --fs-2xs:10px;    /* units, footnotes — the floor */
+  /* Weights: three. 500/550/650/750/800 were steps carrying no meaning. */
+  --fw-normal:400;--fw-med:600;--fw-bold:700;
+  /* Radii: three. Card, control, pill. */
+  --r-card:12px;--r-ctl:8px;--r-pill:999px;
+  --r-lg:var(--r-card);--r-md:var(--r-card);
+  /* 4px spacing grid */
+  --sp:4px;--sp2:8px;--sp3:12px;--sp4:16px;--sp5:20px;--sp6:24px;--sp8:32px;
+  --sbw:246px;--ease:cubic-bezier(.22,.61,.36,1);
 }
 *{box-sizing:border-box}html,body{margin:0;padding:0}
-body{font-family:var(--font-sans);background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;font-feature-settings:'tnum' 1,'calt' 1,'cv11' 1;letter-spacing:-.011em}
+body{font-family:var(--font-sans);background:var(--bg);color:var(--ink);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;font-feature-settings:'tnum' 1,'calt' 1,'cv11' 1;letter-spacing:-.011em}
 button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
+/* Native defaults sat outside the scale: <b> resolves to `bolder`, which computes
+   to 900 against a 700 parent, and <small> to `smaller` (0.833em → 10.83px).
+   Both are pinned to tokens; any rule carrying a class still wins on specificity. */
+b,strong{font-weight:var(--fw-bold)}
+small{font-size:var(--fs-xs)}
 /* Poppins carries brand personality on the logo, titles and headline figures;
    Inter keeps tables, meta and dense tabular numbers crisp. */
 .wordmark,.page-head h1,.dash-head h1,.person-hd h1,.state h2,.hero-fig,.kc-value,.exp-pt,.dcard h3,.lead-tile .lt-name{font-family:var(--font-display);letter-spacing:-.02em}
 .page-head h1,.dash-head h1{letter-spacing:-.022em}
-:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:5px}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:8px}
 ::selection{background:rgba(0,0,0,.10)}
-::-webkit-scrollbar{width:11px;height:11px}::-webkit-scrollbar-thumb{background:#D4DAE3;border-radius:20px;border:3px solid var(--bg);background-clip:padding-box}::-webkit-scrollbar-thumb:hover{background:#BFC7D2}
+::-webkit-scrollbar{width:11px;height:11px}::-webkit-scrollbar-thumb{background:#D4DAE3;border-radius:999px;border:3px solid var(--bg);background-clip:padding-box}::-webkit-scrollbar-thumb:hover{background:#BFC7D2}
 
 .app{min-height:100vh;display:flex}
 
@@ -62,38 +86,38 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
 /* Chrome sits back on a tinted ground so the white content plane advances —
    the flat white-on-white was what made the whole thing read as lifeless. */
 .sidebar{width:var(--sbw);flex:0 0 var(--sbw);height:100vh;position:sticky;top:0;background:var(--surface-2);border-right:1px solid var(--line);display:flex;flex-direction:column;z-index:45;transition:width .26s var(--ease),flex-basis .26s var(--ease)}
-.sb-head{display:flex;align-items:center;gap:9px;padding:0 14px;height:56px;flex:0 0 56px;border-bottom:1px solid var(--line-soft)}
-.brand{display:flex;align-items:center;gap:9px;min-width:0;flex:1;cursor:pointer}
+.sb-head{display:flex;align-items:center;gap:8px;padding:0 16px;height:56px;flex:0 0 56px;border-bottom:1px solid var(--line-soft)}
+.brand{display:flex;align-items:center;gap:8px;min-width:0;flex:1;cursor:pointer}
 .brand .logo{flex:0 0 auto;display:grid;place-items:center}
 .brand .logo svg{width:26px;height:26px;display:block}
-.wordmark{font-weight:700;font-size:16.5px;letter-spacing:.01em;color:var(--ink);white-space:nowrap;overflow:hidden}
+.wordmark{font-weight:700;font-size:15px;letter-spacing:.01em;color:var(--ink);white-space:nowrap;overflow:hidden}
 /* The collapse control lives with identity at the foot, so it is reachable in
    both states — a rail with no way out is a trap. */
-.sb-collapse{display:flex;align-items:center;gap:11px;width:100%;border:none;background:transparent;color:var(--muted);padding:8px 12px;border-radius:10px;cursor:pointer;font-size:12.5px;font-weight:600;margin-bottom:6px;transition:.15s;font-family:inherit}
+.sb-collapse{display:flex;align-items:center;gap:12px;width:100%;border:none;background:transparent;color:var(--muted);padding:8px 12px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;margin-bottom:8px;transition:.15s;font-family:inherit}
 .sb-collapse:hover{background:var(--surface-2);color:var(--ink-2)}
 .sb-collapse svg{width:16px;height:16px;flex:0 0 16px;transition:transform .26s var(--ease)}
-.sb-nav{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:6px 10px 14px;position:relative}
+.sb-nav{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:8px 8px 16px;position:relative}
 .sb-nav::-webkit-scrollbar{width:6px}.sb-nav::-webkit-scrollbar-thumb{border:none;background:var(--line-2)}
-.sb-gt{font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);padding:0 12px;margin:16px 0 6px;white-space:nowrap;overflow:hidden}
-.sb-group:first-of-type .sb-gt{margin-top:6px}
+.sb-gt{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);padding:0 12px;margin:16px 0 8px;white-space:nowrap;overflow:hidden}
+.sb-group:first-of-type .sb-gt{margin-top:8px}
 /* Setup collapses out of the way; the chevron is the only affordance needed. */
-button.sb-gt{display:flex;align-items:center;gap:6px;width:100%;background:transparent;border:none;cursor:pointer;font-family:inherit;border-radius:7px;padding:5px 12px;margin:16px 0 4px;transition:color .15s}
+button.sb-gt{display:flex;align-items:center;gap:8px;width:100%;background:transparent;border:none;cursor:pointer;font-family:inherit;border-radius:8px;padding:4px 12px;margin:16px 0 4px;transition:color .15s}
 button.sb-gt:hover{color:var(--muted)}
 button.sb-gt .cv{width:11px;height:11px;margin-left:auto;transition:transform .22s var(--ease);opacity:.8}
 button.sb-gt.open .cv{transform:rotate(180deg)}
 .sb-group.collapsed .sb-items{display:none}
 /* the rail that slides between modules — ReactBits "Line Sidebar" idea */
-.nav-rail{position:absolute;left:10px;width:3px;border-radius:3px;background:var(--brand);opacity:0;transition:transform .28s var(--ease),height .28s var(--ease),opacity .2s;pointer-events:none;will-change:transform}
-.nav-item{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:10px;position:relative;color:var(--ink-2);font-weight:550;cursor:pointer;font-size:13.5px;letter-spacing:-.006em;white-space:nowrap;transition:background .16s var(--ease),color .16s var(--ease)}
+.nav-rail{position:absolute;left:10px;width:3px;border-radius:4px;background:var(--brand);opacity:0;transition:transform .28s var(--ease),height .28s var(--ease),opacity .2s;pointer-events:none;will-change:transform}
+.nav-item{display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:8px;position:relative;color:var(--ink-2);font-weight:600;cursor:pointer;font-size:13px;letter-spacing:-.006em;white-space:nowrap;transition:background .16s var(--ease),color .16s var(--ease)}
 .nav-item svg{display:block;width:17px;height:17px;flex:0 0 17px;opacity:.62;transition:.16s}
 .nav-item .lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .nav-item:hover{background:var(--surface-2);color:var(--ink)}
 .nav-item:hover svg{opacity:.9}
-.nav-item.active{background:var(--brand-soft);color:var(--brand-ink);font-weight:650}
+.nav-item.active{background:var(--brand-soft);color:var(--brand-ink);font-weight:600}
 .nav-item.active svg{opacity:1;color:var(--brand)}
-.nav-item .badge{margin-left:auto;font-size:10.5px;font-weight:700;background:var(--surface-3);color:var(--ink-2);border-radius:20px;padding:1px 7px;flex:0 0 auto}
+.nav-item .badge{margin-left:auto;font-size:10px;font-weight:700;background:var(--surface-3);color:var(--ink-2);border-radius:999px;padding:1px 8px;flex:0 0 auto}
 .nav-item.active .badge{background:#fff;color:var(--brand-ink)}
-.sb-foot{flex:0 0 auto;border-top:1px solid var(--line-soft);padding:10px}
+.sb-foot{flex:0 0 auto;border-top:1px solid var(--line-soft);padding:8px}
 /* collapsed icon rail */
 .app.rail{--sbw:68px}
 .app.rail .wordmark,.app.rail .sb-gt,.app.rail .nav-item .lbl,.app.rail .nav-item .badge,.app.rail .userchip .u-meta{display:none}
@@ -102,92 +126,99 @@ button.sb-gt.open .cv{transform:rotate(180deg)}
 .app.rail .sb-collapse{justify-content:center;padding:8px 0}
 .app.rail .sb-collapse .lbl{display:none}
 .app.rail .sb-collapse svg{transform:rotate(180deg)}
-.app.rail .sb-group+.sb-group{margin-top:10px;padding-top:10px;border-top:1px solid var(--line-soft)}
+.app.rail .sb-group+.sb-group{margin-top:8px;padding-top:8px;border-top:1px solid var(--line-soft)}
 /* no headers in rail mode, so a collapsed section would be unreachable */
 .app.rail .sb-group.collapsed .sb-items{display:block}
-.app.rail .nav-item{justify-content:center;padding:10px 0}
-.app.rail .userchip{justify-content:center;padding:5px}
+.app.rail .nav-item{justify-content:center;padding:8px 0}
+.app.rail .userchip{justify-content:center;padding:4px}
 .app.rail .nav-rail{left:5px}
 
 /* ===================== MAIN COLUMN ===================== */
 .app-main{flex:1;min-width:0;display:flex;flex-direction:column;min-height:100vh}
-.topbar{position:sticky;top:0;z-index:38;background:rgba(255,255,255,.86);backdrop-filter:saturate(180%) blur(14px);border-bottom:1px solid var(--line);min-height:56px;display:flex;align-items:center;gap:12px;padding:0 26px}
-.tn-right{display:flex;align-items:center;gap:10px;flex:0 0 auto;margin-left:auto}
-.icon-btn{border:1px solid var(--line);background:#fff;border-radius:9px;width:34px;height:34px;display:grid;place-items:center;cursor:pointer;color:var(--ink-2);transition:.15s}
+.topbar{position:sticky;top:0;z-index:38;background:rgba(255,255,255,.86);backdrop-filter:saturate(180%) blur(14px);border-bottom:1px solid var(--line);min-height:56px;display:flex;align-items:center;gap:12px;padding:0 24px}
+.tn-right{display:flex;align-items:center;gap:8px;flex:0 0 auto;margin-left:auto}
+.icon-btn{border:1px solid var(--line);background:#fff;border-radius:8px;width:34px;height:34px;display:grid;place-items:center;cursor:pointer;color:var(--ink-2);transition:.15s}
 .icon-btn:hover{border-color:var(--brand);color:var(--brand)}.icon-btn svg{width:16px;height:16px}
-.userchip{display:flex;align-items:center;gap:9px;padding:5px 12px 5px 5px;border:1px solid var(--line);border-radius:24px;background:#fff;cursor:pointer;transition:.15s;min-width:0}
+.userchip{display:flex;align-items:center;gap:8px;padding:4px 12px 4px 4px;border:1px solid var(--line);border-radius:999px;background:#fff;cursor:pointer;transition:.15s;min-width:0}
 .userchip:hover{border-color:var(--brand)}
 .userchip.active{border-color:transparent;background:var(--brand)}.userchip.active .u-name{color:#fff}.userchip.active .u-sub{color:rgba(255,255,255,.72)}.userchip.active .avatar{background:#fff;color:var(--brand)}
 .avatar{width:28px;height:28px;flex:0 0 28px;border-radius:50%;background:var(--brand-grad);color:#fff;font-weight:600;font-size:11px;display:grid;place-items:center}
 .userchip .u-meta{min-width:0}
-.userchip .u-name{font-size:12.5px;font-weight:600;line-height:1.15;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.userchip .u-sub{font-size:10.5px;color:var(--muted);white-space:nowrap}
+.userchip .u-name{font-size:12px;font-weight:600;line-height:1.15;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.userchip .u-sub{font-size:10px;color:var(--muted);white-space:nowrap}
 .main-scroll{flex:1;min-height:0}
-.crumbs{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted);min-width:0;flex-wrap:wrap;padding:9px 0}
+.crumbs{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);min-width:0;flex-wrap:wrap;padding:8px 0}
 .crumbs b{color:var(--ink);font-weight:600}.crumbs .sep{color:var(--faint)}.crumbs .c-link{cursor:pointer}.crumbs .c-link:hover{color:var(--ink)}
 .spacer{flex:1}
-.updated{font-size:11.5px;color:var(--muted);white-space:nowrap;display:flex;align-items:center;gap:6px}
+.updated{font-size:11px;color:var(--muted);white-space:nowrap;display:flex;align-items:center;gap:8px}
 .updated .dot{width:6px;height:6px;border-radius:50%;background:var(--good)}
 .sb-scrim{display:none}
 
-.filterbar{max-width:1360px;margin:16px auto 0;width:100%;padding:0 32px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.filterbar{max-width:1360px;margin:16px auto 0;width:100%;padding:0 32px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .selectwrap{position:relative}
-.pill-select{appearance:none;border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 30px 8px 12px;font-size:12.5px;font-weight:600;color:var(--ink);cursor:pointer;outline:none;transition:.15s;max-width:240px}
+.pill-select{appearance:none;border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 32px 8px 12px;font-size:12px;font-weight:600;color:var(--ink);cursor:pointer;outline:none;transition:.15s;max-width:240px}
 .pill-select:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
 .selectwrap::after{content:"";position:absolute;right:12px;top:50%;width:6px;height:6px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:translateY(-70%) rotate(45deg);pointer-events:none}
 .fsearch{position:relative;flex:0 1 230px}
-.fsearch input{width:100%;border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 12px 8px 32px;font-size:12.5px;color:var(--ink);outline:none;transition:.15s}
+.fsearch input{width:100%;border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 12px 8px 32px;font-size:12px;color:var(--ink);outline:none;transition:.15s}
 .fsearch input:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
 .fsearch svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--faint)}
-.fseg{display:inline-flex;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px}
-.fseg button{border:none;background:transparent;border-radius:8px;padding:6px 11px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap;transition:.15s}
+.fseg{display:inline-flex;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:4px;gap:2px}
+.fseg button{border:none;background:transparent;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap;transition:.15s}
 .fseg button.active{background:#fff;color:var(--ink);box-shadow:var(--shadow-xs)}
-.chip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;background:var(--brand-soft);color:var(--brand-ink);border-radius:20px;padding:4px 6px 4px 11px}
+.chip{display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:600;background:var(--brand-soft);color:var(--brand-ink);border-radius:999px;padding:4px 8px 4px 12px}
 .chip b{font-weight:700}.chip button{border:none;background:rgba(0,0,0,.08);color:var(--ink);width:16px;height:16px;border-radius:50%;cursor:pointer;font-size:12px;line-height:1;display:grid;place-items:center}
-.clear-all{font-size:12px;font-weight:650;color:var(--muted);cursor:pointer;padding:4px 6px}.clear-all:hover{color:var(--bad-ink)}
+.clear-all{font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;padding:4px 8px}.clear-all:hover{color:var(--bad-ink)}
 
 .content{padding:32px 32px 80px;max-width:1360px;width:100%;margin:0 auto}
 .page-head{margin-bottom:16px}
 .page-head{margin-bottom:24px}
-.page-head h1{font-size:32px;font-weight:600;letter-spacing:-.03em;margin:0 0 6px;line-height:1.1}
+.page-head h1{font-size:28px;font-weight:600;letter-spacing:-.03em;margin:0 0 8px;line-height:1.1}
 .page-head p{margin:0;color:var(--ink-2);font-size:15px;max-width:760px;line-height:1.55}
-.sect-t{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin:24px 0 10px;display:flex;align-items:center;gap:8px}
-.sect-t .r{margin-left:auto;text-transform:none;letter-spacing:0;font-weight:600;color:var(--muted)}
-.q{font-size:12px;color:var(--muted);font-weight:500;font-style:italic;margin:-4px 0 10px}
+/* ===== ONE section-title rule =====
+   Three treatments used to mark the same rank — .sect-t (11px uppercase),
+   .panel-h h3 (15px sentence case) and .section-t (10px uppercase) — so a
+   heading could look bigger or smaller than its sibling for no reason.
+   Uppercase is now reserved for labels that name a column or a tile, never for
+   a heading that introduces content. */
+.sect-t,.panel-h h3,.section-t{font-size:var(--fs-lg);font-weight:var(--fw-bold);
+  letter-spacing:-.014em;text-transform:none;color:var(--ink);
+  margin:var(--sp6) 0 var(--sp3);display:flex;align-items:center;gap:var(--sp2);line-height:1.3}
+.sect-t .r,.panel-h .r,.section-t .r{margin-left:auto;text-transform:none;letter-spacing:0;
+  font-size:var(--fs-sm);font-weight:var(--fw-med);color:var(--muted)}
+.q{font-size:12px;color:var(--muted);font-weight:400;font-style:italic;margin:-4px 0 10px}
 
-.banner{display:flex;align-items:center;gap:14px;padding:16px 18px;border-radius:14px;border:1px solid var(--line);background:var(--surface-2);margin-bottom:16px}
+.banner{display:flex;align-items:center;gap:16px;padding:16px 16px;border-radius:12px;border:1px solid var(--line);background:var(--surface-2);margin-bottom:16px}
 .banner.warn{border-color:var(--line-2);background:var(--surface-3)}
-.banner .bi{width:38px;height:38px;flex:0 0 38px;border-radius:11px;background:#fff;display:grid;place-items:center;color:var(--brand);box-shadow:var(--shadow-xs)}
+.banner .bi{width:38px;height:38px;flex:0 0 38px;border-radius:8px;background:#fff;display:grid;place-items:center;color:var(--brand);box-shadow:var(--shadow-xs)}
 .banner.warn .bi{color:var(--warn-ink)}
-.banner .bt{font-size:13.5px;font-weight:700;letter-spacing:-.01em}
+.banner .bt{font-size:13px;font-weight:700;letter-spacing:-.01em}
 .banner .bs{font-size:12px;color:var(--muted);margin-top:2px}
 .banner .r{margin-left:auto}
 
-.kc-grid{display:grid;gap:14px;margin-bottom:16px}
+.kc-grid{display:grid;gap:16px;margin-bottom:16px}
 .kc-grid.c5{grid-template-columns:repeat(5,minmax(0,1fr))}
 .kc-grid.c4{grid-template-columns:repeat(4,minmax(0,1fr))}
 .kc-grid.c3{grid-template-columns:repeat(3,minmax(0,1fr))}
 .kc-grid.c2{grid-template-columns:repeat(2,minmax(0,1fr))}
-.kc{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:17px 18px 16px;display:flex;flex-direction:column;justify-content:space-between;min-height:126px;box-shadow:var(--shadow-xs);animation:rise .44s var(--ease) backwards;transition:border-color .18s var(--ease),box-shadow .18s var(--ease),transform .18s var(--ease)}
+.kc{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 16px 16px;display:flex;flex-direction:column;justify-content:space-between;min-height:126px;box-shadow:var(--shadow-xs);transition:border-color .18s var(--ease),box-shadow .18s var(--ease)}
 .kc-grid .kc:nth-child(2){animation-delay:.04s}.kc-grid .kc:nth-child(3){animation-delay:.08s}.kc-grid .kc:nth-child(4){animation-delay:.12s}
-.kc-click{cursor:pointer}.kc-click:hover{border-color:var(--line-2);box-shadow:var(--shadow);transform:translateY(-2px)}.kc-click:active{transform:translateY(-1px);transition-duration:.06s}
-.kc-label{font-size:11.5px;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:6px}
-.kc-label .wt{margin-left:auto;font-size:10px;font-weight:700;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:1px 6px}
-.kc-value{font-size:34px;font-weight:600;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums;color:var(--ink);display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
-.kc-value small{font-size:15px;font-weight:650;color:var(--faint);margin-left:0;letter-spacing:-.01em}
-.kc-support{font-size:12px;font-weight:650;color:var(--muted);margin-top:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.kc-bar{height:5px;border-radius:20px;background:var(--line-soft);overflow:hidden;margin-top:11px}
-.kc-bar span{display:block;height:100%;border-radius:20px;transform-origin:left;animation:growx .7s var(--ease) backwards}
-@keyframes rise{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
-@keyframes growx{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.kc-click{cursor:pointer}.kc-click:hover{border-color:var(--line-2);box-shadow:var(--shadow)}.kc-click:active{transition-duration:.06s}
+.kc-label{font-size:11px;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:8px}
+.kc-label .wt{margin-left:auto;font-size:10px;font-weight:700;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:1px 8px}
+.kc-value{font-size:28px;font-weight:600;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums;color:var(--ink);display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.kc-value small{font-size:15px;font-weight:600;color:var(--faint);margin-left:0;letter-spacing:-.01em}
+.kc-support{font-size:12px;font-weight:600;color:var(--muted);margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.kc-bar{height:5px;border-radius:999px;background:var(--line-soft);overflow:hidden;margin-top:12px}
+.kc-bar span{display:block;height:100%;border-radius:999px}
 @media(max-width:1240px){.kc-grid.c5{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:900px){.kc-grid.c5,.kc-grid.c4,.kc-grid.c3{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:430px){.kc-value{font-size:27px}.kc{min-height:108px}}
+@media(max-width:430px){.kc-value{font-size:20px}.kc{min-height:108px}}
 
-.delta{display:inline-flex;align-items:center;gap:3px;font-size:11.5px;font-weight:750;padding:1px 7px 1px 5px;border-radius:20px;font-variant-numeric:tabular-nums;line-height:1.7}
+.delta{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:1px 8px 1px 4px;border-radius:999px;font-variant-numeric:tabular-nums;line-height:1.7}
 .delta svg{width:9px;height:9px}
 .delta.good,.delta.bad,.delta.none{background:transparent;color:var(--ink-2);padding:0}
-.levelchip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;background:var(--surface-3);color:var(--ink-2);white-space:nowrap}
+.levelchip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--surface-3);color:var(--ink-2);white-space:nowrap}
 .levelchip::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.7}
 .levelchip.lv1{background:var(--bad-soft);color:var(--bad-ink)}
 .levelchip.lv2{background:var(--warn-soft);color:var(--warn-ink)}
@@ -196,13 +227,13 @@ button.sb-gt.open .cv{transform:rotate(180deg)}
 .levelchip.lv5{background:var(--good-soft);color:var(--good-ink);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--good) 25%,transparent)}
 
 .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-xs)}
-.panel.pad{padding:20px 22px}
-.panel-h{display:flex;align-items:center;gap:10px;margin-bottom:6px}
-.panel-h h3{font-size:14.5px;font-weight:700;margin:0;letter-spacing:-.014em}
-.panel-h .sub{font-size:12px;color:var(--muted);font-weight:500}
-.panel-h .r{margin-left:auto;display:flex;align-items:center;gap:10px}
-.link{font-size:12.5px;font-weight:650;color:var(--brand);cursor:pointer}.link:hover{text-decoration:underline}
-.stack{margin-top:14px}
+.panel.pad{padding:20px 24px}
+.panel-h{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.panel-h h3{margin:0}
+.panel-h .sub{font-size:12px;color:var(--muted);font-weight:400}
+.panel-h .r{margin-left:auto;display:flex;align-items:center;gap:8px}
+.link{font-size:12px;font-weight:600;color:var(--brand);cursor:pointer}.link:hover{text-decoration:underline}
+.stack{margin-top:16px}
 .two-col{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:16px}
 .two-eq{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
 @media(max-width:900px){.two-col,.two-eq{grid-template-columns:minmax(0,1fr)}}
@@ -215,16 +246,16 @@ button.sb-gt.open .cv{transform:rotate(180deg)}
 .trend .ln{fill:none;stroke:var(--brand);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 .trend .pt{fill:#fff;stroke:var(--brand);stroke-width:2}
 .trend .pt.cur{fill:var(--brand)}
-.trend .xl{fill:var(--faint);font-size:10.5px;font-weight:600}
-.trend .yl{fill:var(--faint);font-size:9.5px;font-weight:600}
-.trend .vlab{fill:var(--ink);font-size:10.5px;font-weight:800}
+.trend .xl{fill:var(--faint);font-size:10px;font-weight:600}
+.trend .yl{fill:var(--faint);font-size:10px;font-weight:600}
+.trend .vlab{fill:var(--ink);font-size:10px;font-weight:700}
 
 /* department / team cards */
-.dgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:14px}
-.dcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 17px;box-shadow:var(--shadow-xs);cursor:pointer;transition:border-color .18s var(--ease),box-shadow .18s var(--ease),transform .18s var(--ease);animation:rise .44s var(--ease) backwards}
-.dcard:hover{border-color:var(--line-2);box-shadow:var(--shadow);transform:translateY(-2px)}
-.dcard .dc-h{display:flex;align-items:center;gap:10px}
-.dcard .dc-ic{width:38px;height:38px;flex:0 0 38px;border-radius:11px;display:grid;place-items:center;background:var(--brand-soft);color:var(--brand)}
+.dgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:16px}
+.dcard{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 16px;box-shadow:var(--shadow-xs);cursor:pointer;transition:border-color .18s var(--ease),box-shadow .18s var(--ease)}
+.dcard:hover{border-color:var(--line-2);box-shadow:var(--shadow)}
+.dcard .dc-h{display:flex;align-items:center;gap:8px}
+.dcard .dc-ic{width:38px;height:38px;flex:0 0 38px;border-radius:8px;display:grid;place-items:center;background:var(--brand-soft);color:var(--brand)}
 /* teams cycle the brand hues so each card is identifiable at a glance */
 .dcard .dc-ic.ic-0{background:var(--p-blue);color:#0048C7}
 .dcard .dc-ic.ic-1{background:var(--p-mint);color:#0E8A66}
@@ -233,25 +264,25 @@ button.sb-gt.open .cv{transform:rotate(180deg)}
 .dcard .dc-ic.ic-4{background:var(--p-green);color:var(--good-ink)}
 .dcard .dc-ic.ic-n{background:var(--surface-3);color:var(--muted)}
 .dcard .dc-ic svg{width:19px;height:19px}
-.dcard h3{margin:0;font-size:15px;font-weight:750;letter-spacing:-.015em}
+.dcard h3{margin:0;font-size:15px;font-weight:700;letter-spacing:-.015em}
 .dcard .dc-kind{font-size:11px;color:var(--muted);font-weight:600}
-.dcard .dc-score{margin-left:auto;text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:5px}
-.dcard .dc-metrics{display:flex;gap:16px;margin-top:14px;padding-top:13px;border-top:1px solid var(--line-soft)}
-.dcard .dm{font-size:11.5px;color:var(--muted);font-weight:600}.dcard .dm b{display:block;font-size:17px;color:var(--ink);font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin-top:1px}
+.dcard .dc-score{margin-left:auto;text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.dcard .dc-metrics{display:flex;gap:16px;margin-top:16px;padding-top:12px;border-top:1px solid var(--line-soft)}
+.dcard .dm{font-size:11px;color:var(--muted);font-weight:600}.dcard .dm b{display:block;font-size:20px;color:var(--ink);font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin-top:1px}
 
 .list{margin:2px -8px 0}
-.lrow{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:12px;cursor:pointer;transition:background .14s var(--ease)}
+.lrow{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:12px;cursor:pointer;transition:background .14s var(--ease)}
 .lrow:hover{background:var(--surface-2)}.lrow+.lrow{box-shadow:inset 0 1px 0 var(--line-soft)}
 .lrow.static{cursor:default}.lrow.static:hover{background:transparent}
 .lrow-id{display:flex;align-items:center;gap:12px;min-width:0;flex:1}
-.lrow-name{font-size:13.5px;font-weight:650;min-width:0;letter-spacing:-.01em}
-.lrow-name .lrow-sub{display:block;font-size:11.5px;font-weight:500;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.lavatar{width:36px;height:36px;flex:0 0 36px;border-radius:11px;background:var(--surface-2);color:var(--ink-2);font-weight:700;font-size:12px;display:grid;place-items:center;transition:.16s}
+.lrow-name{font-size:13px;font-weight:600;min-width:0;letter-spacing:-.01em}
+.lrow-name .lrow-sub{display:block;font-size:11px;font-weight:400;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.lavatar{width:36px;height:36px;flex:0 0 36px;border-radius:8px;background:var(--surface-2);color:var(--ink-2);font-weight:700;font-size:12px;display:grid;place-items:center;transition:.16s}
 .lrow:hover .lavatar{background:var(--brand-soft);color:var(--brand)}
 .rank{width:20px;flex:0 0 20px;text-align:center;font-size:12px;font-weight:700;color:var(--faint);font-variant-numeric:tabular-nums}.rank.top{color:var(--brand)}
-.lrow-track{flex:0 0 116px;height:8px;background:var(--line-soft);border-radius:20px;overflow:hidden}
-.lrow-track span{display:block;height:100%;border-radius:20px}
-.lrow-meta{font-size:12.5px;font-weight:600;color:var(--ink-2);font-variant-numeric:tabular-nums;flex:0 0 auto;text-align:right;white-space:nowrap}
+.lrow-track{flex:0 0 116px;height:8px;background:var(--line-soft);border-radius:999px;overflow:hidden}
+.lrow-track span{display:block;height:100%;border-radius:999px}
+.lrow-meta{font-size:12px;font-weight:600;color:var(--ink-2);font-variant-numeric:tabular-nums;flex:0 0 auto;text-align:right;white-space:nowrap}
 @media(max-width:620px){.lrow-track{display:none}}
 .sdot{width:9px;height:9px;border-radius:50%;flex:0 0 9px;display:inline-block;border:1.5px solid var(--none);background:transparent}
 /* Dual-encoded status: semantic colour (green/amber/red) AND fill fullness, so
@@ -262,197 +293,216 @@ button.sb-gt.open .cv{transform:rotate(180deg)}
 .s-warn{border-color:var(--warn);background:linear-gradient(90deg,var(--warn) 0 50%,transparent 50% 100%)}
 .s-bad{border-color:var(--bad);background:transparent}
 .s-none{border-color:var(--none);background:transparent}
-.chev{color:var(--faint);font-size:18px;flex:0 0 12px;text-align:center;transition:transform .18s var(--ease),color .18s var(--ease)}.lrow:hover .chev{transform:translateX(3px);color:var(--ink-2)}
-.rchip{min-width:50px;text-align:center;font-size:13.5px;font-weight:800;padding:5px 8px;border-radius:9px;font-variant-numeric:tabular-nums;letter-spacing:-.015em;box-shadow:inset 0 0 0 1px color-mix(in srgb,currentColor 14%,transparent)}
-.rchip small{font-size:9.5px;font-weight:700;opacity:.6}
-.pill{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:650;padding:3px 10px;border-radius:20px;white-space:nowrap}
+.chev{color:var(--faint);font-size:20px;flex:0 0 12px;text-align:center;transition:transform .18s var(--ease),color .18s var(--ease)}.lrow:hover .chev{transform:translateX(3px);color:var(--ink-2)}
+.rchip{min-width:50px;text-align:center;font-size:13px;font-weight:700;padding:4px 8px;border-radius:8px;font-variant-numeric:tabular-nums;letter-spacing:-.015em;box-shadow:inset 0 0 0 1px color-mix(in srgb,currentColor 14%,transparent)}
+.rchip small{font-size:10px;font-weight:700;opacity:.6}
+.pill{display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:600;padding:4px 8px;border-radius:999px;white-space:nowrap}
 .pill.good,.pill.strong,.pill.elite{background:var(--good-soft);color:var(--good-ink)}.pill.warn{background:var(--warn-soft);color:var(--warn-ink)}.pill.bad{background:var(--bad-soft);color:var(--bad-ink)}.pill.none{background:var(--surface-2);color:var(--muted)}
 .pill.elite{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--good) 22%,transparent)}
-.tag{font-size:11px;font-weight:600;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line);border-radius:7px;padding:2px 8px;white-space:nowrap}
+.tag{font-size:11px;font-weight:600;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:2px 8px;white-space:nowrap}
 .drawer-h .sub .tag.brand{background:var(--brand-soft);color:var(--brand-ink);border-color:rgba(0,93,255,.18)}
 .tag.brand{color:var(--ink);background:var(--surface-3);border-color:var(--line)}
 .tag.mt{color:var(--ink-2);background:#fff;border-color:var(--line)}
-.mini-tag{font-size:9.5px;font-weight:700;color:var(--brand);background:var(--brand-soft);border-radius:5px;padding:1px 5px;margin-left:5px;vertical-align:middle}
+.mini-tag{font-size:10px;font-weight:700;color:var(--brand);background:var(--brand-soft);border-radius:8px;padding:1px 4px;margin-left:4px;vertical-align:middle}
 
-.bc-row{display:flex;align-items:center;gap:14px;padding:10px 6px;border-radius:10px;cursor:pointer;transition:background .13s}
+.bc-row{display:flex;align-items:center;gap:16px;padding:8px 8px;border-radius:8px;cursor:pointer;transition:background .13s}
 .bc-row.static{cursor:default}.bc-row.static:hover{background:transparent}
 .bc-row:hover{background:var(--surface-2)}
 .bc-label{width:184px;flex:0 0 184px;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.bc-label small{color:var(--muted);font-weight:500}
-.bc-track{flex:1;height:10px;background:var(--line-soft);border-radius:20px;overflow:hidden;min-width:40px}
-.bc-fill{height:100%;border-radius:20px;transform-origin:left center;animation:growx .72s var(--ease) backwards}
-.bc-val{width:70px;flex:0 0 70px;text-align:right;font-size:13.5px;font-weight:800;font-variant-numeric:tabular-nums;display:flex;align-items:center;justify-content:flex-end;gap:6px}
-.bc-val small{font-size:9.5px;color:var(--faint);font-weight:700}
+.bc-label small{color:var(--muted);font-weight:400}
+.bc-track{flex:1;height:10px;background:var(--line-soft);border-radius:999px;overflow:hidden;min-width:40px}
+.bc-fill{height:100%;border-radius:999px;transform-origin:left center}
+.bc-val{width:70px;flex:0 0 70px;text-align:right;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;display:flex;align-items:center;justify-content:flex-end;gap:8px}
+.bc-val small{font-size:10px;color:var(--faint);font-weight:700}
 .bc-chev{color:var(--faint);flex:0 0 10px}
-@media(max-width:560px){.bc-label{width:104px;flex-basis:104px}.bc-row{gap:9px}.bc-chev{display:none}.bc-val{width:auto;flex:0 0 auto}}
+@media(max-width:560px){.bc-label{width:104px;flex-basis:104px}.bc-row{gap:8px}.bc-chev{display:none}.bc-val{width:auto;flex:0 0 auto}}
 
 .person-hd{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
-.person-hd .pa{width:54px;height:54px;border-radius:16px;background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;font-weight:800;font-size:20px;display:grid;place-items:center;flex:0 0 54px}
-.person-hd h1{margin:0;font-size:22px;letter-spacing:-.025em;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.person-hd .meta{color:var(--muted);font-size:12.5px;display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-top:5px}
+.person-hd .pa{width:54px;height:54px;border-radius:12px;background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;font-weight:700;font-size:20px;display:grid;place-items:center;flex:0 0 54px}
+.person-hd h1{margin:0;font-size:28px;letter-spacing:-.025em;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.person-hd .meta{color:var(--muted);font-size:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px}
 .person-hd .r{margin-left:auto}
 
 /* in-page tabs */
-.tabs{display:inline-flex;gap:2px;background:var(--surface-2);border:1px solid var(--line);border-radius:11px;padding:3px;margin:2px 0 4px}
-.tabs button{border:none;background:transparent;border-radius:8px;padding:7px 14px;font-size:12.5px;font-weight:650;color:var(--muted);cursor:pointer;transition:.15s}
+.tabs{display:inline-flex;gap:2px;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:4px;margin:2px 0 4px}
+.tabs button{border:none;background:transparent;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;transition:.15s}
 .tabs button.active{background:#fff;color:var(--ink);box-shadow:var(--shadow-xs)}
 
 /* KRA group + KPI score cards */
-.kra-group{margin-top:6px}
-.kg-h{display:flex;align-items:center;gap:9px;margin:20px 0 10px}
-.kg-h .kg-t{font-size:13px;font-weight:750;letter-spacing:-.01em}
-.kg-h .kg-p{font-size:11px;font-weight:600;color:var(--muted);background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:1px 7px}
+.kra-group{margin-top:8px}
+.kg-h{display:flex;align-items:center;gap:8px;margin:20px 0 8px}
+.kg-h .kg-t{font-size:13px;font-weight:700;letter-spacing:-.01em}
+.kg-h .kg-p{font-size:11px;font-weight:600;color:var(--muted);background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:1px 8px}
 .kg-h .kg-line{flex:1;height:1px;background:var(--line)}
-.kg-h .kg-r{font-size:12px;font-weight:750;font-variant-numeric:tabular-nums}
-.kpigrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(324px,1fr));gap:13px}
-.kcard{border:1px solid var(--line);border-radius:15px;padding:15px 16px;box-shadow:var(--shadow-xs);cursor:pointer;background:var(--card);transition:border-color .16s,box-shadow .16s,transform .16s;display:flex;flex-direction:column}
-.kcard:hover{border-color:var(--line-2);box-shadow:var(--shadow);transform:translateY(-2px)}
-.kcard .kh{display:flex;align-items:flex-start;gap:9px}
-.kcard .kh .kt{font-size:13.5px;font-weight:700;letter-spacing:-.01em;line-height:1.3;min-width:0}
-.kcard .kh .kt small{display:block;font-size:11px;font-weight:500;color:var(--muted);margin-top:2px;line-height:1.4;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-.kcard .kh .wt{margin-left:auto;flex:0 0 auto;font-size:10px;font-weight:700;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:2px 7px}
-.kcard .kmeta{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
-.kcard .kfoot{display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:11px;border-top:1px solid var(--line-soft)}
-.kcard .kfoot .kval{font-size:12.5px;font-weight:600;color:var(--muted)}.kcard .kfoot .kval b{color:var(--ink);font-variant-numeric:tabular-nums}
+.kg-h .kg-r{font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
+.kpigrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(324px,1fr));gap:12px}
+.kcard{border:1px solid var(--line);border-radius:12px;padding:16px 16px;box-shadow:var(--shadow-xs);cursor:pointer;background:var(--card);transition:border-color .16s,box-shadow .16s,transform .16s;display:flex;flex-direction:column}
+.kcard:hover{border-color:var(--line-2);box-shadow:var(--shadow)}
+.kcard .kh{display:flex;align-items:flex-start;gap:8px}
+.kcard .kh .kt{font-size:13px;font-weight:700;letter-spacing:-.01em;line-height:1.3;min-width:0}
+.kcard .kh .kt small{display:block;font-size:11px;font-weight:400;color:var(--muted);margin-top:2px;line-height:1.4;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.kcard .kh .wt{margin-left:auto;flex:0 0 auto;font-size:10px;font-weight:700;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:2px 8px}
+.kcard .kmeta{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
+.kcard .kfoot{display:flex;align-items:center;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line-soft)}
+.kcard .kfoot .kval{font-size:12px;font-weight:600;color:var(--muted)}.kcard .kfoot .kval b{color:var(--ink);font-variant-numeric:tabular-nums}
 .kcard .kfoot .r{margin-left:auto;display:flex;align-items:center;gap:8px}
 
 /* band ladder (type-adaptive) */
-.ladder{display:flex;gap:5px;margin-top:14px}
-.lb{flex:1;min-width:0;border-radius:11px;padding:11px 4px 9px;text-align:center;background:var(--surface-2);border:1px solid var(--line);position:relative;transition:.18s}
-.lb .lbn{font-size:9px;font-weight:700;color:var(--faint);letter-spacing:.02em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.lb .lbv{font-size:11px;font-weight:700;color:var(--ink-2);margin-top:3px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ladder{display:flex;gap:4px;margin-top:16px}
+.lb{flex:1;min-width:0;border-radius:8px;padding:12px 4px 8px;text-align:center;background:var(--surface-2);border:1px solid var(--line);position:relative;transition:.18s}
+.lb .lbn{font-size:10px;font-weight:700;color:var(--faint);letter-spacing:.02em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lb .lbv{font-size:11px;font-weight:700;color:var(--ink-2);margin-top:4px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lb.on{border-color:transparent;color:#fff;box-shadow:0 3px 12px -3px var(--c),0 0 0 2px var(--c)}
 .lb.on .lbn{color:rgba(255,255,255,.8)}.lb.on .lbv{color:#fff}
-.lb.meets::after{content:"MEETS";position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-size:7px;font-weight:800;letter-spacing:.05em;color:var(--brand-ink);background:#fff;padding:0 5px;border-radius:3px;border:1px solid var(--brand-soft)}
+.lb.meets::after{content:"MEETS";position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:700;letter-spacing:.05em;color:var(--brand-ink);background:#fff;padding:0 4px;border-radius:4px;border:1px solid var(--brand-soft)}
 .lb.g1{--c:var(--bad)}.lb.g2{--c:var(--warn)}.lb.g3{--c:var(--brand)}.lb.g4{--c:var(--good)}.lb.g5{--c:var(--good)}
 .lb.on{background:var(--c)}
 .lb .qd{width:11px;height:11px;border-radius:50%;border:2px solid var(--faint);margin:4px auto 0}
 .lb.on .qd{border-color:#fff;background:#fff}
-.ladder-cap{display:flex;justify-content:space-between;font-size:10.5px;color:var(--faint);font-weight:600;margin-top:9px;gap:8px}
-.ladder-act{font-size:12px;color:var(--ink-2);font-weight:600;margin-top:10px;padding:9px 12px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:11px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ladder-cap{display:flex;justify-content:space-between;font-size:10px;color:var(--faint);font-weight:600;margin-top:8px;gap:8px}
+.ladder-act{font-size:12px;color:var(--ink-2);font-weight:600;margin-top:8px;padding:8px 12px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .ladder-act b{color:var(--ink);font-variant-numeric:tabular-nums}
-.ladder-mark{position:relative;height:14px;margin-top:6px}
-.ladder-mark .tk{position:absolute;top:0;width:2px;height:8px;background:var(--ink);border-radius:2px;transform:translateX(-50%)}
+.ladder-mark{position:relative;height:14px;margin-top:8px}
+.ladder-mark .tk{position:absolute;top:0;width:2px;height:8px;background:var(--ink);border-radius:4px;transform:translateX(-50%)}
 .ladder-mark .tk::after{content:"";position:absolute;top:8px;left:50%;transform:translateX(-50%);border:4px solid transparent;border-top-color:var(--ink)}
 
 /* milestone */
-.ms{border:1px solid var(--line);border-left:3px solid var(--brand);border-radius:14px;padding:14px 16px;background:var(--card);box-shadow:var(--shadow-xs);display:flex;flex-direction:column;gap:10px}
-.ms .ms-h{display:flex;align-items:center;gap:10px}
-.ms .ms-h .ms-t{font-size:13.5px;font-weight:700}.ms .ms-h .ms-t small{display:block;font-size:11.5px;color:var(--muted);font-weight:500}
+.ms{border:1px solid var(--line);border-left:3px solid var(--brand);border-radius:12px;padding:16px 16px;background:var(--card);box-shadow:var(--shadow-xs);display:flex;flex-direction:column;gap:8px}
+.ms .ms-h{display:flex;align-items:center;gap:8px}
+.ms .ms-h .ms-t{font-size:13px;font-weight:700}.ms .ms-h .ms-t small{display:block;font-size:11px;color:var(--muted);font-weight:400}
 .ms .ms-h .r{margin-left:auto}
-.ms-track{position:relative;height:10px;border-radius:20px;background:var(--surface-3);overflow:hidden}
-.ms-track span{position:absolute;left:0;top:0;height:100%;border-radius:20px;background:linear-gradient(90deg,var(--brand),var(--brand-2))}
-.ms-foot{display:flex;align-items:center;gap:14px;font-size:11.5px;color:var(--muted);font-weight:600}
+.ms-track{position:relative;height:10px;border-radius:999px;background:var(--surface-3);overflow:hidden}
+.ms-track span{position:absolute;left:0;top:0;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--brand),var(--brand-2))}
+.ms-foot{display:flex;align-items:center;gap:16px;font-size:11px;color:var(--muted);font-weight:600}
 .ms-foot b{color:var(--ink)}
 .ms.done{align-items:flex-start}
 
 /* distribution histogram */
 .hist{display:flex;align-items:flex-end;gap:12px;height:150px;padding:8px 4px 0}
-.hcol{flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;height:100%;justify-content:flex-end;cursor:pointer}
-.hbar{width:100%;max-width:56px;border-radius:8px 8px 3px 3px;background:var(--brand-soft);position:relative;transition:.16s;min-height:3px}
+.hcol{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end;cursor:pointer}
+.hbar{width:100%;max-width:56px;border-radius:8px 8px 4px 4px;background:var(--brand-soft);position:relative;transition:.16s;min-height:3px}
 .hcol:hover .hbar{filter:brightness(.96)}
-.hbar b{position:absolute;top:-19px;left:0;right:0;text-align:center;font-size:12px;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums}
-.hlab{font-size:10.5px;font-weight:650;color:var(--muted);text-align:center;line-height:1.2}
-.hlab small{display:block;color:var(--faint);font-weight:600;font-size:9px}
+.hbar b{position:absolute;top:-19px;left:0;right:0;text-align:center;font-size:12px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+.hlab{font-size:10px;font-weight:600;color:var(--muted);text-align:center;line-height:1.2}
+.hlab small{display:block;color:var(--faint);font-weight:600;font-size:10px}
 
 /* achievements */
 .ach{display:flex;flex-wrap:wrap;gap:8px}
-.ach span{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:650;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line);border-radius:20px;padding:6px 12px}
+.ach span{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:8px 12px}
 .ach span svg{width:13px;height:13px;color:var(--good)}
 
 /* review block */
-.review{border:1px solid var(--line);border-radius:13px;padding:14px 16px;background:var(--surface-2)}
-.review .rv-h{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-.review .rv-txt{font-size:12.5px;color:var(--ink-2);line-height:1.6}
-.review .rv-meta{font-size:11px;color:var(--faint);margin-top:9px;display:flex;gap:12px;flex-wrap:wrap}
+.review{border:1px solid var(--line);border-radius:12px;padding:16px 16px;background:var(--surface-2)}
+.review .rv-h{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.review .rv-txt{font-size:12px;color:var(--ink-2);line-height:1.6}
+.review .rv-meta{font-size:11px;color:var(--faint);margin-top:8px;display:flex;gap:12px;flex-wrap:wrap}
 
 /* KRAs & KPIs — expandable list (§8) */
 .linkrow{display:flex;gap:24px;flex-wrap:wrap;margin-top:2px}
-.bar{flex:0 0 120px;height:6px;background:var(--surface-3);border-radius:20px;overflow:hidden}
+.bar{flex:0 0 120px;height:6px;background:var(--surface-3);border-radius:999px;overflow:hidden}
 .bar.wide{flex-basis:200px}
-.bar span{display:block;height:100%;background:var(--ink);border-radius:20px;transform-origin:left;animation:growx .7s var(--ease) backwards}
+.bar span{display:block;height:100%;background:var(--ink);border-radius:999px}
 .exp-p{margin-bottom:24px}
 .exp-ph{display:flex;align-items:center;gap:16px;padding:0 2px 12px;border-bottom:1px solid var(--line)}
 .exp-pt{font-size:15px;font-weight:600;letter-spacing:-.012em;flex:1;min-width:0}
 .exp-pr{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}.exp-pr small{font-size:11px;color:var(--muted);font-weight:600;margin-left:1px}
-.exp-kra{display:flex;align-items:center;gap:14px;padding:14px 8px;border-bottom:1px solid var(--line-soft);cursor:pointer;transition:background .14s}
+.exp-kra{display:flex;align-items:center;gap:16px;padding:16px 8px;border-bottom:1px solid var(--line-soft);cursor:pointer;transition:background .14s}
 .exp-kra:hover{background:var(--surface-2)}
-.exp-name{flex:1;min-width:0;font-size:13.5px;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.exp-name small{display:block;font-size:11.5px;color:var(--muted);font-weight:500}
-.exp-val{width:48px;text-align:right;font-size:13.5px;font-weight:600;font-variant-numeric:tabular-nums}
+.exp-name{flex:1;min-width:0;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.exp-name small{display:block;font-size:11px;color:var(--muted);font-weight:400}
+.exp-val{width:48px;text-align:right;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
 .exp-chev{color:var(--muted);font-size:12px;width:14px;text-align:center}
-.exp-kpis{overflow:hidden;animation:expand .32s var(--ease);padding-left:20px;border-left:1px solid var(--line);margin:0 0 10px 14px}
-.exp-kpi{display:flex;align-items:center;gap:12px;padding:11px 8px;cursor:pointer;border-radius:9px;transition:background .14s}
+.exp-kpis{overflow:hidden;animation:expand .32s var(--ease);padding-left:20px;border-left:1px solid var(--line);margin:0 0 8px 16px}
+.exp-kpi{display:flex;align-items:center;gap:12px;padding:12px 8px;cursor:pointer;border-radius:8px;transition:background .14s}
 .exp-kpi:hover{background:var(--surface-2)}
 @keyframes expand{from{opacity:0;max-height:0}to{opacity:1;max-height:1600px}}
 .tbl-wrap{overflow-x:auto;margin-top:4px}
 .tbl{width:100%;border-collapse:collapse;font-size:13px;min-width:940px}
 /* small tables inside half-width panels must not inherit the wide min-width */
 .tbl.compact{min-width:0}
-.tbl.compact th,.tbl.compact td{padding:8px 10px}
-.tbl th{text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--faint);padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap;cursor:pointer;user-select:none}
-.tbl th.num{text-align:right}.tbl th.sorted{color:var(--ink-2)}.tbl th .sc{opacity:.5;font-size:9px;margin-left:3px}
-.tbl td{padding:10px 12px;border-bottom:1px solid var(--line-soft);vertical-align:middle}
-.tbl td.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
-.tbl tbody tr{cursor:pointer;transition:.12s}.tbl tbody tr:hover{background:var(--surface-2)}.tbl tbody tr:last-child td{border-bottom:none}
-.tbl .kname{font-weight:650}.tbl .kname small{display:block;color:var(--muted);font-weight:500;font-size:11px}
-.pager{display:flex;align-items:center;justify-content:space-between;padding-top:12px;font-size:12.5px;color:var(--muted)}
-.pager button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 11px;font-size:12.5px;font-weight:600;color:var(--ink-2);cursor:pointer;margin-left:6px}
+.tbl.compact th,.tbl.compact td{padding:8px 8px}
+.tbl th{text-align:left;font-size:var(--fs-xs);font-weight:var(--fw-med);letter-spacing:.04em;text-transform:uppercase;
+  color:var(--muted);padding:var(--sp2) var(--sp3);border-bottom:1px solid var(--line-2);white-space:nowrap;cursor:pointer;user-select:none}
+.tbl th.num{text-align:right}
+.tbl th.sorted{color:var(--ink)}
+/* the sort glyph marks the active column; the rest reveal it on hover, rather
+   than eight arrows competing with the data at rest */
+.tbl th .sc{opacity:0;font-size:var(--fs-2xs);margin-left:var(--sp);transition:opacity .12s}
+.tbl th.sorted .sc{opacity:.7}.tbl th:hover .sc{opacity:.45}
+.tbl td{padding:var(--sp3);border-bottom:1px solid var(--line-soft);vertical-align:middle;font-size:var(--fs-md)}
+.tbl td.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:var(--fw-med)}
+/* three levels of emphasis, so the eye lands on the derived number first */
+.tbl td.strong{font-weight:var(--fw-bold)}
+.tbl td.quiet{color:var(--ink-2);font-weight:var(--fw-normal)}
+.tbl td.num small{font-size:var(--fs-xs);color:var(--faint);font-weight:var(--fw-med)}
+.tbl tbody tr{cursor:pointer;transition:background .12s}.tbl tbody tr:hover{background:var(--surface-2)}.tbl tbody tr:last-child td{border-bottom:none}
+.tbl .kname{font-weight:var(--fw-med);color:var(--ink)}
+.tbl .kname small{display:block;color:var(--muted);font-weight:var(--fw-normal);font-size:var(--fs-xs);margin-top:1px}
+.pager{display:flex;align-items:center;justify-content:space-between;padding-top:12px;font-size:12px;color:var(--muted)}
+.pager button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:600;color:var(--ink-2);cursor:pointer;margin-left:8px}
 .pager button:hover:not(:disabled){border-color:var(--brand);color:var(--brand)}.pager button:disabled{opacity:.45;cursor:default}
-.empty{padding:34px 20px;text-align:center;color:var(--muted);font-size:13px}.empty svg{width:36px;height:36px;opacity:.3;margin-bottom:6px}
+.empty{padding:32px 20px;text-align:center;color:var(--muted);font-size:13px}.empty svg{width:36px;height:36px;opacity:.3;margin-bottom:8px}
 
-.info-tbl{width:100%;border-collapse:collapse;font-size:12.5px;min-width:520px}
-.info-tbl th{background:var(--surface-2);text-align:left;font-size:11px;font-weight:700;color:var(--ink-2);padding:8px 11px;border:1px solid var(--line);white-space:nowrap}
-.info-tbl td{padding:8px 11px;border:1px solid var(--line-soft);vertical-align:top;color:var(--ink-2)}
+.info-tbl{width:100%;border-collapse:collapse;font-size:12px;min-width:520px}
+.info-tbl th{background:var(--surface-2);text-align:left;font-size:11px;font-weight:700;color:var(--ink-2);padding:8px 12px;border:1px solid var(--line);white-space:nowrap}
+.info-tbl td{padding:8px 12px;border:1px solid var(--line-soft);vertical-align:top;color:var(--ink-2)}
 
-.hcheck{display:flex;align-items:center;gap:11px;padding:11px 6px}.hcheck+.hcheck{box-shadow:inset 0 1px 0 var(--line-soft)}
-.hcheck .hc-ic{width:24px;height:24px;flex:0 0 24px;border-radius:7px;display:grid;place-items:center}
+.hcheck{display:flex;align-items:center;gap:12px;padding:12px 8px}.hcheck+.hcheck{box-shadow:inset 0 1px 0 var(--line-soft)}
+.hcheck .hc-ic{width:24px;height:24px;flex:0 0 24px;border-radius:8px;display:grid;place-items:center}
 .hcheck .hc-ic svg{width:14px;height:14px}
 .hcheck.ok .hc-ic{background:var(--good-soft);color:var(--good-ink)}.hcheck.warn .hc-ic{background:var(--warn-soft);color:var(--warn-ink)}.hcheck.bad .hc-ic{background:var(--bad-soft);color:var(--bad-ink)}
-.hcheck .hc-t{font-size:13px;font-weight:600}.hcheck .hc-t small{display:block;font-size:11.5px;color:var(--muted);font-weight:500}
-.hcheck .r{margin-left:auto;font-size:13px;font-weight:800;font-variant-numeric:tabular-nums}
+.hcheck .hc-t{font-size:13px;font-weight:600}.hcheck .hc-t small{display:block;font-size:11px;color:var(--muted);font-weight:400}
+.hcheck .r{margin-left:auto;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
 
 .state{min-height:60vh;display:grid;place-items:center;padding:20px}
 .state-card{max-width:470px;text-align:center}
-.state-ic{width:56px;height:56px;border-radius:16px;display:grid;place-items:center;margin:0 auto 16px;background:var(--brand-soft);color:var(--brand)}.state-ic svg{width:26px;height:26px}
-.state h2{font-size:18px;font-weight:750;margin:0 0 8px;letter-spacing:-.02em}
-.state p{color:var(--muted);font-size:13.5px;line-height:1.55;margin:0 0 18px}
+.state-ic{width:56px;height:56px;border-radius:12px;display:grid;place-items:center;margin:0 auto 16px;background:var(--brand-soft);color:var(--brand)}.state-ic svg{width:26px;height:26px}
+.state h2{font-size:20px;font-weight:700;margin:0 0 8px;letter-spacing:-.02em}
+.state p{color:var(--muted);font-size:13px;line-height:1.55;margin:0 0 16px}
 .state.err .state-ic{background:var(--bad-soft);color:var(--bad-ink)}
 .skl{background:linear-gradient(90deg,#EEF1F6,#F6F8FB,#EEF1F6);background-size:200% 100%;border-radius:12px;animation:sh 1.3s ease infinite}@keyframes sh{to{background-position:-200% 0}}
-.btn{border:none;border-radius:11px;padding:10px 18px;font-size:13.5px;font-weight:650;cursor:pointer;transition:.16s;display:inline-flex;align-items:center;gap:8px}
+.btn{border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;transition:.16s;display:inline-flex;align-items:center;gap:8px}
 .btn:active{transform:translateY(1px)}
 .btn.primary{background:var(--cta,#005DFF);color:#fff}.btn.primary:hover{background:var(--brand-ink)}
 .btn.ghost{background:#fff;border:1px solid var(--line);color:var(--ink-2)}.btn.ghost:hover{border-color:var(--brand);color:var(--brand)}
-.btn.sm{padding:7px 12px;font-size:12.5px;border-radius:9px}
+.btn.sm{padding:8px 12px;font-size:12px;border-radius:8px}
 
 /* drawer */
 .scrim{position:fixed;inset:0;background:rgba(15,23,42,.32);backdrop-filter:blur(2px);opacity:0;pointer-events:none;transition:.2s;z-index:60}.scrim.on{opacity:1;pointer-events:auto}
 .drawer{position:fixed;top:0;right:0;height:100vh;width:540px;max-width:94vw;background:#fff;box-shadow:var(--shadow-lg);transform:translateX(100%);transition:transform .28s var(--ease);z-index:61;display:flex;flex-direction:column}.drawer.on{transform:none}
-.drawer-h{padding:20px 22px 18px;border-bottom:1px solid var(--line);display:flex;gap:14px;align-items:flex-start;background:linear-gradient(180deg,var(--surface-2) 0%,var(--card) 72%);position:relative}
+.drawer-h{padding:20px 24px 16px;border-bottom:1px solid var(--line);display:flex;gap:16px;align-items:flex-start;background:linear-gradient(180deg,var(--surface-2) 0%,var(--card) 72%);position:relative}
 .drawer-h::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:var(--brand-grad);pointer-events:none;border-radius:0}
-.drawer-h h2{margin:0;font-size:18px;font-weight:700;letter-spacing:-.022em;line-height:1.25;font-family:var(--font-display)}
-.drawer-h .sub{font-size:12px;color:var(--muted);margin-top:9px;display:flex;gap:7px;flex-wrap:wrap;align-items:center}
-.drawer-body{padding:22px 22px 36px;overflow-y:auto;flex:1}
+.drawer-h h2{margin:0;font-size:20px;font-weight:700;letter-spacing:-.022em;line-height:1.25;font-family:var(--font-display)}
+.drawer-h .sub{font-size:12px;color:var(--muted);margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.drawer-body{padding:24px 24px 36px;overflow-y:auto;flex:1}
 .drawer .close{margin-left:auto;flex:0 0 34px;margin-top:-2px}
-.section-t{font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:28px 0 12px;display:flex;align-items:center;gap:8px;padding-bottom:9px;border-bottom:1px solid var(--line-soft)}.section-t:first-child{margin-top:0}
-.section-t .r{margin-left:auto;text-transform:none;letter-spacing:0;font-weight:600;color:var(--faint)}
-.def-box{font-size:13px;color:var(--ink-2);line-height:1.65;background:var(--brand-soft);border:1px solid rgba(0,93,255,.14);border-radius:13px;padding:14px 16px}
-.def-box .dm{display:flex;gap:6px;flex-wrap:wrap;margin-top:11px;padding-top:11px;border-top:1px solid rgba(0,93,255,.1)}
-.def-box .dm span{font-size:11px;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:20px;padding:2px 10px;display:inline-flex;align-items:center;gap:3px}
-.def-box .dm b{color:var(--ink-2);font-weight:650}
-.metric-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.section-t{padding-bottom:var(--sp2);border-bottom:1px solid var(--line-soft)}
+.section-t:first-child{margin-top:0}
+.def-box{font-size:13px;color:var(--ink-2);line-height:1.65;background:var(--brand-soft);border:1px solid rgba(0,93,255,.14);border-radius:12px;padding:16px 16px}
+.def-box .dm{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid rgba(0,93,255,.1)}
+.def-box .dm span{font-size:11px;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:999px;padding:2px 8px;display:inline-flex;align-items:center;gap:4px}
+.def-box .dm b{color:var(--ink-2);font-weight:600}
+.metric-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .metric-grid.g4{grid-template-columns:repeat(4,1fr)}
 @media(max-width:820px){.metric-grid.g4{grid-template-columns:repeat(2,1fr)}}
-.metric{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:13px 13px 12px;box-shadow:var(--shadow-xs)}
-.metric .l{font-size:11px;color:var(--muted);font-weight:600;line-height:1.2}.metric .v{font-size:18px;font-weight:800;letter-spacing:-.03em;margin-top:6px;font-variant-numeric:tabular-nums;line-height:1.1}.metric .v small{font-size:11px;font-weight:600;color:var(--faint)}
+.metric{background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);padding:var(--sp3);box-shadow:var(--shadow-xs);min-width:0}
+.metric .l{font-size:var(--fs-xs);color:var(--muted);font-weight:var(--fw-med);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* One size for every cell in the grid. Eight cells previously ran 15/13/20px
+   from inline overrides, so the grid had no rhythm of its own. */
+.metric .v{font-size:var(--fs-xl);font-weight:var(--fw-bold);letter-spacing:-.03em;margin-top:var(--sp);
+  font-variant-numeric:tabular-nums;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.metric .v small{font-size:var(--fs-xs);font-weight:var(--fw-med);color:var(--faint)}
+/* the one cell in the trio that answers the question carries the emphasis */
+.metric.hl{background:var(--brand-soft);border-color:rgba(0,93,255,.18)}
+.metric.hl .l{color:var(--brand-ink)}
 .field{margin-bottom:12px}
-.field label{display:block;font-size:11.5px;font-weight:650;color:var(--ink-2);margin-bottom:5px}
-.field input,.field textarea,.field select{width:100%;border:1px solid var(--line-2);border-radius:10px;padding:9px 11px;font-size:13px;color:var(--ink);outline:none;transition:.15s;background:#fff}
+.field label{display:block;font-size:11px;font-weight:600;color:var(--ink-2);margin-bottom:4px}
+.field input,.field textarea,.field select{width:100%;border:1px solid var(--line-2);border-radius:8px;padding:8px 12px;font-size:13px;color:var(--ink);outline:none;transition:.15s;background:#fff}
 .field input:focus,.field textarea:focus,.field select:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
 .field textarea{resize:vertical;min-height:60px}
-.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:11px 18px;border-radius:12px;font-size:13px;font-weight:600;box-shadow:var(--shadow-lg);opacity:0;pointer-events:none;transition:.24s;z-index:80}.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}.toast.err{background:var(--bad)}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:12px 16px;border-radius:12px;font-size:13px;font-weight:600;box-shadow:var(--shadow-lg);opacity:0;pointer-events:none;transition:.24s;z-index:80}.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}.toast.err{background:var(--bad)}
 .fade{animation:fade .28s ease}@keyframes fade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
 .hamburger{display:none}
 @media(max-width:900px){
@@ -462,91 +512,91 @@ button.sb-gt.open .cv{transform:rotate(180deg)}
   .sidebar.open{transform:none}
   .app.rail{--sbw:246px}
   .app.rail .wordmark,.app.rail .sb-gt,.app.rail .nav-item .lbl,.app.rail .nav-item .badge,.app.rail .userchip .u-meta,.app.rail .sb-collapse .lbl{display:revert}
-  .app.rail .nav-item{justify-content:flex-start;padding:9px 12px}
-  .app.rail .sb-head{padding:0 14px;justify-content:flex-start}
+  .app.rail .nav-item{justify-content:flex-start;padding:8px 12px}
+  .app.rail .sb-head{padding:0 16px;justify-content:flex-start}
   .app.rail .sb-collapse{justify-content:flex-start;padding:8px 12px}
   .app.rail .sb-collapse svg{transform:none}
   .sb-scrim{display:block;position:fixed;inset:0;background:rgba(15,23,42,.32);opacity:0;pointer-events:none;transition:.2s;z-index:44}
   .sb-scrim.on{opacity:1;pointer-events:auto}
   .topbar{padding:0 16px}
   .filterbar{padding-left:16px;padding-right:16px}
-  .content{padding:22px 16px 64px}
+  .content{padding:24px 16px 64px}
 }
-@media(max-width:620px){.userchip .u-meta{display:none}.updated{display:none}.metric-grid{grid-template-columns:repeat(2,1fr)}.person-hd .r{margin-left:0;width:100%}.fseg{flex-wrap:wrap}.fseg button{padding:6px 9px;font-size:11.5px}.fsearch{flex:1 1 100%}.pill-select{max-width:100%}}
+@media(max-width:620px){.userchip .u-meta{display:none}.updated{display:none}.metric-grid{grid-template-columns:repeat(2,1fr)}.person-hd .r{margin-left:0;width:100%}.fseg{flex-wrap:wrap}.fseg button{padding:8px 8px;font-size:11px}.fsearch{flex:1 1 100%}.pill-select{max-width:100%}}
 @media(max-width:480px){.crumbs{display:none}.userchip{display:none}}
 
 /* ---- Cycle chip ---- */
-.cyc-chip{font-size:10.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;border:1px solid var(--line-2);border-radius:20px;padding:2px 9px;color:var(--ink-2);background:#fff;cursor:pointer;margin-right:10px}
+.cyc-chip{font-size:10px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;border:1px solid var(--line-2);border-radius:999px;padding:2px 8px;color:var(--ink-2);background:#fff;cursor:pointer;margin-right:8px}
 .cyc-chip.active{color:var(--ink);border-color:var(--ink)}
 .cyc-chip.locked{background:var(--ink);color:#fff;border-color:var(--ink)}
 .cyc-chip.review{background:var(--surface-3);color:var(--ink)}
 .cyc-chip.draft{color:var(--muted)}
 
 /* ---- score + rating pairing ---- */
-.rt-sub{font-size:11px;font-weight:650;color:var(--muted);margin-left:8px;letter-spacing:0}
+.rt-sub{font-size:11px;font-weight:600;color:var(--muted);margin-left:8px;letter-spacing:0}
 .kc-value .rt-sub{vertical-align:middle}
 /* a word, not a number: drop to a readable size so long states fit the tile */
-.kc-word{font-size:19px;letter-spacing:-.02em;line-height:1.2;display:inline-block}
+.kc-word{font-size:20px;letter-spacing:-.02em;line-height:1.2;display:inline-block}
 
 /* ---- review workflow ---- */
-.stage{font-size:11px;font-weight:650;border:1px solid var(--line);border-radius:20px;padding:3px 10px;color:var(--ink-2);background:#fff;white-space:nowrap}
+.stage{font-size:11px;font-weight:600;border:1px solid var(--line);border-radius:999px;padding:4px 8px;color:var(--ink-2);background:#fff;white-space:nowrap}
 .stage.done{background:var(--ink);color:#fff;border-color:var(--ink)}
-.wf{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 18px;border:1px solid var(--line);border-radius:14px;background:var(--surface-2);margin-bottom:16px}
-.wf-step{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--muted)}
+.wf{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:16px 16px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);margin-bottom:16px}
+.wf-step{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--muted)}
 .wf-step.active{color:var(--ink)}.wf-step.done{color:var(--ink-2)}
 .wf-dot{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700;border:1.5px solid var(--line-2);background:#fff;color:var(--muted)}
 .wf-step.active .wf-dot{border-color:var(--ink);color:var(--ink)}
 .wf-step.done .wf-dot{background:var(--ink);border-color:var(--ink);color:#fff}
 .wf-line{flex:1;min-width:16px;height:1px;background:var(--line-2)}
 .rv-state{border:1px solid var(--line);border-radius:12px;overflow:hidden;cursor:pointer}
-.rv-line{display:flex;align-items:center;gap:10px;padding:11px 13px;font-size:12.5px;font-weight:600}
+.rv-line{display:flex;align-items:center;gap:8px;padding:12px 12px;font-size:12px;font-weight:600}
 .rv-line+.rv-line{border-top:1px solid var(--line-soft)}
-.rv-dot{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--line-2);display:grid;place-items:center;font-size:9px;color:#fff;flex:0 0 16px}
+.rv-dot{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--line-2);display:grid;place-items:center;font-size:10px;color:#fff;flex:0 0 16px}
 .rv-dot.done{background:var(--ink);border-color:var(--ink)}
 .rv-dot.active{border-color:var(--ink)}
-.rv-st{margin-left:auto;font-size:11.5px;font-weight:600;color:var(--muted)}
+.rv-st{margin-left:auto;font-size:11px;font-weight:600;color:var(--muted)}
 
 /* ---- check-ins ---- */
-.ci-date{flex:0 0 52px;font-size:11.5px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
-.ci-log{border:1px solid var(--line);border-radius:13px;overflow:hidden;margin-top:6px}
-.ci-item{display:flex;gap:14px;padding:13px 15px;position:relative;background:var(--card)}
+.ci-date{flex:0 0 52px;font-size:11px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
+.ci-log{border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:8px}
+.ci-item{display:flex;gap:16px;padding:12px 16px;position:relative;background:var(--card)}
 .ci-item+.ci-item{border-top:1px solid var(--line-soft);background:var(--surface-2)}
-.ci-when{flex:0 0 54px;font-size:11.5px;font-weight:700;color:var(--brand);font-variant-numeric:tabular-nums;padding-top:1px}
+.ci-when{flex:0 0 54px;font-size:11px;font-weight:700;color:var(--brand);font-variant-numeric:tabular-nums;padding-top:1px}
 .ci-body{min-width:0;flex:1}
-.ci-val{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
-.ci-note{font-size:12.5px;color:var(--ink-2);line-height:1.55;margin-top:3px}
-.ci-meta{font-size:11px;color:var(--faint);margin-top:5px;display:flex;gap:8px;flex-wrap:wrap}
-.link.sm{font-size:11.5px;font-weight:600;color:var(--ink-2);text-decoration:underline;text-underline-offset:2px;flex:0 0 auto}
+.ci-val{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
+.ci-note{font-size:12px;color:var(--ink-2);line-height:1.55;margin-top:4px}
+.ci-meta{font-size:11px;color:var(--faint);margin-top:4px;display:flex;gap:8px;flex-wrap:wrap}
+.link.sm{font-size:11px;font-weight:600;color:var(--ink-2);text-decoration:underline;text-underline-offset:2px;flex:0 0 auto}
 
 /* ---- score explanation ---- */
-.calc{margin-top:10px;font-size:12.5px;color:var(--ink-2);background:var(--brand-soft);border:1px solid rgba(0,93,255,.14);border-radius:11px;padding:11px 14px;line-height:1.7}
+.calc{margin-top:8px;font-size:12px;color:var(--ink-2);background:var(--brand-soft);border:1px solid rgba(0,93,255,.14);border-radius:8px;padding:12px 16px;line-height:1.7}
 .calc b{color:var(--brand-ink);font-variant-numeric:tabular-nums}
-.lockmsg{font-size:12px;font-weight:600;color:var(--warn-ink);background:var(--warn-soft);border:1px solid rgba(197,122,0,.2);border-radius:10px;padding:10px 13px;margin-bottom:10px}
+.lockmsg{font-size:12px;font-weight:600;color:var(--warn-ink);background:var(--warn-soft);border:1px solid rgba(197,122,0,.2);border-radius:8px;padding:8px 12px;margin-bottom:8px}
 
 /* ---- assignment editor ---- */
-.asg{border:1px solid var(--line);border-radius:13px;padding:13px 15px;background:var(--surface-2);margin-top:4px}
-.asg summary{font-size:12.5px;font-weight:600;color:var(--ink-2);cursor:pointer;list-style:none}
+.asg{border:1px solid var(--line);border-radius:12px;padding:12px 16px;background:var(--surface-2);margin-top:4px}
+.asg summary{font-size:12px;font-weight:600;color:var(--ink-2);cursor:pointer;list-style:none}
 .asg summary::-webkit-details-marker{display:none}
 .asg summary::before{content:"▸ ";color:var(--brand)}
 .asg[open] summary::before{content:"▾ ";color:var(--brand)}
 .asg summary b{color:var(--ink)}
 .band-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:4px 0 2px}
 .band-grid .field label{font-size:10px}
-.band-grid input{padding:7px 8px;font-size:12px}
+.band-grid input{padding:8px 8px;font-size:12px}
 @media(max-width:640px){.band-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
 /* ---- settings ---- */
 .pct-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-bottom:4px}
 .pct-grid .field label{font-size:10px}
-.pct-grid input{padding:8px;font-size:12.5px;text-align:center}
+.pct-grid input{padding:8px;font-size:12px;text-align:center}
 @media(max-width:640px){.pct-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-.chk{display:flex;align-items:flex-start;gap:9px;font-size:12.5px;font-weight:600;color:var(--ink-2);margin:10px 0 14px;cursor:pointer;line-height:1.5}
+.chk{display:flex;align-items:flex-start;gap:8px;font-size:12px;font-weight:600;color:var(--ink-2);margin:8px 0 16px;cursor:pointer;line-height:1.5}
 .chk input{margin-top:2px;accent-color:var(--ink)}
-.chk small{display:block;font-weight:500;color:var(--muted);font-size:11.5px}
-.status-row{display:flex;align-items:center;gap:10px;padding:8px 0}
+.chk small{display:block;font-weight:400;color:var(--muted);font-size:11px}
+.status-row{display:flex;align-items:center;gap:8px;padding:8px 0}
 .status-row+.status-row{border-top:1px solid var(--line-soft)}
-.status-row .st-label{flex:1;min-width:0;border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12.5px;font-weight:600;color:var(--ink);outline:none;background:#fff}
-.status-row .st-min{width:76px;border:1px solid var(--line);border-radius:8px;padding:7px 8px;font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums;outline:none;background:#fff}
+.status-row .st-label{flex:1;min-width:0;border:1px solid var(--line);border-radius:8px;padding:8px 8px;font-size:12px;font-weight:600;color:var(--ink);outline:none;background:#fff}
+.status-row .st-min{width:76px;border:1px solid var(--line);border-radius:8px;padding:8px 8px;font-size:12px;text-align:right;font-variant-numeric:tabular-nums;outline:none;background:#fff}
 .status-row .st-label:focus,.status-row .st-min:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
 .status-row .st-at{font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap}
 .tbl tr.tot td{border-top:2px solid var(--line-2);font-weight:700;background:var(--surface-2)}
@@ -559,10 +609,10 @@ button.sb-gt.open .cv{transform:rotate(180deg)}
 /* Band headings break the dashboard into answerable questions instead of one
    continuous wall of tiles: where we stand → how it breaks down → what to do. */
 /* named .dband, not .band — the distribution chart already uses <g class="band"> */
-.dband{display:flex;align-items:baseline;gap:10px;margin:30px 0 13px}
+.dband{display:flex;align-items:baseline;gap:8px;margin:32px 0 12px}
 .dband:first-of-type{margin-top:4px}
-.dband h2{font-size:13.5px;font-weight:700;letter-spacing:-.012em;margin:0;color:var(--ink);white-space:nowrap;font-family:var(--font-display)}
-.dband .bd{font-size:11.5px;color:var(--muted);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dband h2{font-size:13px;font-weight:700;letter-spacing:-.012em;margin:0;color:var(--ink);white-space:nowrap;font-family:var(--font-display)}
+.dband .bd{font-size:11px;color:var(--muted);font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dband .ln{flex:1;height:1px;background:var(--line);min-width:12px}
 .dash{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px;align-items:stretch}
 .t1{grid-column:span 1}.t2{grid-column:span 2}.t3{grid-column:span 3}.t4{grid-column:span 4}
@@ -573,38 +623,33 @@ button.sb-gt.open .cv{transform:rotate(180deg)}
 @media(max-width:1180px){.t2{grid-column:span 3}.t3{grid-column:span 6}.t4{grid-column:span 6}.t5,.t7,.t8,.t9{grid-column:span 12}
   .dash>.tile.t4:first-child{grid-column:span 12}}
 @media(max-width:980px){.t2{grid-column:span 6}}
-@media(max-width:720px){.dash{gap:10px}.t2,.t3,.t4,.t5,.t6{grid-column:span 12}}
+@media(max-width:720px){.dash{gap:8px}.t2,.t3,.t4,.t5,.t6{grid-column:span 12}}
 
 /* compact page header — a dashboard states what it is in one line */
-.dash-head{display:flex;align-items:flex-end;gap:14px;margin-bottom:14px;flex-wrap:wrap}
-.dash-head h1{font-size:23px;font-weight:600;letter-spacing:-.024em;margin:0;line-height:1.15}
-.dash-head .sub{font-size:12.5px;color:var(--muted);padding-bottom:2px}
+.dash-head{display:flex;align-items:flex-end;gap:16px;margin-bottom:16px;flex-wrap:wrap}
+.dash-head h1{font-size:28px;font-weight:600;letter-spacing:-.024em;margin:0;line-height:1.15}
+.dash-head .sub{font-size:12px;color:var(--muted);padding-bottom:2px}
 .dash-head .r{margin-left:auto;display:flex;align-items:center;gap:8px;padding-bottom:1px}
 
-.tile{border:1px solid var(--line);border-radius:14px;background:var(--card);padding:13px 15px;min-width:0;display:flex;flex-direction:column}
-.tile.pad0{padding:13px 8px 8px}
-/* Pastel tones. Applied per tile category so the grid reads as colour-coded
-   groups rather than a field of identical white boxes. */
-.tile.tn-peri{background:var(--p-peri);border-color:var(--p-peri-bd)}
-.tile.tn-blue{background:var(--p-blue);border-color:var(--p-blue-bd)}
-.tile.tn-violet{background:var(--p-violet);border-color:var(--p-violet-bd)}
-.tile.tn-mint{background:var(--p-mint);border-color:var(--p-mint-bd)}
-.tile.tn-green{background:var(--p-green);border-color:var(--p-green-bd)}
-.tile.tn-amber{background:var(--p-amber);border-color:var(--p-amber-bd)}
-.tile.tn-rose{background:var(--p-rose);border-color:var(--p-rose-bd)}
-/* the tile label needs a step more contrast once it sits on a tint */
-.tile[class*="tn-"] .tile-h .tlb{color:var(--ink-2);opacity:.82}
-.tile[class*="tn-"] .stat .sub{color:var(--ink-2);opacity:.72}
-/* the meter track would disappear into a tint, so give it its own ground */
-.tile[class*="tn-"] .meter{background:rgba(255,255,255,.72)}
-/* a white sheen reads better than a blue glow on a coloured ground */
-.tile[class*="tn-"]::before{background:radial-gradient(320px circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,.62),transparent 64%)}
-.tile-h{display:flex;align-items:center;gap:8px;margin-bottom:9px;min-height:16px}
-.tile-h .tlb{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);white-space:nowrap}
+.tile{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:12px 16px;min-width:0;display:flex;flex-direction:column}
+.tile.pad0{padding:12px 8px 8px}
+/* ===== Colour carries one meaning =====
+   Tiles were tinted by category — periwinkle for people, violet for process,
+   mint for coverage — which put hue on the one axis a reader cannot infer. Two
+   tiles side by side in different colours implied a difference in performance
+   that did not exist. Hue now means performance and nothing else: the status
+   ramp where a value sits on it, brand blue for anything interactive, neutral
+   surfaces for structure. A tile that must signal risk does so through its
+   status chip and meter, which already carry the ramp.
+   tn-* are kept as no-ops so existing call sites stay valid. */
+.tile.tn-peri,.tile.tn-blue,.tile.tn-violet,.tile.tn-mint,
+.tile.tn-green,.tile.tn-amber,.tile.tn-rose{background:var(--card);border-color:var(--line)}
+.tile-h{display:flex;align-items:center;gap:8px;margin-bottom:8px;min-height:16px}
+.tile-h .tlb{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);white-space:nowrap}
 .tile-h .r{margin-left:auto;font-size:11px;font-weight:600;color:var(--muted);white-space:nowrap}
 .tile-h .r.link{cursor:pointer}.tile-h .r.link:hover{color:var(--ink)}
-.tile.clickable{cursor:pointer;transition:border-color .15s var(--ease),box-shadow .15s var(--ease),transform .15s var(--ease)}
-.tile.clickable:hover{border-color:var(--line-2);box-shadow:var(--shadow);transform:translateY(-2px)}
+.tile.clickable{cursor:pointer;transition:border-color .15s var(--ease),box-shadow .15s var(--ease)}
+.tile.clickable:hover{border-color:var(--line-2);box-shadow:var(--shadow)}
 /* The hero is the one number the page leads with — it gets a brand edge and a
    tinted ground so it is not just another white box among twelve. */
 .tile.t4:first-child{background:linear-gradient(150deg,var(--brand-soft) 0%,var(--card) 58%);border-color:rgba(0,93,255,.16)}
@@ -612,53 +657,53 @@ button.sb-gt.open .cv{transform:rotate(180deg)}
 
 /* hero: the one number the view leads with (proportional figures, ≥48px) */
 .hero{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
-.hero-fig{font-size:56px;font-weight:600;letter-spacing:-.035em;line-height:.95;font-variant-numeric:proportional-nums}
-.hero-fig .u{font-size:22px;font-weight:600;color:var(--muted);margin-left:2px;letter-spacing:-.02em}
-.hero-fig .hero-blank{color:var(--faint);font-weight:500}
-.hero-side{display:flex;flex-direction:column;gap:7px;min-width:0}
+.hero-fig{font-size:44px;font-weight:600;letter-spacing:-.035em;line-height:.95;font-variant-numeric:proportional-nums}
+.hero-fig .u{font-size:28px;font-weight:600;color:var(--muted);margin-left:2px;letter-spacing:-.02em}
+.hero-fig .hero-blank{color:var(--faint);font-weight:400}
+.hero-side{display:flex;flex-direction:column;gap:8px;min-width:0}
 .hero-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.hero-note{font-size:11.5px;color:var(--muted);line-height:1.5}
+.hero-note{font-size:11px;color:var(--muted);line-height:1.5}
 
 /* stat tile: label · value · delta · sparkline */
 .stat{display:flex;flex-direction:column;gap:2px;flex:1}
-.stat .v{font-size:27px;font-weight:600;letter-spacing:-.028em;line-height:1.1;font-variant-numeric:proportional-nums}
-.stat .v .u{font-size:14px;color:var(--muted);font-weight:600;margin-left:1px}
-.stat .sub{font-size:11.5px;color:var(--muted);margin-top:2px;line-height:1.45}
-.stat .spark{margin-top:auto;padding-top:9px}
+.stat .v{font-size:20px;font-weight:600;letter-spacing:-.028em;line-height:1.1;font-variant-numeric:proportional-nums}
+.stat .v .u{font-size:13px;color:var(--muted);font-weight:600;margin-left:1px}
+.stat .sub{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.45}
+.stat .spark{margin-top:auto;padding-top:8px}
 
 /* meter — a single ratio against its limit; track is a lighter step of the ramp */
-.meter{height:6px;border-radius:20px;background:var(--line-soft);overflow:hidden;margin-top:9px}
-.meter span{display:block;height:100%;border-radius:20px;background:var(--brand)}
-.meter.sm{height:4px;margin-top:7px}
+.meter{height:6px;border-radius:999px;background:var(--line-soft);overflow:hidden;margin-top:8px}
+.meter span{display:block;height:100%;border-radius:999px;background:var(--brand)}
+.meter.sm{height:4px;margin-top:8px}
 
 /* dense ranked rows — magnitude on nominal categories: one ink, length varies */
-.drow{display:flex;align-items:center;gap:10px;padding:7px 6px;border-radius:8px;cursor:pointer;transition:background .13s}
+.drow{display:flex;align-items:center;gap:8px;padding:8px 8px;border-radius:8px;cursor:pointer;transition:background .13s}
 .drow:hover{background:var(--surface-2)}
 .drow.static{cursor:default}.drow.static:hover{background:transparent}
-.drow .nm{font-size:12.5px;font-weight:550;flex:0 0 118px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.drow .nm{font-size:12px;font-weight:600;flex:0 0 118px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .drow.wide .nm{flex:0 0 210px}
 @media(max-width:720px){.drow.wide .nm{flex:0 0 130px}}
-.drow .nm small{display:block;font-size:10.5px;color:var(--faint);font-weight:500}
-.drow .bar{flex:1;height:8px;background:var(--line-soft);border-radius:20px;overflow:hidden;min-width:40px}
-.drow .bar i{display:block;height:100%;border-radius:20px;background:var(--ink)}
-.drow .val{font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums;flex:0 0 auto;min-width:44px;text-align:right}
-.drow .val small{font-size:9.5px;color:var(--muted);font-weight:600}
+.drow .nm small{display:block;font-size:10px;color:var(--faint);font-weight:400}
+.drow .bar{flex:1;height:8px;background:var(--line-soft);border-radius:999px;overflow:hidden;min-width:40px}
+.drow .bar i{display:block;height:100%;border-radius:999px;background:var(--ink)}
+.drow .val{font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;flex:0 0 auto;min-width:44px;text-align:right}
+.drow .val small{font-size:10px;color:var(--muted);font-weight:600}
 .drow .d{flex:0 0 auto;min-width:52px;text-align:right}
 @media(max-width:520px){.drow .nm{flex-basis:88px}.drow .d{display:none}}
 
 /* distribution columns — ordered categories, so the ordinal ramp is legitimate */
-.cols{display:flex;align-items:flex-end;gap:7px;height:104px;padding:0 2px}
-.ccol{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px;height:100%;min-width:0}
-.ccol .cbar{width:100%;max-width:52px;border-radius:5px 5px 2px 2px;background:var(--cbar,var(--ink));position:relative;min-height:2px;transition:opacity .13s,filter .13s}
+.cols{display:flex;align-items:flex-end;gap:8px;height:104px;padding:0 2px}
+.ccol{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:8px;height:100%;min-width:0}
+.ccol .cbar{width:100%;max-width:52px;border-radius:8px 8px 4px 4px;background:var(--cbar,var(--ink));position:relative;min-height:2px;transition:opacity .13s,filter .13s}
 .ccol:hover .cbar{filter:brightness(1.06)}
 .ccol .cbar b{position:absolute;top:-17px;left:0;right:0;text-align:center;font-size:11px;font-weight:700;color:var(--ink)}
-.ccol .clab{font-size:9.5px;font-weight:600;color:var(--faint);text-align:center;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.ccol .clab{font-size:10px;font-weight:600;color:var(--faint);text-align:center;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .ccol.dim .cbar{background:var(--line-2)}
 
 /* charts */
 .chart{width:100%;display:block;overflow:visible}
 .chart .grid{stroke:var(--line-soft);stroke-width:1}
-.chart .axis{fill:var(--faint);font-size:9.5px;font-weight:600}
+.chart .axis{fill:var(--faint);font-size:10px;font-weight:600}
 .chart .ln{fill:none;stroke:var(--brand);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .chart .ar{fill:var(--brand-soft)}
 .chart .pt{fill:#fff;stroke:var(--brand);stroke-width:2}
@@ -671,56 +716,49 @@ button.sb-gt.open .cv{transform:rotate(180deg)}
 .sparksvg .sd{fill:var(--ink)}
 
 /* one shared tooltip for every chart's hover layer */
-.vtip{position:fixed;z-index:80;pointer-events:none;background:var(--ink);color:#fff;border-radius:8px;padding:7px 10px;font-size:11.5px;font-weight:600;line-height:1.45;opacity:0;transform:translate(-50%,-118%);transition:opacity .12s;white-space:nowrap;box-shadow:var(--shadow)}
+.vtip{position:fixed;z-index:80;pointer-events:none;background:var(--ink);color:#fff;border-radius:8px;padding:8px 8px;font-size:11px;font-weight:600;line-height:1.45;opacity:0;transform:translate(-50%,-118%);transition:opacity .12s;white-space:nowrap;box-shadow:var(--shadow)}
 .vtip.on{opacity:1}
 .vtip b{font-variant-numeric:tabular-nums}
 .vtip .k{color:rgba(255,255,255,.62);font-weight:600}
 
 /* compact attention table */
-.mini{width:100%;border-collapse:collapse;font-size:12.5px}
-.mini td{padding:7px 6px;border-bottom:1px solid var(--line-soft)}
+.mini{width:100%;border-collapse:collapse;font-size:12px}
+.mini td{padding:8px 8px;border-bottom:1px solid var(--line-soft)}
 .mini tr:last-child td{border-bottom:none}
 .mini tr{cursor:pointer}.mini tr:hover{background:var(--surface-2)}
 .mini .nm{font-weight:600}
-.mini .nm small{display:block;font-size:10.5px;color:var(--faint);font-weight:500}
+.mini .nm small{display:block;font-size:10px;color:var(--faint);font-weight:400}
 .mini .n{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap}
 .tile .empty{padding:16px 4px;font-size:12px}
 
 /* ---- team lead ---- */
-.lead-chip{display:inline-flex;align-items:center;gap:5px;font-weight:600;color:var(--ink-2);cursor:pointer}
+.lead-chip{display:inline-flex;align-items:center;gap:4px;font-weight:600;color:var(--ink-2);cursor:pointer}
 .lead-chip.static{cursor:default}
 .lead-chip svg{width:13px;height:13px}
 .lead-chip b{color:var(--ink);font-weight:700}
 .lead-chip:not(.static):hover b{text-decoration:underline}
-.lead-tile{display:flex;align-items:center;gap:11px;min-width:0}
-.lead-tile .lt-name{font-size:16px;font-weight:700;letter-spacing:-.015em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.lead-tile .lt-role{font-size:11.5px;color:var(--muted);font-weight:500;margin-top:1px}
-.lavatar.lg{width:40px;height:40px;font-size:14px;flex:0 0 40px}
+.lead-tile{display:flex;align-items:center;gap:12px;min-width:0}
+.lead-tile .lt-name{font-size:15px;font-weight:700;letter-spacing:-.015em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lead-tile .lt-role{font-size:11px;color:var(--muted);font-weight:400;margin-top:1px}
+.lavatar.lg{width:40px;height:40px;font-size:13px;flex:0 0 40px}
 
 /* ---- teams editor ---- */
-.team-edit{border:1px solid var(--line);border-radius:13px;padding:14px 15px;background:var(--card)}
-.team-edit+.team-edit{margin-top:10px}
-.te-h{display:flex;align-items:center;gap:11px}
-.te-name{flex:1;min-width:0;border:1px solid transparent;border-radius:8px;padding:6px 9px;font-size:16px;font-weight:700;letter-spacing:-.015em;color:var(--ink);background:var(--surface-2);outline:none;width:100%}
+.team-edit{border:1px solid var(--line);border-radius:12px;padding:16px 16px;background:var(--card)}
+.team-edit+.team-edit{margin-top:8px}
+.te-h{display:flex;align-items:center;gap:12px}
+.te-name{flex:1;min-width:0;border:1px solid transparent;border-radius:8px;padding:8px 8px;font-size:15px;font-weight:700;letter-spacing:-.015em;color:var(--ink);background:var(--surface-2);outline:none;width:100%}
 .te-name:focus{border-color:var(--brand);background:#fff;box-shadow:0 0 0 3px var(--brand-soft)}
-.te-stat{font-size:11.5px;color:var(--muted);font-weight:600;white-space:nowrap;flex:0 0 auto}
+.te-stat{font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap;flex:0 0 auto}
 .te-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
 @media(max-width:640px){.te-grid{grid-template-columns:1fr}}
-.te-note{font-size:11px;color:var(--muted);margin-top:5px;line-height:1.4}
-.te-subs{margin-top:11px;padding-top:10px;border-top:1px solid var(--line-soft);font-size:11.5px;color:var(--muted);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.te-note{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.4}
+.te-subs{margin-top:12px;padding-top:8px;border-top:1px solid var(--line-soft);font-size:11px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 
 /* ===== ReactBits-inspired micro-interactions =====
    Spotlight: a soft brand-tinted glow tracks the cursor across a card.
    Kept at 7% so it reads as depth, not decoration. */
 .kc,.kcard,.dcard,.tile,.metric{position:relative}
-.kc::before,.kcard::before,.dcard::before,.tile::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .32s var(--ease);background:radial-gradient(320px circle at var(--mx,50%) var(--my,50%),rgba(0,93,255,.075),transparent 62%)}
-.kc:hover::before,.kcard:hover::before,.dcard:hover::before,.tile:hover::before{opacity:1}
 /* Animated list: rows arrive in sequence rather than all at once. */
-.lrow{animation:rowIn .38s var(--ease) backwards}
-.lrow:nth-child(1){animation-delay:.02s}.lrow:nth-child(2){animation-delay:.05s}.lrow:nth-child(3){animation-delay:.08s}
-.lrow:nth-child(4){animation-delay:.11s}.lrow:nth-child(5){animation-delay:.14s}.lrow:nth-child(6){animation-delay:.17s}
-.lrow:nth-child(7){animation-delay:.19s}.lrow:nth-child(8){animation-delay:.21s}.lrow:nth-child(n+9){animation-delay:.23s}
-@keyframes rowIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .sp-grow{flex:1 1 auto}
 
 /* Achievement bar — one component, used everywhere achievement is listed, so a
@@ -729,11 +767,11 @@ button.sb-gt.open .cv{transform:rotate(180deg)}
    reference a bar means nothing. Over-achievement stays visible (a caret past
    the tick) instead of being clipped at full. Colour comes from the KPI's own
    status band, and the number is always printed too — never colour alone. */
-.achcell{display:flex;flex-direction:column;align-items:flex-end;gap:5px;min-width:66px}
-.kbar{position:relative;height:5px;width:100%;min-width:58px;border-radius:20px;background:var(--surface-2)}
-.kbar>span{position:absolute;left:0;top:0;bottom:0;border-radius:20px;transform-origin:left;
+.achcell{display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:66px}
+.kbar{position:relative;height:5px;width:100%;min-width:58px;border-radius:999px;background:var(--surface-2)}
+.kbar>span{position:absolute;left:0;top:0;bottom:0;border-radius:999px;
   animation:kbargrow .55s cubic-bezier(.22,.61,.36,1) backwards}
-.kbar>i{position:absolute;top:-3px;bottom:-3px;left:80%;width:1px;background:var(--line-2);border-radius:1px}
+.kbar>i{position:absolute;top:-3px;bottom:-3px;left:80%;width:1px;background:var(--line-2);border-radius:4px}
 .kbar.none{background:repeating-linear-gradient(90deg,var(--line) 0 3px,transparent 3px 7px)}
 .kbar.over>span::after{content:"";position:absolute;right:-4px;top:50%;transform:translateY(-50%);
   border:3.5px solid transparent;border-left-color:inherit}
@@ -741,7 +779,7 @@ button.sb-gt.open .cv{transform:rotate(180deg)}
 @media(prefers-reduced-motion:reduce){.kbar>span{animation:none}}
 
 /* Targets — a team's facts as one quiet line, not a row of competing cards. */
-.tgt-facts{display:flex;flex-wrap:wrap;gap:6px 22px;margin-bottom:16px;
+.tgt-facts{display:flex;flex-wrap:wrap;gap:8px 24px;margin-bottom:16px;
   font-size:13px;color:var(--ink-2);font-variant-numeric:tabular-nums}
 .tgt-facts span{position:relative}
 .tgt-facts span+span::before{content:"";position:absolute;left:-12px;top:.42em;width:3px;height:3px;
@@ -761,94 +799,94 @@ button.sb-gt.open .cv{transform:rotate(180deg)}
 .mo-scrim{position:fixed;inset:0;background:rgba(12,26,51,.38);backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:opacity .22s var(--ease);z-index:70}
 .mo-scrim.on{opacity:1;pointer-events:auto}
 .mo-wrap{position:fixed;inset:0;z-index:71;display:grid;place-items:center;padding:28px;pointer-events:none}
-.mo{width:100%;max-width:720px;max-height:calc(100vh - 56px);background:var(--card);border-radius:18px;
+.mo{width:100%;max-width:720px;max-height:calc(100vh - 56px);background:var(--card);border-radius:12px;
   box-shadow:0 1px 2px rgba(12,26,51,.06),0 40px 80px -32px rgba(12,26,51,.34);
   display:flex;flex-direction:column;opacity:0;transform:translateY(10px) scale(.985);
   transition:opacity .22s var(--ease),transform .26s var(--ease);pointer-events:auto;overflow:hidden}
 .mo.wide{max-width:880px}
 .mo.on{opacity:1;transform:none}
 /* header — identity on the left, the one headline number on the right */
-.mo-h{padding:22px 26px 18px;display:flex;align-items:flex-start;gap:16px;border-bottom:1px solid var(--line)}
+.mo-h{padding:24px 24px 16px;display:flex;align-items:flex-start;gap:16px;border-bottom:1px solid var(--line)}
 .mo-ic{width:42px;height:42px;flex:0 0 42px;border-radius:12px;display:grid;place-items:center;
-  background:var(--brand-soft);color:var(--brand-ink);font-weight:700;font-size:14px;overflow:hidden}
+  background:var(--brand-soft);color:var(--brand-ink);font-weight:700;font-size:13px;overflow:hidden}
 .mo-ic svg{width:20px;height:20px}
 .mo-id{min-width:0;flex:1}
-.mo-eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
-.mo-h h2{margin:4px 0 0;font-size:20px;font-weight:650;letter-spacing:-.025em;line-height:1.2;font-family:var(--font-display)}
-.mo-sub{margin-top:7px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
+.mo-eyebrow{font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.mo-h h2{margin:4px 0 0;font-size:20px;font-weight:600;letter-spacing:-.025em;line-height:1.2;font-family:var(--font-display)}
+.mo-sub{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--muted)}
 .mo-score{flex:0 0 auto;text-align:right}
-.mo-score .v{font-size:26px;font-weight:650;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1}
-.mo-score .l{font-size:10.5px;font-weight:650;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-top:5px}
-.mo-x{border:1px solid var(--line);background:#fff;border-radius:9px;width:32px;height:32px;flex:0 0 32px;
+.mo-score .v{font-size:28px;font-weight:600;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1}
+.mo-score .l{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-top:4px}
+.mo-x{border:1px solid var(--line);background:#fff;border-radius:8px;width:32px;height:32px;flex:0 0 32px;
   display:grid;place-items:center;cursor:pointer;color:var(--muted);transition:.15s;margin-left:2px}
 .mo-x:hover{border-color:var(--ink-2);color:var(--ink)}.mo-x svg{width:15px;height:15px}
 /* tabs */
-.mo-tabs{display:flex;gap:2px;padding:0 26px;border-bottom:1px solid var(--line);overflow-x:auto}
-.mo-tabs button{border:none;background:transparent;padding:12px 2px 11px;margin-right:22px;font:inherit;font-size:13px;
-  font-weight:550;color:var(--muted);cursor:pointer;white-space:nowrap;position:relative;transition:color .15s}
+.mo-tabs{display:flex;gap:2px;padding:0 24px;border-bottom:1px solid var(--line);overflow-x:auto}
+.mo-tabs button{border:none;background:transparent;padding:12px 2px 12px;margin-right:24px;font:inherit;font-size:13px;
+  font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap;position:relative;transition:color .15s}
 .mo-tabs button:hover{color:var(--ink)}
-.mo-tabs button.on{color:var(--ink);font-weight:650}
-.mo-tabs button.on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--brand);border-radius:2px}
+.mo-tabs button.on{color:var(--ink);font-weight:600}
+.mo-tabs button.on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--brand);border-radius:4px}
 /* body */
-.mo-b{padding:22px 26px 26px;overflow-y:auto;flex:1}
-.mo-sec+.mo-sec{margin-top:26px}
-.mo-sec-h{display:flex;align-items:baseline;gap:10px;margin-bottom:12px}
-.mo-sec-h .t{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
-.mo-sec-h .r{margin-left:auto;font-size:12px;color:var(--muted);font-weight:550}
+.mo-b{padding:24px 24px 24px;overflow-y:auto;flex:1}
+.mo-sec+.mo-sec{margin-top:24px}
+.mo-sec-h{display:flex;align-items:baseline;gap:8px;margin-bottom:12px}
+.mo-sec-h .t{font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.mo-sec-h .r{margin-left:auto;font-size:12px;color:var(--muted);font-weight:600}
 /* headline stats — hairline separated, never boxed */
 .mo-stats{display:flex;flex-wrap:wrap;gap:0;border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.mo-stat{flex:1 1 0;min-width:132px;padding:14px 16px;border-right:1px solid var(--line)}
+.mo-stat{flex:1 1 0;min-width:132px;padding:16px 16px;border-right:1px solid var(--line)}
 .mo-stat:last-child{border-right:none}
 .mo-stat .l{font-size:11px;font-weight:600;color:var(--muted)}
-.mo-stat .v{font-size:21px;font-weight:650;letter-spacing:-.025em;font-variant-numeric:tabular-nums;margin-top:5px;line-height:1.1}
-.mo-stat .s{font-size:11.5px;color:var(--muted);margin-top:4px;font-weight:500}
+.mo-stat .v{font-size:20px;font-weight:600;letter-spacing:-.025em;font-variant-numeric:tabular-nums;margin-top:4px;line-height:1.1}
+.mo-stat .s{font-size:11px;color:var(--muted);margin-top:4px;font-weight:400}
 @media(max-width:620px){.mo-stat{flex:1 1 50%;min-width:50%;border-bottom:1px solid var(--line)}.mo-stat:nth-child(2n){border-right:none}}
 /* definition pairs */
 .mo-kv{display:grid;grid-template-columns:minmax(120px,190px) 1fr;gap:0}
-.mo-kv>div{padding:10px 0;border-top:1px solid var(--line-soft);font-size:13px;min-width:0}
+.mo-kv>div{padding:8px 0;border-top:1px solid var(--line-soft);font-size:13px;min-width:0}
 .mo-kv>div:nth-child(-n+2){border-top:none}
-.mo-kv .k{color:var(--muted);font-weight:550}
-.mo-kv .v{color:var(--ink);font-weight:550;overflow-wrap:anywhere}
+.mo-kv .k{color:var(--muted);font-weight:600}
+.mo-kv .v{color:var(--ink);font-weight:600;overflow-wrap:anywhere}
 @media(max-width:560px){.mo-kv{grid-template-columns:1fr}.mo-kv .k{padding-bottom:2px}.mo-kv .v{padding-top:0;border-top:none}}
 /* rating ladder — the achieved band is marked, the rest recede */
-.mo-lad{display:flex;gap:5px}
-.mo-lad .b{flex:1;min-width:0;border:1px solid var(--line);border-radius:9px;padding:9px 7px 8px;text-align:center;background:var(--surface-2);transition:.16s}
-.mo-lad .b .n{font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
-.mo-lad .b .v{font-size:12px;font-weight:650;color:var(--ink-2);margin-top:3px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mo-lad{display:flex;gap:4px}
+.mo-lad .b{flex:1;min-width:0;border:1px solid var(--line);border-radius:8px;padding:8px 8px 8px;text-align:center;background:var(--surface-2);transition:.16s}
+.mo-lad .b .n{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
+.mo-lad .b .v{font-size:12px;font-weight:600;color:var(--ink-2);margin-top:4px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mo-lad .b.on{background:var(--brand-soft);border-color:rgba(0,93,255,.28)}
 .mo-lad .b.on .n{color:var(--brand-ink)}.mo-lad .b.on .v{color:var(--brand-ink)}
-.mo-lad-cap{display:flex;justify-content:space-between;gap:10px;margin-top:9px;font-size:11.5px;color:var(--muted);font-weight:550}
+.mo-lad-cap{display:flex;justify-content:space-between;gap:8px;margin-top:8px;font-size:11px;color:var(--muted);font-weight:600}
 /* the measurement line: target → actual → achievement */
 .mo-meas{display:flex;align-items:center;gap:0;border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.mo-meas>div{flex:1 1 0;padding:14px 16px;border-right:1px solid var(--line);min-width:0}
+.mo-meas>div{flex:1 1 0;padding:16px 16px;border-right:1px solid var(--line);min-width:0}
 .mo-meas>div:last-child{border-right:none}
 .mo-meas .l{font-size:11px;font-weight:600;color:var(--muted)}
-.mo-meas .v{font-size:19px;font-weight:650;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin-top:5px}
+.mo-meas .v{font-size:20px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin-top:4px}
 .mo-meas .arrow{flex:0 0 26px;padding:0;display:grid;place-items:center;color:var(--faint);border-right:1px solid var(--line)}
 @media(max-width:620px){.mo-meas{flex-wrap:wrap}.mo-meas>div{flex:1 1 50%;border-bottom:1px solid var(--line)}.mo-meas .arrow{display:none}}
 /* compact table */
 .mo-tbl{width:100%;border-collapse:collapse;font-size:13px}
-.mo-tbl th{text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
-  padding:0 12px 9px 0;border-bottom:1px solid var(--line);white-space:nowrap}
+.mo-tbl th{text-align:left;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+  padding:0 12px 8px 0;border-bottom:1px solid var(--line);white-space:nowrap}
 .mo-tbl th.n,.mo-tbl td.n{text-align:right;padding-right:0}
-.mo-tbl td{padding:11px 12px 11px 0;border-bottom:1px solid var(--line-soft);vertical-align:middle}
+.mo-tbl td{padding:12px 12px 12px 0;border-bottom:1px solid var(--line-soft);vertical-align:middle}
 .mo-tbl td.n{font-variant-numeric:tabular-nums;font-weight:600}
 .mo-tbl tbody tr:last-child td{border-bottom:none}
 .mo-tbl tr.tot td{border-top:1px solid var(--line);border-bottom:none;font-weight:700;padding-top:12px}
-.mo-tbl .nm{font-weight:600}.mo-tbl .nm small{display:block;color:var(--muted);font-weight:500;font-size:11.5px;margin-top:2px}
+.mo-tbl .nm{font-weight:600}.mo-tbl .nm small{display:block;color:var(--muted);font-weight:400;font-size:11px;margin-top:2px}
 .mo-tw{overflow-x:auto}
 /* bars */
-.mo-bars{display:flex;flex-direction:column;gap:11px}
+.mo-bars{display:flex;flex-direction:column;gap:12px}
 .mo-bar{display:flex;align-items:center;gap:12px;font-size:13px}
-.mo-bar .l{flex:0 0 132px;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mo-bar .t{flex:1;height:6px;background:var(--line-soft);border-radius:20px;overflow:hidden;min-width:40px}
-.mo-bar .t span{display:block;height:100%;border-radius:20px;background:var(--brand);transform-origin:left;animation:growx .7s var(--ease) backwards}
-.mo-bar .v{flex:0 0 auto;font-weight:650;font-variant-numeric:tabular-nums;min-width:44px;text-align:right}
+.mo-bar .l{flex:0 0 132px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mo-bar .t{flex:1;height:6px;background:var(--line-soft);border-radius:999px;overflow:hidden;min-width:40px}
+.mo-bar .t span{display:block;height:100%;border-radius:999px;background:var(--brand)}
+.mo-bar .v{flex:0 0 auto;font-weight:600;font-variant-numeric:tabular-nums;min-width:44px;text-align:right}
 @media(max-width:560px){.mo-bar .l{flex-basis:96px}}
 /* footer */
-.mo-f{padding:16px 26px;border-top:1px solid var(--line);display:flex;align-items:center;gap:10px;background:var(--surface-2)}
+.mo-f{padding:16px 24px;border-top:1px solid var(--line);display:flex;align-items:center;gap:8px;background:var(--surface-2)}
 .mo-f .sp{flex:1}
-.mo-note{font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.5}
+.mo-note{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5}
 @media(max-width:720px){.mo-wrap{padding:0}.mo,.mo.wide{max-width:100%;max-height:100vh;height:100vh;border-radius:0}}
 
 /* Targets — individual allocation rows carry two figures (target + achievement),
@@ -932,12 +970,16 @@ function pctScale(v){return Math.abs(v)<=1.5?v*100:v;}
 function pctStr(v){const p=pctScale(v);const r=Math.round(p*10)/10;return (r===Math.round(r)?String(Math.round(r)):r.toFixed(1))+'%';}
 function fmtVal(rec,v){if(v==null||v==='')return '—';const mt=rec&&rec.metricType;if(mt==='Percentage')return pctStr(v);if(mt==='Days')return n2(v)+' d';if(mt==='Amount')return '₹'+n2(v)+' Cr';return String(n2(v));}
 function unitStr(rec,v){return fmtVal(rec,v);}
-/* Prettify a band's raw cell for display: bare fractional numbers on a
-   Percentage KPI become "60%", but rich labels ("≥ ₹9 Cr", "12 Days") stay. */
+/* Prettify a band's raw cell for display. A bare number carries no unit, so an
+   Amount KPI showed its ladder as "0.97" directly beside an actual of "₹1.08 Cr"
+   — two formats for one quantity, adjacent, impossible to compare by eye. Bare
+   numbers now take the KPI's own type; rich labels ("≥ ₹9 Cr", "12 Days") stay. */
 function bandDisplay(rec,b){
   const raw=(b&&b.raw!=null)?String(b.raw):'';
-  if(rec&&rec.metricType==='Percentage'&&/^-?\d*\.?\d+$/.test(raw.trim())&&b.num!=null)return pctStr(b.num);
-  return raw||'—';
+  const bare=/^-?\d*\.?\d+$/.test(raw.trim())&&b.num!=null;
+  if(!bare)return raw||'—';
+  if(rec&&rec.metricType==='Percentage')return pctStr(b.num);
+  return rec?fmtVal(rec,b.num):String(b.num);
 }
 
 function backend(){return (typeof google!=='undefined'&&google.script&&google.script.run)?google.script.run:null;}
@@ -1034,8 +1076,6 @@ const navIcon=id=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 const NAV_PARENT={
   dept:'teams', teamadmin:'teams',
   person:'employees', review:'employees', pickme:'employees',
-  goals:'records', reports:'overview',
-  perspective:'overview', perspectives:'overview', kpianalysis:'records',
   mykpis:'records',
   health:'settings', library:'settings', kpidef:'settings', reviews:'settings'
 };
@@ -1196,7 +1236,20 @@ const NAVSTACK=[];
 const NAV_MAX=40;
 function navSnapshot(){return {view:APP.view,ctx:APP.ctx,tab:APP.tab,mode:APP.mode,page:APP.table.page};}
 function navSame(a,b){return a&&b&&a.view===b.view&&JSON.stringify(a.ctx||{})===JSON.stringify(b.ctx||{})&&a.tab===b.tab;}
+/* Four views were third lenses on records already reachable per team and per
+ * person: Perspectives and KPI Analysis re-grouped the same rows, Reports
+ * restated Overview, Goals restated the KPI table. They are gone, but the keys
+ * still resolve — deep links and saved bookmarks land on the screen that now
+ * owns the content instead of falling through to a default. */
+const VIEW_MOVED={perspectives:'dept',perspective:'dept',kpianalysis:'records',goals:'records',reports:'overview'};
 function go(v,ctx,opts){
+  if(VIEW_MOVED[v]){
+    const to=VIEW_MOVED[v];
+    const known=(ctx&&ctx.deptId)||(APP.ctx&&APP.ctx.deptId);
+    /* a perspective drill-down with no team in hand lands on Teams, not a blank team */
+    if(to==='dept'&&!known)v='teams';
+    else{if(to==='dept'&&!(ctx&&ctx.deptId))ctx=Object.assign({},ctx,{deptId:APP.ctx.deptId});v=to;}
+  }
   if(v==='me'&&!APP.meId)v='pickme';
   const next={view:v,ctx:ctx||{},tab:'',mode:(v==='me'||v==='mykpis'||v==='pickme')?'me':'mgmt',page:0};
   const prev=navSnapshot();
@@ -1241,8 +1294,7 @@ function render(){
     overview:vOverview, goals:vRecords, checkins:vCheckins,
     me:vPerson, mykpis:vRecords, pickme:vPickMe,
     teams:vTeams, dept:vDept, person:vPerson,
-    reviews:vReviews, review:vReview, reports:vReports,
-    perspectives:vPerspectives, perspective:vPerspective, kpianalysis:vKpiAnalysis, records:vRecords,
+    reviews:vReviews, review:vReview, records:vRecords,
     employees:vPeople, teamadmin:vTeamAdmin, library:vLibrary, kpidef:vKpiDef,
     cycles:vCycles, settings:vSettings, health:vHealth,
     targets:vTargets
@@ -1252,10 +1304,9 @@ function render(){
 }
 function renderCrumbs(){
   let cr;
-  const LAB={overview:'Overview',targets:'Targets',goals:'Goals & KPIs',checkins:'Check-ins',teams:'Teams',
-    reviews:'Reviews',reports:'Reports',perspectives:'Perspectives',kpianalysis:'KPI Analysis',
-    records:'All KPIs',employees:'People',teamadmin:'Team setup',library:'KRA / KPI Library',
-    cycles:'Performance Cycles',settings:'Settings',health:'Data Health'};
+  const LAB={overview:'Overview',targets:'Targets',checkins:'Check-ins',teams:'Teams',
+    reviews:'Reviews',records:'KPIs',employees:'People',teamadmin:'Team setup',
+    library:'KPI Library',cycles:'Performance Cycles',settings:'Settings',health:'Data Health'};
   if(APP.mode==='me'){cr=[{t:'My Performance'}];if(APP.view==='mykpis')cr.push({t:'My KPIs'});if(APP.view==='pickme')cr.push({t:'Select profile'});}
   else{
     cr=[{t:'Overview',v:'overview'}];
@@ -1263,7 +1314,6 @@ function renderCrumbs(){
     if(LAB[APP.view]&&APP.view!=='overview')cr.push({t:LAB[APP.view]});
     if(APP.view==='dept'){const d=deptById(APP.ctx.deptId);cr=[{t:'Teams',v:'teams'}];if(d)cr.push({t:d.name});}
     if(APP.view==='person'){const e=empById(APP.ctx.empId);cr=[{t:'People',v:'employees'}];if(e&&e.department)cr.push({t:e.department,v:'dept',ctx:{deptId:e.deptId}});if(e)cr.push({t:e.name});}
-    if(APP.view==='perspective'){cr=[{t:'Overview',v:'overview'},{t:'Perspectives',v:'perspectives'},{t:APP.ctx.name||''}];}
     if(APP.view==='review'){const e=empById(APP.ctx.empId);cr=[{t:'Reviews',v:'reviews'}];if(e)cr.push({t:e.name});}
     if(APP.view==='kpidef'){const d=(B().library||[]).find(x=>x.defId===APP.ctx.defId);cr=[{t:'Administration'},{t:'KRA / KPI Library',v:'library'}];if(d)cr.push({t:d.kpi||d.kra});}
   }
@@ -1276,7 +1326,13 @@ function rchip(rating,status){return '<div class="rchip" style="color:'+sc(statu
 function statusPill(status){return '<span class="pill '+status.k+'"><span class="sdot s-'+status.k+'"></span>'+esc(status.label)+'</span>';}
 function ratingBar(rating){const p=rating==null?0:clamp((rating-1)/4*100,0,100);const k=statusFromRating(rating).k;return '<div class="bc-track"><div class="bc-fill" style="width:'+p+'%;background:'+sc(k)+'"></div></div>';}
 function deltaChip(d,unit){if(d==null)return '';const flat=Math.abs(d)<0.005;const k=flat?'none':(d>0?'good':'bad');const arrow=flat?'':(d>0?AR_UP:AR_DN);const val=(d>0?'+':'')+(Math.round(d*100)/100)+(unit||' pt');return '<span class="delta '+k+'">'+arrow+val+'</span>';}
-function levelChip(level){if(!level||!level.level)return '';return '<span class="levelchip lv'+level.level+'">Lv '+level.level+' · '+esc(level.label)+'</span>';}
+/* Reads the level off the score through the one ladder, rather than trusting a
+   separately-computed level field that could disagree with the figure printed
+   beside it. "Level 4 · Strong" always matches the score on the same line. */
+function levelChip(score){
+  const b=bandFromScore(score);
+  return b.level?'<span class="levelchip lv'+b.level+'">Level '+b.level+' · '+esc(b.label)+'</span>':'';
+}
 
 /* SVG trend line (rating 1..5 over periods) */
 function trendChart(series,opts){
@@ -1348,7 +1404,7 @@ function milestoneCard(r){
   const gapTxt=m.gap!=null?('<b>'+fmtVal(r,m.gap)+'</b> to go'):('reach '+esc(shortBand(m.band.label||'')));
   return '<div class="ms" data-rec="'+r.kpiId+'" style="cursor:pointer"><div class="ms-h"><div class="ms-t">'+esc(r.kpi||r.kra)+'<small>Next: '+esc(m.band.label||('Band '+m.toRating))+(m.band.raw?' ('+esc(m.band.raw)+')':'')+'</small></div><div class="r">'+rchip(r.rating,r.status)+'</div></div>'
     +'<div class="ms-track"><span style="width:'+p+'%"></span></div>'
-    +'<div class="ms-foot"><span>'+gapTxt+'</span><span>·</span><span><b>'+(r.weightShown==null?'—':n1(r.weightShown)+'%')+'</b> weight</span><span>·</span><span>'+impact+'</span></div></div>';
+    +'<div class="ms-foot"><span>'+gapTxt+'</span><span>·</span><span><b>'+(r.weightShown==null?'—':n1(r.weightShown)+'%')+'</b> weightage</span><span>·</span><span>'+impact+'</span></div></div>';
 }
 
 /* priority = gap-below-target × weight (business relevance) */
@@ -1631,12 +1687,6 @@ function coverageRows(){
     return dRow(d.name,recs.length+' KPIs',wd+'/'+recs.length,'',recs.length?wd/recs.length:0,' data-dept="'+d.id+'"');}).join('')
     ||'<div class="empty">No teams detected.</div>';
 }
-function perspBar(p){const r=p.rating,pp=r==null?0:clamp((r-1)/4*100,0,100);return `<div class="bc-row" data-persp="${esc(p.perspective)}"><div class="bc-label">${esc(p.perspective)}<small> · ${p.kpis} KPIs</small></div><div class="bc-track"><div class="bc-fill" style="width:${pp}%;background:${sc(p.status.k)}"></div></div><div class="bc-val" style="color:${sc(p.status.k)}">${p.score==null?'—':n1(p.score)+'<small>%</small>'}</div><span class="bc-chev">›</span></div>`;}
-function deptBar(d,hasData){
-  const r=d.rating,p=r==null?0:clamp((r-1)/4*100,0,100);const st=d.status;
-  const right=hasData&&r!=null?('<div class="bc-val" style="color:'+sc(st.k)+'">'+n1(d.score)+'<small>%</small></div>'):('<div class="bc-val" style="color:var(--faint)">'+d.kpiCount+'<small>KPIs</small></div>');
-  return `<div class="bc-row" data-dept="${d.id}"><div class="bc-label">${esc(d.name)}<small> · ${d.employeeCount} ${d.employeeCount===1?'person':'people'}</small></div><div class="bc-track"><div class="bc-fill" style="width:${hasData?p:0}%;background:${sc(st.k)}"></div></div>${hasData&&d.delta!=null?deltaChip(d.delta):''}${right}<span class="bc-chev">›</span></div>`;
-}
 function attentionFramework(){
   const items=[];
   (B().health.weightIssues||[]).slice(0,4).forEach(w=>items.push({t:w.employee+' — weights total '+w.sum+'%',s:(w.dept)+(w.subTeam?' · '+w.subTeam:'')+' · expected 100%',k:'warn'}));
@@ -1740,106 +1790,11 @@ function vInfoDept(d){
    The framework as a hierarchy: PERSPECTIVE → KRA → KPI. Not "KRA → KPI" —
    the workbook carries a real perspective layer above the KRA and the product
    preserves it. */
-function vGoals(){
-  const o=B().rollups.org;const hasData=o.kpisWithData>0;
-  const ps=B().perspectives||[];
-  const kraCount=new Set(B().records.map(r=>r.kra).filter(Boolean)).size;
-  return `<div class="page-head"><h1>Goals &amp; KPIs</h1>
-    <p><b>Perspective → KRA → KPI</b> · each with its own weightage and target bands.</p></div>
-  <div class="kc-grid c4">
-    ${kpiCard('Perspectives',String(ps.length),'role dimensions in use',{nav:'perspectives'})}
-    ${kpiCard('KRAs',String(kraCount),'result areas defined',{})}
-    ${kpiCard('KPI lines',String(o.kpis),o.kpisWithData+' with results',{nav:'records'})}
-    ${kpiCard('Definitions',String((B().library||[]).length),'distinct KPIs in the library',{nav:'library'})}
-  </div>
-  <div class="linkrow" style="margin-top:16px"><span class="link" data-nav="records">Full KPI table →</span><span class="link" data-nav="kpianalysis">Compare a KPI across teams →</span><span class="link" data-nav="library">KRA / KPI library →</span></div>
-  <div class="sect-t">Perspective → KRA → KPI${hasData?'<span class="r">score · rating / 5</span>':''}</div>
-  <div style="margin-top:4px">${perspectiveExpand()}</div>`;
-}
-function perspectiveExpand(){
-  return B().perspectives.map(p=>{
-    const recs=B().records.filter(r=>(r.perspective||r.kra||'General')===p.perspective);
-    const byKra={};recs.forEach(r=>{const k=r.kra||'General';(byKra[k]=byKra[k]||[]).push(r);});
-    const pp=p.rating==null?0:clamp((p.rating-1)/4*100,0,100);
-    let rows='';
-    Object.keys(byKra).forEach(k=>{
-      const g=byKra[k];const wd=withData(g);const r=wd.length?wd.reduce((s,x)=>s+x.rating,0)/wd.length:null;const st=statusFromRating(r);
-      const key=slugKey(p.perspective+'|'+k);const open=!!APP.expanded[key];
-      const rp=r==null?0:clamp((r-1)/4*100,0,100);
-      const owners=new Set(g.map(x=>x.employeeId)).size;
-      const wsum=g.reduce((s,x)=>s+(x.weightShown||0),0);
-      /* weightage only sums within one scorecard; across people show the average */
-      const wt=!wsum?'':(owners===1?' · '+n1(wsum)+'% weight':' · '+owners+' people · avg '+n1(wsum/owners)+'% weight');
-      rows+='<div class="exp-kra'+(open?' open':'')+'" data-exp="'+esc(key)+'"><span class="sdot s-'+st.k+'"></span><div class="exp-name">'+esc(k)+'<small>'+g.length+' KPI'+(g.length===1?'':'s')+wt+'</small></div><div class="bar"><span style="width:'+rp+'%"></span></div><div class="exp-val">'+(r==null?'—':n1(scoreFromRating(r))+'<small>%</small>')+'</div><span class="exp-chev">'+(open?'▾':'▸')+'</span></div>';
-      if(open)rows+='<div class="exp-kpis">'+g.slice().sort((a,b)=>(a.rating==null?99:a.rating)-(b.rating==null?99:b.rating)).map(r2=>'<div class="exp-kpi" data-rec="'+r2.kpiId+'"><span class="sdot s-'+r2.status.k+'"></span><div class="exp-name">'+esc(r2.kpi||r2.kra)+'<small>'+esc(r2.employee)+' · '+esc(r2.department)+(r2.weightShown!=null?' · '+n1(r2.weightShown)+'%':'')+'</small></div><div class="exp-val">'+(r2.actual==null?'':esc(fmtVal(r2,r2.actual)))+'</div>'+rchip(r2.rating,r2.status)+'<span class="chev">›</span></div>').join('')+'</div>';
-    });
-    return '<div class="exp-p"><div class="exp-ph"><div class="exp-pt">'+esc(p.perspective)+'<small> · '+p.kpis+' KPIs · '+p.people+' people</small></div><div class="bar wide"><span style="width:'+pp+'%"></span></div><div class="exp-pr">'+(p.score==null?'—':n1(p.score)+'<small>%</small>')+(p.rating!=null?'<span class="rt-sub">'+ratingStr(p.rating)+'/5</span>':'')+'</div></div>'+rows+'</div>';
-  }).join('')||'<div class="empty">No perspectives tagged in the sheet.</div>';
-}
-function slugKey(s){return String(s).replace(/[^a-z0-9]+/gi,'_').toLowerCase();}
 
 /* ---------------- PERSPECTIVES ---------------- */
-function vPerspectives(){
-  const ps=B().perspectives;
-  return `<div class="page-head"><h1>Perspectives</h1><p>The org rolled up by perspective · tap for KRAs and owners.</p></div>
-  <div class="kc-grid c3">
-    ${kpiCard('Perspectives',String(ps.length),'distinct role dimensions',{})}
-    ${kpiCard('Strongest',ps.length&&ps[0].rating!=null?esc(ps[0].perspective):'—',ps.length&&ps[0].rating!=null?ratingStr(ps[0].rating)+' / 5':'no data',{tone:'good'})}
-    ${kpiCard('Needs focus',ps.length&&ps[ps.length-1].rating!=null?esc(ps[ps.length-1].perspective):'—',ps.length&&ps[ps.length-1].rating!=null?ratingStr(ps[ps.length-1].rating)+' / 5':'no data',{tone:'warn'})}
-  </div>
-  <div class="panel pad"><div class="panel-h"><h3>All perspectives</h3><span class="sub">weighted rating · KPIs · people</span></div>
-  <div class="stack" style="margin-top:4px">${ps.map(p=>perspBar(p)).join('')||'<div class="empty">No perspectives tagged in the sheet.</div>'}</div></div>`;
-}
-function vPerspective(){
-  const name=APP.ctx.name;const p=B().perspectives.find(x=>x.perspective===name);
-  const recs=B().records.filter(r=>(r.perspective||r.kra||'General')===name);
-  if(!p)return '<div class="empty" style="padding:60px">Perspective not found</div>';
-  const cards=`<div class="kc-grid c4">
-    ${kpiCard('Perspective rating',p.rating==null?'—':ratingStr(p.rating)+'<small>/5</small>',statusPill(p.status),{tone:p.status.k,bar:p.rating==null?null:(p.rating-1)/4*100})}
-    ${kpiCard('KPIs',String(p.kpis),p.withData+' with results',{})}
-    ${kpiCard('People',String(p.people),'owning these KPIs',{})}
-    ${kpiCard('KRAs',String(p.kras.length),'under this perspective',{})}
-  </div>`;
-  // group by KRA
-  const byKra={};recs.forEach(r=>{const k=r.kra||'General';(byKra[k]=byKra[k]||[]).push(r);});
-  let body='<div class="sect-t">KRAs under this perspective</div><div class="panel pad"><div class="stack" style="margin-top:2px">';
-  body+=Object.keys(byKra).map(k=>{const g=byKra[k];const wd=withData(g);const r=wd.length?wd.reduce((s,x)=>s+x.rating,0)/wd.length:null;const st=statusFromRating(r);const pp=r==null?0:clamp((r-1)/4*100,0,100);return `<div class="bc-row static"><div class="bc-label">${esc(k)}<small> · ${g.length} KPIs</small></div><div class="bc-track"><div class="bc-fill" style="width:${pp}%;background:${sc(st.k)}"></div></div><div class="bc-val" style="color:${sc(st.k)}">${r==null?'—':ratingStr(r)}</div></div>`;}).join('');
-  body+='</div></div>';
-  body+='<div class="sect-t">KPI lines</div><div class="panel pad"><div class="list stack" style="margin-top:2px">'+recs.slice().sort((a,b)=>(a.rating==null?99:a.rating)-(b.rating==null?99:b.rating)).slice(0,20).map(r=>recRow(r)).join('')+'</div></div>';
-  return `<div class="page-head"><h1>${esc(name)}</h1><p>Everything under the ${esc(name)} perspective, across all teams.</p></div>${cards}${body}`;
-}
 function recRow(r){return `<div class="lrow" data-rec="${r.kpiId}"><div class="lrow-id"><span class="sdot s-${r.status.k}"></span><div class="lrow-name">${esc(r.kpi||r.kra)}<span class="lrow-sub">${esc(titleName(r.employee))} · ${esc(r.department)}${r.subTeam?' · '+esc(r.subTeam):''}</span></div></div>${r.metricType?'<span class="tag mt">'+esc(r.metricType)+'</span>':''}${rchip(r.rating,r.status)}<span class="chev">›</span></div>`;}
 
 /* ---------------- KPI ANALYSIS ---------------- */
-function kpiNameGroups(){
-  const map={};B().records.forEach(r=>{const k=(r.kpi||r.kra||'—').trim();(map[k]=map[k]||[]).push(r);});
-  return Object.keys(map).map(k=>({name:k,recs:map[k]})).filter(g=>g.recs.length>1||true).sort((a,b)=>b.recs.length-a.recs.length);
-}
-function vKpiAnalysis(){
-  const groups=kpiNameGroups();
-  const sel=APP.ctx.kpiName||(groups[0]&&groups[0].name);
-  const g=groups.find(x=>x.name===sel)||groups[0];
-  const opts=groups.map(x=>'<option value="'+esc(x.name)+'"'+(x.name===sel?' selected':'')+'>'+esc(x.name)+' ('+x.recs.length+')</option>').join('');
-  if(!g)return `<div class="page-head"><h1>KPI Analysis</h1><p>No KPIs found.</p></div>`;
-  const recs=g.recs;const wd=withData(recs);const avg=wd.length?wd.reduce((s,r)=>s+r.rating,0)/wd.length:null;
-  // by team
-  const byTeam={};recs.forEach(r=>{(byTeam[r.department]=byTeam[r.department]||[]).push(r);});
-  const teamRows=Object.keys(byTeam).map(t=>{const rs=withData(byTeam[t]);const r=rs.length?rs.reduce((s,x)=>s+x.rating,0)/rs.length:null;const st=statusFromRating(r);const p=r==null?0:clamp((r-1)/4*100,0,100);return `<div class="bc-row static"><div class="bc-label">${esc(t)}<small> · ${byTeam[t].length}</small></div><div class="bc-track"><div class="bc-fill" style="width:${p}%;background:${sc(st.k)}"></div></div><div class="bc-val" style="color:${sc(st.k)}">${r==null?'—':ratingStr(r)}</div></div>`;}).join('');
-  const owners=recs.slice().sort((a,b)=>(b.rating==null?-1:b.rating)-(a.rating==null?-1:a.rating));
-  const mt=recs[0].metricType,unit=recs[0].unit;
-  return `<div class="page-head"><h1>KPI Analysis</h1><p>One KPI across every team and owner.</p></div>
-  <div class="panel pad"><div class="panel-h"><h3>Choose a KPI</h3><div class="r"><div class="selectwrap"><select class="pill-select" data-kpisel>${opts}</select></div></div></div></div>
-  <div class="kc-grid c4" style="margin-top:16px">
-    ${kpiCard('Average rating',avg==null?'—':ratingStr(avg)+'<small>/5</small>',statusPill(statusFromRating(avg)),{tone:statusFromRating(avg).k,bar:avg==null?null:(avg-1)/4*100})}
-    ${kpiCard('Owners',String(recs.length),Object.keys(byTeam).length+' teams',{})}
-    ${kpiCard('Metric type',esc(mt||'—'),unit?esc(unit):'from rule layer',{})}
-    ${kpiCard('With actuals',String(wd.length),pct(recs.length?wd.length/recs.length*100:0)+' coverage',{tone:'none'})}
-  </div>
-  <div class="two-eq">
-    <div class="panel pad"><div class="panel-h"><h3>By team</h3><span class="sub">average rating</span></div><div class="stack" style="margin-top:4px">${teamRows||'<div class="empty">No data.</div>'}</div></div>
-    <div class="panel pad"><div class="panel-h"><h3>Owners</h3><span class="sub">ranked</span></div><div class="list stack" style="margin-top:2px">${owners.map(r=>`<div class="lrow" data-rec="${r.kpiId}"><div class="lrow-id"><div class="lavatar">${initials(r.employee)}</div><div class="lrow-name">${esc(titleName(r.employee))}<span class="lrow-sub">${esc(r.department)}${r.subTeam?' · '+esc(r.subTeam):''}</span></div></div><span class="lrow-meta">${r.actual==null?'—':esc(fmtVal(r,r.actual))}</span>${rchip(r.rating,r.status)}<span class="chev">›</span></div>`).join('')}</div></div>
-  </div>`;
-}
 
 /* ---------------- PEOPLE ---------------- */
 function vPeople(){
@@ -1878,7 +1833,7 @@ function vPerson(){
   const tab=APP.tab||'scorecard';
   const nextLvl=e.rating==null?null:(e.rating>=4.5?null:(e.rating>=3.75?4.5:(e.rating>=3?3.75:(e.rating>=2?3:2))));
   const toNext=nextLvl==null?null:Math.round((nextLvl-e.rating)*100)/100;
-  const head=`<div class="page-head"><div class="person-hd"><div class="pa">${initials(e.name)}</div><div style="min-width:0"><h1>${esc(titleName(e.name))}${e.rating!=null?levelChip(e.level):''}</h1>
+  const head=`<div class="page-head"><div class="person-hd"><div class="pa">${initials(e.name)}</div><div style="min-width:0"><h1>${esc(titleName(e.name))}${e.score!=null?levelChip(e.score):''}</h1>
     <div class="meta"><span class="tag brand">${esc(e.department)}</span>${e.role?'<span>'+esc(e.role)+'</span>':''}${e.region?'<span>· '+esc(e.region)+'</span>':''}<span>· ${recs.length} KPIs</span>${e.consistency>=2?'<span class="tag">'+e.consistency+'-period streak</span>':''}${e.isTemplate?'<span class="tag">Shared rubric — roster not mapped</span>':''}</div></div>
     <div class="r">${isMe?'<button class="btn ghost sm" data-act="switch-me">Switch profile</button>':''}</div></div></div>`;
   const rv=e.review||{status:'Not Started'};
@@ -1915,12 +1870,12 @@ function personSummary(e,recs){
     <td class="num">${tgt==null?'—':esc(fmtVal(r,tgt))}</td>
     <td class="num">${r.actual==null?'—':esc(fmtVal(r,r.actual))}</td>
     <td class="num">${achCell(r.attainment,r.status&&r.status.k,tgt==null?'':'Target '+fmtVal(r,tgt))}</td>
-    <td class="num" style="font-weight:800">${r.rating==null?'—':ratingStr(r.rating)+'<small>/5</small>'}</td>
+    <td class="num" style="font-weight:700">${r.rating==null?'—':ratingStr(r.rating)+'<small>/5</small>'}</td>
     <td class="num">${r.points==null?'—':n1(r.points)}</td>
     <td>${statusPill(r.status)}</td></tr>`;}).join('');
   return `<div class="two-eq">
     <div class="panel pad"><div class="panel-h"><h3>Performance by perspective</h3><span class="sub">what drives the score</span></div>
-      <div class="stack" style="margin-top:6px">${persp.map(groupBar).join('')||'<div class="empty">No perspectives tagged.</div>'}</div>
+      <div class="stack" style="margin-top:8px">${persp.map(groupBar).join('')||'<div class="empty">No perspectives tagged.</div>'}</div>
       <div class="sect-t" style="margin-top:16px">By KRA</div>
       <div class="stack">${(e.kras||[]).slice(0,8).map(groupBar).join('')||'<div class="empty">No KRAs tagged.</div>'}</div></div>
     <div class="panel pad"><div class="panel-h"><h3>Recent check-ins</h3><span class="sub">${esc(periodLong(APP.period))}</span><div class="r"><span class="link" data-nav="checkins">All ›</span></div></div>
@@ -1935,7 +1890,7 @@ function personSummary(e,recs){
       </div></div>
   </div>
   <div class="sect-t">All KPIs<span class="r">weight → target → actual → achievement → rating → points</span></div>
-  <div class="panel pad"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>KRA · KPI</th><th class="num">Weight</th><th class="num">Target</th><th class="num">Actual</th><th class="num">Achieved</th><th class="num">Rating</th><th class="num">Points</th><th>Status</th></tr></thead>
+  <div class="panel pad"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>KRA · KPI</th><th class="num">Weightage</th><th class="num">Target</th><th class="num">Actual</th><th class="num">Achievement %</th><th class="num">Rating</th><th class="num">Points</th><th>Status</th></tr></thead>
   <tbody>${rows||'<tr><td colspan="8" class="empty">No KPIs mapped.</td></tr>'}
   ${e.points!=null?'<tr class="tot"><td colspan="6" style="text-align:right">Overall</td><td class="num">'+n1(e.points)+'</td><td>'+statusPill(e.status)+'</td></tr>':''}</tbody></table></div></div>`;
 }
@@ -2006,9 +1961,9 @@ function vRecords(){
   const title=mine?('My KPIs'+(me?' · '+esc(titleName(me.name)):'')):'KPI Tracking';
   return `<div class="page-head"><h1>${title}</h1><p>Every KPI with its target, the result so far, and how far along it is. ${rows.length} shown${!mine&&(APP.filters.dept||APP.filters.emp||APP.filters.status||APP.filters.search)?' (filtered)':''} · click a row to add a result.</p></div>
   <div class="panel pad"><div class="panel-h"><h3>${rows.length} KPI${rows.length===1?'':'s'}</h3><span class="sub">${withData(rows).length} have ${esc(periodShort(APP.period))} results</span></div>
-  <div class="tbl-wrap stack"><table class="tbl"><thead><tr>${mine?'':th('employee','Employee')}${th('kra','KRA')}${th('kpi','KPI')}${th('target','Target',1)}${th('actual','Actual',1)}${th('ach','Achievement %',1)}${th('rating','Rating',1)}<th>Status</th></tr></thead>
-  <tbody>${slice.length?slice.map(r=>`<tr data-rec="${r.kpiId}">${mine?'':'<td class="kname">'+esc(titleName(r.employee))+'<small>'+esc(r.department)+'</small></td>'}<td>${esc(r.kra||'—')}</td><td class="kname">${esc(r.kpi||'—')}${r.weightShown!=null?'<small>'+n1(r.weightShown)+'% weight</small>':''}</td><td class="num">${r.target==null?'—':esc(fmtVal(r,r.target))}</td><td class="num">${r.actual==null?'—':esc(fmtVal(r,r.actual))}</td><td class="num">${achCell(r.attainment,r.status.k,r.target==null?'':'Target '+fmtVal(r,r.target))}</td><td class="num" style="color:${sc(r.status.k)};font-weight:800">${r.rating==null?'—':ratingStr(r.rating)}</td><td>${statusPill(r.status)}</td></tr>`).join(''):'<tr><td colspan="'+(mine?7:8)+'" class="empty">No KPIs match the filters.</td></tr>'}</tbody></table></div>
-  <div class="pager"><span>Page ${page+1} of ${pages} · ${slice.length} of ${rows.length}</span><div><button data-page="prev" ${page===0?'disabled':''}>Prev</button><button data-page="next" ${page>=pages-1?'disabled':''}>Next</button></div></div></div>`;
+  <div class="tbl-wrap stack"><table class="tbl"><thead><tr>${mine?'':th('employee','Employee')}${th('kra','KRA')}${th('kpi','KPI')}${th('weight','Weightage',1)}${th('target','Target',1)}${th('actual','Actual',1)}${th('ach','Achievement %',1)}${th('rating','Rating',1)}<th>Status</th></tr></thead>
+  <tbody>${slice.length?slice.map(r=>`<tr data-rec="${r.kpiId}">${mine?'':'<td class="kname">'+esc(titleName(r.employee))+'<small>'+esc(r.department)+'</small></td>'}<td>${esc(r.kra||'—')}</td><td class="kname">${esc(r.kpi||'—')}</td><td class="num quiet">${r.weightShown==null?'—':n1(r.weightShown)+'%'}</td><td class="num quiet">${r.target==null?'—':esc(fmtVal(r,r.target))}</td><td class="num">${r.actual==null?'—':esc(fmtVal(r,r.actual))}</td><td class="num">${achCell(r.attainment,r.status.k,r.target==null?'':'Target '+fmtVal(r,r.target))}</td><td class="num" style="color:${sc(r.status.k)}">${r.rating==null?'—':ratingStr(r.rating)+'<small> / 5</small>'}</td><td>${statusPill(r.status)}</td></tr>`).join(''):'<tr><td colspan="'+(mine?8:9)+'" class="empty">No KPIs match the filters.</td></tr>'}</tbody></table></div>
+  <div class="pager"><span>${slice.length} of ${rows.length} · page ${page+1} of ${pages}</span><div><button data-page="prev" ${page===0?'disabled':''}>Previous</button><button data-page="next" ${page>=pages-1?'disabled':''}>Next</button></div></div></div>`;
 }
 
 /* ---------------- CHECK-INS (spec §18) ----------------
@@ -2106,13 +2061,13 @@ function vReview(){
   }).join('<span class="wf-line"></span>');
 
   const system=`<div class="panel pad"><div class="panel-h"><h3>System-calculated performance</h3><span class="sub">weightage × rating, ${esc(periodLong(APP.period))}</span></div>
-    <div class="metric-grid g4" style="margin-top:10px">
+    <div class="metric-grid g4" style="margin-top:8px">
       <div class="metric"><div class="l">Overall score</div><div class="v">${e.score==null?'—':n1(e.score)+'<small>%</small>'}</div></div>
       <div class="metric"><div class="l">Overall rating</div><div class="v">${e.rating==null?'—':ratingStr(e.rating)+'<small>/5</small>'}</div></div>
       <div class="metric"><div class="l">Status</div><div class="v" style="font-size:13px">${esc(e.status.label)}</div></div>
       <div class="metric"><div class="l">KPIs rated</div><div class="v">${e.kpiWithData}<small>/${e.kpiTotal}</small></div></div>
     </div>
-    <div class="sect-t" style="margin-top:18px">By perspective</div>
+    <div class="sect-t" style="margin-top:16px">By perspective</div>
     <div class="stack">${(e.perspectives||[]).map(p=>groupBar(p)).join('')||'<div class="empty">No perspectives tagged.</div>'}</div>
     <div class="sect-t">By KRA</div>
     <div class="stack">${(e.kras||[]).map(k=>groupBar(k)).join('')||'<div class="empty">No KRAs tagged.</div>'}</div>
@@ -2122,7 +2077,7 @@ function vReview(){
     const disabled=locked?' disabled':'';
     return `<div class="panel pad"><div class="panel-h"><h3>${esc(label)}</h3>${at?'<span class="sub">'+esc(by||'')+' · '+esc(relTime(at))+'</span>':'<span class="sub">not submitted</span>'}</div>
       <div class="q">${esc(hint)}</div>
-      <div class="row2" style="margin-top:6px">
+      <div class="row2" style="margin-top:8px">
         <div class="field"><label>Assessment (1–5)</label><select id="rvRating_${stage}"${disabled}><option value="">—</option>${[1,2,3,4,5].map(n=>'<option value="'+n+'"'+(rating!=null&&Math.round(rating)===n?' selected':'')+'>'+n+'</option>').join('')}</select></div>
         <div class="field"><label>Suggested by system</label><input value="${e.rating==null?'—':ratingStr(e.rating)}" disabled></div>
       </div>
@@ -2157,8 +2112,8 @@ function groupBar(g){
 /* Weightage sums only within one person's scorecard; across people it is an
    average, and the label has to say so or the number reads as nonsense. */
 function groupWeight(g){
-  if(g.weight!=null)return ' · '+n1(g.weight)+'% weight';
-  if(g.avgWeight!=null)return ' · '+g.people+' people · avg '+n1(g.avgWeight)+'% weight';
+  if(g.weight!=null)return ' · '+n1(g.weight)+'% weightage';
+  if(g.avgWeight!=null)return ' · '+g.people+' people · avg '+n1(g.avgWeight)+'% weightage';
   return '';
 }
 
@@ -2359,7 +2314,7 @@ const tQty=(v,u)=>v==null||isNaN(v)?'—':Math.round(v).toLocaleString('en-IN')+
 const tKpiVal=(v,unit)=>v==null||isNaN(v)?'—':(unit==='Cr'?tCr(v):tQty(v,unit||''));
 
 /* Achievement against target, as a bar the eye can scan down a column.
-   Track = 0–125% of target, tick at 100%. Attainment is already direction-aware
+   Track = 0–125% of target, tick at 100%. Achievement % is already direction-aware
    from the backend, so a lower-is-better KPI (DSO, DN%) reads the same way. */
 function pctTone(p){return p==null?'none':(p>=100?'good':(p>=90?'warn':'bad'));}
 function kpiBar(pct,tone){
@@ -2462,12 +2417,12 @@ function vTargetPerson(){
   // the KPI lines this target feeds
   const recs=(B().records||[]).filter(r=>r.targetSourced&&r.employee===a.name&&r.department===t.team);
   const kpis=recs.length?('<div class="sect-t">KPIs this target feeds<span class="r">Target → Actual → Achievement % → Rating</span></div>'
-    +'<div class="panel pad"><div class="tbl-wrap"><table class="tbl" style="min-width:720px"><thead><tr><th>KPI</th><th>KRA</th><th class="num">Weight</th><th class="num">Target</th><th class="num">Actual</th><th class="num">Achievement</th><th class="num">Rating</th><th>Status</th></tr></thead><tbody>'
+    +'<div class="panel pad"><div class="tbl-wrap"><table class="tbl" style="min-width:720px"><thead><tr><th>KPI</th><th>KRA</th><th class="num">Weightage</th><th class="num">Target</th><th class="num">Actual</th><th class="num">Achievement %</th><th class="num">Rating</th><th>Status</th></tr></thead><tbody>'
     +recs.map(r=>'<tr data-rec="'+esc(r.kpiId)+'"><td class="kname">'+esc(r.kpi)+(r.primaryMetric?'<small>primary metric</small>':'')+'</td><td>'+esc(r.kra)+'</td><td class="num">'+r.weight+'%</td><td class="num">'+tKpiVal(r.planTarget,r.unit)+'</td><td class="num">'+(r.actual==null?'—':tKpiVal(r.actual,r.unit))+'</td><td class="num">'+tPct(r.attainment)+'</td><td class="num">'+(r.rating==null?'—':(Math.round(r.rating*10)/10))+'</td><td>'+statusPill(r.status)+'</td></tr>').join('')
     +'</tbody></table></div></div>'):'';
   // second-level buyer breakdown
   const buyers=(a.buyers&&a.buyers.length)?('<div class="sect-t">Buyer-wise target<span class="r">second-level detail</span></div>'
-    +'<div class="panel pad"><div class="tbl-wrap"><table class="tbl" style="min-width:560px"><thead><tr><th>Buyer</th><th>Region</th><th>Category</th><th class="num">Quantity</th><th class="num">GMV target</th>'+(perf?'<th class="num">Achieved</th>':'')+'</tr></thead><tbody>'
+    +'<div class="panel pad"><div class="tbl-wrap"><table class="tbl" style="min-width:560px"><thead><tr><th>Buyer</th><th>Region</th><th>Category</th><th class="num">Quantity</th><th class="num">GMV target</th>'+(perf?'<th class="num">Achievement %</th>':'')+'</tr></thead><tbody>'
     +a.buyers.map(b=>'<tr><td class="kname">'+esc(b.buyer)+(b.placeholder?'<small>unnamed placeholder</small>':(b.bundled?'<small>several buyers in one cell</small>':''))+'</td><td>'+esc(b.region||'—')+'</td><td>'+esc(b.category||'—')+'</td><td class="num">'+tQty(b.qty,t.qtyUnit)+'</td><td class="num">'+tCr(b.gmvTarget)+'</td>'+(perf?'<td class="num">'+tCr(b.gmvActual)+'</td>':'')+'</tr>').join('')
     +'</tbody></table></div></div>'):'';
   const emp=(B().employees||[]).filter(e=>e.name===a.name&&e.department===t.team)[0];
@@ -2497,7 +2452,7 @@ function vHealth(){
     <div class="panel pad"><div class="panel-h"><h3>Actuals &amp; period</h3><span class="sub">the separate target/metric source</span></div>
       <div class="stack" style="font-size:13px;color:var(--ink-2);line-height:1.7">Definitions come from the master tabs; <b>targets &amp; actuals</b> live separately in <b>${esc(B().source.actuals.tab)}</b> (${esc(B().source.actuals.type)}), joined by a stable <code>KpiId</code>. Actuals are entered per <b>period</b> (${esc(periodLong(APP.period))}).</div>
       <div class="stack"><button class="btn primary sm" data-act="scaffold">Create / refresh actuals for ${esc(periodShort(APP.period))}</button>
-      <div style="font-size:11.5px;color:var(--faint);margin-top:8px">Adds one blank row per KPI (target pre-filled from the "Meets" band). Never overwrites existing values.</div></div>
+      <div style="font-size:11px;color:var(--faint);margin-top:8px">Adds one blank row per KPI (target pre-filled from the "Meets" band). Never overwrites existing values.</div></div>
     </div>
     <div class="panel pad"><div class="panel-h"><h3>Scoring thresholds</h3><span class="sub">on the 1–5 rating scale</span></div>
       <div class="stack row2">
@@ -2505,12 +2460,12 @@ function vHealth(){
         <div class="field"><label>At Risk ≥</label><input id="setAtRisk" type="number" step="0.1" min="0" max="5" value="${th.atRisk}"></div>
       </div>
       <button class="btn ghost sm" data-act="save-settings">Save thresholds</button>
-      <div style="font-size:11.5px;color:var(--faint);margin-top:10px">Band 3 = "Meets" = on-target. Below <b>At Risk</b> is Off Track. Applies on next refresh.</div>
+      <div style="font-size:11px;color:var(--faint);margin-top:8px">Band 3 = "Meets" = on-target. Below <b>At Risk</b> is Off Track. Applies on next refresh.</div>
     </div>
   </div>
   <div class="sect-t">Parser diagnostics</div>
   <div class="panel pad"><div class="tbl-wrap"><table class="info-tbl"><thead><tr><th>Tab</th><th>Rows</th><th>Cols</th></tr></thead><tbody>${src.tabs.map(t=>'<tr><td>'+esc(t.name)+'</td><td>'+t.rows+'</td><td>'+t.cols+'</td></tr>').join('')}</tbody></table></div>
-  <div class="stack" style="font-size:12.5px;color:var(--muted)">${B().departments.map(d=>esc(d.name)+' → '+d.kind+' ('+d.employeeCount+' people, '+d.kpiCount+' KPIs)').join('<br>')}</div>
+  <div class="stack" style="font-size:12px;color:var(--muted)">${B().departments.map(d=>esc(d.name)+' → '+d.kind+' ('+d.employeeCount+' people, '+d.kpiCount+' KPIs)').join('<br>')}</div>
   ${(B().notes&&B().notes.length)?'<div class="stack" style="font-size:12px;color:var(--warn-ink)">'+B().notes.map(esc).join('<br>')+'</div>':''}</div>`;
 }
 
@@ -2534,7 +2489,7 @@ function vLibrary(){
   </div>
   <div class="panel pad" style="margin-top:16px"><div class="panel-h"><h3>${rows.length} definition${rows.length===1?'':'s'}</h3><span class="sub">owners · weight range · average rating</span>
     <div class="r"><div class="fsearch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg><input id="libSearch" placeholder="Search definitions…" value="${esc(APP.ctx.q||'')}"></div></div></div>
-  <div class="tbl-wrap stack"><table class="tbl"><thead><tr><th>KPI</th><th>Perspective</th><th>KRA</th><th>Type</th><th>Direction</th><th class="num">Owners</th><th class="num">Weight</th><th class="num">Rating</th></tr></thead>
+  <div class="tbl-wrap stack"><table class="tbl"><thead><tr><th>KPI</th><th>Perspective</th><th>KRA</th><th>Type</th><th>Direction</th><th class="num">Owners</th><th class="num">Weightage</th><th class="num">Rating</th></tr></thead>
   <tbody>${rows.length?rows.map(d=>`<tr data-def="${esc(d.defId)}">
     <td class="kname">${esc(d.kpi||d.kra||'—')}${d.definition?'<small>'+esc(d.definition)+'</small>':''}</td>
     <td>${esc(d.perspective||'—')}</td><td>${esc(d.kra||'—')}</td>
@@ -2542,7 +2497,7 @@ function vLibrary(){
     <td><span class="tag${d.directionSource==='declared'?' brand':''}">${esc(dirLabel(d.directionKey))}</span></td>
     <td class="num">${d.owners}${d.teams>1?'<small> · '+d.teams+' teams</small>':''}</td>
     <td class="num">${d.weightMin==null?'—':(d.weightMin===d.weightMax?n1(d.weightMin)+'%':n1(d.weightMin)+'–'+n1(d.weightMax)+'%')}</td>
-    <td class="num" style="font-weight:800">${d.rating==null?'—':ratingStr(d.rating)}</td></tr>`).join(''):'<tr><td colspan="8" class="empty">No definitions match.</td></tr>'}</tbody></table></div></div>`;
+    <td class="num" style="font-weight:700">${d.rating==null?'—':ratingStr(d.rating)}</td></tr>`).join(''):'<tr><td colspan="8" class="empty">No definitions match.</td></tr>'}</tbody></table></div></div>`;
 }
 function dirLabel(k){return k==='lower'?'Lower is better':(k==='exact'?'Exact / binary':'Higher is better');}
 
@@ -2570,12 +2525,12 @@ function vKpiDef(){
       ${sample?ladder(sample):'<div class="empty">No bands.</div>'}</div>
   </div>
   <div class="sect-t">Assignments<span class="r">weight and ladder can differ per person</span></div>
-  <div class="panel pad"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Person</th><th>Team</th><th class="num">Weight</th><th>Ladder</th><th>Reviewer</th><th class="num">Rating</th><th>Status</th></tr></thead>
+  <div class="panel pad"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Person</th><th>Team</th><th class="num">Weightage</th><th>Ladder</th><th>Reviewer</th><th class="num">Rating</th><th>Status</th></tr></thead>
   <tbody>${d.assignments.map(a=>`<tr data-rec="${esc(a.kpiId)}"><td class="kname">${esc(a.employee)}</td><td>${esc(a.department)}${a.subTeam?' · '+esc(a.subTeam):''}</td>
     <td class="num">${a.weight==null?'—':n1(a.weight)+'%'}</td>
     <td><span class="tag${a.bandSource==='assignment'?' brand':''}">${a.bandSource==='assignment'?'Overridden':'Master'}</span></td>
     <td>${esc(a.reviewer||'—')}</td>
-    <td class="num" style="font-weight:800">${a.rating==null?'—':ratingStr(a.rating)}</td><td>${statusPill(a.status)}</td></tr>`).join('')}</tbody></table></div></div>`;
+    <td class="num" style="font-weight:700">${a.rating==null?'—':ratingStr(a.rating)}</td><td>${statusPill(a.status)}</td></tr>`).join('')}</tbody></table></div></div>`;
 }
 
 /* ---------------- PERFORMANCE CYCLES (spec §17) ---------------- */
@@ -2601,7 +2556,7 @@ function vCycles(){
       <div class="field"><label>Note</label><input id="cyNote_${esc(c.period)}" value="${esc(c.note||'')}" placeholder="Optional"></div>
     </div>
     <button class="btn primary sm" data-act="save-cycle" data-period="${esc(c.period)}">Save cycle</button>
-    <div style="font-size:11.5px;color:var(--faint);margin-top:9px">A <b>Locked</b> cycle rejects every check-in, actual and review until it is reopened — that is what makes a closed period trustworthy.</div></div>`;
+    <div style="font-size:11px;color:var(--faint);margin-top:8px">A <b>Locked</b> cycle rejects every check-in, actual and review until it is reopened — that is what makes a closed period trustworthy.</div></div>`;
   return `<div class="page-head"><h1>Performance Cycles</h1>
     <p>Each cycle owns its assignments, actuals and review · lock to freeze it.</p></div>
   <div class="kc-grid c3">
@@ -2620,7 +2575,7 @@ function vCycles(){
 function vSettings(){
   const sc=SCORING(),scale=SCALE().slice().sort((a,b)=>a.min-b.min),th=TH(),h=B().health,src=B().source;
   const example=[[40,4],[30,4],[15,5],[10,4],[5,3]];
-  const exRows=example.map(([w,r])=>{const p=scoreFromRating(r)*(w/100);return `<tr><td class="num">${w}%</td><td class="num">${r}</td><td class="num">${n1(scoreFromRating(r))}%</td><td class="num" style="font-weight:800">${n1(p)}</td></tr>`;}).join('');
+  const exRows=example.map(([w,r])=>{const p=scoreFromRating(r)*(w/100);return `<tr><td class="num">${w}%</td><td class="num">${r}</td><td class="num">${n1(scoreFromRating(r))}%</td><td class="num" style="font-weight:700">${n1(p)}</td></tr>`;}).join('');
   const exTotal=example.reduce((s,[w,r])=>s+scoreFromRating(r)*(w/100),0);
   return `<div class="page-head"><h1>Settings</h1>
     <p>How a rating becomes a score, and a score becomes a word · system-wide.</p></div>
@@ -2630,9 +2585,9 @@ function vSettings(){
       <div class="pct-grid">${sc.ratingPct.map((v,i)=>`<div class="field"><label>Rating ${i+1}</label><input id="scPct${i}" type="number" min="0" max="100" step="1" value="${v}"></div>`).join('')}</div>
       <label class="chk"><input type="checkbox" id="scInterp" ${sc.interpolate===false?'':'checked'}> Interpolate between anchors <small>a rating of 4.4 scores between the band-4 and band-5 values instead of snapping</small></label>
       <button class="btn primary sm" data-act="save-scoring">Save scoring</button>
-      <div class="sect-t" style="margin-top:18px">Worked example</div>
-      <div class="tbl-wrap"><table class="tbl compact"><thead><tr><th class="num">Weight</th><th class="num">Rating</th><th class="num">Score</th><th class="num">Points</th></tr></thead><tbody>${exRows}
-        <tr><td colspan="3" style="text-align:right;font-weight:700">Overall</td><td class="num" style="font-weight:800">${n1(exTotal)} / 100</td></tr></tbody></table></div>
+      <div class="sect-t" style="margin-top:16px">Worked example</div>
+      <div class="tbl-wrap"><table class="tbl compact"><thead><tr><th class="num">Weightage</th><th class="num">Rating</th><th class="num">Score</th><th class="num">Points</th></tr></thead><tbody>${exRows}
+        <tr><td colspan="3" style="text-align:right;font-weight:700">Overall</td><td class="num" style="font-weight:700">${n1(exTotal)} / 100</td></tr></tbody></table></div>
     </div>
     <div class="panel pad"><div class="panel-h"><h3>Performance status</h3><span class="sub">separate from rating (spec §8)</span></div>
       <div class="q">The rating measures; the status names it.</div>
@@ -2642,8 +2597,8 @@ function vSettings(){
         <input class="st-min" id="stMin${i}" type="number" min="0" max="5" step="0.05" value="${s.min}">
       </div>`).join('')}</div>
       <button class="btn primary sm" data-act="save-statuses">Save statuses</button>
-      <div style="font-size:11.5px;color:var(--faint);margin-top:10px">Anything below the lowest cut-off takes the lowest label. A KPI with no actual is always <b>Pending</b>, never a status.</div>
-      <div class="sect-t" style="margin-top:18px">Preview</div>
+      <div style="font-size:11px;color:var(--faint);margin-top:8px">Anything below the lowest cut-off takes the lowest label. A KPI with no actual is always <b>Pending</b>, never a status.</div>
+      <div class="sect-t" style="margin-top:16px">Preview</div>
       <div class="stack" style="display:flex;gap:8px;flex-wrap:wrap">${[1,2,3,3.6,4,4.6,5].map(r=>{const s=statusFromRating(r);return '<span class="pill '+s.k+'"><span class="sdot s-'+s.k+'"></span>'+ratingStr(r)+' · '+esc(s.label)+'</span>';}).join('')}</div>
     </div>
   </div>
@@ -2660,15 +2615,15 @@ function vSettings(){
         <tr><td>Cycles</td><td>KKT_Cycles</td><td class="num">${(B().cycles||[]).length}</td></tr>
       </tbody></table></div>
       <button class="btn ghost sm" data-act="scaffold">Create / refresh actuals rows for ${esc(periodShort(APP.period))}</button>
-      <div style="font-size:11.5px;color:var(--faint);margin-top:8px">Adds one blank row per KPI with the target pre-filled from the Meets band. Never overwrites existing values.</div>
+      <div style="font-size:11px;color:var(--faint);margin-top:8px">Adds one blank row per KPI with the target pre-filled from the Meets band. Never overwrites existing values.</div>
     </div>
     <div class="panel pad"><div class="panel-h"><h3>Legacy thresholds</h3><span class="sub">derived from the status scale</span></div>
       <div class="row2"><div class="field"><label>On Track ≥</label><input id="setOnTrack" type="number" step="0.1" min="0" max="5" value="${th.onTrack}"></div>
       <div class="field"><label>At Risk ≥</label><input id="setAtRisk" type="number" step="0.1" min="0" max="5" value="${th.atRisk}"></div></div>
       <button class="btn ghost sm" data-act="save-settings">Save thresholds</button>
-      <div style="font-size:11.5px;color:var(--faint);margin-top:10px">These drive priority ranking and consistency streaks. Saving the status scale above keeps them in step automatically.</div>
-      <div class="sect-t" style="margin-top:18px">Parser diagnostics</div>
-      <div class="stack" style="font-size:12.5px;color:var(--muted)">${B().departments.map(d=>esc(d.name)+' → '+d.kind+' ('+d.employeeCount+' people, '+d.kpiCount+' KPIs)').join('<br>')}</div>
+      <div style="font-size:11px;color:var(--faint);margin-top:8px">These drive priority ranking and consistency streaks. Saving the status scale above keeps them in step automatically.</div>
+      <div class="sect-t" style="margin-top:16px">Parser diagnostics</div>
+      <div class="stack" style="font-size:12px;color:var(--muted)">${B().departments.map(d=>esc(d.name)+' → '+d.kind+' ('+d.employeeCount+' people, '+d.kpiCount+' KPIs)').join('<br>')}</div>
     </div>
   </div>`;
 }
@@ -2718,7 +2673,7 @@ function vTeamAdmin(){
     <p>Maps sheet tabs to a canonical team and lead · members are read live.</p></div>
   <div class="panel pad"><div class="panel-h"><h3>${teams.length} teams</h3><span class="sub">canonical name · lead · tab mapping</span>
     <div class="r"><button class="btn primary sm" data-act="save-teams">Save teams</button></div></div>
-    <div class="stack" style="margin-top:6px">${rows}</div>
+    <div class="stack" style="margin-top:8px">${rows}</div>
   </div>
   ${unregistered.length?'<div class="sect-t">Unmapped tabs</div><div class="panel pad"><div class="stack" style="font-size:13px;color:var(--ink-2)">These tabs matched no team pattern and appear as their own group: '+unregistered.map(d=>'<b>'+esc(d.name)+'</b>').join(', ')+'. Add a pattern above to fold them into a team.</div></div>':''}
   <div class="sect-t">Sub-teams</div>
@@ -2727,67 +2682,39 @@ function vTeamAdmin(){
 }
 
 /* ---------------- REPORTS ---------------- */
-function vReports(){
-  const o=B().rollups.org;const hasData=o.kpisWithData>0;
-  const depts=perfDepts();
-  const persp=B().perspectives||[];
-  return `<div class="page-head"><h1>Reports</h1>
-    <p>How the org, teams and perspectives have moved across ${o.periods.length} period${o.periods.length===1?'':'s'}.</p></div>
-  ${!hasData?stateCard('doc','No actuals to report on yet','Enter actuals for '+esc(periodLong(APP.period))+' and this page fills in.','<button class="btn primary" data-nav="checkins">Go to check-ins</button>'):`
-  <div class="kc-grid c4">
-    ${kpiCard('Overall score',n1(o.score)+'<small>%</small>',statusPill(o.status),{tone:o.status.k,bar:o.score,delta:o.delta})}
-    ${kpiCard('People on track',n1(o.peopleOnTrackPct)+'<small>%</small>',o.onTrack+' of '+o.peopleWithData+' rated',{tone:'good',bar:o.peopleOnTrackPct})}
-    ${kpiCard('KPIs on track',n1(o.recOnTrackPct)+'<small>%</small>',o.recOnTrack+' of '+o.kpisWithData+' with results',{tone:'good',bar:o.recOnTrackPct})}
-    ${kpiCard('Coverage',pct(o.coverage),o.kpisWithData+' of '+o.kpis+' KPIs',{tone:o.coverage>=67?'good':'warn',bar:o.coverage})}
-  </div>
-  <div class="panel pad" style="margin-top:16px"><div class="panel-h"><h3>Organisation trend</h3><span class="sub">rating over the last ${o.periods.length} periods</span>${o.delta!=null?'<div class="r">'+deltaChip(o.delta)+' vs '+esc(periodShort(o.previousPeriod))+'</div>':''}</div>
-    ${trendChart(o.trend,{h:170})}</div>
-  <div class="two-eq" style="margin-top:16px">
-    <div class="panel pad"><div class="panel-h"><h3>Team comparison</h3><span class="sub">score · Δ vs prior</span></div>
-      <div class="stack" style="margin-top:4px">${depts.map(d=>deptBar(d,true)).join('')||'<div class="empty">No teams.</div>'}</div></div>
-    <div class="panel pad"><div class="panel-h"><h3>Perspective comparison</h3><span class="sub">weighted across the org</span></div>
-      <div class="stack" style="margin-top:4px">${persp.map(perspBar).join('')||'<div class="empty">No perspectives tagged.</div>'}</div></div>
-  </div>
-  <div class="two-col" style="margin-top:16px">
-    <div class="panel pad"><div class="panel-h"><h3>Biggest movers</h3><span class="sub">vs ${esc(periodShort(o.previousPeriod))}</span></div><div class="list stack" style="margin-top:4px">${moversList(o.movers,8)}</div></div>
-    <div class="panel pad"><div class="panel-h"><h3>Priority actions</h3><span class="sub">gap below target × weightage</span></div><div class="list stack" style="margin-top:4px">${priorityList(null,8)}</div></div>
-  </div>
-  <div class="sect-t">Compare one KPI across the business</div>
-  <div class="linkrow"><span class="link" data-nav="kpianalysis">Open KPI analysis →</span><span class="link" data-nav="records">Full KPI table →</span><span class="link" data-nav="perspectives">All perspectives →</span></div>`}`;
-}
 
 /* ---------------- DRAWER (KPI detail + edit) ---------------- */
 function openRec(id){
   const r=recById(id);if(!r)return;
-  const meets=r.bands&&r.bands[2]?bandDisplay(r,r.bands[2]):'';
   const locked=cycleLocked(),lk=locked?' disabled':'';
   const m=nextMilestone(r);
   let msHtml='';
-  if(m&&!m.done){const p=clamp((r.rating-1)/4*100,0,100);const gapTxt=m.gap!=null?('<b>'+fmtVal(r,m.gap)+'</b> to go'):('reach the next band');msHtml=`<div class="section-t">Next milestone</div><div class="ms"><div class="ms-h"><div class="ms-t">${esc(m.band.label||('Band '+m.toRating))}${m.band.raw?'<small>'+esc(m.band.raw)+'</small>':''}</div></div><div class="ms-track"><span style="width:${p}%"></span></div><div class="ms-foot"><span>${gapTxt}</span><span>·</span><span><b>${r.weightShown==null?'—':n1(r.weightShown)+'%'}</b> weight</span></div></div>`;}
+  if(m&&!m.done){const p=clamp((r.rating-1)/4*100,0,100);const gapTxt=m.gap!=null?('<b>'+fmtVal(r,m.gap)+'</b> to go'):('reach the next band');msHtml=`<div class="section-t">Next milestone</div><div class="ms"><div class="ms-h"><div class="ms-t">${esc(m.band.label||('Band '+m.toRating))}${m.band.raw?'<small>'+esc(m.band.raw)+'</small>':''}</div></div><div class="ms-track"><span style="width:${p}%"></span></div><div class="ms-foot"><span>${gapTxt}</span><span>·</span><span><b>${r.weightShown==null?'—':n1(r.weightShown)+'%'}</b> weightage</span></div></div>`;}
   else if(m&&m.done)msHtml=`<div class="section-t">Next milestone</div><div class="ms done"><div class="ms-h"><div class="ms-t">Top band reached 🎉<small>Hold performance to keep the rating</small></div></div></div>`;
   const spark=kpiSpark(r);
   $('#drawerContent').innerHTML=`
-    <div class="drawer-h"><div style="min-width:0">${statusPill(r.status)}<h2 style="margin-top:9px">${esc(r.kpi||r.kra||'KPI')}</h2>
+    <div class="drawer-h"><div style="min-width:0">${statusPill(r.status)}<h2 style="margin-top:8px">${esc(r.kpi||r.kra||'KPI')}</h2>
       <div class="sub"><span class="tag brand">${esc(r.department)}</span>${r.subTeam?'<span class="tag">'+esc(r.subTeam)+'</span>':''}<span>${esc(titleName(r.employee))}</span></div></div>
       <button class="icon-btn close" data-act="close-drawer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div class="drawer-body">
-      <div class="section-t">What is it?</div>
+      <div class="section-t">Definition</div>
       <div class="def-box">${esc(r.definition||r.kpi||r.kra||'—')}<div class="dm"><span>Type <b>${esc(r.metricType||'—')}</b></span>${r.unit?'<span>Unit <b>'+esc(r.unit)+'</b></span>':''}<span>Direction <b>${r.qualitative?'manual':esc(dirLabel(r.directionKey))}</b>${r.qualitative||r.directionSource==='declared'?'':' <i>(inferred)</i>'}</span>${r.perspective?'<span>Perspective <b>'+esc(r.perspective)+'</b></span>':''}${r.kra&&r.kra!==r.kpi?'<span>KRA <b>'+esc(r.kra)+'</b></span>':''}${r.reviewer?'<span>Reviewer <b>'+esc(r.reviewer)+'</b></span>':''}</div></div>
-      <div class="section-t">Where should I be? <span class="r">5-band rubric</span></div>
+      <div class="section-t">Rating bands <span class="r">${esc(r.achievedBand?'reached '+r.achievedBand:'5-band rubric')}</span></div>
       ${ladder(r)}
-      <div class="section-t">How this scores <span class="r">weightage × rating</span></div>
+      <div class="section-t">Result</div>
       <div class="metric-grid">
-        <div class="metric"><div class="l">Actual</div><div class="v" style="font-size:15px">${r.actual==null?'—':esc(fmtVal(r,r.actual))}</div></div>
-        <div class="metric"><div class="l">Target (Meets)</div><div class="v" style="font-size:14px">${esc(meets||(r.target==null?'—':fmtVal(r,r.target)))}</div></div>
-        <div class="metric"><div class="l">Achievement</div><div class="v">${r.attainment==null?'—':pct(r.attainment)}</div></div>
-        <div class="metric"><div class="l">Achieved band</div><div class="v" style="font-size:13px">${esc(r.achievedBand||'—')}</div></div>
-        <div class="metric"><div class="l">Rating</div><div class="v" style="color:${sc(r.status.k)}">${r.rating==null?'—':ratingStr(r.rating)}<small>/5</small></div></div>
-        <div class="metric"><div class="l">Score</div><div class="v">${r.scorePct==null?'—':n1(r.scorePct)}<small>%</small></div></div>
-        <div class="metric"><div class="l">Weightage</div><div class="v">${r.weightShown==null?'—':n1(r.weightShown)}<small>%</small></div></div>
-        <div class="metric"><div class="l">Points earned</div><div class="v" style="font-weight:800">${r.points==null?'—':n1(r.points)}<small>/${r.maxPoints==null?'—':n1(r.maxPoints)}</small></div></div>
+        <div class="metric"><div class="l">Target</div><div class="v">${r.target==null?'—':esc(fmtVal(r,r.target))}</div></div>
+        <div class="metric"><div class="l">Actual</div><div class="v">${r.actual==null?'—':esc(fmtVal(r,r.actual))}</div></div>
+        <div class="metric hl"><div class="l">Achievement %</div><div class="v" style="color:${sc(r.status.k)}">${r.attainment==null?'—':pct(r.attainment)}</div></div>
       </div>
-      ${r.points!=null?'<div class="calc">'+esc(ratingStr(r.rating))+' / 5 → <b>'+n1(r.scorePct)+'%</b> × <b>'+n1(r.weightShown)+'%</b> weight = <b>'+n1(r.points)+' points</b> of this person&rsquo;s 100</div>':''}
-      ${spark?'<div class="section-t">Trend <span class="r">'+esc(r.qualitative?'rating':(r.unit||'actual'))+' over time</span></div><div class="panel pad" style="padding:10px 12px">'+spark+'</div>':''}
+      <div class="section-t">Contribution to the score</div>
+      <div class="metric-grid">
+        <div class="metric"><div class="l">Weightage</div><div class="v">${r.weightShown==null?'—':n1(r.weightShown)}<small>%</small></div></div>
+        <div class="metric"><div class="l">Rating</div><div class="v" style="color:${sc(r.status.k)}">${r.rating==null?'—':ratingStr(r.rating)}<small> / 5</small></div></div>
+        <div class="metric"><div class="l">Points</div><div class="v">${r.points==null?'—':n1(r.points)}<small> / ${r.maxPoints==null?'—':n1(r.maxPoints)}</small></div></div>
+      </div>
+      ${r.points!=null?'<div class="calc">Rating <b>'+esc(ratingStr(r.rating))+' / 5</b> scores <b>'+n1(r.scorePct)+'%</b> of a <b>'+n1(r.weightShown)+'%</b> weightage — contributing <b>'+n1(r.points)+'</b> points of this person&rsquo;s 100.</div>':''}
+      ${spark?'<div class="section-t">Trend <span class="r">'+esc(r.qualitative?'rating':(r.unit||'actual'))+' over time</span></div><div class="panel pad" style="padding:8px 12px">'+spark+'</div>':''}
       ${msHtml}
       ${r.comment||r.evidence?'<div class="section-t">Review</div><div class="review"><div class="rv-h">'+rchip(r.rating,r.status)+'<span class="tag">'+esc(periodShort(APP.period))+'</span></div>'+(r.comment?'<div class="rv-txt">'+esc(r.comment)+'</div>':'')+'<div class="rv-meta">'+(r.evidence?'<a class="link" href="'+esc(r.evidence)+'" target="_blank" rel="noopener">Evidence ↗</a>':'')+(r.updatedAt?'<span>Updated '+esc(relTime(r.updatedAt))+'</span>':'')+'</div></div>':''}
       ${checkinHistory(r)}
@@ -2805,7 +2732,7 @@ function openRec(id){
         <button class="btn primary" data-act="save-checkin" data-rec="${r.kpiId}"${lk}>Add check-in</button>
         <button class="btn ghost" data-act="save-actual" data-rec="${r.kpiId}"${lk}>Correct current value</button>
       </div>
-      <div style="font-size:11.5px;color:var(--faint);margin-top:10px"><b>Add check-in</b> appends to the history and updates the current value. <b>Correct current value</b> amends the actual without logging a new entry — use it to fix a mistake. Source of tracking: ${esc(r.source||'—')}.</div>
+      <div style="font-size:11px;color:var(--faint);margin-top:8px"><b>Add check-in</b> appends to the history and updates the current value. <b>Correct current value</b> amends the actual without logging a new entry — use it to fix a mistake. Source of tracking: ${esc(r.source||'—')}.</div>
     </div>`;
   $('#drawer').classList.add('on');$('#scrim').classList.add('on');
 }
@@ -2831,7 +2758,7 @@ function assignmentBox(r){
   return `<div class="section-t">Assignment <span class="r">${r.bandSource==='assignment'?'overridden for this cycle':'inheriting the master ladder'}</span></div>
     <details class="asg"${r.bandSource==='assignment'||r.weightSource==='assignment'?' open':''}>
       <summary>Weightage, direction and target bands for <b>${esc(titleName(r.employee))}</b> · ${esc(periodLong(APP.period))}</summary>
-      <div class="row2" style="margin-top:10px">
+      <div class="row2" style="margin-top:8px">
         <div class="field"><label>Weight % (how much this KPI counts)</label><input id="asgWeight" type="number" step="any" min="0" max="100" value="${r.weightShown==null?'':r.weightShown}"${lk}></div>
         <div class="field"><label>Direction</label><select id="asgDirection"${lk}>
           <option value="">Inherit (${esc(dirLabel(r.directionKey))})</option>
@@ -2843,7 +2770,7 @@ function assignmentBox(r){
       <div class="band-grid">${[0,1,2,3,4].map(i=>'<div class="field"><label>Target '+(i+1)+'</label><input id="asgBand'+i+'" value="'+b(i)+'" placeholder="—"'+lk+'></div>').join('')}</div>
       <div class="field"><label>Reviewer</label><input id="asgReviewer" value="${esc(r.reviewer||'')}" placeholder="Who reviews this KPI"${lk}></div>
       <button class="btn ghost sm" data-act="save-assignment" data-rec="${r.kpiId}"${lk}>Save assignment</button>
-      <div style="font-size:11.5px;color:var(--faint);margin-top:8px">Leave a field blank to inherit the master sheet. Saved against ${esc(periodLong(APP.period))} only, so past cycles keep the bands they were actually judged on.</div>
+      <div style="font-size:11px;color:var(--faint);margin-top:8px">Leave a field blank to inherit the master sheet. Saved against ${esc(periodLong(APP.period))} only, so past cycles keep the bands they were actually judged on.</div>
     </details>`;
 }
 function closeDrawer(){$('#drawer').classList.remove('on');$('#scrim').classList.remove('on');}
@@ -2888,18 +2815,36 @@ function showState(kind,msg){
 }
 function renderEmpty(){$('#filterbar').style.display='none';buildChrome();$('#content').innerHTML=stateCard('doc','No KRA/KPI framework detected',esc((B()&&B().message)||'The parser found no KRA/KPI tabs (Perspective / KRA / KPI / Weightage / band columns). Check the master sheet and refresh — see Health & Data for what each tab was classified as.'),'<button class="btn primary" data-act="refresh">Refresh</button>');}
 function stateCard(icon,title,body,action,err){const ic={link:'<path d="M9 12a4 4 0 0 1 4-4h3a4 4 0 1 1 0 8h-1"/><path d="M15 12a4 4 0 0 1-4 4H8a4 4 0 1 1 0-8h1"/>',alert:'<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/>',doc:'<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/>'}[icon]||'';return '<div class="state '+(err?'err':'')+'"><div class="state-card"><div class="state-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+ic+'</svg></div><h2>'+esc(title)+'</h2><p>'+body+'</p>'+(action||'')+'</div></div>';}
-function skeleton(){const c='<div class="skl" style="height:126px"></div>';return '<div style="padding:4px 0 18px"><div class="skl" style="height:26px;width:280px;margin-bottom:10px"></div><div class="skl" style="height:14px;width:440px"></div></div><div class="kc-grid c4">'+c+c+c+c+'</div><div class="skl" style="height:240px"></div>';}
+function skeleton(){const c='<div class="skl" style="height:126px"></div>';return '<div style="padding:4px 0 16px"><div class="skl" style="height:26px;width:280px;margin-bottom:8px"></div><div class="skl" style="height:14px;width:440px"></div></div><div class="kc-grid c4">'+c+c+c+c+'</div><div class="skl" style="height:240px"></div>';}
 
 /* ---------------- helpers using settings ---------------- */
 /* Mirrors the backend exactly: status comes from the configurable scale, never
  * from hard-coded cut-offs, so relabelling in Settings moves the whole UI. */
 function SCALE(){const s=B()&&B().settings&&B().settings.statusScale;return (s&&s.length)?s:[{key:'bad',label:'At Risk',min:0},{key:'warn',label:'Watch',min:2},{key:'good',label:'On Track',min:3},{key:'strong',label:'Strong',min:4},{key:'elite',label:'Exceeding',min:4.5}];}
-function statusFromRating(r){
-  if(r==null||isNaN(r))return {k:'none',label:'Pending',tier:0};
-  const sc=SCALE().slice().sort((a,b)=>a.min-b.min);
-  let pick=sc[0];sc.forEach(s=>{if(r>=s.min)pick=s;});
-  return {k:pick.key,label:pick.label,tier:sc.indexOf(pick)+1};
+/* ===== ONE ladder =====
+ * Score out of 100 IS the percentage, and Level 1–5 is simply its band. Status
+ * cut-offs on rating, a separate lv1–5 chip, and the rating→percent map were
+ * three independent ladders, so a level chip could disagree with the score
+ * printed beside it. Both a per-KPI rating and an overall score now resolve
+ * through the same rungs, derived from the configurable status scale rather
+ * than re-hardcoded — retuning Settings still moves the whole UI. */
+function LADDER(){
+  const s=SCALE().slice().sort((a,b)=>a.min-b.min);
+  return s.map((x,i)=>({key:x.key,label:x.label,level:i+1,
+    minRating:x.min,minScore:i===0?0:scoreFromRating(clamp(x.min,1,5))}));
 }
+function bandFromScore(score){
+  if(score==null||isNaN(score))return {k:'none',label:'Pending',level:0,tier:0};
+  const L=LADDER();let pick=L[0];
+  L.forEach(b=>{if(score>=b.minScore)pick=b;});
+  return {k:pick.key,label:pick.label,level:pick.level,tier:pick.level};
+}
+/* scoreFromRating is monotonic, so this is identical to the old rating lookup
+ * but incapable of drifting away from the score-based one. */
+function bandFromRating(r){
+  return r==null||isNaN(r)?{k:'none',label:'Pending',level:0,tier:0}:bandFromScore(scoreFromRating(r));
+}
+function statusFromRating(r){return bandFromRating(r);}
 /* The ONE rating→percentage conversion, client side, for anything the backend
  * did not pre-compute (ad-hoc groupings in the UI). */
 function SCORING(){const s=B()&&B().settings&&B().settings.scoring;return (s&&s.ratingPct&&s.ratingPct.length===5)?s:{ratingPct:[20,40,60,80,100],interpolate:true};}
@@ -2944,7 +2889,6 @@ document.addEventListener('click',e=>{
   const pg=e.target.closest('[data-page]');if(pg){APP.table.page+=(pg.dataset.page==='next'?1:-1);render();return;}
   const pk=e.target.closest('[data-pick]');if(pk){APP.meId=pk.dataset.pick;go('me');return;}
   const rc=e.target.closest('[data-rec]');if(rc){openRec(rc.dataset.rec);return;}
-  const pv=e.target.closest('[data-persp]');if(pv){go('perspective',{name:pv.dataset.persp});return;}
   const sb=e.target.closest('[data-subteam]');if(sb){APP.filters.subTeam=sb.dataset.subteam;APP.filters.dept=(subById(sb.dataset.subteam)||{}).deptId||'';go('employees');return;}
   const dp=e.target.closest('[data-dept]');if(dp){go('dept',{deptId:dp.dataset.dept});return;}
   const mtab=e.target.closest('[data-motab]');if(mtab){MO.tab=mtab.dataset.motab;moRender();return;}
