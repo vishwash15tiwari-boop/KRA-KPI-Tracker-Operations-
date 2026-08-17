@@ -2013,11 +2013,32 @@ function actualsSourceInfo_(settings, all) {
 /* Every period the product knows about: from actuals, from declared cycles and
  * from assignments — so a cycle set up in advance is selectable before a single
  * actual has been entered against it. */
+/* How many recent months the period switch always offers, even before any data
+ * exists for them. A rolling window means the list advances by itself each
+ * month instead of needing a code change. */
+var PERIOD_WINDOW = 3;
+
+/** The last `n` months ending at `current`, newest first. */
+function recentPeriods_(current, n) {
+  var m = /^(\d{4})-(\d{2})$/.exec(current || '');
+  if (!m) return [];
+  var y = Number(m[1]), mo = Number(m[2]), out = [];
+  for (var i = 0; i < (n || PERIOD_WINDOW); i++) {
+    out.push(y + '-' + ('0' + mo).slice(-2));
+    mo--; if (mo < 1) { mo = 12; y--; }
+  }
+  return out;
+}
+
 function knownPeriods_(all, current, cycles, assignments) {
   var set = {}; set[current] = true;
   (all && all.periods || []).forEach(function (p) { if (p) set[p] = true; });
   ((cycles && cycles.list) || []).forEach(function (c) { if (c.period) set[c.period] = true; });
   Object.keys((assignments && assignments.periods) || {}).forEach(function (p) { if (p) set[p] = true; });
+  // the rolling window, so a month is selectable before its data lands
+  recentPeriods_(current, PERIOD_WINDOW).forEach(function (p) { set[p] = true; });
+  // and any month a target-plan workbook describes (GmvSource.gs is optional)
+  try { if (typeof tsPeriods_ === 'function') tsPeriods_().forEach(function (p) { if (p) set[p] = true; }); } catch (e) {}
   return Object.keys(set).sort().reverse();
 }
 
