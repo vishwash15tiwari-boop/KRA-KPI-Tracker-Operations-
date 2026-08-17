@@ -45,7 +45,9 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
 /* ===================== SIDEBAR =====================
    Persistent left rail: brand → grouped modules → identity.
    A single sliding indicator (.nav-rail) tracks the active module. */
-.sidebar{width:var(--sbw);flex:0 0 var(--sbw);height:100vh;position:sticky;top:0;background:var(--card);border-right:1px solid var(--line);display:flex;flex-direction:column;z-index:45;transition:width .26s var(--ease),flex-basis .26s var(--ease)}
+/* Chrome sits back on a tinted ground so the white content plane advances —
+   the flat white-on-white was what made the whole thing read as lifeless. */
+.sidebar{width:var(--sbw);flex:0 0 var(--sbw);height:100vh;position:sticky;top:0;background:var(--surface-2);border-right:1px solid var(--line);display:flex;flex-direction:column;z-index:45;transition:width .26s var(--ease),flex-basis .26s var(--ease)}
 .sb-head{display:flex;align-items:center;gap:9px;padding:0 14px;height:56px;flex:0 0 56px;border-bottom:1px solid var(--line-soft)}
 .brand{display:flex;align-items:center;gap:9px;min-width:0;flex:1;cursor:pointer}
 .brand .logo{flex:0 0 auto;display:grid;place-items:center}
@@ -60,6 +62,12 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
 .sb-nav::-webkit-scrollbar{width:6px}.sb-nav::-webkit-scrollbar-thumb{border:none;background:var(--line-2)}
 .sb-gt{font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);padding:0 12px;margin:16px 0 6px;white-space:nowrap;overflow:hidden}
 .sb-group:first-of-type .sb-gt{margin-top:6px}
+/* Setup collapses out of the way; the chevron is the only affordance needed. */
+button.sb-gt{display:flex;align-items:center;gap:6px;width:100%;background:transparent;border:none;cursor:pointer;font-family:inherit;border-radius:7px;padding:5px 12px;margin:16px 0 4px;transition:color .15s}
+button.sb-gt:hover{color:var(--muted)}
+button.sb-gt .cv{width:11px;height:11px;margin-left:auto;transition:transform .22s var(--ease);opacity:.8}
+button.sb-gt.open .cv{transform:rotate(180deg)}
+.sb-group.collapsed .sb-items{display:none}
 /* the rail that slides between modules — ReactBits "Line Sidebar" idea */
 .nav-rail{position:absolute;left:10px;width:3px;border-radius:3px;background:var(--brand);opacity:0;transition:transform .28s var(--ease),height .28s var(--ease),opacity .2s;pointer-events:none;will-change:transform}
 .nav-item{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:10px;position:relative;color:var(--ink-2);font-weight:550;cursor:pointer;font-size:13.5px;letter-spacing:-.006em;white-space:nowrap;transition:background .16s var(--ease),color .16s var(--ease)}
@@ -81,6 +89,8 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
 .app.rail .sb-collapse .lbl{display:none}
 .app.rail .sb-collapse svg{transform:rotate(180deg)}
 .app.rail .sb-group+.sb-group{margin-top:10px;padding-top:10px;border-top:1px solid var(--line-soft)}
+/* no headers in rail mode, so a collapsed section would be unreachable */
+.app.rail .sb-group.collapsed .sb-items{display:block}
 .app.rail .nav-item{justify-content:center;padding:10px 0}
 .app.rail .userchip{justify-content:center;padding:5px}
 .app.rail .nav-rail{left:5px}
@@ -525,6 +535,14 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
    dense tile grid, and a form chosen per job. Colour is disciplined — brand
    blue for the accent and progress, a green/amber/red ramp for status only,
    and neutral ink for pure magnitude, so hue always carries meaning. */
+/* Band headings break the dashboard into answerable questions instead of one
+   continuous wall of tiles: where we stand → how it breaks down → what to do. */
+/* named .dband, not .band — the distribution chart already uses <g class="band"> */
+.dband{display:flex;align-items:baseline;gap:10px;margin:30px 0 13px}
+.dband:first-of-type{margin-top:4px}
+.dband h2{font-size:13.5px;font-weight:700;letter-spacing:-.012em;margin:0;color:var(--ink);white-space:nowrap;font-family:var(--font-display)}
+.dband .bd{font-size:11.5px;color:var(--muted);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dband .ln{flex:1;height:1px;background:var(--line);min-width:12px}
 .dash{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px;align-items:stretch}
 .t1{grid-column:span 1}.t2{grid-column:span 2}.t3{grid-column:span 3}.t4{grid-column:span 4}
 .t5{grid-column:span 5}.t6{grid-column:span 6}.t7{grid-column:span 7}.t8{grid-column:span 8}
@@ -544,8 +562,12 @@ button,input,select{font-family:inherit}a{color:inherit;text-decoration:none}
 .tile-h .tlb{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);white-space:nowrap}
 .tile-h .r{margin-left:auto;font-size:11px;font-weight:600;color:var(--muted);white-space:nowrap}
 .tile-h .r.link{cursor:pointer}.tile-h .r.link:hover{color:var(--ink)}
-.tile.clickable{cursor:pointer;transition:border-color .15s var(--ease)}
-.tile.clickable:hover{border-color:var(--line-2)}
+.tile.clickable{cursor:pointer;transition:border-color .15s var(--ease),box-shadow .15s var(--ease),transform .15s var(--ease)}
+.tile.clickable:hover{border-color:var(--line-2);box-shadow:var(--shadow);transform:translateY(-2px)}
+/* The hero is the one number the page leads with — it gets a brand edge and a
+   tinted ground so it is not just another white box among twelve. */
+.tile.t4:first-child{background:linear-gradient(150deg,var(--brand-soft) 0%,var(--card) 58%);border-color:rgba(0,93,255,.16)}
+.tile.t4:first-child .tile-h .tlb{color:var(--brand-ink)}
 
 /* hero: the one number the view leads with (proportional figures, ≥48px) */
 .hero{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
@@ -735,7 +757,7 @@ function bandDisplay(rec,b){
 function backend(){return (typeof google!=='undefined'&&google.script&&google.script.run)?google.script.run:null;}
 function call(fn,payload){return new Promise((resolve,reject)=>{const b=backend();if(!b){reject({__offline:true});return;}b.withSuccessHandler(resolve).withFailureHandler(reject)[fn](payload);});}
 
-const APP={boot:null,mode:'mgmt',view:'overview',ctx:{},meId:null,tab:'',expanded:{},filters:{dept:'',subTeam:'',status:'',search:''},table:{sort:'employee',dir:1,page:0,per:14},period:''};
+const APP={boot:null,mode:'mgmt',view:'overview',ctx:{},meId:null,tab:'',expanded:{},navOpen:{},filters:{dept:'',subTeam:'',status:'',search:''},table:{sort:'employee',dir:1,page:0,per:14},period:''};
 function B(){return APP.boot;}
 function TH(){return B().settings.thresholds;}
 
@@ -787,7 +809,10 @@ const NAV_ADMIN=[
 ];
 /* The sidebar reads top-to-bottom in the order the work happens, then the
    setup that rarely changes. One 17px line icon per module. */
-const NAV_GROUPS=[{t:'Main',items:NAV_MAIN},{t:'Administration',items:NAV_ADMIN}];
+const NAV_GROUPS=[
+  {key:'main',t:'Workspace',items:NAV_MAIN},
+  {key:'admin',t:'Administration',items:NAV_ADMIN,collapsible:true}
+];
 const NAV_ICON={
   overview:'<path d="M3 12l2-2 4 4 5-6 4 4 3-3"/><path d="M3 20h18" opacity=".45"/>',
   goals:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2"/><path d="M12 2.4v2.6M12 19v2.6M21.6 12H19M5 12H2.4"/>',
@@ -824,12 +849,20 @@ function buildChrome(){
     if(id==='goals'&&atRisk)return '<span class="badge">'+atRisk+'</span>';
     return '';
   };
-  // Grouped rail: every module is visible at once, so nothing hides behind a menu.
-  navEl.innerHTML='<div class="nav-rail" id="navRail"></div>'+NAV_GROUPS.map(g=>
-    '<div class="sb-group"><div class="sb-gt">'+esc(g.t)+'</div>'
-    +g.items.map(nv=>'<div class="nav-item'+(nv.id===activeNav?' active':'')+'" data-nav="'+nv.id+'" title="'+esc(nv.label)+'">'
-      +navIcon(nv.id)+'<span class="lbl">'+esc(nv.label)+'</span>'+badgeFor(nv.id)+'</div>').join('')
-    +'</div>').join('');
+  // Day-to-day modules stay open; setup collapses so the rail reads as 7 items,
+  // not 12. A section auto-opens when the current view lives inside it.
+  navEl.innerHTML='<div class="nav-rail" id="navRail"></div>'+NAV_GROUPS.map(g=>{
+    const holdsActive=g.items.some(nv=>nv.id===activeNav);
+    const open=g.collapsible?(holdsActive||APP.navOpen[g.key]===true):true;
+    const head=g.collapsible
+      ? '<button class="sb-gt tog'+(open?' open':'')+'" data-act="toggle-group" data-group="'+g.key+'">'
+        +'<span>'+esc(g.t)+'</span><svg class="cv" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>'
+      : '<div class="sb-gt">'+esc(g.t)+'</div>';
+    return '<div class="sb-group'+(open?'':' collapsed')+'">'+head+'<div class="sb-items">'
+      +g.items.map(nv=>'<div class="nav-item'+(nv.id===activeNav?' active':'')+'" data-nav="'+nv.id+'" title="'+esc(nv.label)+'">'
+        +navIcon(nv.id)+'<span class="lbl">'+esc(nv.label)+'</span>'+badgeFor(nv.id)+'</div>').join('')
+      +'</div></div>';
+  }).join('');
   moveNavRail();
   const em=(B().user&&B().user.email)||'';const emName=em?em.split('@')[0].replace(/[._]+/g,' '):'You';
   const meName=APP.meId?((empById(APP.meId)||{}).name||emName):emName;
@@ -868,7 +901,9 @@ function buildFilterbar(){
   let h='';
   h+='<div class="selectwrap"><select class="pill-select" data-filter="dept"><option value="">All teams</option>'+depts.map(d=>'<option value="'+d.id+'"'+(f.dept===d.id?' selected':'')+'>'+esc(d.name)+'</option>').join('')+'</select></div>';
   if(subs.length)h+='<div class="selectwrap"><select class="pill-select" data-filter="subTeam"><option value="">All sub-teams</option>'+subs.map(s=>'<option value="'+s.id+'"'+(f.subTeam===s.id?' selected':'')+'>'+esc((f.dept?'':s.deptName+' · ')+s.name)+'</option>').join('')+'</select></div>';
-  h+='<div class="fseg">'+statuses.map(([v,l])=>'<button data-fstatus="'+v+'" class="'+(f.status===v?'active':'')+'">'+l+'</button>').join('')+'</div>';
+  // A 7-button strip for status was the noisiest thing on screen; the active
+  // choice still reads back as a chip below, so nothing is lost.
+  h+='<div class="selectwrap"><select class="pill-select" data-filter="status">'+statuses.map(([v,l])=>'<option value="'+esc(v)+'"'+(f.status===v?' selected':'')+'>'+esc(l)+'</option>').join('')+'</select></div>';
   h+='<div class="fsearch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg><input id="fSearch" placeholder="Search people, KRAs, KPIs…" value="'+esc(f.search)+'"></div>';
   const chips=[];if(f.dept)chips.push(chip('Team','dept',(deptById(f.dept)||{}).name||''));if(f.subTeam)chips.push(chip('Sub-team','subTeam',(subById(f.subTeam)||{}).name||''));if(f.status)chips.push(chip('Status','status',(statuses.find(s=>s[0]===f.status)||['',''])[1]));if(f.search)chips.push(chip('Search','search','“'+f.search+'”'));
   if(chips.length)h+='<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+chips.join('')+'<span class="clear-all" data-act="clear-filters">Clear all</span></div>';
@@ -1186,24 +1221,33 @@ function vOverview(){
       <td class="n">${deltaChip(m.delta)}</td><td class="n">${m.score==null?'—':n1(m.score)+'%'}</td></tr>`).join('')
     :'<tr><td class="empty" colspan="3">'+(hasData?'No period-over-period change yet.':'Awaiting the backend sheet.')+'</td></tr>';
 
-  return head+banner+`<div class="dash">
+  return head+banner
+  +band('Where we stand',periodLong(APP.period)+' at a glance')
+  +`<div class="dash">
     ${heroTile(o.score,o.rating,o.status,o.delta,
       hasData?('Weightage × rating across '+o.kpisWithData+' scored KPIs'+(o.previousPeriod?', vs '+prev:'')+'.'):'Awaiting the backend sheet — the framework is ready.')}
     ${statTile('t2','Employees on track',n1(o.peopleOnTrackPct),'%',o.onTrack+' of '+o.peopleWithData+' rated',{meter:o.peopleOnTrackPct,nav:'employees'})}
     ${statTile('t2','KPIs on track',n1(o.recOnTrackPct),'%',o.recOnTrack+' of '+o.kpisWithData+' scored',{meter:o.recOnTrackPct,nav:'goals'})}
     ${statTile('t2','KPIs at risk',String(o.recAtRisk+o.recOffTrack),'',o.recAtRisk+' at risk · '+o.recOffTrack+' off track',{nav:'goals'})}
     ${statTile('t2','Reviews pending',String(rv.pending),'',rv.total?rv.complete+' of '+rv.total+' complete':'no reviews yet',{meter:rv.progress,nav:'reviews'})}
-
+  </div>`
+  +band('How it breaks down','trend, teams, perspectives and spread')
+  +`<div class="dash">
     ${tile('t7','Performance trend',areaChart(o.trend,{h:150}),{right:o.delta!=null?(o.delta>0?'▲':'▼')+' vs '+prev:'rating / 5'})}
     ${tile('t5','Team performance','<div>'+(teamRows||'<div class="empty">No teams.</div>')+'</div>',{right:'score / 100'})}
-
     ${tile('t5','Perspective performance','<div>'+(perspRows||'<div class="empty">No perspectives tagged.</div>')+'</div>',{right:'All ›',rightNav:'perspectives'})}
     ${tile('t3','Performance distribution',distCols(bins),{right:o.peopleWithData+' rated'})}
     ${tile('t4','Coverage','<div class="stat"><div class="v">'+n1(o.coverage)+'<span class="u">%</span></div><div class="sub">'+o.kpisWithData+' of '+o.kpis+' KPIs have '+esc(periodShort(APP.period))+' actuals</div><div class="meter"><span style="width:'+clamp(o.coverage,0,100)+'%"></span></div></div>',{nav:'checkins'})}
-
+  </div>`
+  +band('What needs attention','where a nudge moves the score most')
+  +`<div class="dash">
     ${tile('t6','Priority actions','<table class="mini"><tbody>'+priorityRows+'</tbody></table>',{right:'gap × weight'})}
     ${tile('t6','Biggest movers','<table class="mini"><tbody>'+moverRows+'</tbody></table>',{right:o.previousPeriod?'vs '+prev:''})}
   </div>`;
+}
+/* One question per band — the heading tells you what the tiles below answer. */
+function band(title,desc){
+  return '<div class="dband"><h2>'+esc(title)+'</h2>'+(desc?'<span class="bd">'+esc(desc)+'</span>':'')+'<span class="ln"></span></div>';
 }
 function coverageRows(){
   return perfDepts().map(d=>{const recs=B().records.filter(r=>r.deptId===d.id);const wd=withData(recs).length;
@@ -2241,6 +2285,9 @@ function handleAct(a,el){
   else if(a==='toggle-nav'){const s=$('#sidebar'),sc=$('#sbScrim');if(s){const on=s.classList.toggle('open');if(sc)sc.classList.toggle('on',on);}}
   else if(a==='close-nav')closeNav();
   else if(a==='toggle-rail')setRail(!$('#app').classList.contains('rail'));
+  else if(a==='toggle-group'){const k=el.dataset.group;APP.navOpen[k]=!APP.navOpen[k];
+    try{localStorage.setItem('kra_navopen',JSON.stringify(APP.navOpen));}catch(_){}
+    buildChrome();}
   else if(a==='go-me')go(APP.meId?'me':'pickme');
   else if(a==='refresh')doRefresh();
   else if(a==='clear-filters'){APP.filters={dept:'',subTeam:'',status:'',search:''};APP.table.page=0;render();}
@@ -2265,7 +2312,10 @@ function setRail(on){
   try{localStorage.setItem('kra_rail',on?'1':'0');}catch(_){}
   moveNavRail();
 }
-function restoreRail(){try{if(localStorage.getItem('kra_rail')==='1')$('#app').classList.add('rail');}catch(_){}}
+function restoreRail(){
+  try{if(localStorage.getItem('kra_rail')==='1')$('#app').classList.add('rail');}catch(_){}
+  try{APP.navOpen=JSON.parse(localStorage.getItem('kra_navopen')||'{}')||{};}catch(_){APP.navOpen={};}
+}
 async function doRefresh(){toast('Refreshing…');try{const b=await call('apiBootstrap',{force:true,period:APP.period||undefined});if(b&&b.ok&&b.connected!==false){applyBoot(b);toast('Up to date');}else showState('error',b&&b.error||'Refresh failed');}catch(e){if(e&&e.__offline)showState('offline');else toast('Error',true);}}
 async function doScaffold(){toast('Building actuals sheet…');try{const res=await call('apiScaffoldActuals',{period:APP.period});if(res&&res.ok){toast(res.added+' rows added to '+res.tab);doRefresh();}else toast((res&&res.error)||'Failed',true);}catch(e){if(e&&e.__offline)toast('Connect to the sheet first',true);else toast('Failed',true);}}
 async function doSaveSettings(){const on=$('#setOnTrack'),ar=$('#setAtRisk');const p={};if(on)p.onTrack=on.value;if(ar)p.atRisk=ar.value;await pushSettings(p,'Thresholds saved');}
