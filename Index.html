@@ -721,6 +721,13 @@ button.sb-gt.open .cv{transform:rotate(180deg)}
 .lrow:nth-child(4){animation-delay:.11s}.lrow:nth-child(5){animation-delay:.14s}.lrow:nth-child(6){animation-delay:.17s}
 .lrow:nth-child(7){animation-delay:.19s}.lrow:nth-child(8){animation-delay:.21s}.lrow:nth-child(n+9){animation-delay:.23s}
 @keyframes rowIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+/* Targets — a team's facts as one quiet line, not a row of competing cards. */
+.tgt-facts{display:flex;flex-wrap:wrap;gap:6px 22px;margin-bottom:16px;
+  font-size:13px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.tgt-facts span{position:relative}
+.tgt-facts span+span::before{content:"";position:absolute;left:-12px;top:.42em;width:3px;height:3px;
+  border-radius:50%;background:var(--line-2)}
+
 /* Back — sits left of the breadcrumb, appears only when there is somewhere to
    return to. Present at every width, unlike the crumbs, which collapse. */
 .back-btn{display:grid;flex:0 0 34px}
@@ -968,6 +975,7 @@ const NAV_MAIN=[
 ];
 /* Administration — how the framework itself is set up. */
 const NAV_ADMIN=[
+  {id:'library',label:'KRA / KPI Library'},
   {id:'cycles',label:'Performance Cycles'},
   {id:'settings',label:'Settings'}
 ];
@@ -1129,7 +1137,7 @@ function render(){
   buildFilterbar();renderCrumbs();updateBackBtn();
   const c=$('#content');c.classList.remove('fade');void c.offsetWidth;c.classList.add('fade');
   const v={
-    overview:vOverview, goals:vGoals, checkins:vCheckins,
+    overview:vOverview, goals:vRecords, checkins:vCheckins,
     me:vPerson, mykpis:vRecords, pickme:vPickMe,
     teams:vTeams, dept:vDept, person:vPerson,
     reviews:vReviews, review:vReview, reports:vReports,
@@ -1471,8 +1479,8 @@ function vOverview(){
     ${heroTile(o.score,o.rating,o.status,o.delta,
       hasData?(o.kpisWithData+' scored KPIs'+(o.previousPeriod?' · vs '+prev:'')):'Awaiting the backend sheet.')}
     ${statTile('t2','Employees on track',n1(o.peopleOnTrackPct),'%',o.onTrack+' of '+o.peopleWithData+' rated',{meter:o.peopleOnTrackPct,nav:'employees',tone:'peri'})}
-    ${statTile('t2','KPIs on track',n1(o.recOnTrackPct),'%',o.recOnTrack+' of '+o.kpisWithData+' scored',{meter:o.recOnTrackPct,nav:'goals',tone:'blue'})}
-    ${statTile('t2','KPIs below target',String(o.recAtRisk+o.recOffTrack),'',o.recAtRisk+' at risk · '+o.recOffTrack+' off track',{nav:'goals',tone:(o.recAtRisk+o.recOffTrack)?'amber':'green'})}
+    ${statTile('t2','KPIs on track',n1(o.recOnTrackPct),'%',o.recOnTrack+' of '+o.kpisWithData+' scored',{meter:o.recOnTrackPct,nav:'records',tone:'blue'})}
+    ${statTile('t2','KPIs below target',String(o.recAtRisk+o.recOffTrack),'',o.recAtRisk+' at risk · '+o.recOffTrack+' off track',{nav:'records',tone:(o.recAtRisk+o.recOffTrack)?'amber':'green'})}
     ${statTile('t2','Reviews pending',String(rv.pending),'',rv.total?rv.complete+' of '+rv.total+' complete':'no reviews yet',{meter:rv.progress,nav:'reviews',tone:rv.pending?'violet':'green'})}
   </div>`
   +band('How it breaks down')
@@ -2256,18 +2264,25 @@ function vTargets(){
     +kpiCard(anyPerf?'GMV achieved':'Employees carrying target',anyPerf?tCr(totA):String(totP),anyPerf?tPct(totT?totA/totT*100:null)+' of target':totB+' buyer target lines',{})
     +kpiCard('Buyer target lines',String(totB),'second-level detail',{})
     +'</div>';
+  /* One team, one block: a single line of facts, then the allocation. The team's
+     numbers used to appear three times over — in cards here, again in a modal,
+     again in the rows. Facts once, detail once. */
   const body=teams.map(t=>{
-    const s=t.summary,max=Math.max.apply(null,t.allocation.map(a=>a.gmvTarget||0).concat([0]));
-    return '<div class="sect-t">'+esc(t.team)+' — '+esc(periodLong(APP.period))+'<span class="r">'+tgtModeChip(t)+'</span></div>'
-      +'<div class="panel pad"><div class="kc-grid c4" style="margin-bottom:4px">'
-      +kpiCard('Team GMV target',tCr(s.gmvTarget),s.employees+' employees · '+s.buyerLines+' buyer lines',{attr:'data-tgtteam="'+esc(t.key)+'"'})
-      +kpiCard('Quantity target',tQty(s.qtyTarget,s.qtyUnit),'secondary metric',{})
-      +kpiCard(t.mode==='performance'?'Achieved':'Concentration',
-          t.mode==='performance'?tCr(s.gmvActual):(t.concentration?t.concentration.share+'%':'—'),
-          t.mode==='performance'?(tPct(s.achievementPct)+' of target'+(s.actualBasis==='stated'?' · team-level figure':'')):(t.concentration?'with '+esc(t.concentration.name):''),{})
-      +kpiCard('Individual allocation',String(t.allocation.length),'click a name to drill',{attr:'data-tgtteam="'+esc(t.key)+'"'})
-      +'</div>'
-      +'<div class="stack tgt-alloc">'+t.allocation.map(a=>tgtRow(a,t,max,'data-tgtperson="'+esc(t.key)+'|'+esc(a.name)+'"')).join('')+'</div></div>';
+    const s=t.summary,perf=t.mode==='performance';
+    const facts=[tCr(s.gmvTarget)+' GMV',tQty(s.qtyTarget,s.qtyUnit),s.employees+' employees',s.buyerLines+' buyer lines']
+      .concat(perf?[tCr(s.gmvActual)+' achieved · '+tPct(s.achievementPct)]:[])
+      .concat(t.concentration&&t.concentration.share!=null?[t.concentration.share+'% with '+esc(t.concentration.name)]:[]);
+    return '<div class="sect-t">'+esc(t.team)+'<span class="r">'+tgtModeChip(t)+'</span></div>'
+      +'<div class="panel pad"><div class="tgt-facts">'+facts.map(f=>'<span>'+f+'</span>').join('')+'</div>'
+      +moTbl(
+        [{t:'Employee'},{t:'Region'},{t:'GMV target',n:1},{t:'% of team',n:1},{t:'Quantity',n:1}]
+          .concat(perf?[{t:'Achieved',n:1},{t:'Achievement',n:1}]:[]),
+        t.allocation.map(a=>({attr:' data-tgtperson="'+esc(t.key)+'|'+esc(a.name)+'" style="cursor:pointer"',
+          c:['<span class="nm">'+esc(titleName(a.name))+(a.rh?'<small>RH '+esc(titleName(a.rh))+'</small>':'')+'</span>',
+             esc(a.region||'—'),tCr(a.gmvTarget),(a.share==null?'—':a.share+'%'),tQty(a.qtyTarget,t.qtyUnit)]
+             .concat(perf?[tCr(a.gmvActual),tPct(a.achievementPct)]:[])})),
+        ['Total','',tCr(s.gmvTarget),'100%',tQty(s.qtyTarget,s.qtyUnit)].concat(perf?[tCr(s.gmvActual),tPct(s.achievementPct)]:[]))
+      +'</div>';
   }).join('');
   const missing=notCon.length?'<div class="sect-t">Not connected</div><div class="panel pad">'
     +notCon.map(t=>'<div class="hcheck warn"><div class="hc-ic">!</div><div class="hc-t">'+esc(t.team)+'<small>'+esc(t.error||'')+'</small></div></div>').join('')+'</div>':'';
@@ -2793,7 +2808,6 @@ document.addEventListener('click',e=>{
   const sb=e.target.closest('[data-subteam]');if(sb){APP.filters.subTeam=sb.dataset.subteam;APP.filters.dept=(subById(sb.dataset.subteam)||{}).deptId||'';go('employees');return;}
   const dp=e.target.closest('[data-dept]');if(dp){go('dept',{deptId:dp.dataset.dept});return;}
   const mtab=e.target.closest('[data-motab]');if(mtab){MO.tab=mtab.dataset.motab;moRender();return;}
-  const tt=e.target.closest('[data-tgtteam]');if(tt){moTargetTeam(tt.dataset.tgtteam);return;}
   const tpn=e.target.closest('[data-tgtperson]');if(tpn){const parts=String(tpn.dataset.tgtperson).split('|');moTargetPlan(parts[0],parts.slice(1).join('|'));return;}
   const pc=e.target.closest('[data-person]');if(pc){go('person',{empId:pc.dataset.person});return;}
   const rv=e.target.closest('[data-review]');if(rv){go('review',{empId:rv.dataset.review});return;}
