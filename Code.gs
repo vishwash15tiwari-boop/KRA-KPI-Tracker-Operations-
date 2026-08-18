@@ -390,6 +390,16 @@ function provisionMaster() {
   mWrite_(M_TAB.THR, thrRows);
   mTab_(M_TAB.TGT); mTab_(M_TAB.ACT); mTab_(M_TAB.PERF);
 
+  /* Controlled enumerations, applied by COLUMN NAME rather than index, so a
+   * schema change moves the rule with the column instead of stranding it. */
+  var REGIONS = TEAMS.length ? uniq_(PEOPLE.map(function (p) { return p[4]; }).filter(String)) : [];
+  mValidate_(M_TAB.EMP, 'region', REGIONS);
+  mValidate_(M_TAB.EMP, 'employment_status', ['ACTIVE', 'INACTIVE']);
+  mValidate_(M_TAB.KPI, 'measurement_type', ['CR', 'MT', 'COUNT', 'PERCENT', 'DAYS']);
+  mValidate_(M_TAB.KPI, 'direction', ['HIGHER_IS_BETTER', 'LOWER_IS_BETTER']);
+  mValidate_(M_TAB.TGT, 'target_unit', ['CR', 'MT', 'COUNT', 'PERCENT', 'DAYS']);
+  mValidate_(M_TAB.ACT, 'actual_unit', ['CR', 'MT', 'COUNT', 'PERCENT', 'DAYS']);
+
   var unmapped = PEOPLE.filter(function (p) { return !byEmp[p[0]]; }).map(function (p) { return p[1]; });
   return [
     'Teams: ' + teams.length,
@@ -407,10 +417,23 @@ function shortOf_(teamId) {
   var t = TEAMS.filter(function (x) { return x[0] === teamId; })[0];
   return t ? t[2] : 'GEN';
 }
+function uniq_(list) {
+  var seen = {}, out = [];
+  list.forEach(function (v) { if (v !== '' && v != null && !seen[v]) { seen[v] = 1; out.push(v); } });
+  return out;
+}
 function mTab_(name) {
   var ss = bkSS_(), sh = ss.getSheetByName(name);
   if (!sh) sh = ss.insertSheet(name);
   var h = M_SCHEMA[name];
+  /* Clear any validation the sheet is already carrying BEFORE writing.
+   * A rule survives a schema change and then rejects perfectly correct data:
+   * an earlier version of this backend put region in column 7, so that column
+   * held an East/South/Central rule, and writing the current column 7 -
+   * employment_status - failed with "the data you entered violates the data
+   * validation rules". Provisioning owns the shape of these tabs, so it clears
+   * first and re-applies afterwards against the CURRENT schema. */
+  sh.getRange(1, 1, sh.getMaxRows(), sh.getMaxColumns()).clearDataValidations();
   sh.getRange(1, 1, 1, h.length).setValues([h]).setFontWeight('bold').setBackground('#F2F0E8');
   sh.setFrozenRows(1);
   return sh;
@@ -420,6 +443,19 @@ function mWrite_(name, rows) {
   if (sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, h.length).clearContent();
   if (rows.length) sh.getRange(2, 1, rows.length, h.length).setValues(rows);
   return rows.length;
+}
+
+/* Validation is applied AFTER the data, and only to columns that exist in the
+ * current schema. Applying it before writing is what made provisioning
+ * self-defeating: the rule rejected the very rows provisioning was placing. */
+function mValidate_(name, colName, list) {
+  var h = M_SCHEMA[name], col = h.indexOf(colName) + 1;
+  if (!col) return;
+  var sh = bkSS_().getSheetByName(name);
+  if (!sh) return;
+  var rule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(list, true).setAllowInvalid(false).build();
+  sh.getRange(2, col, Math.max(sh.getMaxRows() - 1, 200), 1).setDataValidation(rule);
 }
 /* Reads are non-fatal. An unreachable or unprovisioned sheet means "no period
  * data yet", not a broken app - the master is in code, so structure renders
