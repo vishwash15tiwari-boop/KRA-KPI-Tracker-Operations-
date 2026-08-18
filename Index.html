@@ -157,6 +157,26 @@ b,strong{font-weight:var(--fw-b)}
 .node.lead .sc{font-size:var(--fs-xxl)}
 .node .sc em{font-style:normal;font-size:var(--fs-xs);color:var(--faint);font-weight:var(--fw-m)}
 
+
+/* A function tier, not a person. It is visibly a different kind of object —
+   flatter, on the sunken surface, with a chevron — so no one mistakes it for
+   someone they can open a profile on. */
+.gnode{width:var(--nodew);background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r-card);padding:var(--s3) var(--s4);text-align:left;cursor:pointer;
+  display:grid;grid-template-columns:1fr auto;align-items:center;gap:2px var(--s3);
+  transition:border-color var(--d1) var(--ease),background var(--d1) var(--ease)}
+.gnode:hover{border-color:var(--line-2);background:var(--card)}
+.gnode.open{background:var(--card);border-color:var(--line-2)}
+.gnode .gt{grid-column:1;font-size:var(--fs-2xs);font-weight:var(--fw-b);letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink)}
+.gnode .gm{grid-column:1;font-size:var(--fs-2xs);color:var(--muted)}
+.gnode .gs{grid-column:1;font-size:var(--fs-lg);font-weight:var(--fw-b);letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums;margin-top:var(--s1)}
+.gnode .gs em{font-style:normal;font-size:var(--fs-2xs);color:var(--faint);font-weight:var(--fw-m)}
+.gnode .gc{grid-column:2;grid-row:1/4;font-size:var(--fs-lg);color:var(--faint);
+  width:20px;text-align:center;line-height:1}
+.gnode:hover .gc{color:var(--ink)}
+@media(max-width:760px){.gnode{width:100%;max-width:300px}}
 /* --------------------------------------------------------------- PROFILE --
    One dominant figure, three stats, then the KRAs that explain it. */
 .prof{display:flex;align-items:flex-start;gap:var(--s6);flex-wrap:wrap;margin-bottom:var(--s8)}
@@ -329,7 +349,7 @@ var show = function (v) { var n = n1(v); return n == null ? '—' : n; };
 
 var S = { model: null, loading: true, error: null,
           team: null, employee: null, month: null, kra: '', kpi: '', region: '',
-          showFilters: false, closed: {}, detail: null, demo: false, _demo: null };
+          showFilters: false, closed: {}, open: {}, detail: null, demo: false, _demo: null };
 
 /* ============================== API ====================================== */
 var Api = {
@@ -405,31 +425,36 @@ var Seed = {
     { perspective: 'Process',  kra: 'Cash Flow',   kpi: 'Days Sales Outstanding',           weightage: 10, unit: 'DAYS',    direction: 'LOWER_IS_BETTER',  goal: 'Average days to collect. Lower is better.' }
   ],
   TEAMS: [
-    { team_id: 'MET', team_name: 'Metal', team_lead: 'Amit Jha', people: [
-      ['MET001', 'Amit Jha',           'Team Lead — Business Development',        'Central'],
+    { team_id: 'MET', team_name: 'Metal', team_lead: 'Amit', people: [
+      ['MET001', 'Amit',                'Team Lead — Business Development',        'Central'],
       ['MET002', 'Arijit Dutta',       'Senior Executive — Business Development', 'East'],
       ['MET003', 'Arghyadeep Samanta', 'Senior Executive — Business Development', 'East'],
       ['MET004', 'Abhisek Sanyal',     'Assistant Manager — Business Development','South'],
       ['MET005', 'Adarsh Krishna',     'Assistant Manager — Business Development','South'],
       ['MET006', 'Ayush Goyal',        'Assistant Manager — Business Development','East']
     ]},
-    { team_id: 'PLA', team_name: 'Plastic', team_lead: 'Tabesh Mohsin', people: [
-      ['PLA001', 'Tabesh Mohsin', 'Team Lead — Business Development',         'West'],
-      ['PLA002', 'Rahul Sharma',  'Senior Executive — Business Development',  'West'],
-      ['PLA003', 'Nikhil Verma',  'Assistant Manager — Business Development', 'North'],
-      ['PLA004', 'Sneha Iyer',    'Assistant Manager — Business Development', 'South']
+    /* Plastic runs through two functions, so its people carry a sub_team and
+       the chart grows a tier between the lead and the members. Nothing about
+       this is specific to Plastic in the code — any team whose people carry a
+       sub_team will draw the same way. */
+    { team_id: 'PLA', team_name: 'Plastic', team_lead: 'Tabesh', people: [
+      ['PLA001', 'Tabesh',        'Team Lead — Business Development',         'West',  null],
+      ['PLA002', 'Rahul Sharma',  'Senior Executive — Supply',                'West',  'Supply'],
+      ['PLA003', 'Nikhil Verma',  'Assistant Manager — Supply',               'North', 'Supply'],
+      ['PLA004', 'Sneha Iyer',    'Senior Executive — Demand',                'South', 'Demand'],
+      ['PLA005', 'Imran Qureshi', 'Assistant Manager — Demand',               'West',  'Demand']
     ]},
-    { team_id: 'ONB', team_name: 'Onboarding', team_lead: 'Ajay Nair', people: [
-      ['ONB001', 'Ajay Nair',     'Team Lead — Onboarding',       'Central'],
+    { team_id: 'ONB', team_name: 'Onboarding', team_lead: 'Ajay', people: [
+      ['ONB001', 'Ajay',          'Team Lead — Onboarding',       'Central'],
       ['ONB002', 'Naveen Ranga',  'Executive — Onboarding',       'South'],
       ['ONB003', 'Vishwash Tiwari','Executive — Onboarding',      'Central']
     ]},
-    { team_id: 'COL', team_name: 'Collections', team_lead: 'Ravi Naik', people: [
-      ['COL001', 'Ravi Naik',   'Team Lead — Collections', 'West'],
+    { team_id: 'COL', team_name: 'Collections', team_lead: 'Srinivas', people: [
+      ['COL001', 'Srinivas',    'Team Lead — Collections', 'West'],
       ['COL002', 'Megaraj S',   'Executive — Collections', 'South']
     ]},
-    { team_id: 'MCT', team_name: 'Marketplace — Control Tower', team_lead: 'Ashwin Kumar', people: [
-      ['MCT001', 'Ashwin Kumar', 'Manager — Control Tower',  'Central'],
+    { team_id: 'MCT', team_name: 'Marketplace — Control Tower', team_lead: 'Ashwin', people: [
+      ['MCT001', 'Ashwin',       'Team Lead — Control Tower',  'Central'],
       ['MCT002', 'Priya Menon',  'Executive — Control Tower','South'],
       ['MCT003', 'Karan Bhatia', 'Executive — Control Tower','North']
     ]}
@@ -453,6 +478,7 @@ var Seed = {
                them. The real EMPLOYEE_MASTER carries manager_id and will
                replace this the moment the sheet is connected. */
             manager_id: p[1] === t.team_lead ? null : t.people[0][0],
+            sub_team: p[4] || null,
             kpis: Seed.KPIS.map(function (k) { return JSON.parse(JSON.stringify(k)); })
           });
         });
@@ -637,6 +663,30 @@ function buildTree(members) {
   var order = function (n) { n.kids.sort(byScore); n.kids.forEach(order); };
   roots.sort(function (a, b) { return b.kids.length - a.kids.length || byScore(a, b); });
   roots.forEach(order);
+
+  /* A team that splits into functions gets a tier between its lead and its
+     people. The tier is not a person — it is the function itself — so it draws
+     as a different kind of node and opens by expanding rather than by going to
+     a profile. Any team whose people carry a sub_team grows this tier; no team
+     is named anywhere in this code. */
+  roots.forEach(function (r) {
+    var groups = {}, names = [];
+    r.kids.forEach(function (k) {
+      var g = k.m.sub_team || k.m.sub_function || k.m.function_name || null;
+      if (!g) return;
+      if (!groups[g]) { groups[g] = []; names.push(g); }
+      groups[g].push(k);
+    });
+    if (!names.length) return;
+    var ungrouped = r.kids.filter(function (k) {
+      return !(k.m.sub_team || k.m.sub_function || k.m.function_name);
+    });
+    r.kids = names.map(function (n) {
+      var kids = groups[n];
+      var scores = kids.map(function (k) { return k.m.overall_score; });
+      return { group: n, kids: kids, score: Sel.mean(scores), count: kids.length };
+    }).concat(ungrouped);
+  });
   return roots;
 }
 
@@ -650,7 +700,26 @@ function Node(m, isLead) {
     '</button>';
 }
 
+/* A function, not a person: the name, how many people sit under it, and their
+   mean score. It opens by expanding rather than by going anywhere, so the
+   chevron is the whole affordance. */
+function GroupNode(node) {
+  var open = !!S.open[node.group];
+  return '<button class="gnode' + (open ? ' open' : '') + '" data-group="' + esc(node.group) + '">' +
+    '<span class="gt">' + esc(node.group) + '</span>' +
+    '<span class="gm">' + plural(node.count, 'person').replace('persons', 'people') + '</span>' +
+    '<span class="gs">' + show(node.score) + '<em> / 100</em></span>' +
+    '<span class="gc" aria-hidden="true">' + (open ? '−' : '+') + '</span>' +
+    '</button>';
+}
+
 function renderNode(node) {
+  if (node.group) {
+    var open = !!S.open[node.group];
+    return '<div class="arm"><div class="stem"></div>' + GroupNode(node) +
+      (open ? '<div class="drop"></div><div class="branch">' +
+        node.kids.map(renderNode).join('') + '</div>' : '') + '</div>';
+  }
   var card = Node(node.m, false);
   if (!node.kids.length) return '<div class="arm"><div class="stem"></div>' + card + '</div>';
   return '<div class="arm"><div class="stem"></div>' + card +
@@ -883,7 +952,7 @@ function usePlaceholder() {
 /* ============================== EVENTS =================================== */
 document.addEventListener('click', function (e) {
   var t = e.target.closest('[data-team]');
-  if (t) { S.team = t.dataset.team; S.employee = null; S.kra = ''; S.kpi = ''; S.detail = null; render(); scrollTo(0, 0); return; }
+  if (t) { S.team = t.dataset.team; S.employee = null; S.open = {}; S.detail = null; render(); scrollTo(0, 0); return; }
   var emp = e.target.closest('[data-emp]');
   if (emp) { S.employee = emp.dataset.emp; S.detail = null; render(); scrollTo(0, 0); return; }
   /* One step back per level: KPI → person → team → all teams. */
@@ -894,6 +963,8 @@ document.addEventListener('click', function (e) {
     if (to === 'team') S.employee = null;
     S.detail = null; render(); scrollTo(0, 0); return;
   }
+  var grp = e.target.closest('[data-group]');
+  if (grp) { var g = grp.dataset.group; S.open[g] = !S.open[g]; render(); return; }
   var k = e.target.closest('[data-kpi]');
   if (k) {
     var owner = Sel.employee();
