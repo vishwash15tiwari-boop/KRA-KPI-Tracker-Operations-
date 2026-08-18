@@ -3317,13 +3317,24 @@ function derivePublished_(period, metric, alloc, onb) {
 function achievementPct_(target, actual, direction) {
   var t = Number(target), a = Number(actual);
   if (!isFinite(t) || !isFinite(a)) return null;
+  /* A target of zero means the KPI was not asked of this person this month.
+   * It is NOT zero achievement and NOT full achievement - the source sheet
+   * does both, returning 0% for one person and 100% for another on identical
+   * 0/0 input. Returning null makes it N/A, excluded from the score, so no one
+   * is rewarded or punished for a target never assigned. */
+  if (t === 0) return null;
   if (direction === 'LOWER_IS_BETTER') {
     if (a === 0) return null;          /* zero days is not a real measurement */
-    return round1_(t / a * 100);
+    return capAch_(t / a * 100);
   }
-  if (t === 0) return null;
-  return round1_(a / t * 100);
+  return capAch_(a / t * 100);
 }
+
+/* Achievement is capped at the top band. The published sheets show GMV of
+ * 0.83 against 0.6 as 105.0%, not 138%, and score it 42 of a 40 weightage -
+ * so the cap is part of the contract, not a display rounding. */
+var ACHIEVEMENT_CAP_PCT = 105;
+function capAch_(pct) { return round1_(Math.min(Number(pct), ACHIEVEMENT_CAP_PCT)); }
 
 /**
  * Band and rating from the achievement, using the thresholds in the sheet so
@@ -3348,12 +3359,19 @@ function bandFor_(kpiId, direction, achPct, rawActual, bands) {
   return { band: pick.band, rating: Number(pick.rating) };
 }
 
-/* Weighted score = weightage x (rating / 5). A KPI at its Meets band (P4,
- * rating 4) therefore returns 80% of its weightage, matching the published
- * 5-band contract rather than an invented linear scale. */
-function weightedScore_(weightPct, rating) {
-  if (rating == null) return null;
-  return round1_(Number(weightPct) * (Number(rating) / 5));
+/* Weighted score = weightage x capped achievement.
+ *
+ * This is what the published team sheets actually compute: GMV at weightage 40
+ * and 105% achievement scores 42.0; a KPI at weightage 15 and 85.7% scores
+ * 12.857. An earlier version of this engine used weightage x (rating / 5) off
+ * the 5-band ladder, which is coarser - everything from 100% to 104% collapsed
+ * to one value - and did not reproduce a single published figure.
+ *
+ * The 60/75/90/100/105 bands remain, but as STATUS thresholds: they label a
+ * result, they do not score it. */
+function weightedScore_(weightPct, achPct) {
+  if (achPct == null) return null;
+  return Math.round(Number(weightPct) * (Number(achPct) / 100) * 1000) / 1000;
 }
 
 function statusFor_(achPct, rating) {
@@ -3413,7 +3431,7 @@ function computeCalculations(period) {
       var a = actualOf(e.employee_id, k.kpi_id);
       var ach = (t == null || a == null) ? null : achievementPct_(t, a, k.direction);
       var b = bandFor_(k.kpi_id, k.direction, ach, a, bands);
-      var ws = weightedScore_(k.weightage_pct, b.rating);
+      var ws = weightedScore_(k.weightage_pct, ach);
       var variance = (t == null || a == null) ? '' : round1_(a - t);
       rows.push(['CALC' + pad3_(++seq), period, e.employee_id, k.kpi_id, Number(k.weightage_pct),
         t == null ? '' : t, a == null ? '' : a, ach == null ? '' : ach,
