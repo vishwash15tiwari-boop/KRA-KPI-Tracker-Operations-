@@ -309,17 +309,25 @@ M_SCHEMA[M_TAB.PERF] = ['performance_id','month','team_id','employee_id','kpi_id
  * cleared - master data is frozen, period data is not, and re-freezing the
  * master must never destroy a month of actuals.
  */
-function provisionMaster() {
-  var teamOf = {}, i;
+/**
+ * Derives the six master tables from the constants at the top of this file,
+ * in memory, writing nothing.
+ *
+ * This is the single derivation. provisionMaster() writes its output to the
+ * sheet; apiMasterModel() uses it directly when the sheet has not been
+ * provisioned. That distinction matters: master data is frozen in code, so the
+ * sheet is a convenience for viewing and editing it, never a prerequisite for
+ * the app to run. Only targets and actuals genuinely live in the sheet.
+ */
+function buildMaster_() {
+  var teamOf = {};
   PEOPLE.forEach(function (p) { teamOf[p[0]] = p[2]; });
 
-  /* 1. Teams and people */
   var teams = TEAMS.map(function (t) { return [t[0],t[1],t[2],t[3],t[4],t[5],'TRUE']; });
   var emps  = PEOPLE.map(function (p) {
     return [p[0],p[1],p[2],p[3],p[4],p[5],'ACTIVE','','', UNMAPPED_NOTE[p[0]] || ''];
   });
 
-  /* 2. Derive KRAs, KPIs, mappings, thresholds */
   var kraIdx = {}, kraRows = [], kpiIdx = {}, kpiRows = [], mapRows = [], thrRows = [];
   var kraSeq = 0, kpiSeq = 0, mapSeq = 0, thrSeq = 0;
 
@@ -354,12 +362,25 @@ function provisionMaster() {
     mapRows.push(['MAP' + pad3_(++mapSeq), emp, kpiIdx[kpiKey], wt, '', '', 'TRUE']);
   });
 
-  /* 3. Integrity: every mapped person's weightages must total 100 */
   var byEmp = {}, issues = [];
   mapRows.forEach(function (m) { byEmp[m[1]] = (byEmp[m[1]] || 0) + Number(m[3]); });
   Object.keys(byEmp).forEach(function (e) {
     if (Math.round(byEmp[e]) !== 100) issues.push(e + ' totals ' + byEmp[e] + '%');
   });
+
+  return { teams: teams, emps: emps, kras: kraRows, kpis: kpiRows,
+           maps: mapRows, thr: thrRows, byEmp: byEmp, issues: issues };
+}
+
+/**
+ * Writes the derived master into the sheet. Optional: the app runs without it.
+ * Master tabs are rewritten; the three performance tabs are created but never
+ * cleared, so re-freezing the master cannot destroy a month of actuals.
+ */
+function provisionMaster() {
+  var M = buildMaster_();
+  var teams = M.teams, emps = M.emps, kraRows = M.kras, kpiRows = M.kpis,
+      mapRows = M.maps, thrRows = M.thr, byEmp = M.byEmp, issues = M.issues;
 
   mWrite_(M_TAB.TEAM, teams);
   mWrite_(M_TAB.EMP, emps);
@@ -400,8 +421,13 @@ function mWrite_(name, rows) {
   if (rows.length) sh.getRange(2, 1, rows.length, h.length).setValues(rows);
   return rows.length;
 }
+/* Reads are non-fatal. An unreachable or unprovisioned sheet means "no period
+ * data yet", not a broken app - the master is in code, so structure renders
+ * either way and only targets and actuals are missing. */
 function mRead_(name) {
-  var ss = bkSS_(), sh = ss.getSheetByName(name);
+  var ss = null;
+  try { ss = bkSS_(); } catch (e) { return []; }
+  var sh = ss.getSheetByName(name);
   if (!sh || sh.getLastRow() < 2) return [];
   var h = M_SCHEMA[name], v = sh.getRange(2, 1, sh.getLastRow() - 1, h.length).getValues();
   return v.filter(function (r) { return String(r[0]).trim() !== ''; })
@@ -413,14 +439,33 @@ function mRead_(name) {
  * derived value is already computed here, so the UI only ever visualises.
  */
 function apiMasterModel(teamId, month) {
+  /* Master comes from the sheet when it has been provisioned, and from the
+   * frozen definitions in this file when it has not. Either way the structure
+   * is identical, because provisionMaster() writes exactly what buildMaster_()
+   * returns. This is why the app needs no setup step to render. */
   var teams = mRead_(M_TAB.TEAM), emps = mRead_(M_TAB.EMP);
   var kras = mRead_(M_TAB.KRA), kpis = mRead_(M_TAB.KPI), maps = mRead_(M_TAB.MAP);
+  var thrAll = mRead_(M_TAB.THR);
+  var fromSheet = emps.length > 0 && maps.length > 0;
+  if (!fromSheet) {
+    var M = buildMaster_(), asObj = function (rows, schema) {
+      return rows.map(function (r) { var o = {}; schema.forEach(function (k, i) { o[k] = r[i]; }); return o; });
+    };
+    teams  = asObj(M.teams, M_SCHEMA[M_TAB.TEAM]);
+    emps   = asObj(M.emps,  M_SCHEMA[M_TAB.EMP]);
+    kras   = asObj(M.kras,  M_SCHEMA[M_TAB.KRA]);
+    kpis   = asObj(M.kpis,  M_SCHEMA[M_TAB.KPI]);
+    maps   = asObj(M.maps,  M_SCHEMA[M_TAB.MAP]);
+    thrAll = asObj(M.thr,   M_SCHEMA[M_TAB.THR]);
+  }
   var kraById = {}; kras.forEach(function (k) { kraById[k.kra_id] = k; });
   var kpiById = {}; kpis.forEach(function (k) { kpiById[k.kpi_id] = k; });
+  /* Targets and actuals only ever come from the sheet - they are period data,
+   * never frozen in code. Absent means "not loaded yet", not zero. */
   var tgt = mRead_(M_TAB.TGT), act = mRead_(M_TAB.ACT);
   /* Thresholds travel with the KPI so the UI can draw a band ladder without
    * knowing what any of the numbers mean. */
-  var thrAll = mRead_(M_TAB.THR), thrByKpi = {};
+  var thrByKpi = {};
   thrAll.forEach(function (t) {
     if (String(t.threshold_not_defined).toUpperCase() === 'TRUE') return;
     (thrByKpi[t.kpi_id] = thrByKpi[t.kpi_id] || []).push(
@@ -475,6 +520,7 @@ function apiMasterModel(teamId, month) {
   months.sort();
   return { ok: true, month: month || months[months.length - 1] || null,
            months: months, teams: teams, scorecards: scorecards,
+           masterSource: fromSheet ? 'sheet' : 'code',
            generatedAt: new Date().toISOString() };
 }
 
