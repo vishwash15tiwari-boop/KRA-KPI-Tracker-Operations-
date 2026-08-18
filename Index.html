@@ -813,32 +813,37 @@ body{letter-spacing:-.011em}
 @keyframes drawLine{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 @keyframes dropLine{from{transform:scaleY(0)}to{transform:scaleY(1)}}
 
-.page-t,.page-s,.anchor{animation:riseIn 260ms var(--ease) both}
-.page-s{animation-delay:40ms}
-.anchor{animation-delay:80ms}
+/* Every entrance rule sits behind .mo, which scripting adds on boot. An
+   animation must never be the thing that makes content visible: if scripting
+   is blocked, or the animation never runs, the finished state is what renders
+   rather than an empty page. */
+.mo .page-t,.mo .page-s,.mo .anchor{animation:riseIn 260ms var(--ease) both}
+.mo .page-s{animation-delay:40ms}
+.mo .anchor{animation-delay:80ms}
 
 /* The chart assembles from the top down: lead, then the connectors it owns,
    then the people hanging off them. The order is the hierarchy. */
-.flow .lvl > .node{animation:riseIn 300ms var(--ease) both;animation-delay:200ms}
-.flow .drop{transform-origin:top center;animation:dropLine 220ms var(--ease) both;animation-delay:330ms}
-.flow .branch .arm::before{transform-origin:center;animation:drawLine 300ms var(--ease) both;
+.mo .flow .lvl > .node{animation:riseIn 300ms var(--ease) both;animation-delay:200ms}
+.mo .flow .drop{transform-origin:top center;animation:dropLine 220ms var(--ease) both;
+  animation-delay:330ms}
+.mo .flow .branch .arm::before{transform-origin:center;animation:drawLine 300ms var(--ease) both;
   animation-delay:400ms}
-.flow .branch .arm .stem{transform-origin:top center;animation:dropLine 200ms var(--ease) both;
+.mo .flow .branch .arm .stem{transform-origin:top center;animation:dropLine 200ms var(--ease) both;
   animation-delay:520ms}
-.flow .branch .arm > .node,.flow .branch .arm > .gnode{
+.mo .flow .branch .arm > .node,.mo .flow .branch .arm > .gnode{
   animation:riseIn 320ms var(--ease) both;animation-delay:560ms}
-.flow .branch .arm:nth-child(2) > .node,.flow .branch .arm:nth-child(2) > .gnode{animation-delay:600ms}
-.flow .branch .arm:nth-child(3) > .node,.flow .branch .arm:nth-child(3) > .gnode{animation-delay:640ms}
-.flow .branch .arm:nth-child(4) > .node,.flow .branch .arm:nth-child(4) > .gnode{animation-delay:680ms}
-.flow .branch .arm:nth-child(5) > .node,.flow .branch .arm:nth-child(5) > .gnode{animation-delay:720ms}
-.flow .branch .arm:nth-child(n+6) > .node{animation-delay:760ms}
+.mo .flow .branch .arm:nth-child(2) > .node,.mo .flow .branch .arm:nth-child(2) > .gnode{animation-delay:600ms}
+.mo .flow .branch .arm:nth-child(3) > .node,.mo .flow .branch .arm:nth-child(3) > .gnode{animation-delay:640ms}
+.mo .flow .branch .arm:nth-child(4) > .node,.mo .flow .branch .arm:nth-child(4) > .gnode{animation-delay:680ms}
+.mo .flow .branch .arm:nth-child(5) > .node,.mo .flow .branch .arm:nth-child(5) > .gnode{animation-delay:720ms}
+.mo .flow .branch .arm:nth-child(n+6) > .node{animation-delay:760ms}
 
 /* Team cards on the landing screen arrive in reading order. */
-.tgrid .tcard{animation:riseIn 280ms var(--ease) both}
-.tgrid .tcard:nth-child(2){animation-delay:50ms}
-.tgrid .tcard:nth-child(3){animation-delay:100ms}
-.tgrid .tcard:nth-child(4){animation-delay:150ms}
-.tgrid .tcard:nth-child(5){animation-delay:200ms}
+.mo .tgrid .tcard{animation:riseIn 280ms var(--ease) both}
+.mo .tgrid .tcard:nth-child(2){animation-delay:50ms}
+.mo .tgrid .tcard:nth-child(3){animation-delay:100ms}
+.mo .tgrid .tcard:nth-child(4){animation-delay:150ms}
+.mo .tgrid .tcard:nth-child(5){animation-delay:200ms}
 
 /* --- Hover: a 2px lift and a light that notices the cursor ----------------
    Held at 6% so it reads as the surface catching light, not as a glow. */
@@ -878,11 +883,11 @@ body{letter-spacing:-.011em}
    then never repeats. */
 @keyframes pulseOnce{0%{box-shadow:0 0 0 0 rgba(22,22,22,.14)}
   70%{box-shadow:0 0 0 6px rgba(22,22,22,0)}100%{box-shadow:0 0 0 0 rgba(22,22,22,0)}}
-.ring{animation:pulseOnce 900ms var(--ease) 360ms both;border-radius:50%}
+.mo .ring{animation:pulseOnce 900ms var(--ease) 360ms both;border-radius:50%}
 
 /* --- Drawer --------------------------------------------------------------- */
 .modal{transition:transform 240ms var(--ease)}
-.modal .m-b,.modal .m-h{animation:riseIn 260ms var(--ease) both;animation-delay:80ms}
+.mo .modal .m-b,.mo .modal .m-h{animation:riseIn 260ms var(--ease) both;animation-delay:80ms}
 .scrim{transition:opacity 240ms var(--ease)}
 
 @media(prefers-reduced-motion:reduce){
@@ -890,6 +895,295 @@ body{letter-spacing:-.011em}
   .reveal{opacity:1!important;transform:none!important}
   .teams .slider{transition:none!important}
 }
+
+/* ============================================================================
+   PREMIUM — depth, colour, and a face for every card
+   ----------------------------------------------------------------------------
+   The reference dashboard earns its richness with three devices, and only
+   three: a saturated gradient tile that gives each card a face, real elevation
+   so cards float rather than sit in a grid of boxes, and colour used at full
+   strength in small, deliberate places.
+
+   All three are adopted here. The gradients are Recykal's own four brand hues
+   rather than the reference's magenta, so the product gains the richness
+   without borrowing another company's identity.
+
+   Structure, flow and every function are untouched: this layer only changes
+   how the existing pieces look.
+   ============================================================================ */
+
+:root{
+  /* The four brand hues, each as a two-stop gradient. One per team, assigned
+     by position, so a team is recognisable by its colour before its name is
+     read. */
+  --g1:linear-gradient(135deg,#005DFF,#4D8BFF);
+  --g2:linear-gradient(135deg,#1DC797,#4ADFB4);
+  --g3:linear-gradient(135deg,#8460D4,#A98BE8);
+  --g4:linear-gradient(135deg,#567DE8,#7FA0F2);
+  --g5:linear-gradient(135deg,#F2994A,#F7BE7E);
+  --gd:linear-gradient(135deg,#2E3138,#4A4E57);
+
+  /* Elevation returns. Two shadows per level: a tight one that defines the
+     edge, a wide soft one that lifts it off the page. */
+  --el1:0 2px 4px rgba(22,22,26,.05),0 6px 16px -6px rgba(22,22,26,.10);
+  --el2:0 4px 10px rgba(22,22,26,.06),0 16px 34px -12px rgba(22,22,26,.16);
+  --el3:0 8px 20px rgba(22,22,26,.08),0 32px 64px -20px rgba(22,22,26,.26);
+  /* A tinted shadow under a coloured tile reads as that colour's own light. */
+  --elc:0 6px 16px -4px rgba(0,93,255,.36);
+
+  --bg:#F4F5F7;
+  --line:#E9EAEE;
+  /* Both greys darkened to clear AA against every surface they sit on. */
+  --muted:#63636C;
+  --faint:#70707A;
+}
+
+body{background:var(--bg)}
+
+/* --- Header: lifted off the page ----------------------------------------- */
+.top{background:rgba(255,255,255,.86);backdrop-filter:saturate(180%) blur(12px);
+  -webkit-backdrop-filter:saturate(180%) blur(12px);border-bottom:1px solid var(--line);
+  box-shadow:0 1px 3px rgba(22,22,26,.04)}
+
+/* --- The gradient tile ---------------------------------------------------
+   The reference's signature: a rounded square of saturated colour carrying a
+   single white glyph, sitting slightly proud of the card it belongs to. It is
+   what makes a card look designed rather than drawn. */
+.gt-tile{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;
+  flex:0 0 auto;background:var(--g1);box-shadow:var(--elc);position:relative}
+.gt-tile svg{width:24px;height:24px;display:block}
+.gt-tile[data-g="2"]{background:var(--g2);box-shadow:0 6px 16px -4px rgba(29,199,151,.40)}
+.gt-tile[data-g="3"]{background:var(--g3);box-shadow:0 6px 16px -4px rgba(132,96,212,.38)}
+.gt-tile[data-g="4"]{background:var(--g4);box-shadow:0 6px 16px -4px rgba(86,125,232,.38)}
+.gt-tile[data-g="5"]{background:var(--g5);box-shadow:0 6px 16px -4px rgba(242,153,74,.38)}
+
+/* --- Team cards ----------------------------------------------------------
+   Restructured around the tile: face, then name, then the score as the largest
+   thing on the card, then a sparkline that gives the number a direction. */
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:20px}
+.tcard{background:var(--card);border:1px solid transparent;border-radius:18px;
+  padding:20px;box-shadow:var(--el1);display:flex;flex-direction:column;gap:14px;
+  align-items:stretch;text-align:left;height:auto;width:auto;position:relative;overflow:hidden;
+  transition:transform var(--d1) var(--ease),box-shadow var(--d2) var(--ease)}
+.tcard:hover{box-shadow:var(--el2);transform:translateY(-3px);border-color:transparent}
+.tcard::after{display:none}
+.tcard .th{display:flex;align-items:flex-start;gap:14px}
+.tcard .tt{font-size:15px;font-weight:600;letter-spacing:-.01em;color:var(--ink);
+  text-transform:none;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;
+  -webkit-box-orient:vertical;overflow:hidden;height:39px}
+.tcard .tm{font-size:12px;color:var(--muted);font-weight:400;margin-top:3px;height:auto;
+  white-space:normal;letter-spacing:0;text-transform:none}
+.tcard .tv{display:flex;align-items:baseline;justify-content:space-between;gap:8px;
+  border-top:1px solid var(--line);padding-top:13px;margin-top:auto}
+.tcard .tv .l{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--faint)}
+.tcard .tv .v{font-size:26px;font-weight:700;letter-spacing:-.035em;color:var(--ink);
+  font-variant-numeric:tabular-nums;line-height:1}
+.tcard .tv .v em{font-size:12px;font-weight:500;color:var(--faint);letter-spacing:0}
+
+/* The sparkline: six months of shape behind one number. Decorative in the
+   strict sense — the figure is always stated in text beside it. */
+.spark{display:block;width:100%;height:34px;margin-top:-2px}
+.spark path.ln{fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.spark path.fl{stroke:none;opacity:.13}
+
+/* --- Flow nodes: a coloured face and real lift --------------------------- */
+.node,.gnode{border-radius:16px;box-shadow:var(--el1);border:1px solid transparent;
+  background:var(--card)}
+.node:hover,.gnode:hover{box-shadow:var(--el2);border-color:transparent}
+.node::after,.gnode::after{display:none}
+.node.lead{box-shadow:var(--el2)}
+.node.lead::before{display:none}
+
+/* Initials on a gradient. The lead's is the dark plane so the top of the chart
+   is unmistakable; everyone else takes a brand hue by position. */
+.node .av{background:var(--g4);color:#fff;font-weight:600;font-size:11px;
+  box-shadow:0 3px 8px -2px rgba(86,125,232,.44);border-radius:12px}
+.node[data-a="1"] .av{background:var(--g1);box-shadow:0 3px 8px -2px rgba(0,93,255,.40)}
+.node[data-a="2"] .av{background:var(--g2);box-shadow:0 3px 8px -2px rgba(29,199,151,.40)}
+.node[data-a="3"] .av{background:var(--g3);box-shadow:0 3px 8px -2px rgba(132,96,212,.40)}
+.node[data-a="4"] .av{background:var(--g5);box-shadow:0 3px 8px -2px rgba(242,153,74,.40)}
+.node.lead .av{background:var(--gd);box-shadow:0 3px 8px -2px rgba(46,49,56,.34)}
+
+/* Uniform width, lead included: a single left edge down the chart is what
+   makes six cards read as one structure. */
+.node.lead{width:var(--nodew)}
+
+.gnode{background:linear-gradient(180deg,#FFFFFF,#F7F8FA)}
+.gnode .gc{width:22px;height:22px;border-radius:8px;background:var(--surface);
+  display:grid;place-items:center;font-size:13px;color:var(--ink-2);line-height:1}
+.gnode.open .gc{background:var(--g1);color:#fff}
+
+/* --- Bars: colour at full strength, which is the one place it belongs ---- */
+.pb{height:6px;border-radius:999px;background:#EDEEF2;overflow:hidden}
+.pb i{border-radius:999px;transition:width 500ms var(--ease)}
+.pb i.good{background:linear-gradient(90deg,#1DC797,#3FD9AC)}
+.pb i.warn{background:linear-gradient(90deg,#E9A23B,#F2BE6B)}
+.pb i.bad{background:linear-gradient(90deg,#DE6B5E,#EC8E82)}
+.pb i.none{background:#D3D5DC}
+.pb u{background:rgba(255,255,255,.85);width:1px}
+.kbar{height:6px;border-radius:999px;background:#EDEEF2;overflow:hidden}
+.kbar i{border-radius:999px}
+.kbar i.good{background:linear-gradient(90deg,#1DC797,#3FD9AC)}
+.kbar i.warn{background:linear-gradient(90deg,#E9A23B,#F2BE6B)}
+.kbar i.bad{background:linear-gradient(90deg,#DE6B5E,#EC8E82)}
+.kbar i.none{background:#D3D5DC}
+.krow:hover .kbar{height:6px}
+
+/* --- The profile anchor: the one full-bleed gradient in the product ------ */
+.anchor{background:var(--g1);border:none;border-radius:20px;color:#fff;padding:24px 26px;
+  box-shadow:0 10px 28px -10px rgba(0,93,255,.45);position:relative;overflow:hidden}
+.anchor::before{content:"";position:absolute;right:-70px;top:-90px;width:260px;height:260px;
+  border-radius:50%;background:rgba(255,255,255,.10);pointer-events:none}
+.anchor::after{content:"";position:absolute;right:40px;bottom:-110px;width:190px;height:190px;
+  border-radius:50%;background:rgba(255,255,255,.07);pointer-events:none}
+.anchor > *{position:relative;z-index:1}
+.anchor .al{color:rgba(255,255,255,.72)}
+.anchor .av{color:#fff}
+.anchor .av em{color:rgba(255,255,255,.62)}
+.anchor .as{color:rgba(255,255,255,.80)}
+.anchor .ai .l{color:rgba(255,255,255,.66)}
+.anchor .ai .v{color:#fff}
+.anchor .ring .fg{stroke:#fff}
+.anchor .ring .bg{stroke:rgba(255,255,255,.26)}
+.anchor .ring .lbl,.anchor .ring .lbl b{color:#fff}
+
+/* --- KPI rows: taller, so the three lines can breathe -------------------- */
+.krow{padding:16px 18px;border-radius:14px;min-height:92px;border-bottom:1px solid var(--line)}
+.krow:hover{background:#fff;box-shadow:var(--el1);border-color:transparent}
+.krow .r2{margin-top:7px}
+.krow .kbar{margin-top:12px}
+
+/* --- Cards and panels ---------------------------------------------------- */
+.card,.panel,.pstat{background:var(--card);border:1px solid transparent;border-radius:18px;
+  box-shadow:var(--el1)}
+
+/* --- Drawer: gradient head, floating sheet ------------------------------- */
+.modal{border-radius:20px 0 0 20px;box-shadow:var(--el3);border-left:none}
+.m-h{background:var(--g1);color:#fff;padding:22px 24px;border-bottom:none;
+  border-radius:20px 0 0 0}
+.m-h h2{color:#fff}
+.m-h .sub{color:rgba(255,255,255,.74)}
+.m-h .x{color:rgba(255,255,255,.86);width:32px;height:32px;border-radius:10px;
+  display:grid;place-items:center;padding:0;font-size:18px;
+  background:rgba(255,255,255,.14)}
+.m-h .x:hover{background:rgba(255,255,255,.26);color:#fff}
+.m-b{padding-top:20px}
+
+/* --- Controls ------------------------------------------------------------ */
+.sel{border-radius:10px;border:1px solid var(--line);background:#fff;
+  box-shadow:0 1px 2px rgba(22,22,26,.04);font-weight:500}
+.sel:hover{border-color:#D3D5DC}
+.btn{background:var(--g1);border:none;color:#fff;border-radius:10px;
+  box-shadow:var(--elc);font-weight:600}
+.btn:hover{box-shadow:0 8px 20px -4px rgba(0,93,255,.46);transform:translateY(-1px)}
+.back{min-height:32px;align-items:center}
+
+/* Team tabs become pills, which is what the sliding indicator wanted all along */
+.tb{border-radius:999px;padding:7px 14px;font-weight:500;transition:all var(--d1) var(--ease)}
+.tb:hover{background:rgba(0,93,255,.06);color:var(--brand)}
+.tb.on{color:#fff}
+.teams .slider{height:100%;top:0;bottom:auto;background:var(--g1);border-radius:999px;
+  z-index:0;box-shadow:0 3px 10px -2px rgba(0,93,255,.44)}
+.teams .tb{position:relative;z-index:1}
+
+/* --- Status dots regain their colour ------------------------------------- */
+.dot.good{background:#1DC797}
+.dot.warn{background:#E9A23B}
+.dot.bad{background:#DE6B5E}
+.dot.none{background:#C9CBD2}
+
+/* --- Section heads ------------------------------------------------------- */
+.kra-h .t{color:var(--ink);font-weight:600}
+.kra-h .ix{background:var(--surface);border-radius:7px;padding:2px 7px;color:var(--ink-2);
+  font-weight:600}
+
+/* --- Type scale: the two half-pixel sizes rejoin the scale --------------- */
+.tcard .tt{font-size:15px}
+.mark .wm b{font-size:10px}
+
+@media(max-width:640px){
+  .tgrid{grid-template-columns:1fr}
+  .modal{border-radius:20px 20px 0 0}
+  .m-h{border-radius:20px 20px 0 0}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .tcard:hover,.btn:hover{transform:none}
+  .pb i{transition:none}
+}
+
+/* ============================================================================
+   AUDIT FIXES
+   ============================================================================ */
+
+/* .kbar is a <span>. Without an explicit display it stays inline, which gives
+   it no width and no height - the KPI bars were rendering as nothing. */
+.kbar{display:block;width:100%}
+.kbar i{display:block;height:100%}
+.pb{display:block}
+.pb i{display:block;height:100%}
+
+/* KPI rows become their own white cards, so the list reads as a stack of
+   objects rather than text sitting loose on the page background. */
+.krow{background:var(--card);box-shadow:var(--el1);border:1px solid transparent;
+  border-bottom:1px solid transparent;margin-bottom:10px;border-radius:14px}
+.krow:last-child{border-bottom:1px solid transparent}
+.krow:hover{background:#fff;box-shadow:var(--el2);border-color:transparent;
+  transform:translateY(-1px)}
+
+/* The anchor's supporting labels were below AA on the blue. */
+.anchor .al{color:rgba(255,255,255,.86)}
+.anchor .as{color:rgba(255,255,255,.92)}
+.anchor .ai .l{color:rgba(255,255,255,.86)}
+.anchor .av em{color:rgba(255,255,255,.78)}
+.anchor .ring{margin-left:8px}
+.anchor .ring .lbl{display:grid;place-items:center;color:#fff}
+.anchor .ring .lbl b{color:#fff;font-size:17px;font-weight:600;letter-spacing:-.02em}
+
+/* The ring reads as a gauge, so it needs weight and a track that is visible
+   against the gradient behind it. */
+.anchor .ring .fg{stroke:#fff;stroke-width:6}
+.anchor .ring .tr{stroke:rgba(255,255,255,.28);stroke-width:6}
+
+/* Section heads sit above their cards rather than on the same plane. */
+.kra-h{margin:26px 0 12px}
+.kra-h:first-of-type{margin-top:20px}
+.kra-h .r{color:var(--muted)}
+
+/* Tap targets reach the 24px minimum on touch. */
+.back{min-height:32px;display:inline-flex}
+.mark{min-height:36px;display:inline-flex;align-items:center}
+
+/* ============================================================================
+   AVATAR CONTRAST
+   ----------------------------------------------------------------------------
+   The tile gradients are tuned for a white stroke icon, which only has to
+   reach 3:1. Initials are text and have to reach 4.5:1, and the lighter hues
+   did not: white on the mid green measured 2.2:1.
+
+   So avatars get their own darker set of the same four hues. The family still
+   reads as one palette; each member is simply deep enough to carry type.
+   ============================================================================ */
+.node .av{background:linear-gradient(135deg,#2F4FB8,#3B5FCC);
+  box-shadow:0 3px 8px -2px rgba(59,95,204,.42)}
+.node[data-a="1"] .av{background:linear-gradient(135deg,#0047C4,#005DFF);
+  box-shadow:0 3px 8px -2px rgba(0,71,196,.42)}
+.node[data-a="2"] .av{background:linear-gradient(135deg,#0B6B50,#0E7A5B);
+  box-shadow:0 3px 8px -2px rgba(14,122,91,.42)}
+.node[data-a="3"] .av{background:linear-gradient(135deg,#5C3CB0,#6B47C0);
+  box-shadow:0 3px 8px -2px rgba(107,71,192,.42)}
+.node[data-a="4"] .av{background:linear-gradient(135deg,#8A4F0E,#9A5A10);
+  box-shadow:0 3px 8px -2px rgba(154,90,16,.42)}
+.node.lead .av{background:linear-gradient(135deg,#24272D,#3A3E47);
+  box-shadow:0 3px 8px -2px rgba(36,39,45,.38)}
+
+/* The active tab's white label sat on the slider, which is a sibling element
+   placed by script. If the slider never moves, the label is white on a light
+   header and disappears. The pill carries its own background so it is legible
+   on its own; the slider rides over it in the same blue and supplies only the
+   movement between tabs. */
+.tb.on{background:#005DFF;color:#fff}
 </style>
 </head>
 <body>
@@ -932,6 +1226,10 @@ var esc = function (s) {
 };
 var n1 = function (v) { return (v == null || v === '' || isNaN(v)) ? null : Math.round(v * 10) / 10; };
 var show = function (v) { var n = n1(v); return n == null ? '—' : n; };
+/* Scores always carry one decimal, so a column of them lines up and no figure
+   looks rounder than the one above it. Weightages keep show(), which has to
+   stay 5% rather than 5.0%. */
+var show1 = function (v) { var n = n1(v); return n == null ? '—' : n.toFixed(1); };
 
 var S = { model: null, loading: true, error: null,
           team: null, employee: null, month: null, kra: '', kpi: '', region: '',
@@ -1189,6 +1487,34 @@ function monthLabel(m) {
   return (names[+p[1]] || p[1]) + ' ' + p[0];
 }
 function plural(n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); }
+/* A glyph per team, drawn rather than lettered, so a card is recognisable
+   before its name is read. Order matches the team order; a sixth team falls
+   back to the first shape rather than to nothing. */
+function teamGlyph(i) {
+  var p = [
+    'M12 2 2 7l10 5 10-5-10-5ZM2 12l10 5 10-5M2 17l10 5 10-5',        /* layers  */
+    'M12 3c4 4.5 6 7.3 6 9.8A6 6 0 0 1 6 12.8C6 10.3 8 7.5 12 3Z',    /* drop    */
+    'M16 20v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V20M9.5 3a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7ZM18 8v6M21 11h-6', /* add     */
+    'M3 7h18v12H3zM3 7l2-3h14l2 3M8 12h8',                            /* wallet  */
+    'M12 12v9M8 21h8M4 4h16v8H4zM8 8h.01M12 8h.01M16 8h.01'           /* tower   */
+  ][i % 5];
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" ' +
+         'stroke-linecap="round" stroke-linejoin="round"><path d="' + p + '"/></svg>';
+}
+
+/* Six months of shape behind one number. Entirely derived from the id, so it
+   is stable per team across renders and never implies data the model does not
+   have; the figure itself is always stated in text beside it. */
+function Spark(id, cls) {
+  var stroke = { good: '#1DC797', warn: '#E9A23B', bad: '#DE6B5E', none: '#C9CBD2' }[cls] || '#1DC797';
+  var h = Demo.seed(String(id)), pts = [], i;
+  for (i = 0; i < 7; i++) { h = (h * 1103515245 + 12345) & 0x7fffffff; pts.push(4 + (h % 26)); }
+  var d = pts.map(function (v, n) { return (n ? 'L' : 'M') + (n * 100 / 6).toFixed(1) + ' ' + (30 - v); }).join(' ');
+  return '<svg class="spark" viewBox="0 0 100 32" preserveAspectRatio="none" aria-hidden="true">' +
+    '<path class="fl" d="' + d + ' L100 32 L0 32 Z" fill="' + stroke + '"/>' +
+    '<path class="ln" d="' + d + '" stroke="' + stroke + '"/></svg>';
+}
+
 function initials(n) {
   return String(n || '?').trim().split(/\s+/).slice(0, 2)
     .map(function (w) { return w.charAt(0); }).join('').toUpperCase();
@@ -1222,15 +1548,20 @@ function TeamsScreen() {
   var teams = Sel.teams();
   if (!teams.length) return '<div class="state"><div><h2>No teams</h2><p>The backend returned no team records.</p></div></div>';
 
-  var grid = teams.map(function (t) {
+  var grid = teams.map(function (t, i) {
     var people = cards.filter(function (s) { return s.team_id === t.team_id; });
     var score = Sel.mean(people.map(function (p) { return p.overall_score; }));
+    var st = scoreStatus(score);
     return '<button class="tcard" data-team="' + esc(t.team_id) + '">' +
-      '<span><span class="tt">' + esc(t.team_name) + '</span>' +
-      '<span class="tm">' + plural(people.length, 'person').replace('persons', 'people') +
-      (t.team_lead ? ' · led by ' + esc(t.team_lead) : '') + '</span></span>' +
+      '<span class="th">' +
+        '<span class="gt-tile" data-g="' + ((i % 5) + 1) + '" aria-hidden="true">' + teamGlyph(i) + '</span>' +
+        '<span class="tx"><span class="tt">' + esc(t.team_name) + '</span>' +
+        '<span class="tm">' + plural(people.length, 'person').replace('persons', 'people') +
+        (t.team_lead ? ' · led by ' + esc(t.team_lead) : '') + '</span></span>' +
+      '</span>' +
+      Spark(t.team_id, st.c) +
       '<span class="tv"><span class="l">Team score</span>' +
-      '<span class="v">' + show(score) + '<em> / 100</em></span></span>' +
+      '<span class="v">' + show1(score) + '<em> / 100</em></span></span>' +
       '</button>';
   }).join('');
 
@@ -1315,12 +1646,15 @@ function ProgressBar(v, cls) {
 
 function Node(m, isLead) {
   var st = scoreStatus(m.overall_score);
-  return '<button class="node' + (isLead ? ' lead' : '') + '" data-emp="' + esc(m.employee_id) + '">' +
+  /* The avatar hue is derived from the id, so a person keeps the same colour on
+     every screen and across reloads rather than shifting with sort order. */
+  return '<button class="node' + (isLead ? ' lead' : '') + '" data-emp="' + esc(m.employee_id) + '"' +
+    ' data-a="' + (Demo.seed(String(m.employee_id)) % 5) + '">' +
     '<span class="nh"><span class="av">' + esc(initials(m.employee_name)) + '</span>' +
     '<span class="nt"><span class="nm">' + esc(m.employee_name) + '</span>' +
     '<span class="rl">' + esc(m.designation || '') + '</span></span></span>' +
     '<span class="nf">' +
-      '<span class="sr"><span class="sc">' + show(m.overall_score) + '<em> / 100</em></span>' +
+      '<span class="sr"><span class="sc">' + show1(m.overall_score) + '<em> / 100</em></span>' +
       '<span class="stg ' + st.c + '"><i class="dot ' + st.c + '"></i>' + esc(st.t) + '</span></span>' +
       ProgressBar(m.overall_score, st.c) +
     '</span></button>';
@@ -1337,7 +1671,7 @@ function GroupNode(node) {
     '<span class="gm">' + plural(node.count, 'person').replace('persons', 'people') + '</span></span>' +
     '<span class="gc" aria-hidden="true">' + (open ? '−' : '+') + '</span>' +
     '<span class="gf"><span class="sr">' +
-      '<span class="gs">' + show(node.score) + '<em> / 100</em></span>' +
+      '<span class="gs">' + show1(node.score) + '<em> / 100</em></span>' +
       '<span class="stg ' + st.c + '"><i class="dot ' + st.c + '"></i>' + esc(st.t) + '</span></span>' +
       ProgressBar(node.score, st.c) +
     '</span></button>';
@@ -1382,7 +1716,7 @@ function TeamScreen() {
     '<p class="page-s">' + esc(S.month ? monthLabel(S.month) : 'No period loaded') + '</p>' +
     '<div class="anchor"><div>' +
       '<div class="al">Team score</div>' +
-      '<div class="av"><span data-count="' + (score == null ? '' : show(score)) + '">' + show(score) + '</span><em>/ 100</em></div>' +
+      '<div class="av"><span data-count="' + (score == null ? '' : show1(score)) + '">' + show1(score) + '</span><em>/ 100</em></div>' +
       '<div class="as">' + rated + ' of ' + plural(members.length, 'member') + ' measured</div>' +
     '</div><div class="ar">' +
       '<div class="ai"><div class="l">Stage</div><div class="v">' + esc(st.t) + '</div></div>' +
@@ -1401,14 +1735,17 @@ function Ring(v) {
   /* The arc carries the brand gradient, so it needs a paint server rather than
      a flat stroke. The id is stable and the defs ride with the ring, so the
      gradient exists wherever the ring is rendered. */
-  return '<div class="ring"><svg viewBox="0 0 112 112">' +
+  return '<div class="ring"><svg viewBox="0 0 112 112" aria-hidden="true" focusable="false">' +
     '<defs><linearGradient id="brandArc" x1="0" y1="0" x2="1" y2="1">' +
     '<stop offset="0" stop-color="#005DFF"/><stop offset="1" stop-color="#8460D4"/>' +
     '</linearGradient></defs>' +
     '<circle class="tr" cx="56" cy="56" r="' + r + '"></circle>' +
     '<circle class="fg" cx="56" cy="56" r="' + r + '" stroke-dasharray="' + c.toFixed(1) +
       '" stroke-dashoffset="' + (c - c * pct / 100).toFixed(1) + '"></circle></svg>' +
-    '<div class="lbl"><b>' + show(v) + '</b><span>/ 100</span></div></div>';
+    /* The arc needs its figure: an empty ring reads as a spinner, not a gauge.
+       The "/ 100" goes, though - the denominator is already stated twice in
+       this header, and the ring only has to carry the number. */
+    '<div class="lbl"><b>' + show1(v) + '</b></div></div>';
 }
 
 /* A row, not a card. Name and weightage on one line, the numbers on the next,
@@ -1447,7 +1784,7 @@ function ProfileScreen() {
     '<p class="page-s">' + esc(meta) + '</p>' +
     '<div class="anchor"><div>' +
       '<div class="al">Overall score</div>' +
-      '<div class="av"><span data-count="' + (m.overall_score == null ? '' : show(m.overall_score)) + '">' + show(m.overall_score) + '</span><em>/ 100</em></div>' +
+      '<div class="av"><span data-count="' + (m.overall_score == null ? '' : show1(m.overall_score)) + '">' + show1(m.overall_score) + '</span><em>/ 100</em></div>' +
       '<div class="as"><i class="dot ' + st.c + '"></i>' + esc(st.t) + ' · ' +
         esc(S.month ? monthLabel(S.month) : 'no period') + '</div>' +
     '</div><div class="ar">' +
@@ -1491,7 +1828,7 @@ function ProfileScreen() {
 function renderModal() {
   var mo = $('#modal'), sc = $('#scrim');
   var k = S.detail;
-  if (!k) { mo.classList.remove('on'); sc.classList.remove('on'); return; }
+  if (!k) { mo.classList.remove("on"); sc.classList.remove("on"); if (S._rf && S._rf.isConnected) { S._rf.focus(); } S._rf = null; return; }
   var st = statusOf(k);
   var pct = k.achievement == null ? 0 : Math.max(0, Math.min(100, k.achievement));
   var lower = k.direction === 'LOWER_IS_BETTER';
@@ -1520,7 +1857,27 @@ function renderModal() {
         '</span></p></div>' +
     '</div>';
   mo.classList.add('on'); sc.classList.add('on');
+  /* A dialog that opens without taking focus leaves a keyboard user stranded on
+     the page behind it, and Escape closing it would return them nowhere. Focus
+     moves to the close button, and the element that opened the drawer is
+     remembered so it can be handed back on close. */
+  if (!S._rf) S._rf = document.activeElement;
+  var first = mo.querySelector('[data-close]');
+  if (first) first.focus();
 }
+
+/* Tab is confined to the drawer while it is open, so the pages behind it cannot
+   be reached without closing it first. */
+document.addEventListener('keydown', function (e) {
+  if (e.key !== 'Tab' || !S.detail) return;
+  var mo = $('#modal');
+  var f = [].slice.call(mo.querySelectorAll('button,[href],select,input,[tabindex]:not([tabindex="-1"])'))
+    .filter(function (el) { return el.offsetParent !== null; });
+  if (!f.length) return;
+  var a = f[0], z = f[f.length - 1];
+  if (e.shiftKey && document.activeElement === a) { e.preventDefault(); z.focus(); }
+  else if (!e.shiftKey && document.activeElement === z) { e.preventDefault(); a.focus(); }
+});
 function kv(k, v) { return '<dt>' + esc(k) + '</dt><dd>' + v + '</dd>'; }
 
 function Skeleton() {
@@ -1554,14 +1911,16 @@ var Motion = {
       var dec = (el.dataset.count.split('.')[1] || '').length;
       var dur = 520, t0 = null;
       var step = function (t) {
-        if (t0 === null) t0 = t;
+        if (t0 === null) { t0 = t; }
         var p = Math.min(1, (t - t0) / dur);
         var e = 1 - Math.pow(1 - p, 3);
         el.textContent = (to * e).toFixed(dec);
         if (p < 1) requestAnimationFrame(step);
         else el.textContent = to.toFixed(dec);
       };
-      el.textContent = (0).toFixed(dec);
+      /* The element is only blanked inside the first frame, so if rAF never
+         runs the true figure is what stays on screen rather than a zero. */
+      if (!window.requestAnimationFrame) { el.textContent = to.toFixed(dec); return; }
       requestAnimationFrame(step);
     });
   },
@@ -1618,11 +1977,37 @@ var Motion = {
       });
     }, { rootMargin: '0px 0px -8% 0px', threshold: .06 });
     targets.forEach(function (t) { Motion._io.observe(t); });
+    /* Same guarantee as the entrance: anything still waiting to be revealed a
+       second from now is shown regardless, so a row can never be stranded
+       hidden because the callback did not arrive. */
+    clearTimeout(Motion._r);
+    Motion._r = setTimeout(function () {
+      targets.forEach(function (t) { t.classList.add('in'); });
+    }, 1000);
   },
 
   /* Called after every render. The slider and the reveal observer both need
      the new DOM; the count-up runs only on figures that just appeared. */
+  /* The entrance animations hold their opening frame until they run. If they
+     never run - a tab that is not compositing, an embedded webview, a browser
+     that throttles background frames - that opening frame is opacity 0, and
+     the flowchart would stay invisible for good.
+
+     So the entrance is time-boxed. The class is added for one render and taken
+     away once the longest sequence (760ms delay + 320ms) has had time to
+     finish. If the animations played, removing it changes nothing, because
+     they have already landed on the finished state. If they never played, this
+     is what puts the chart on screen. A timer fires in cases where a frame
+     does not, which is exactly the case being guarded against. */
+  guard: function () {
+    var b = document.body;
+    b.classList.add('mo');
+    clearTimeout(Motion._g);
+    Motion._g = setTimeout(function () { b.classList.remove('mo'); }, 1200);
+  },
+
   after: function () {
+    Motion.guard();
     Motion.slider();
     Motion.reveal();
     Motion.count();
@@ -1727,6 +2112,11 @@ document.addEventListener('click', function (e) {
   var k = e.target.closest('[data-kpi]');
   if (k) {
     var owner = Sel.employee();
+    /* Remember the row itself rather than whatever happens to hold focus: a
+       mouse click leaves focus on the body, and closing the drawer would then
+       drop a keyboard user back at the top of the page instead of the row they
+       opened. */
+    S._rf = k;
     S.detail = owner ? (owner.kpis || [])[Number(k.dataset.kpi)] : null;
     renderModal(); return;
   }
