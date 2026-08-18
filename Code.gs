@@ -3136,8 +3136,8 @@ var ASSIGNMENTS = [];
   ['ONB002','Process','On-Site Verification','TAT - 4 Days',15,'TAT_PCT'],
   ['ONB002','Process','Vendor Payments - Finoscale / Carma One','Timely Validation',10,'NONE'],
 
-  ['ONB003','Process','INFRA - Buyer & Seller Onboarding','TAT - 3 Days',30,'TAT_PCT'],
-  ['ONB003','Process','AFR - Buyer & Seller Onboarding','TAT - 3 Days',30,'TAT_PCT'],
+  ['ONB003','Process','INFRA - Buyer & Seller Onboarding','TAT - 3 Days',25,'TAT_PCT'],
+  ['ONB003','Process','AFR - Buyer & Seller Onboarding','TAT - 3 Days',25,'TAT_PCT'],
   ['ONB003','Process','Audit & Monitoring','Document Completeness',20,'NONE'],
   ['ONB003','Process','Fall Back - EPR','TAT',10,'TAT_PCT'],
   ['ONB003','Process','Vendor Payments - Ongrid','Timely Validation',10,'NONE'],
