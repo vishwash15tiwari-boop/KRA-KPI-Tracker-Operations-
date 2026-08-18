@@ -6,369 +6,294 @@
 <title>KRA / KPI Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 /* ============================================================================
-   KRA / KPI — visual system
+   KRA / KPI Tracker
    ----------------------------------------------------------------------------
-   A scorecard, not a dashboard: team, employee, overall score, KRA, KPI,
-   weightage, target, actual, achievement, weighted score. Nothing else earns a
-   place. What changed here is only how those things look and read — every class
-   name, every element and every behaviour is exactly as it was.
+   The product answers four questions in order — who, what, how much, how well —
+   and shows nothing that does not serve one of them.
 
-   The language: a cool blue-white ground, white planes lifted on soft
-   blue-tinted shadow, one blue accent for identity and interaction, and a
-   restrained amber/green/red ramp that means performance and nothing else.
+   Three levels, and nothing beyond them is visible by default:
+       TEAMS  →  TEAM FLOW  →  PERSON  →  KPI
+
+   The restraint is the design. Almost monochrome until performance requires
+   emphasis; typography and space carry hierarchy so most values need no box
+   around them at all.
    ============================================================================ */
 :root{
-  --font:'Plus Jakarta Sans','Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
 
-  /* Ground — four surfaces. The page is coolest; a card is the only thing that
-     reads as raised, so content always advances toward the reader. */
-  --bg:#EFF3FA;--card:#FFFFFF;--surface:#F5F8FD;--well:#E3EAF5;
+  --bg:#FAFAFA;--card:#FFFFFF;--surface:#F4F4F5;--well:#E9E9EC;
+  --ink:#18181B;--ink-2:#3F3F46;--muted:#71717A;--faint:#A1A1AA;
+  --line:#E7E7EA;--line-2:#D6D6DB;--line-soft:#F1F1F3;
 
-  /* Ink — four steps, navy-black rather than neutral so text belongs to the
-     same light as the ground. */
-  --ink:#0F1B2E;--ink-2:#3B4A63;--muted:#5B6B85;--faint:#8496AF;
+  /* Status is the only colour, and it is muted enough that a screen full of it
+     still reads as one calm surface. */
+  --good:#2F6B4F;--good-soft:#EAF2ED;
+  --warn:#8A6320;--warn-soft:#F7F0E3;
+  --bad:#9C3B32;--bad-soft:#F7EAE8;
 
-  /* Line — borders are the last resort for separation; space does it first. */
-  --line:#E2E9F3;--line-2:#CFDAEA;--line-soft:#EEF3FA;
+  --fs-hero:44px;--fs-xxl:30px;--fs-xl:19px;--fs-lg:15px;--fs-md:14px;
+  --fs-sm:13px;--fs-xs:12px;--fs-2xs:11px;
+  --fw-n:400;--fw-m:500;--fw-b:600;
 
-  /* Accent — one blue. It means interactive and it means identity. It never
-     signals performance: the ramp below owns that job alone. */
-  --accent:#0D4EA6;--accent-2:#1668E3;--accent-ink:#093A7C;--accent-soft:#E6EFFC;
-  --navy:#0A2A5E;
-  --grad-blue:linear-gradient(145deg,#1668E3,#0A3E86);
-  --grad-navy:linear-gradient(145deg,#124A8F,#0A2A5E);
-  --grad-good:linear-gradient(145deg,#1FBE85,#0E8256);
-  --grad-bad:linear-gradient(145deg,#E8695E,#C23B30);
+  --r-ctl:6px;--r-card:10px;--r-lg:14px;--r-pill:999px;
+  --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:24px;--s6:32px;--s7:40px;--s8:56px;--s9:80px;
 
-  /* Performance ramp — semantic only, and always paired with a word. */
-  --good:#0E7A50;--good-soft:#E4F5EE;
-  --warn:#A66C10;--warn-soft:#FBF0DC;--warn-bar:#E5A032;
-  --bad:#A83428;--bad-soft:#FBE9E7;
+  --e1:0 1px 2px rgba(24,24,27,.04);
+  --e2:0 1px 3px rgba(24,24,27,.06),0 10px 24px -16px rgba(24,24,27,.16);
+  --e3:0 24px 56px -20px rgba(24,24,27,.24);
 
-  /* Type — seven rungs, nothing between them. */
-  --fs-xxl:38px;--fs-xl:24px;--fs-lg:17px;--fs-md:14px;--fs-sm:13px;--fs-xs:12px;--fs-2xs:11px;
-  --fw-n:400;--fw-m:500;--fw-b:600;--fw-x:700;
-
-  /* Radius — four, each bound to a size of object. */
-  --r-ctl:9px;--r-card:18px;--r-lg:24px;--r-pill:999px;
-
-  /* 8px space foundation; 4 and 12 are the declared exceptions. */
-  --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:24px;--s6:32px;--s7:40px;--s8:56px;
-
-  /* Elevation — blue-tinted and faint. Depth is for things that float. */
-  --e1:0 1px 2px rgba(15,27,46,.04);
-  --e2:0 2px 6px rgba(15,27,46,.05),0 18px 40px -22px rgba(15,27,46,.20);
-  --e3:0 32px 64px -24px rgba(15,27,46,.28);
-
-  --ease:cubic-bezier(.2,.6,.35,1);--d1:130ms;--d2:200ms;--maxw:1160px;
+  --ease:cubic-bezier(.2,.6,.35,1);--d1:130ms;--d2:220ms;
+  --maxw:1000px;--nodew:190px;
 }
 *{box-sizing:border-box}html,body{margin:0;padding:0}
 body{font-family:var(--font);background:var(--bg);color:var(--ink);font-size:var(--fs-sm);
   line-height:1.5;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
-  font-feature-settings:'tnum' 1;letter-spacing:-.008em}
+  font-feature-settings:'tnum' 1,'cv11' 1;letter-spacing:-.006em}
 button,select{font-family:inherit;cursor:pointer}
 b,strong{font-weight:var(--fw-b)}
 *:focus{outline:none}
-*:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-ctl)}
-.btn:focus-visible,.tb:focus-visible,.sel:focus-visible,.more:focus-visible{
-  box-shadow:0 0 0 4px var(--accent-soft)}
+*:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:var(--r-ctl)}
 
-/* ------------------------------------------------------------- SIDEBAR --
-   A persistent navy rail. Teams are the product's top-level axis, so they get
-   a permanent home rather than a strip that scrolls away, and each one carries
-   its score: the comparison a lead makes first - who is behind - is answered
-   before anything is clicked.
-
-   The rail is dark so the content plane beside it reads as the lit surface.
-   It is the only dark region in the product, which is what makes it read as
-   structure rather than as another panel competing for attention. */
-:root{--railw:248px}
-.top{position:fixed;left:0;top:0;bottom:0;width:var(--railw);z-index:30;
-  background:linear-gradient(180deg,#0E3670 0%,#0A2A5E 45%,#082247 100%);
-  display:flex;flex-direction:column}
-.nav{display:flex;flex-direction:column;height:100%;padding:var(--s5) var(--s3) var(--s4);gap:var(--s5);
-  max-width:none;margin:0}
-.mark{font-size:var(--fs-2xs);font-weight:var(--fw-x);letter-spacing:.14em;text-transform:uppercase;
-  color:rgba(255,255,255,.62);white-space:nowrap;padding:0 var(--s3)}
-.teams{display:flex;flex-direction:column;gap:2px;overflow-y:auto;overflow-x:hidden;flex:1;
-  scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.22) transparent}
-.teams::-webkit-scrollbar{width:6px}
-.teams::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:var(--r-pill)}
-.tb{display:flex;align-items:center;gap:var(--s3);width:100%;text-align:left;
-  border:none;background:transparent;color:rgba(255,255,255,.74);
-  font-size:var(--fs-sm);font-weight:var(--fw-m);padding:10px var(--s3);
-  border-radius:var(--r-ctl);
-  transition:background var(--d1) var(--ease),color var(--d1) var(--ease)}
-.tb .tn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-/* The score is metadata until the row is the active one, so it stays quiet. */
-.tb .ts{font-variant-numeric:tabular-nums;font-weight:var(--fw-b);font-size:var(--fs-xs);
-  color:rgba(255,255,255,.5);flex:0 0 auto}
-.tb:hover{background:rgba(255,255,255,.08);color:#fff}
-.tb:hover .ts{color:rgba(255,255,255,.8)}
-.tb.on{background:rgba(255,255,255,.14);color:#fff;font-weight:var(--fw-b)}
-.tb.on .ts{color:#fff}
-.tb:focus-visible{outline:2px solid rgba(255,255,255,.7);outline-offset:-2px}
-
-/* Everything outside the rail shifts across, and the measure stays centred
-   within the width that remains — so the content does not hug the rail on a
-   wide screen, and long lines never outrun a comfortable scan. */
-.wrap{margin-left:var(--railw);max-width:none;
-  padding:var(--s7) max(var(--s5),calc((100% - var(--maxw)) / 2)) var(--s8)}
-.demo{margin-left:var(--railw)}
-.demo .in{max-width:none;margin:0;
-  padding-left:max(var(--s5),calc((100% - var(--maxw)) / 2));
-  padding-right:max(var(--s5),calc((100% - var(--maxw)) / 2))}
-
-/* --------------------------------------------------------------- HEADER -- */
-.head{display:flex;align-items:flex-start;gap:var(--s4);flex-wrap:wrap}
-.head h1{font-size:var(--fs-xl);font-weight:var(--fw-x);letter-spacing:-.025em;margin:0;line-height:1.2}
-.head .kind{font-size:var(--fs-sm);color:var(--muted);margin-top:3px}
-.head .r{margin-left:auto;display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap}
-.back{border:none;background:none;color:var(--muted);font-size:var(--fs-xs);font-weight:var(--fw-m);
-  padding:0 0 var(--s2);display:inline-flex;align-items:center;gap:5px;
+/* ---------------------------------------------------------------- CHROME --
+   The navigation almost disappears: a wordmark, the period, and — once you are
+   inside a team — the team names as plain text. The platform is the navigation. */
+.top{position:sticky;top:0;z-index:30;background:rgba(250,250,250,.85);
+  backdrop-filter:saturate(150%) blur(10px);border-bottom:1px solid var(--line)}
+.nav{max-width:var(--maxw);margin:0 auto;padding:0 var(--s5);min-height:54px;
+  display:flex;align-items:center;gap:var(--s5);flex-wrap:wrap}
+.mark{font-size:var(--fs-xs);font-weight:var(--fw-b);letter-spacing:.02em;color:var(--ink);
+  white-space:nowrap;border:none;background:none;padding:0}
+.mark:hover{color:var(--muted)}
+.teams{display:flex;gap:var(--s4);overflow-x:auto;flex:1;scrollbar-width:none;align-items:center}
+.teams::-webkit-scrollbar{display:none}
+.tb{border:none;background:transparent;color:var(--muted);font-size:var(--fs-xs);
+  font-weight:var(--fw-m);padding:4px 0;white-space:nowrap;position:relative;
   transition:color var(--d1) var(--ease)}
-.back:hover{color:var(--accent)}
+.tb:hover{color:var(--ink)}
+.tb.on{color:var(--ink);font-weight:var(--fw-b)}
+.tb.on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1.5px;background:var(--ink)}
+.tb .ts{display:none}
 
-/* ---------------------------------------------------------------- SCORE --
-   The one number the page leads with, on its own plane, with a gradient mark
-   lifted off the top-left corner. A single figure with nothing beside it is the
-   fastest thing on the page to read. */
-.score{position:relative;margin:var(--s7) 0 var(--s7);padding:var(--s5);
-  background:var(--card);border-radius:var(--r-lg);box-shadow:var(--e2);
-  display:flex;align-items:baseline;gap:var(--s3);flex-wrap:wrap}
-.score::before{content:"";position:absolute;left:var(--s5);top:-22px;
-  width:56px;height:56px;border-radius:var(--r-card);
-  background:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='9' r='5.2'/%3E%3Cpath d='M8.6 13.4 7.3 21l4.7-2.6 4.7 2.6-1.3-7.6'/%3E%3C/svg%3E") center/26px 26px no-repeat,
-    var(--grad-blue);
-  box-shadow:0 12px 26px -10px rgba(13,78,166,.6)}
-.score .l{font-size:var(--fs-2xs);font-weight:var(--fw-b);color:var(--muted);
-  text-transform:uppercase;letter-spacing:.09em;flex:0 0 100%;padding-top:var(--s5)}
-.score .v{font-size:var(--fs-xxl);font-weight:var(--fw-x);letter-spacing:-.035em;line-height:1;
-  font-variant-numeric:tabular-nums;color:var(--accent)}
-.score .v em{font-style:normal;font-size:var(--fs-lg);color:var(--faint);font-weight:var(--fw-m)}
-.score .cov{font-size:var(--fs-xs);color:var(--muted);flex:0 0 100%;
-  padding-top:var(--s3);margin-top:var(--s1);border-top:1px solid var(--line-soft)}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:var(--s8) var(--s5) var(--s9)}
+.demo{border-bottom:1px solid var(--line);background:var(--good-soft)}
+.demo .in{max-width:var(--maxw);margin:0 auto;padding:7px var(--s5);display:flex;align-items:center;
+  gap:var(--s2);font-size:var(--fs-xs);color:var(--good)}
+.demo button{margin-left:auto;border:1px solid var(--line-2);background:var(--card);color:var(--ink-2);
+  font-size:var(--fs-2xs);font-weight:var(--fw-m);padding:3px 10px;border-radius:var(--r-pill)}
+.demo button:hover{border-color:var(--ink)}
 
-/* -------------------------------------------------------------- CONTROLS -- */
-.ctl{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap}
-.fl{display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-xs);color:var(--muted)}
 .sel{border:1px solid var(--line-2);background:var(--card);color:var(--ink);font-size:var(--fs-xs);
-  font-weight:var(--fw-m);padding:7px var(--s3);border-radius:var(--r-ctl);max-width:190px;
-  transition:border-color var(--d1) var(--ease),box-shadow var(--d1) var(--ease)}
-.sel:hover:not(:disabled){border-color:var(--accent)}
-.sel:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  font-weight:var(--fw-m);padding:5px var(--s3);border-radius:var(--r-ctl);
+  transition:border-color var(--d1) var(--ease)}
+.sel:hover:not(:disabled){border-color:var(--ink)}
 .sel:disabled{color:var(--faint);background:var(--surface);cursor:not-allowed}
-.more{border:1px solid var(--line-2);background:var(--card);color:var(--muted);font-size:var(--fs-xs);
-  font-weight:var(--fw-m);padding:7px var(--s3);border-radius:var(--r-ctl);
-  transition:color var(--d1) var(--ease),border-color var(--d1) var(--ease),background var(--d1) var(--ease)}
-.more:hover{color:var(--accent);border-color:var(--accent)}
-.more.on{color:#fff;background:var(--accent);border-color:var(--accent)}
+.nav .sel{margin-left:auto}
 
-/* ---------------------------------------------------------------- TABLE -- */
-.sect{font-size:var(--fs-2xs);font-weight:var(--fw-x);color:var(--muted);text-transform:uppercase;
-  letter-spacing:.09em;margin:0 0 var(--s3);display:flex;align-items:baseline;gap:var(--s2)}
-.sect .r{margin-left:auto;font-weight:var(--fw-m);letter-spacing:0;text-transform:none;
-  font-size:var(--fs-xs);color:var(--faint)}
-.block{margin-bottom:var(--s7)}
-.panel{background:var(--card);border-radius:var(--r-card);overflow:hidden;box-shadow:var(--e2)}
-.tw{overflow-x:auto}
-table{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;min-width:680px;
-  font-size:var(--fs-sm)}
-th{text-align:left;font-size:var(--fs-2xs);font-weight:var(--fw-b);color:var(--muted);
-  text-transform:uppercase;letter-spacing:.06em;padding:var(--s3);
-  border-bottom:1px solid var(--line-2);white-space:nowrap;background:var(--surface)}
-td{padding:var(--s3);border-bottom:1px solid var(--line-soft);vertical-align:middle;
-  height:56px;overflow:hidden}
-tbody tr:last-child td{border-bottom:none}
-.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
-.quiet{color:var(--muted);font-weight:var(--fw-n)}
-.strong{font-weight:var(--fw-b);color:var(--ink)}
-.nm{font-weight:var(--fw-b);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-tr.click{cursor:pointer;transition:background var(--d1) var(--ease)}
-tr.click:hover{background:var(--surface)}
+.back{border:none;background:none;color:var(--muted);font-size:var(--fs-xs);font-weight:var(--fw-m);
+  padding:0;margin-bottom:var(--s5);display:inline-flex;align-items:center;gap:5px;
+  transition:color var(--d1) var(--ease)}
+.back:hover{color:var(--ink)}
 
-/* KRA band: the rule that separates a scorecard's sections. */
-tr.kra td{padding:var(--s5) var(--s3) var(--s2);border-bottom:1px solid var(--line-2);
-  font-size:var(--fs-2xs);font-weight:var(--fw-x);color:var(--accent-ink);
-  text-transform:uppercase;letter-spacing:.09em;cursor:pointer;background:var(--card)}
-tr.kra:first-child td{padding-top:var(--s3)}
-tr.kra .cv{display:inline-block;width:12px;color:var(--faint);font-weight:var(--fw-n)}
-tr.kra .rs{float:right;text-transform:none;letter-spacing:0;color:var(--muted);
-  font-weight:var(--fw-m);font-variant-numeric:tabular-nums}
-td.kpi{padding-left:var(--s5)}
+/* ----------------------------------------------------------------- TEAMS --
+   The landing screen is deliberately almost empty: a title, and the five places
+   you can go. No totals, no charts, no summary. */
+.page-t{font-size:var(--fs-xxl);font-weight:var(--fw-b);letter-spacing:-.03em;margin:0 0 var(--s2)}
+.page-s{font-size:var(--fs-sm);color:var(--muted);margin:0 0 var(--s8)}
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:var(--s4)}
+.tcard{background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);
+  padding:var(--s5);text-align:left;display:flex;flex-direction:column;gap:var(--s5);
+  min-height:150px;cursor:pointer;
+  transition:border-color var(--d1) var(--ease),box-shadow var(--d1) var(--ease)}
+.tcard:hover{border-color:var(--line-2);box-shadow:var(--e2)}
+.tcard .tt{display:block;font-size:var(--fs-2xs);font-weight:var(--fw-b);letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink);line-height:1.4}
+.tcard .tm{display:block;font-size:var(--fs-xs);color:var(--muted);margin-top:var(--s1);line-height:1.5}
+.tcard .tv{margin-top:auto;display:block}
+.tcard .tv .l{display:block;font-size:var(--fs-2xs);color:var(--muted)}
+.tcard .tv .v{display:block;font-size:var(--fs-xxl);font-weight:var(--fw-b);letter-spacing:-.03em;
+  line-height:1;font-variant-numeric:tabular-nums;margin-top:var(--s1)}
+.tcard .tv .v em{font-style:normal;font-size:var(--fs-sm);color:var(--faint);font-weight:var(--fw-m)}
 
-/* Achievement: the figure, with its bar as an annotation beneath it — not a
-   second reading of the same number. */
-.ach{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;
-  gap:5px;height:30px}
-.ach .n{font-variant-numeric:tabular-nums;font-weight:var(--fw-x)}
-.bar{display:block;position:relative;width:100%;height:5px;background:var(--well);
-  border-radius:var(--r-pill)}
-.bar i{position:absolute;left:0;top:0;height:100%;border-radius:var(--r-pill);background:var(--accent)}
-.bar i.good{background:var(--good)}
-.bar i.warn{background:var(--warn-bar)}
-.bar i.bad{background:var(--bad)}
-.bar u{position:absolute;top:-1px;width:1px;height:7px;background:var(--line-2)}
+/* ------------------------------------------------------------- TEAM FLOW --
+   People as performance nodes, not profile cards. Each node carries a name, a
+   role and a score — enough to answer "who is performing well", and nothing
+   that would begin to answer "why", which belongs inside the profile.
 
-/* Status: a word in the status colour, on its own tint. Colour is never the
-   only carrier — the word is always there. */
-.st{font-size:var(--fs-2xs);font-weight:var(--fw-b);white-space:nowrap;
-  padding:3px var(--s2);border-radius:var(--r-pill);display:inline-block}
-.st.good{color:var(--good);background:var(--good-soft)}
-.st.warn{color:var(--warn);background:var(--warn-soft)}
-.st.bad{color:var(--bad);background:var(--bad-soft)}
-.st.none{color:var(--muted);background:var(--surface);font-weight:var(--fw-m)}
+   The connectors are hairlines. They state the reporting relationship and then
+   get out of the way. */
+.flow{display:flex;flex-direction:column;align-items:center;width:100%;margin-top:var(--s7)}
+.lvl{display:flex;justify-content:center;flex-wrap:wrap;gap:var(--s4);width:100%}
+.drop{width:1px;height:var(--s5);background:var(--line-2);flex:0 0 auto}
+.branch{display:flex;justify-content:center;width:100%}
+.branch .arm{position:relative;flex:1;min-width:0;display:flex;flex-direction:column;
+  align-items:center}
+.branch .arm::before{content:"";position:absolute;top:0;height:1px;background:var(--line-2);left:0;right:0}
+.branch .arm:first-child::before{left:50%}
+.branch .arm:last-child::before{right:50%}
+.branch .arm:only-child::before{display:none}
+.branch .arm .stem{width:1px;height:var(--s5);background:var(--line-2);flex:0 0 auto}
 
-/* ---------------------------------------------------------------- MODAL -- */
-.scrim{position:fixed;inset:0;background:rgba(15,27,46,.38);opacity:0;pointer-events:none;
-  transition:opacity var(--d1) var(--ease);z-index:40;backdrop-filter:blur(2px)}
+.node{width:var(--nodew);background:var(--card);border:1px solid var(--line);
+  border-radius:var(--r-card);padding:var(--s4);text-align:left;cursor:pointer;
+  display:flex;flex-direction:column;gap:var(--s4);
+  transition:border-color var(--d1) var(--ease),box-shadow var(--d1) var(--ease)}
+.node:hover{border-color:var(--line-2);box-shadow:var(--e2)}
+.node:active{background:var(--surface)}
+/* The lead is one step larger — the only size difference in the chart, and it
+   carries the hierarchy without a heavier border or a colour. */
+.node.lead{width:calc(var(--nodew) + 28px);box-shadow:var(--e1)}
+.node .nm{display:block;font-size:var(--fs-sm);font-weight:var(--fw-b);line-height:1.3;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.node .sc{display:block}
+.node > span{display:block}
+/* the role is clamped so no node can grow taller than its siblings */
+.node .rl{font-size:var(--fs-2xs);color:var(--muted);line-height:1.35;margin-top:2px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:30px}
+.node .sc{font-size:var(--fs-xl);font-weight:var(--fw-b);letter-spacing:-.03em;line-height:1;
+  font-variant-numeric:tabular-nums}
+.node.lead .sc{font-size:var(--fs-xxl)}
+.node .sc em{font-style:normal;font-size:var(--fs-xs);color:var(--faint);font-weight:var(--fw-m)}
+
+/* --------------------------------------------------------------- PROFILE --
+   One dominant figure, three stats, then the KRAs that explain it. */
+.prof{display:flex;align-items:flex-start;gap:var(--s6);flex-wrap:wrap;margin-bottom:var(--s8)}
+.prof .pid h1{font-size:var(--fs-xxl);font-weight:var(--fw-b);margin:0;letter-spacing:-.03em;line-height:1.15}
+.prof .pid .meta{font-size:var(--fs-sm);color:var(--muted);margin-top:var(--s2);line-height:1.6}
+.prof .pr{margin-left:auto;display:flex;align-items:center;gap:var(--s7)}
+.ring{position:relative;width:112px;height:112px;flex:0 0 auto}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg);display:block}
+.ring .tr{fill:none;stroke:var(--well);stroke-width:6}
+.ring .fg{fill:none;stroke:var(--ink);stroke-width:6;stroke-linecap:round}
+.ring .lbl{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:0}
+.ring .lbl b{font-size:var(--fs-xxl);font-weight:var(--fw-b);letter-spacing:-.035em;
+  font-variant-numeric:tabular-nums;line-height:1}
+.ring .lbl span{font-size:var(--fs-2xs);color:var(--faint);margin-top:2px}
+/* Three stats. Not four, not a grid of tiles — a short list set in type. */
+.pstat{display:flex;flex-direction:column;gap:var(--s4)}
+.pstat .si{display:flex;align-items:baseline;gap:var(--s4);justify-content:space-between;min-width:180px}
+.pstat .si .l{font-size:var(--fs-xs);color:var(--muted)}
+.pstat .si .v{font-size:var(--fs-lg);font-weight:var(--fw-b);font-variant-numeric:tabular-nums;
+  letter-spacing:-.02em}
+
+/* ------------------------------------------------------------- KRA / KPI --
+   The KRA heading is the navigation hierarchy; a rule and a label are enough.
+   Each KPI is a row, not a card: name and weightage on one line, the numbers
+   on the next, and a hairline bar beneath. Rows sit directly on the page, so
+   twelve of them still read as one list rather than twelve objects. */
+.kra-h{display:flex;align-items:baseline;gap:var(--s3);margin:var(--s7) 0 var(--s2)}
+.kra-h .t{font-size:var(--fs-2xs);font-weight:var(--fw-b);color:var(--ink);
+  text-transform:uppercase;letter-spacing:.11em;white-space:nowrap}
+.kra-h .ln{flex:1;height:1px;background:var(--line)}
+.kra-h .r{font-size:var(--fs-2xs);color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+.krow{display:block;width:100%;text-align:left;border:none;background:none;
+  padding:var(--s4) var(--s3);border-bottom:1px solid var(--line-soft);cursor:pointer;
+  transition:background var(--d1) var(--ease)}
+.krow:hover{background:var(--card)}
+.krow:last-child{border-bottom:none}
+.krow .r1{display:flex;align-items:baseline;gap:var(--s4)}
+.krow .kn{font-size:var(--fs-md);font-weight:var(--fw-b);flex:1;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-.012em}
+.krow .kw{font-size:var(--fs-xs);color:var(--muted);font-variant-numeric:tabular-nums;flex:0 0 auto}
+.krow .r2{display:flex;align-items:baseline;gap:var(--s4);margin-top:var(--s2)}
+.krow .flow-v{font-size:var(--fs-xs);color:var(--muted);font-variant-numeric:tabular-nums;
+  flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.krow .flow-v b{color:var(--ink);font-weight:var(--fw-m)}
+.krow .ach{font-size:var(--fs-md);font-weight:var(--fw-b);font-variant-numeric:tabular-nums;
+  flex:0 0 auto;letter-spacing:-.015em}
+.krow .ach.good{color:var(--good)}
+.krow .ach.warn{color:var(--warn)}
+.krow .ach.bad{color:var(--bad)}
+.krow .ach.none{color:var(--faint);font-weight:var(--fw-m)}
+.kbar{margin-top:var(--s3);height:3px;background:var(--well);border-radius:var(--r-pill);
+  position:relative;overflow:hidden}
+.kbar i{position:absolute;left:0;top:0;height:100%;border-radius:var(--r-pill);background:var(--ink)}
+.kbar i.good{background:var(--good)}
+.kbar i.warn{background:var(--warn)}
+.kbar i.bad{background:var(--bad)}
+
+/* ---------------------------------------------------------------- DRAWER --
+   One slim panel from the right. No modal stack, no nested popups. */
+.scrim{position:fixed;inset:0;background:rgba(24,24,27,.28);opacity:0;pointer-events:none;
+  transition:opacity var(--d2) var(--ease);z-index:40}
 .scrim.on{opacity:1;pointer-events:auto}
-.modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-48%) scale(.98);opacity:0;
-  pointer-events:none;width:420px;max-width:calc(100vw - 32px);max-height:86vh;overflow-y:auto;
-  background:var(--card);border-radius:var(--r-lg);box-shadow:var(--e3);z-index:41;
-  transition:opacity var(--d1) var(--ease),transform var(--d2) var(--ease)}
-.modal.on{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
-.m-h{display:flex;align-items:flex-start;gap:var(--s3);padding:var(--s5) var(--s5) var(--s3);
-  border-bottom:1px solid var(--line-soft)}
-.m-h h2{font-size:var(--fs-lg);font-weight:var(--fw-x);margin:0;letter-spacing:-.022em;line-height:1.3}
-.m-h .x{margin-left:auto;border:none;background:none;color:var(--faint);font-size:var(--fs-lg);
+.modal{position:fixed;top:0;right:0;bottom:0;width:380px;max-width:calc(100vw - 32px);
+  background:var(--card);border-left:1px solid var(--line);box-shadow:var(--e3);z-index:41;
+  transform:translateX(100%);transition:transform var(--d2) var(--ease);
+  overflow-y:auto;display:flex;flex-direction:column}
+.modal.on{transform:none}
+.m-h{padding:var(--s6) var(--s5) var(--s4);display:flex;align-items:flex-start;gap:var(--s3)}
+.m-h h2{font-size:var(--fs-xl);font-weight:var(--fw-b);margin:0;letter-spacing:-.022em;line-height:1.25}
+.m-h .sub{font-size:var(--fs-2xs);color:var(--muted);margin-top:var(--s1);text-transform:uppercase;
+  letter-spacing:.11em;font-weight:var(--fw-b)}
+.m-h .x{margin-left:auto;border:none;background:none;color:var(--faint);font-size:var(--fs-xl);
   line-height:1;padding:0 2px;flex:0 0 auto;transition:color var(--d1) var(--ease)}
 .m-h .x:hover{color:var(--ink)}
-.m-b{padding:var(--s5)}
-.kv{display:grid;grid-template-columns:auto 1fr;gap:var(--s2) var(--s4)}
+.m-b{padding:0 var(--s5) var(--s7)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:var(--s3) var(--s4);
+  padding-top:var(--s4);border-top:1px solid var(--line)}
 .kv dt{color:var(--muted);font-size:var(--fs-xs);white-space:nowrap}
-.kv dd{margin:0;text-align:right;font-variant-numeric:tabular-nums;font-weight:var(--fw-b);
+.kv dd{margin:0;text-align:right;font-variant-numeric:tabular-nums;font-weight:var(--fw-m);
   font-size:var(--fs-sm)}
-.kv .rule{grid-column:1/-1;height:1px;background:var(--line-soft);margin:var(--s2) 0}
-.goal{margin-top:var(--s4);padding-top:var(--s3);border-top:1px solid var(--line-soft)}
-.goal .t{font-size:var(--fs-2xs);font-weight:var(--fw-b);color:var(--muted);
-  text-transform:uppercase;letter-spacing:.08em;margin-bottom:var(--s1)}
+.kv dd.hi{font-weight:var(--fw-b)}
+.sect-t{font-size:var(--fs-2xs);font-weight:var(--fw-b);color:var(--muted);text-transform:uppercase;
+  letter-spacing:.11em;margin:var(--s6) 0 var(--s3);padding-top:var(--s4);
+  border-top:1px solid var(--line)}
 .goal p{margin:0;color:var(--ink-2);line-height:1.65;font-size:var(--fs-xs)}
+.m-perf .n{font-size:var(--fs-xxl);font-weight:var(--fw-b);letter-spacing:-.03em;
+  font-variant-numeric:tabular-nums;line-height:1}
+.m-perf .n.good{color:var(--good)}.m-perf .n.warn{color:var(--warn)}.m-perf .n.bad{color:var(--bad)}
+.m-perf .kbar{margin-top:var(--s3);height:4px}
 
-/* ---------------------------------------------------------------- STATE -- */
-.state{display:grid;place-items:center;min-height:50vh;text-align:center}
-.state h2{font-size:var(--fs-lg);font-weight:var(--fw-x);margin:0 0 var(--s2)}
-.state p{color:var(--muted);margin:0 0 var(--s4);max-width:44ch;line-height:1.65}
-.btn{border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:var(--r-ctl);
-  padding:9px 18px;font-size:var(--fs-sm);font-weight:var(--fw-b);
-  transition:background var(--d1) var(--ease),border-color var(--d1) var(--ease)}
-.btn:hover{background:var(--accent-ink);border-color:var(--accent-ink)}
-.btn:active{filter:brightness(.95)}
+/* ----------------------------------------------------------------- STATE -- */
+.state{display:grid;place-items:center;min-height:52vh;text-align:center}
+.state h2{font-size:var(--fs-xl);font-weight:var(--fw-b);margin:0 0 var(--s2)}
+.state p{color:var(--muted);margin:0 0 var(--s4);max-width:46ch;line-height:1.6}
+.btn{border:1px solid var(--ink);background:var(--ink);color:#fff;border-radius:var(--r-ctl);
+  padding:8px 16px;font-size:var(--fs-sm);font-weight:var(--fw-m);
+  transition:opacity var(--d1) var(--ease)}
+.btn:hover{opacity:.86}
 .btn.ghost{background:var(--card);border-color:var(--line-2);color:var(--ink-2);margin-left:var(--s2)}
-.btn.ghost:hover{background:var(--surface);border-color:var(--accent);color:var(--accent)}
+.btn.ghost:hover{border-color:var(--ink);color:var(--ink);opacity:1}
 .state .btn{margin-top:var(--s2)}
-.empty{padding:var(--s6);text-align:center;color:var(--muted)}
-.hint{font-size:var(--fs-xs);color:var(--muted);margin-top:var(--s3);line-height:1.65}
+.empty{padding:var(--s6);text-align:center;color:var(--muted);font-size:var(--fs-xs)}
+.hint{font-size:var(--fs-xs);color:var(--muted);margin-top:var(--s7);line-height:1.6}
 .skl{background:linear-gradient(90deg,var(--surface),var(--well),var(--surface));
   background-size:200% 100%;border-radius:var(--r-card);animation:sh 1.4s ease-in-out infinite}
 @keyframes sh{to{background-position:-200% 0}}
-.demo{border-bottom:1px solid var(--line);background:var(--good-soft)}
-.demo .in{max-width:var(--maxw);margin:0 auto;padding:9px var(--s5);display:flex;align-items:center;
-  gap:var(--s2);font-size:var(--fs-xs);color:var(--good)}
-.demo button{margin-left:auto;border:1px solid var(--line-2);
-  background:var(--card);color:var(--good);font-size:var(--fs-2xs);font-weight:var(--fw-b);
-  padding:3px 10px;border-radius:var(--r-pill);transition:background var(--d1) var(--ease)}
-.demo button:hover{background:var(--good-soft)}
 
-
-/* ---------------------------------------------------------------- CARDS --
-   The four figures a lead reads first. Each is one metric with its context and
-   nothing else, on its own plane, with a gradient mark lifted off the corner —
-   the same treatment as the score, so the row reads as one family. The mark's
-   colour is the only thing that varies, and it varies by meaning. */
-.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--s4);
-  margin:calc(var(--s7) + 6px) 0 var(--s7)}
-.card{position:relative;background:var(--card);border-radius:var(--r-lg);
-  box-shadow:var(--e2);padding:var(--s5) var(--s4) var(--s4);min-width:0}
-.card .ic{position:absolute;left:var(--s4);top:-20px;width:48px;height:48px;
-  border-radius:var(--r-card);background:var(--grad-blue);
-  box-shadow:0 12px 24px -10px rgba(13,78,166,.55);
-  background-repeat:no-repeat;background-position:center;background-size:22px 22px}
-.card.t-score .ic{background-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='9' r='5.2'/%3E%3Cpath d='M8.6 13.4 7.3 21l4.7-2.6 4.7 2.6-1.3-7.6'/%3E%3C/svg%3E"),var(--grad-blue)}
-.card.t-gmv .ic{background-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 17l5-5 4 3 7-8'/%3E%3Cpath d='M14 7h5v5'/%3E%3C/svg%3E"),var(--grad-navy);
-  box-shadow:0 12px 24px -10px rgba(10,42,94,.55)}
-.card.t-onb .ic{background-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='9' cy='8' r='3.2'/%3E%3Cpath d='M3.5 20a5.5 5.5 0 0 1 11 0'/%3E%3Cpath d='M17 8h4M19 6v4'/%3E%3C/svg%3E"),var(--grad-blue)}
-.card.t-ok .ic{background-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8.4'/%3E%3Cpath d='M8.4 12.3l2.5 2.5 4.7-4.9'/%3E%3C/svg%3E"),var(--grad-good);
-  box-shadow:0 12px 24px -10px rgba(14,130,86,.5)}
-.card.t-risk .ic{background-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 4.2 21 19.5H3z'/%3E%3Cpath d='M12 10.2v4M12 17.2h.01'/%3E%3C/svg%3E"),var(--grad-bad);
-  box-shadow:0 12px 24px -10px rgba(194,59,48,.5)}
-.card .cl{font-size:var(--fs-2xs);font-weight:var(--fw-b);color:var(--muted);
-  text-transform:uppercase;letter-spacing:.09em;padding-top:var(--s5)}
-.card .cv{font-size:var(--fs-xl);font-weight:var(--fw-x);letter-spacing:-.03em;
-  line-height:1.1;margin-top:var(--s2);font-variant-numeric:tabular-nums;color:var(--ink)}
-.card.t-score .cv{color:var(--accent)}
-.card.t-ok .cv{color:var(--good)}
-.card.t-risk .cv{color:var(--bad)}
-.card .cv em{font-style:normal;font-size:var(--fs-sm);color:var(--faint);
-  font-weight:var(--fw-m);margin-left:3px;letter-spacing:0}
-.card .cs{font-size:var(--fs-xs);color:var(--muted);margin-top:var(--s3);
-  padding-top:var(--s3);border-top:1px solid var(--line-soft);line-height:1.5}
-
-/* Two lines in one cell: the KPI and the KRA it belongs to. */
-td .sub{display:block;font-size:var(--fs-2xs);color:var(--muted);font-weight:var(--fw-n);
-  margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-
-/* Variance is signed, so it gets an axis rather than a length: the centre line
-   is zero, ahead runs right, behind runs left. */
-.gap{display:block;position:relative;width:100%;height:8px;background:var(--well);
-  border-radius:var(--r-pill)}
-.gap::after{content:"";position:absolute;left:50%;top:-2px;width:1px;height:12px;
-  background:var(--line-2)}
-.gap i{position:absolute;top:0;height:100%;border-radius:var(--r-pill)}
-.gap i.pos{background:var(--good)}
-.gap i.neg{background:var(--bad)}
-.v-pos{color:var(--good)}
-.v-neg{color:var(--bad)}
-
-@media(max-width:980px){.cards{grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:var(--s5) var(--s4);margin-top:calc(var(--s6) + 6px)}}
-@media(max-width:520px){.cards{grid-template-columns:minmax(0,1fr)}}
-/* ------------------------------------------------------------ RESPONSE --
-   The frame tightens; the hierarchy does not change. Wide tables scroll in
-   their own well rather than truncate — a missing column is a wrong decision
-   waiting to happen. */
-/* Below the rail's comfortable width it becomes a horizontal strip along the
-   top: the same teams, the same scores, the same order - laid on their side
-   rather than hidden behind a control, because a tap you have to discover is
-   slower than a row you can already see. */
-@media(max-width:900px){
-  .top{position:sticky;left:auto;top:0;bottom:auto;width:auto;
-    background:linear-gradient(180deg,#0E3670,#0A2A5E)}
-  .nav{flex-direction:row;align-items:center;height:58px;padding:0 var(--s4);gap:var(--s4)}
-  .mark{padding:0}
-  .teams{flex-direction:row;gap:var(--s1);overflow-x:auto;overflow-y:hidden}
-  .teams::-webkit-scrollbar{height:0}
-  .tb{width:auto;padding:7px var(--s3)}
-  .tb .tn{overflow:visible}
-  .tb .ts{display:none}
-  .demo,.wrap{margin-left:0}
-  .wrap,.demo .in{padding-left:var(--s5);padding-right:var(--s5)}
+/* -------------------------------------------------------------- RESPONSE --
+   The flow becomes a single column; a child still sits below its parent joined
+   by the same hairline, so the structure survives the narrowing. */
+@media(max-width:760px){
+  .nav{padding:var(--s2) var(--s4);gap:var(--s3)}
+  .nav .sel{margin-left:auto}
+  .teams{order:3;flex-basis:100%;gap:var(--s4);padding-bottom:var(--s1)}
+  .wrap{padding:var(--s6) var(--s4) var(--s8)}
+  .demo .in{padding-left:var(--s4);padding-right:var(--s4)}
+  .prof{gap:var(--s5)}
+  .prof .pr{margin-left:0;width:100%;justify-content:space-between;gap:var(--s5)}
+  .lvl,.branch{flex-direction:column;align-items:center;gap:var(--s3)}
+  .branch{gap:0}
+  .branch .arm{width:100%}
+  .branch .arm::before{display:none}
+  .branch .arm .stem{height:var(--s4)}
+  .node,.node.lead{width:100%;max-width:300px}
+  .modal{width:100%;max-width:100%}
 }
-@media(max-width:820px){
-  .wrap,.demo .in{padding-left:var(--s4);padding-right:var(--s4)}
-  .wrap{padding-top:var(--s5)}
-  .score{margin:var(--s6) 0 var(--s6);padding:var(--s4)}
-  .score::before{left:var(--s4);width:48px;height:48px;top:-20px}
-  .score .l{padding-top:var(--s4)}
-}
-@media(max-width:520px){
-  .head .r{margin-left:0;width:100%}
-  .score .v{font-size:var(--fs-xl)}
-  .modal{width:calc(100vw - 24px)}
-}
-@media(pointer:coarse){
-  .tb,.btn,.more,.sel{min-height:44px}
-}
+@media(pointer:coarse){.tb,.btn,.sel{min-height:40px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
 </head>
 <body>
 <header class="top"><div class="nav">
-  <span class="mark">KRA / KPI</span>
+  <button class="mark" data-crumb="teams">KRA / KPI Tracker</button>
   <nav class="teams" id="teams"></nav>
+  <span id="months"></span>
 </div></header>
 <div id="demo"></div>
 <main class="wrap" id="view"></main>
@@ -502,6 +427,11 @@ var Seed = {
     { team_id: 'COL', team_name: 'Collections', team_lead: 'Ravi Naik', people: [
       ['COL001', 'Ravi Naik',   'Team Lead — Collections', 'West'],
       ['COL002', 'Megaraj S',   'Executive — Collections', 'South']
+    ]},
+    { team_id: 'MCT', team_name: 'Marketplace — Control Tower', team_lead: 'Ashwin Kumar', people: [
+      ['MCT001', 'Ashwin Kumar', 'Manager — Control Tower',  'Central'],
+      ['MCT002', 'Priya Menon',  'Executive — Control Tower','South'],
+      ['MCT003', 'Karan Bhatia', 'Executive — Control Tower','North']
     ]}
   ],
   model: function () {
@@ -519,6 +449,10 @@ var Seed = {
           acc.push({
             team_id: t.team_id, employee_id: p[0], employee_name: p[1],
             designation: p[2], region: p[3],
+            /* The lead is the first person listed; everyone else reports to
+               them. The real EMPLOYEE_MASTER carries manager_id and will
+               replace this the moment the sheet is connected. */
+            manager_id: p[1] === t.team_lead ? null : t.people[0][0],
             kpis: Seed.KPIS.map(function (k) { return JSON.parse(JSON.stringify(k)); })
           });
         });
@@ -533,155 +467,13 @@ var Seed = {
    how are we doing, is the revenue line landing, is onboarding landing, and
    what is broken. Each is a rollup of backend weighted scores - none of them
    originates a number. */
-function Cards(members) {
-  var kpisOf = function (name) {
-    var out = [];
-    members.forEach(function (m) {
-      m.kpis.forEach(function (k) { if (k.kra === name || k.kpi === name) out.push(k); });
-    });
-    return out;
-  };
-  var achOf = function (list) {
-    var e = 0, w = 0;
-    list.forEach(function (k) { if (k.weighted_score != null) { e += k.weighted_score; w += Number(k.weightage) || 0; } });
-    return w > 0 ? Math.round(e / w * 1000) / 10 : null;
-  };
-  var sumOf = function (list, field) {
-    var s = null;
-    list.forEach(function (k) { if (k[field] != null) s = (s || 0) + Number(k[field]); });
-    return s == null ? null : Math.round(s * 100) / 100;
-  };
-
-  var score = Sel.mean(members.map(function (m) { return m.overall_score; }));
-  var gmv = kpisOf('GMV'), onb = kpisOf('Acquisition');
-  var all = []; members.forEach(function (m) { all = all.concat(m.kpis); });
-  var rated = all.filter(function (k) { return k.achievement != null; });
-  var risk = rated.filter(function (k) { return k.achievement < 90; }).length;
-  var hit = rated.filter(function (k) { return k.achievement >= 100; }).length;
-
-  var card = function (tone, label, value, unit, sub) {
-    return '<div class="card ' + tone + '"><div class="ic"></div>' +
-      '<div class="cl">' + esc(label) + '</div>' +
-      '<div class="cv">' + (value == null ? '—' : value) +
-      (unit ? '<em>' + esc(unit) + '</em>' : '') + '</div>' +
-      '<div class="cs">' + sub + '</div></div>';
-  };
-
-  return '<div class="cards">' +
-    card('t-score', 'Team score', show(score), '/ 100',
-         members.filter(function (m) { return m.overall_score != null; }).length +
-         ' of ' + plural(members.length, 'member') + ' measured') +
-    card('t-gmv', 'GMV achievement', show(achOf(gmv)), achOf(gmv) == null ? '' : '%',
-         gmv.length ? esc(fmt(sumOf(gmv, 'actual'), 'CR')) + ' of ' + esc(fmt(sumOf(gmv, 'target'), 'CR')) : 'no GMV KPI assigned') +
-    card('t-onb', 'Onboarding', show(achOf(onb)), achOf(onb) == null ? '' : '%',
-         onb.length ? esc(show(sumOf(onb, 'actual'))) + ' of ' + esc(show(sumOf(onb, 'target'))) + ' onboarded' : 'no acquisition KPI assigned') +
-    card(risk ? 't-risk' : 't-ok', 'KPI status', rated.length ? String(risk) : '—', risk ? 'at risk' : '',
-         rated.length ? hit + ' on or above target · ' + rated.length + ' of ' + all.length + ' measured'
-                      : 'nothing measured this period') +
-    '</div>';
-}
-
-/* ============================== REGION ===================================
-   The team is split across regions, so the lead can see whether a shortfall is
-   one person or a whole geography before opening anybody's scorecard. */
-function RegionBlock(members) {
-  var by = {}, order = [];
-  members.forEach(function (m) {
-    var r = m.region || 'Unassigned';
-    if (!by[r]) { by[r] = { region: r, people: 0, earned: 0, measured: 0, scores: [] }; order.push(r); }
-    by[r].people++;
-    if (m.overall_score != null) by[r].scores.push(m.overall_score);
-    m.kpis.forEach(function (k) {
-      if (k.weighted_score != null) { by[r].earned += k.weighted_score; by[r].measured += Number(k.weightage) || 0; }
-    });
-  });
-  if (order.length < 2) return '';
-  var rows = order.map(function (n) { return by[n]; }).sort(function (a, b) {
-    return Sel.mean(b.scores) - Sel.mean(a.scores);
-  }).map(function (g) {
-    var s = Sel.mean(g.scores), st = scoreStatus(s);
-    var pct = s == null ? 0 : Math.max(0, Math.min(100, s));
-    return '<tr><td class="nm">' + esc(g.region) + '</td>' +
-      '<td class="num quiet">' + g.people + '</td>' +
-      '<td><span class="bar"><i class="' + st.c + '" style="width:' + pct + '%"></i></span></td>' +
-      '<td class="num strong">' + show(s) + '</td>' +
-      '<td><span class="st ' + st.c + '">' + esc(st.t) + '</span></td></tr>';
-  }).join('');
-  return '<div class="block"><div class="sect">Regional performance<span class="r">mean score / 100</span></div>' +
-    '<div class="panel"><div class="tw"><table>' +
-    '<colgroup><col style="width:24%"><col style="width:12%"><col style="width:34%"><col style="width:14%"><col style="width:16%"></colgroup>' +
-    '<thead><tr><th>Region</th><th class="num">People</th><th>Score</th><th class="num">Score</th><th>Status</th></tr></thead>' +
-    '<tbody>' + rows + '</tbody></table></div></div></div>';
-}
-
-/* ============================== GAP ======================================
-   Variance carries a sign, so it belongs on its own axis: who is ahead and who
-   is behind, ordered by how much. A ranked list answers "who is driving this"
-   faster than any chart of the same numbers. */
-function GapBlock(members) {
-  var name = S.kpi || 'Monthly GMV Target Achievement';
-  var rows = [];
-  members.forEach(function (m) {
-    m.kpis.forEach(function (k) {
-      if (k.kpi !== name || k.variance == null) return;
-      rows.push({ who: m.employee_name, id: m.employee_id, v: k.variance, unit: k.unit, ach: k.achievement });
-    });
-  });
-  if (!rows.length) return '';
-  rows.sort(function (a, b) { return b.v - a.v; });
-  var max = Math.max.apply(null, rows.map(function (r) { return Math.abs(r.v); })) || 1;
-  var body = rows.map(function (r) {
-    var w = Math.round(Math.abs(r.v) / max * 50);
-    var neg = r.v < 0;
-    return '<tr class="click" data-emp="' + esc(r.id) + '"><td class="nm">' + esc(r.who) + '</td>' +
-      '<td><span class="gap"><i class="' + (neg ? 'neg' : 'pos') + '" style="width:' + w + '%;' +
-      (neg ? 'right:50%' : 'left:50%') + '"></i></span></td>' +
-      '<td class="num strong ' + (neg ? 'v-neg' : 'v-pos') + '">' +
-      (neg ? '' : '+') + esc(fmt(r.v, r.unit)) + '</td>' +
-      '<td class="num quiet">' + show(r.ach) + '%</td></tr>';
-  }).join('');
-  return '<div class="block"><div class="sect">Gap analysis<span class="r">' + esc(name) + '</span></div>' +
-    '<div class="panel"><div class="tw"><table>' +
-    '<colgroup><col style="width:34%"><col style="width:36%"><col style="width:16%"><col style="width:14%"></colgroup>' +
-    '<thead><tr><th>Employee</th><th>Variance</th><th class="num">Gap</th><th class="num">Achievement</th></tr></thead>' +
-    '<tbody>' + body + '</tbody></table></div></div></div>';
-}
-
-/* ============================== AT RISK ==================================
-   Everything below target, worst first. This is the list a lead acts on. */
-function RiskBlock(members) {
-  var rows = [];
-  members.forEach(function (m) {
-    Sel.kpisOf(m).forEach(function (k) {
-      if (k.achievement == null || k.achievement >= 90) return;
-      rows.push({ who: m.employee_name, id: m.employee_id, k: k });
-    });
-  });
-  if (!rows.length) return '';
-  rows.sort(function (a, b) { return a.k.achievement - b.k.achievement; });
-  var body = rows.slice(0, 10).map(function (r) {
-    var st = statusOf(r.k);
-    return '<tr class="click" data-emp="' + esc(r.id) + '">' +
-      '<td class="nm">' + esc(r.k.kpi) + '<span class="sub">' + esc(r.k.kra) + '</span></td>' +
-      '<td class="quiet">' + esc(r.who) + '</td>' +
-      '<td class="num quiet">' + esc(fmt(r.k.target, r.k.unit)) + '</td>' +
-      '<td class="num">' + esc(fmt(r.k.actual, r.k.unit)) + '</td>' +
-      '<td>' + Ach(r.k) + '</td>' +
-      '<td><span class="st ' + st.c + '">' + esc(st.t) + '</span></td></tr>';
-  }).join('');
-  return '<div class="block"><div class="sect">Needs attention' +
-    '<span class="r">below 90% · worst first</span></div>' +
-    '<div class="panel"><div class="tw"><table>' +
-    '<colgroup><col style="width:28%"><col style="width:20%"><col style="width:12%">' +
-    '<col style="width:12%"><col style="width:16%"><col style="width:12%"></colgroup>' +
-    '<thead><tr><th>KPI</th><th>Employee</th><th class="num">Target</th><th class="num">Actual</th>' +
-    '<th class="num">Achievement</th><th>Status</th></tr></thead><tbody>' + body + '</tbody></table></div></div></div>';
-}
-
 var Sel = {
   model: function () { return S.demo && S.model ? (S._demo || (S._demo = Demo.apply(S.model))) : S.model; },
   teams: function () { var m = Sel.model(); return (m && m.teams) || []; },
   team: function () { return Sel.teams().filter(function (t) { return t.team_id === S.team; })[0] || null; },
+  employee: function () {
+    return Sel.members().filter(function (m) { return m.employee_id === S.employee; })[0] || null;
+  },
   months: function () { var m = Sel.model(); return (m && m.months) || []; },
   members: function () {
     var m = Sel.model();
@@ -744,233 +536,272 @@ var Sel = {
 };
 
 /* ============================== FORMAT =================================== */
+/* ============================== FORMAT =================================== */
 function fmt(v, unit) {
-  var n = n1(v); if (n == null) return '—';
-  return unit === 'CR' ? '₹' + n + ' Cr'
-       : unit === 'MT' ? n + ' MT'
-       : unit === 'DAYS' ? n + (Math.abs(n) === 1 ? ' day' : ' days')
-       : unit === 'PERCENT' ? n + '%' : String(n);
+  if (v == null || v === '' || isNaN(v)) return '—';
+  var n = Math.round(v * 100) / 100;
+  if (unit === 'CR') return '₹' + n + ' Cr';
+  if (unit === 'PERCENT') return n + '%';
+  if (unit === 'DAYS') return n + (Math.abs(n) === 1 ? ' day' : ' days');
+  return String(n);
 }
 function statusOf(k) {
-  if (k.achievement == null) return { t: 'Awaiting data', c: 'none' };
-  if (k.achievement >= 100) return { t: 'Achieved', c: 'good' };
-  if (k.achievement >= 90) return { t: 'Achieved', c: 'good' };
-  if (k.achievement >= 75) return { t: 'At Risk', c: 'warn' };
-  return { t: 'Below Target', c: 'bad' };
-}
-function scoreStatus(v) {
-  if (v == null) return { t: 'Awaiting data', c: 'none' };
-  return v >= 90 ? { t: 'Achieved', c: 'good' } : v >= 75 ? { t: 'At Risk', c: 'warn' } : { t: 'Below Target', c: 'bad' };
+  if (k.achievement == null) return { c: 'none', t: 'Not measured' };
+  if (k.achievement >= 100) return { c: 'good', t: 'Achieved' };
+  if (k.achievement >= 90) return { c: 'good', t: 'On track' };
+  if (k.achievement >= 75) return { c: 'warn', t: 'Near target' };
+  return { c: 'bad', t: 'Below target' };
 }
 function monthLabel(m) {
-  var M = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July',
-           'August', 'September', 'October', 'November', 'December'];
-  var x = /^(\d{4})-(\d{2})$/.exec(m || '');
-  return x ? (M[+x[2]] || x[2]) + ' ' + x[1] : (m || '');
+  var p = String(m || '').split('-');
+  if (p.length !== 2) return String(m || '');
+  var names = ['', 'January', 'February', 'March', 'April', 'May', 'June',
+               'July', 'August', 'September', 'October', 'November', 'December'];
+  return (names[+p[1]] || p[1]) + ' ' + p[0];
 }
 function plural(n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); }
 
-/* ============================== PIECES =================================== */
-function Score(label, value, sub) {
-  return '<div class="score"><span class="l">' + esc(label) + '</span>' +
-    '<span class="v">' + (value == null ? '—' : show(value) + '<em> / 100</em>') + '</span>' +
-    (sub ? '<span class="cov">' + esc(sub) + '</span>' : '') + '</div>';
-}
-/* The bar is an annotation on the figure above it, drawn against the KPI's own
-   threshold ladder rather than an assumed 100. */
-function Ach(k) {
-  if (k.achievement == null) return '<span class="quiet">—</span>';
-  var w = Math.max(0, Math.min(100, k.achievement / 105 * 100));
-  var cls = k.achievement >= 90 ? 'good' : k.achievement >= 75 ? 'warn' : 'bad';
-  var ticks = '';
-  if (k.bands && k.bands.length && k.direction !== 'LOWER_IS_BETTER' && k.unit === 'PERCENT') {
-    k.bands.forEach(function (bv) {
-      ticks += '<u style="left:' + Math.max(0, Math.min(100, bv / 105 * 100)) + '%"></u>';
-    });
-  }
-  return '<span class="ach"><span class="n">' + show(k.achievement) + '%</span>' +
-    '<span class="bar">' + ticks + '<i class="' + cls + '" style="width:' + w + '%"></i></span></span>';
-}
-function KpiTable(kpis, prefix, showOwner) {
-  var groups = Sel.byKra(kpis);
-  var body = groups.length ? groups.map(function (g) {
-    var id = prefix + '|' + g.kra, open = !S.closed[id];
-    var head = '<tr class="kra" data-kra="' + esc(id) + '"><td colspan="7">' +
-      '<span class="cv">' + (open ? '▾' : '▸') + '</span>' + esc(g.kra) +
-      '<span class="rs">' + plural(g.kpis.length, 'KPI') +
-      (g.achievement == null ? '' : ' · ' + show(g.achievement) + '%') + '</span></td></tr>';
-    if (!open) return head;
-    return head + g.kpis.map(function (k) {
-      var st = statusOf(k);
-      return '<tr class="click" data-kpi="' + esc((k.__owner || '') + '::' + k.kra + '::' + k.kpi) + '">' +
-        '<td class="kpi nm">' + esc(k.kpi) + '</td>' +
-        '<td class="quiet">' + esc(showOwner ? (k.__ownerName || '') : (k.perspective || '')) + '</td>' +
-        '<td class="num quiet">' + show(k.weightage) + '%</td>' +
-        '<td class="num quiet">' + (k.target == null ? 'Not set' : fmt(k.target, k.unit)) + '</td>' +
-        '<td class="num">' + (k.actual == null ? '<span class="quiet">Pending</span>' : fmt(k.actual, k.unit)) + '</td>' +
-        '<td class="num">' + Ach(k) + '</td>' +
-        '<td class="num strong">' + show(k.weighted_score) + '</td></tr>';
-    }).join('');
-  }).join('') : '<tr><td colspan="7" class="empty">No KPIs match the current filters.</td></tr>';
-
-  return '<div class="panel"><div class="tw"><table>' +
-    '<colgroup><col style="width:26%"><col style="width:16%"><col style="width:10%">' +
-    '<col style="width:14%"><col style="width:14%"><col style="width:12%"><col style="width:8%"></colgroup>' +
-    '<thead><tr><th>KPI</th><th>' + (showOwner ? 'Employee' : 'Perspective') + '</th>' +
-    '<th class="num">Weight</th><th class="num">Target</th><th class="num">Actual</th>' +
-    '<th class="num">Achievement</th><th class="num">Score</th></tr></thead>' +
-    '<tbody>' + body + '</tbody></table></div></div>';
+/* Weighted achievement across a set of KPIs: earned score over the weightage
+   that was actually measured. Presentation rollup only — it originates nothing. */
+function achOf(kpis) {
+  var e = 0, w = 0;
+  kpis.forEach(function (k) {
+    if (k.weighted_score != null) { e += k.weighted_score; w += Number(k.weightage) || 0; }
+  });
+  return w > 0 ? Math.round(e / w * 1000) / 10 : null;
 }
 
-/* ============================== SCREENS ================================== */
-function TeamScreen() {
-  var t = Sel.team();
-  if (!t) return '<div class="state"><div><h2>No team selected</h2><p>Choose a team above.</p></div></div>';
-  var members = Sel.visible();
-  var kpis = Sel.allKpis();
-  members.forEach(function (m) { m.kpis.forEach(function (k) { k.__ownerName = m.employee_name; }); });
-  var score = Sel.mean(members.map(function (m) { return m.overall_score; }));
-  var measured = members.filter(function (m) { return m.overall_score != null; }).length;
+function MonthSelect() {
+  var months = Sel.months();
+  return '<select class="sel" id="f-month"' + (months.length ? '' : ' disabled') + '>' +
+    (months.length ? months.map(function (x) {
+      return '<option value="' + esc(x) + '"' + (x === S.month ? ' selected' : '') + '>' +
+        esc(monthLabel(x)) + '</option>';
+    }).join('') : '<option>No period</option>') + '</select>';
+}
 
-  var head = '<div class="head"><div><h1>' + esc(t.team_name) + '</h1>' +
-    '<div class="kind">KRA / KPI performance · ' + esc(S.month ? monthLabel(S.month) : 'no period loaded') + '</div></div>' +
-    '<div class="r">' + Controls() + '</div></div>';
+/* ============================== LEVEL 1 — TEAMS ==========================
+   The landing screen is deliberately almost empty: the five places you can go
+   and the one number that tells you where to look first. No totals, no charts,
+   no summary of any kind. */
+function TeamsScreen() {
+  var m = Sel.model(), cards = (m && m.scorecards) || [];
+  var teams = Sel.teams();
+  if (!teams.length) return '<div class="state"><div><h2>No teams</h2><p>The backend returned no team records.</p></div></div>';
 
-  var score1 = Score('Team score', score,
-    measured + ' of ' + plural(members.length, 'member') + ' measured');
-
-  var kpiBlock = '<div class="block"><div class="sect">KRA / KPI performance' +
-    '<span class="r">click a KPI for detail</span></div>' + KpiTable(kpis, 'team', true) + '</div>';
-
-  var rows = members.slice().sort(function (a, b) {
-    return (b.overall_score == null ? -1 : b.overall_score) - (a.overall_score == null ? -1 : a.overall_score);
-  }).map(function (m) {
-    var st = scoreStatus(m.overall_score);
-    return '<tr class="click" data-emp="' + esc(m.employee_id) + '">' +
-      '<td class="nm">' + esc(m.employee_name) + '</td>' +
-      '<td class="quiet">' + esc(m.designation || '—') + '</td>' +
-      '<td class="quiet">' + esc(m.region || '—') + '</td>' +
-      '<td class="num quiet">' + m.kpis.length + '</td>' +
-      '<td class="num strong">' + show(m.overall_score) + '</td>' +
-      '<td><span class="st ' + st.c + '">' + esc(st.t) + '</span></td></tr>';
+  var grid = teams.map(function (t) {
+    var people = cards.filter(function (s) { return s.team_id === t.team_id; });
+    var score = Sel.mean(people.map(function (p) { return p.overall_score; }));
+    return '<button class="tcard" data-team="' + esc(t.team_id) + '">' +
+      '<span><span class="tt">' + esc(t.team_name) + '</span>' +
+      '<span class="tm">' + plural(people.length, 'person').replace('persons', 'people') +
+      (t.team_lead ? ' · led by ' + esc(t.team_lead) : '') + '</span></span>' +
+      '<span class="tv"><span class="l">Team score</span>' +
+      '<span class="v">' + show(score) + '<em> / 100</em></span></span>' +
+      '</button>';
   }).join('');
 
-  var people = '<div class="block"><div class="sect">Team members<span class="r">score / 100</span></div>' +
-    '<div class="panel"><div class="tw"><table>' +
-    '<colgroup><col style="width:30%"><col style="width:26%"><col style="width:12%">' +
-    '<col style="width:10%"><col style="width:10%"><col style="width:12%"></colgroup>' +
-    '<thead><tr><th>Employee</th><th>Role</th><th>Region</th><th class="num">KPIs</th>' +
-    '<th class="num">Score</th><th>Status</th></tr></thead><tbody>' +
-    (rows || '<tr><td colspan="6" class="empty">No members match the current filters.</td></tr>') +
-    '</tbody></table></div></div></div>';
-
-  var unmapped = Sel.members().filter(function (m) { return !m.kpis.length; });
-  var hint = unmapped.length
-    ? '<div class="hint">' + plural(unmapped.length, 'member') + ' without a KPI assignment: ' +
-      unmapped.map(function (m) { return esc(m.employee_name); }).join(', ') + '.</div>' : '';
-
-  return head + Cards(members) + kpiBlock + RegionBlock(members) +
-         people + GapBlock(members) + RiskBlock(members) + hint;
+  return '<h1 class="page-t">Performance</h1>' +
+    '<p class="page-s">' + esc(S.month ? monthLabel(S.month) : 'No period loaded') + '</p>' +
+    '<div class="tgrid">' + grid + '</div>';
 }
 
-function EmployeeScreen() {
-  var m = Sel.members().filter(function (x) { return x.employee_id === S.employee; })[0];
-  if (!m) return '<div class="state"><div><h2>Employee not found</h2><p>That employee is not part of the selected team.</p></div></div>';
-  var t = Sel.team();
-  m.kpis.forEach(function (k) { k.__owner = m.employee_id; });
-  var kpis = Sel.kpisOf(m);
-  var pending = kpis.filter(function (k) { return k.achievement == null; }).length;
-
-  var head = '<button class="back" data-back="1">← ' + esc(t ? t.team_name : 'Team') + '</button>' +
-    '<div class="head"><div><h1>' + esc(m.employee_name) + '</h1>' +
-    '<div class="kind">' + esc([m.designation, m.region].filter(Boolean).join(' · ')) +
-    ' · ' + esc(S.month ? monthLabel(S.month) : 'no period loaded') + '</div></div>' +
-    '<div class="r">' + Controls(true) + '</div></div>';
-
-  var score1 = Score('Overall score', m.overall_score,
-    m.overall_score == null ? plural(kpis.length, 'KPI') + ' assigned · awaiting targets and actuals'
-      : show(m.measured_weightage) + '% of assigned weightage measured');
-
-  var block = '<div class="block"><div class="sect">Assigned KRA / KPI' +
-    '<span class="r">click a KPI for detail</span></div>' + KpiTable(kpis, 'emp', false) + '</div>';
-
-  var hint = pending
-    ? '<div class="hint">' + pending + ' of ' + kpis.length +
-      ' KPIs have no target or actual for this period, so they are excluded from the score rather than counted as zero.</div>' : '';
-
-  return head + score1 + block + hint;
-}
-
-/* Month and Employee are always visible; KRA and KPI sit behind one control so
-   they never compete with the data. */
-function Controls(hideEmployee) {
-  var months = Sel.months();
-  var c = '<span class="fl">Month<select class="sel" id="f-month"' + (months.length ? '' : ' disabled') + '>' +
-    (months.length ? months.map(function (x) {
-      return '<option value="' + esc(x) + '"' + (x === S.month ? ' selected' : '') + '>' + esc(monthLabel(x)) + '</option>';
-    }).join('') : '<option>No period loaded</option>') + '</select></span>';
-  if (!hideEmployee) {
-    var regions = Sel.regions();
-    if (regions.length > 1) {
-      c += '<span class="fl">Region<select class="sel" id="f-region">' +
-        '<option value=""' + (S.region ? '' : ' selected') + '>All</option>' +
-        regions.map(function (r) {
-          return '<option value="' + esc(r) + '"' + (r === S.region ? ' selected' : '') + '>' + esc(r) + '</option>';
-        }).join('') + '</select></span>';
+/* ============================== LEVEL 2 — TEAM FLOW ======================
+   People as performance nodes. The tree is read from the data, never assumed:
+   whoever has no manager inside the team is a root, everyone else hangs off the
+   person they report to. A flat team draws one row; a two-layer team draws two.
+   Nothing here knows the name of any team. */
+function buildTree(members) {
+  var byId = {}, roots = [];
+  members.forEach(function (m) { byId[m.employee_id] = { m: m, kids: [] }; });
+  members.forEach(function (m) {
+    var pid = m.manager_id || m.reports_to || null;
+    if (pid && byId[pid] && pid !== m.employee_id) byId[pid].kids.push(byId[m.employee_id]);
+    else roots.push(byId[m.employee_id]);
+  });
+  /* No reporting line recorded anywhere: fall back to the lead named on the
+     team record, so the shape still reflects how the team actually runs. */
+  if (roots.length === members.length && members.length > 1) {
+    var t = Sel.team(), lead = t && t.team_lead;
+    var head = lead && members.filter(function (m) { return m.employee_name === lead; })[0];
+    if (head) {
+      var hn = byId[head.employee_id];
+      hn.kids = roots.filter(function (n) { return n !== hn; });
+      roots = [hn];
     }
-    c += '<span class="fl">Employee<select class="sel" id="f-emp">' +
-      '<option value=""' + (S.employee ? '' : ' selected') + '>All</option>' +
-      Sel.members().map(function (p) {
-        return '<option value="' + esc(p.employee_id) + '"' + (p.employee_id === S.employee ? ' selected' : '') + '>' +
-          esc(p.employee_name) + '</option>';
-      }).join('') + '</select></span>';
   }
-  var active = (S.kra || S.kpi) ? ' on' : '';
-  c += '<button class="more' + (S.showFilters || active ? ' on' : '') + '" data-more="1">' +
-    (S.kra || S.kpi ? 'Filtered' : 'Filter') + '</button>';
-  if (S.showFilters) {
-    c += '<span class="fl">KRA<select class="sel" id="f-kra"><option value="">All</option>' +
-      Sel.names('kra').map(function (k) {
-        return '<option value="' + esc(k) + '"' + (k === S.kra ? ' selected' : '') + '>' + esc(k) + '</option>';
-      }).join('') + '</select></span>' +
-      '<span class="fl">KPI<select class="sel" id="f-kpi"><option value="">All</option>' +
-      Sel.names('kpi', S.kra).map(function (k) {
-        return '<option value="' + esc(k) + '"' + (k === S.kpi ? ' selected' : '') + '>' + esc(k) + '</option>';
-      }).join('') + '</select></span>';
-  }
-  return '<span class="ctl">' + c + '</span>';
+  var byScore = function (a, b) {
+    return (b.m.overall_score == null ? -1 : b.m.overall_score) -
+           (a.m.overall_score == null ? -1 : a.m.overall_score);
+  };
+  var order = function (n) { n.kids.sort(byScore); n.kids.forEach(order); };
+  roots.sort(function (a, b) { return b.kids.length - a.kids.length || byScore(a, b); });
+  roots.forEach(order);
+  return roots;
 }
 
-/* KPI detail: only what is needed to understand the KPI. */
+/* Name, role, score. Enough to answer "who is performing well" — and nothing
+   that begins to answer "why", which belongs inside the profile. */
+function Node(m, isLead) {
+  return '<button class="node' + (isLead ? ' lead' : '') + '" data-emp="' + esc(m.employee_id) + '">' +
+    '<span><span class="nm">' + esc(m.employee_name) + '</span>' +
+    '<span class="rl">' + esc(m.designation || '') + '</span></span>' +
+    '<span class="sc">' + show(m.overall_score) + '<em> / 100</em></span>' +
+    '</button>';
+}
+
+function renderNode(node) {
+  var card = Node(node.m, false);
+  if (!node.kids.length) return '<div class="arm"><div class="stem"></div>' + card + '</div>';
+  return '<div class="arm"><div class="stem"></div>' + card +
+    '<div class="drop"></div><div class="branch">' +
+    node.kids.map(renderNode).join('') + '</div></div>';
+}
+
+function Flowchart(members) {
+  if (!members.length) return '<div class="empty">No people are mapped to this team.</div>';
+  var roots = buildTree(members);
+  var top = '<div class="lvl">' + roots.map(function (r) {
+    return Node(r.m, r.kids.length > 0);
+  }).join('') + '</div>';
+  var below = roots.filter(function (r) { return r.kids.length; }).map(function (r) {
+    return '<div class="drop"></div><div class="branch">' +
+      r.kids.map(renderNode).join('') + '</div>';
+  }).join('');
+  return '<div class="flow">' + top + below + '</div>';
+}
+
+function TeamScreen() {
+  var t = Sel.team();
+  if (!t) return TeamsScreen();
+  var members = Sel.members();
+  var score = Sel.mean(members.map(function (m) { return m.overall_score; }));
+  return '<button class="back" data-crumb="teams">← All teams</button>' +
+    '<h1 class="page-t">' + esc(t.team_name) + '</h1>' +
+    '<p class="page-s">' + esc(S.month ? monthLabel(S.month) : 'No period loaded') +
+    ' · team score ' + show(score) + ' / 100</p>' +
+    Flowchart(members);
+}
+
+/* ============================== LEVEL 3 — PROFILE ========================
+   One reusable profile for every team. Which KRAs and KPIs appear is decided
+   entirely by that person's backend mapping, so two people on the same team can
+   carry different KPIs at different weightages and both render correctly. */
+function Ring(v) {
+  var pct = v == null ? 0 : Math.max(0, Math.min(100, v));
+  var r = 50, c = 2 * Math.PI * r;
+  return '<div class="ring"><svg viewBox="0 0 112 112">' +
+    '<circle class="tr" cx="56" cy="56" r="' + r + '"></circle>' +
+    '<circle class="fg" cx="56" cy="56" r="' + r + '" stroke-dasharray="' + c.toFixed(1) +
+      '" stroke-dashoffset="' + (c - c * pct / 100).toFixed(1) + '"></circle></svg>' +
+    '<div class="lbl"><b>' + show(v) + '</b><span>/ 100</span></div></div>';
+}
+
+/* A row, not a card. Name and weightage on one line, the numbers on the next,
+   a hairline bar beneath. Twelve of these still read as one list. */
+function KpiRow(k, i) {
+  var st = statusOf(k);
+  var pct = k.achievement == null ? 0 : Math.max(0, Math.min(100, k.achievement));
+  var flow = (k.target == null && k.actual == null)
+    ? 'No target or actual for this period'
+    : '<b>' + esc(fmt(k.target, k.unit)) + '</b> → <b>' + esc(fmt(k.actual, k.unit)) + '</b>' +
+      (k.weighted_score == null ? '' : ' · score ' + show(k.weighted_score) + ' / ' + show(k.weightage));
+  return '<button class="krow" data-kpi="' + i + '">' +
+    '<span class="r1"><span class="kn">' + esc(k.kpi) + '</span>' +
+    '<span class="kw">' + show(k.weightage) + '%</span></span>' +
+    '<span class="r2"><span class="flow-v">' + flow + '</span>' +
+    '<span class="ach ' + st.c + '">' +
+      (k.achievement == null ? '—' : show(k.achievement) + '%') + '</span></span>' +
+    '<span class="kbar"><i class="' + st.c + '" style="width:' + pct + '%"></i></span>' +
+    '</button>';
+}
+
+function ProfileScreen() {
+  var m = Sel.employee();
+  if (!m) return '<div class="state"><div><h2>Not found</h2><p>That person is not on the selected team.</p></div></div>';
+  var t = Sel.team();
+  var kpis = m.kpis || [];
+  var rated = kpis.filter(function (k) { return k.achievement != null; });
+  var meta = [m.designation, m.region].filter(Boolean).join(' · ');
+
+  var prof = '<button class="back" data-crumb="team">← ' + esc(t ? t.team_name : 'Team') + '</button>' +
+    '<div class="prof"><div class="pid"><h1>' + esc(m.employee_name) + '</h1>' +
+    '<div class="meta">' + esc(meta) + '</div></div>' +
+    '<div class="pr"><div class="pstat">' +
+      '<div class="si"><span class="l">Overall score</span><span class="v">' + show(m.overall_score) + '</span></div>' +
+      '<div class="si"><span class="l">KPI achievement</span><span class="v">' +
+        (achOf(rated) == null ? '—' : achOf(rated) + '%') + '</span></div>' +
+      '<div class="si"><span class="l">KPIs assigned</span><span class="v">' + kpis.length + '</span></div>' +
+    '</div>' + Ring(m.overall_score) + '</div></div>';
+
+  /* Grouped by KRA, in the order the backend supplied them. The heading is the
+     hierarchy — no container, no card, just a label and a rule. */
+  var by = {}, order = [];
+  kpis.forEach(function (k, i) {
+    k.__i = i;
+    var g = k.kra || 'Other';
+    if (!by[g]) { by[g] = []; order.push(g); }
+    by[g].push(k);
+  });
+  var body = order.map(function (g) {
+    var list = by[g], wt = 0;
+    list.forEach(function (k) { wt += Number(k.weightage) || 0; });
+    var a = achOf(list);
+    return '<div class="kra-h"><span class="t">' + esc(g) + '</span><span class="ln"></span>' +
+      '<span class="r">' + show(wt) + '%' + (a == null ? '' : ' · ' + a + '% achieved') + '</span></div>' +
+      list.map(function (k) { return KpiRow(k, k.__i); }).join('');
+  }).join('');
+  if (!kpis.length) body = '<div class="empty">No KPIs are mapped to this person.</div>';
+
+  var pending = kpis.length - rated.length;
+  var hint = pending ? '<div class="hint">' + pending + ' of ' + kpis.length +
+    ' KPIs have no target or actual for this period, so they are excluded from the score rather than counted as zero.</div>' : '';
+
+  return prof + body + hint;
+}
+
+/* ============================== LEVEL 4 — KPI DRAWER =====================
+   One slim panel from the right: the numbers, the goal, the performance. No
+   modal stack, no nested popups. */
 function renderModal() {
   var mo = $('#modal'), sc = $('#scrim');
-  if (!S.detail) { mo.classList.remove('on'); sc.classList.remove('on'); return; }
-  var k = S.detail, st = statusOf(k);
+  var k = S.detail;
+  if (!k) { mo.classList.remove('on'); sc.classList.remove('on'); return; }
+  var st = statusOf(k);
+  var pct = k.achievement == null ? 0 : Math.max(0, Math.min(100, k.achievement));
+  var lower = k.direction === 'LOWER_IS_BETTER';
+
   mo.innerHTML =
-    '<div class="m-h"><h2>' + esc(k.kpi) + '</h2><button class="x" data-close="1" aria-label="Close">×</button></div>' +
-    '<div class="m-b"><dl class="kv">' +
-      kv('KRA', esc(k.kra)) +
-      kv('Perspective', esc(k.perspective || '—')) +
-      kv('Weight', show(k.weightage) + '%') +
-      '<div class="rule"></div>' +
-      kv('Target', k.target == null ? 'Not set' : fmt(k.target, k.unit)) +
-      kv('Actual', k.actual == null ? 'Pending' : fmt(k.actual, k.unit)) +
-      kv('Achievement', k.achievement == null ? '—' : show(k.achievement) + '%') +
-      kv('Score', k.weighted_score == null ? '—' : show(k.weighted_score) + ' / ' + show(k.weightage)) +
-      kv('Status', '<span class="st ' + st.c + '">' + esc(st.t) + '</span>') +
-    '</dl>' +
-    (k.goal
-      ? '<div class="goal"><div class="t">Goal</div><p>' + esc(k.goal) + '</p></div>'
-      : '') +
+    '<div class="m-h"><div><h2>' + esc(k.kpi) + '</h2>' +
+    '<div class="sub">' + esc(k.kra || '') + '</div></div>' +
+    '<button class="x" data-close="1" aria-label="Close">×</button></div>' +
+    '<div class="m-b">' +
+      '<dl class="kv">' +
+        kv('Weightage', show(k.weightage) + '%') +
+        kv('Target', esc(fmt(k.target, k.unit))) +
+        kv('Actual', esc(fmt(k.actual, k.unit))) +
+        kv('Achievement', k.achievement == null ? '—' : show(k.achievement) + '%') +
+        kv('Variance', k.variance == null ? '—'
+           : (k.variance > 0 ? '+' : '') + esc(fmt(k.variance, k.unit))) +
+        kv('Weighted score', '<span class="hi">' + show(k.weighted_score) + ' / ' + show(k.weightage) + '</span>') +
+      '</dl>' +
+      (k.goal ? '<div class="sect-t">Goal</div><div class="goal"><p>' + esc(k.goal) + '</p></div>' : '') +
+      '<div class="sect-t">Performance</div>' +
+      '<div class="m-perf"><div class="n ' + st.c + '">' +
+        (k.achievement == null ? '—' : show(k.achievement) + '%') + '</div>' +
+        '<div class="kbar"><i class="' + st.c + '" style="width:' + pct + '%"></i></div>' +
+        '<p class="goal" style="margin-top:12px"><span style="color:var(--muted);font-size:var(--fs-xs)">' +
+        esc(st.t) + (lower ? ' · lower is better, so achievement is target ÷ actual' : '') +
+        '</span></p></div>' +
     '</div>';
   mo.classList.add('on'); sc.classList.add('on');
 }
 function kv(k, v) { return '<dt>' + esc(k) + '</dt><dd>' + v + '</dd>'; }
 
 function Skeleton() {
-  return '<div class="skl" style="height:26px;width:170px"></div>' +
-    '<div class="skl" style="height:44px;width:200px;margin:var(--s6) 0 var(--s7)"></div>' +
-    '<div class="skl" style="height:300px"></div>';
+  return '<div class="skl" style="height:30px;width:220px"></div>' +
+    '<div class="skl" style="height:16px;width:140px;margin-top:12px"></div>' +
+    '<div class="skl" style="height:150px;margin-top:56px"></div>';
 }
 
 /* ============================== RENDER =================================== */
@@ -982,26 +813,26 @@ function render() {
       '<button class="btn ghost" data-demo="on">Preview the interface</button></div></div>';
     return;
   }
-  /* Each team carries its score in the rail, so the comparison a lead makes
-   * first - who is behind - is answered before anything is clicked. The figure
-   * is the mean of that team's member scores, the same rollup the team screen
-   * shows; it originates nothing. */
-  var cards = ((Sel.model() || {}).scorecards) || [];
-  $('#teams').innerHTML = Sel.teams().map(function (t) {
-    var scores = cards.filter(function (s) { return s.team_id === t.team_id; })
-                      .map(function (s) { return s.overall_score; });
-    var v = Sel.mean(scores);
+  /* The team strip only exists once you are inside a team; on the landing
+   * screen the team cards are the navigation, so a second copy of it would be
+   * one control too many. */
+  $('#teams').innerHTML = S.team ? Sel.teams().map(function (t) {
     return '<button class="tb' + (t.team_id === S.team ? ' on' : '') + '" data-team="' + esc(t.team_id) + '">' +
-      '<span class="tn">' + esc(t.team_name) + '</span>' +
-      '<span class="ts">' + (v == null ? '' : show(v)) + '</span></button>';
-  }).join('');
+      esc(t.team_name) + '</button>';
+  }).join('') : '';
+  $('#months').innerHTML = MonthSelect();
+
   var noPerf = !(S.model.scorecards || []).some(function (s) {
     return s.kpis.some(function (k) { return k.achievement != null; });
   });
   $('#demo').innerHTML = S.demo
     ? '<div class="demo"><div class="in"><span>Showing sample values. Teams, employees, KRAs, KPIs and weightages are real; targets and actuals are not.</span><button data-demo="off">Show real data</button></div></div>'
     : (noPerf ? '<div class="demo"><div class="in"><span>No targets or actuals loaded yet.</span><button data-demo="on">Preview with sample values</button></div></div>' : '');
-  $('#view').innerHTML = S.employee && !Sel.members().length ? '' : (S.employee ? EmployeeScreen() : TeamScreen());
+
+  /* Three levels, and the state says which one you are on. */
+  $('#view').innerHTML = !S.team ? TeamsScreen()
+                       : S.employee ? ProfileScreen()
+                       : TeamScreen();
   renderModal();
 }
 
@@ -1027,7 +858,7 @@ function load() {
     }
     if (!m.ok) { S.error = (m.error || 'The backend reported a failure.') + (m.where ? ' (' + m.where + ')' : ''); return render(); }
     S.model = m; S._demo = null;
-    if (!S.team && m.teams && m.teams.length) S.team = m.teams[0].team_id;
+    /* No team is chosen for the user: the landing screen is the first decision. */
     if (!S.month) { var mo = Sel.months(); S.month = mo[mo.length - 1] || null; }
     render();
   }, function (e) {
@@ -1044,7 +875,7 @@ function load() {
 function usePlaceholder() {
   var m = Seed.model();
   S.model = m; S._demo = null; S.demo = true; S.loading = false; S.error = null;
-  if (!S.team) S.team = m.teams[0].team_id;
+  /* land on the teams screen, not inside a team */
   if (!S.month) S.month = m.month;
   render();
 }
@@ -1055,18 +886,21 @@ document.addEventListener('click', function (e) {
   if (t) { S.team = t.dataset.team; S.employee = null; S.kra = ''; S.kpi = ''; S.detail = null; render(); scrollTo(0, 0); return; }
   var emp = e.target.closest('[data-emp]');
   if (emp) { S.employee = emp.dataset.emp; S.detail = null; render(); scrollTo(0, 0); return; }
-  if (e.target.closest('[data-back]')) { S.employee = null; S.detail = null; render(); scrollTo(0, 0); return; }
-  var g = e.target.closest('[data-kra]');
-  if (g) { var id = g.dataset.kra; S.closed[id] = !S.closed[id]; render(); return; }
+  /* One step back per level: KPI → person → team → all teams. */
+  var cb = e.target.closest('[data-crumb]');
+  if (cb) {
+    var to = cb.dataset.crumb;
+    if (to === 'teams') { S.team = null; S.employee = null; }
+    if (to === 'team') S.employee = null;
+    S.detail = null; render(); scrollTo(0, 0); return;
+  }
   var k = e.target.closest('[data-kpi]');
   if (k) {
-    var p = k.dataset.kpi.split('::');
-    var owner = Sel.members().filter(function (m) { return m.employee_id === p[0]; })[0];
-    S.detail = owner ? owner.kpis.filter(function (x) { return x.kra === p[1] && x.kpi === p[2]; })[0] : null;
+    var owner = Sel.employee();
+    S.detail = owner ? (owner.kpis || [])[Number(k.dataset.kpi)] : null;
     renderModal(); return;
   }
   if (e.target.closest('[data-close]') || e.target.id === 'scrim') { S.detail = null; renderModal(); return; }
-  if (e.target.closest('[data-more]')) { S.showFilters = !S.showFilters; if (!S.showFilters) { S.kra = ''; S.kpi = ''; } render(); return; }
   var d = e.target.closest('[data-demo]');
   if (d) {
     var on = d.dataset.demo === 'on';
