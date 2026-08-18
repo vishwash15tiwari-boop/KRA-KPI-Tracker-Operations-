@@ -434,12 +434,19 @@ function mTab_(name) {
    * validation rules". Provisioning owns the shape of these tabs, so it clears
    * first and re-applies afterwards against the CURRENT schema. */
   sh.getRange(1, 1, sh.getMaxRows(), sh.getMaxColumns()).clearDataValidations();
+  /* A tab that already exists may be narrower than the schema - someone tidied
+   * it, or an older version had fewer columns - and getRange past the edge
+   * throws rather than growing the sheet. Widen before writing. */
+  if (sh.getMaxColumns() < h.length) sh.insertColumnsAfter(sh.getMaxColumns(), h.length - sh.getMaxColumns());
   sh.getRange(1, 1, 1, h.length).setValues([h]).setFontWeight('bold').setBackground('#F2F0E8');
   sh.setFrozenRows(1);
   return sh;
 }
 function mWrite_(name, rows) {
   var sh = mTab_(name), h = M_SCHEMA[name];
+  /* Same for height: 322 threshold rows do not fit a sheet trimmed to 50. */
+  var need = rows.length + 1;
+  if (sh.getMaxRows() < need) sh.insertRowsAfter(sh.getMaxRows(), need - sh.getMaxRows());
   if (sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, h.length).clearContent();
   if (rows.length) sh.getRange(2, 1, rows.length, h.length).setValues(rows);
   return rows.length;
@@ -453,9 +460,14 @@ function mValidate_(name, colName, list) {
   if (!col) return;
   var sh = bkSS_().getSheetByName(name);
   if (!sh) return;
+  if (!list || !list.length) return;
   var rule = SpreadsheetApp.newDataValidation()
     .requireValueInList(list, true).setAllowInvalid(false).build();
-  sh.getRange(2, col, Math.max(sh.getMaxRows() - 1, 200), 1).setDataValidation(rule);
+  /* Never ask for more rows than the sheet has. Math.max(maxRows-1, 200) reads
+   * as a sensible floor but reaches past the last row on any sheet shorter
+   * than 201, and getRange throws rather than clamping. */
+  var rows = sh.getMaxRows() - 1;
+  if (rows > 0) sh.getRange(2, col, rows, 1).setDataValidation(rule);
 }
 /* Reads are non-fatal. An unreachable or unprovisioned sheet means "no period
  * data yet", not a broken app - the master is in code, so structure renders
