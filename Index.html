@@ -136,46 +136,89 @@ b,strong{font-weight:var(--fw-b)}
 .branch .arm:only-child::before{display:none}
 .branch .arm .stem{width:1px;height:var(--s5);background:var(--line-2);flex:0 0 auto}
 
+/* Two fixed rows: identity on top, performance pinned to the bottom. Because
+   the identity block reserves exactly two lines for the role, the score, the
+   stage word and the bar land on the same baseline in every card in the row —
+   a name that wraps can never push one card's bar out of line with its
+   neighbours'. */
 .node{width:var(--nodew);background:var(--card);border:1px solid var(--line);
   border-radius:var(--r-card);padding:var(--s4);text-align:left;cursor:pointer;
-  display:flex;flex-direction:column;gap:var(--s4);
+  display:grid;grid-template-rows:auto 1fr;gap:var(--s4);
   transition:border-color var(--d1) var(--ease),box-shadow var(--d1) var(--ease)}
 .node:hover{border-color:var(--line-2);box-shadow:var(--e2)}
 .node:active{background:var(--surface)}
 /* The lead is one step larger — the only size difference in the chart, and it
    carries the hierarchy without a heavier border or a colour. */
 .node.lead{width:calc(var(--nodew) + 28px);box-shadow:var(--e1)}
-.node .nm{display:block;font-size:var(--fs-sm);font-weight:var(--fw-b);line-height:1.3;
+.node .nh,.node .nf{display:block;min-width:0}
+.node .nf{align-self:end}
+.node .nm{display:block;font-size:var(--fs-sm);font-weight:var(--fw-b);line-height:17px;height:17px;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.node .sc{display:block}
-.node > span{display:block}
-/* the role is clamped so no node can grow taller than its siblings */
-.node .rl{font-size:var(--fs-2xs);color:var(--muted);line-height:1.35;margin-top:2px;
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:30px}
+/* exactly two lines are reserved, so no node can grow taller than its siblings */
+.node .rl{display:-webkit-box;font-size:var(--fs-2xs);color:var(--muted);line-height:1.35;
+  margin-top:3px;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;height:30px}
+/* score and stage share a baseline; the score is the anchor and the word is
+   set small and quiet beside it, so the figure is still what you read first */
+.node .sr{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s2)}
 .node .sc{font-size:var(--fs-xl);font-weight:var(--fw-b);letter-spacing:-.03em;line-height:1;
-  font-variant-numeric:tabular-nums}
+  font-variant-numeric:tabular-nums;white-space:nowrap}
 .node.lead .sc{font-size:var(--fs-xxl)}
 .node .sc em{font-style:normal;font-size:var(--fs-xs);color:var(--faint);font-weight:var(--fw-m)}
+.node .stg{font-size:var(--fs-2xs);font-weight:var(--fw-b);white-space:nowrap;letter-spacing:.01em}
+.node .stg.good{color:var(--good)}
+.node .stg.warn{color:var(--warn)}
+.node .stg.bad{color:var(--bad)}
+.node .stg.none{color:var(--faint);font-weight:var(--fw-m)}
+
+/* The bar itself. Notches are cut in the card's own colour so they read as
+   breaks in the fill rather than marks on top of it. */
+.pb{display:block;position:relative;height:6px;margin-top:var(--s3);
+  background:var(--well);border-radius:var(--r-pill);overflow:hidden}
+.pb i{position:absolute;left:0;top:0;height:100%;border-radius:var(--r-pill);
+  background:var(--ink);transition:width var(--d2) var(--ease)}
+.pb i.good{background:var(--good)}
+.pb i.warn{background:var(--warn)}
+.pb i.bad{background:var(--bad)}
+.pb i.none{background:var(--line-2)}
+.pb u{position:absolute;top:0;width:1.5px;height:100%;background:var(--card);
+  transform:translateX(-.75px)}
+.gnode .pb u{background:var(--surface)}
+.gnode.open .pb u,.gnode:hover .pb u{background:var(--card)}
 
 
 /* A function tier, not a person. It is visibly a different kind of object —
    flatter, on the sunken surface, with a chevron — so no one mistakes it for
    someone they can open a profile on. */
+/* Same two-row skeleton as a person node, so the two kinds of card align to
+   the same internal grid and their bars sit at the same height when they share
+   a row. */
 .gnode{width:var(--nodew);background:var(--surface);border:1px solid var(--line);
-  border-radius:var(--r-card);padding:var(--s3) var(--s4);text-align:left;cursor:pointer;
-  display:grid;grid-template-columns:1fr auto;align-items:center;gap:2px var(--s3);
+  border-radius:var(--r-card);padding:var(--s4);text-align:left;cursor:pointer;
+  display:grid;grid-template-columns:1fr auto;grid-template-rows:auto 1fr;
+  gap:var(--s4) var(--s3);
   transition:border-color var(--d1) var(--ease),background var(--d1) var(--ease)}
 .gnode:hover{border-color:var(--line-2);background:var(--card)}
 .gnode.open{background:var(--card);border-color:var(--line-2)}
-.gnode .gt{grid-column:1;font-size:var(--fs-2xs);font-weight:var(--fw-b);letter-spacing:.1em;
-  text-transform:uppercase;color:var(--ink)}
-.gnode .gm{grid-column:1;font-size:var(--fs-2xs);color:var(--muted)}
-.gnode .gs{grid-column:1;font-size:var(--fs-lg);font-weight:var(--fw-b);letter-spacing:-.02em;
-  font-variant-numeric:tabular-nums;margin-top:var(--s1)}
-.gnode .gs em{font-style:normal;font-size:var(--fs-2xs);color:var(--faint);font-weight:var(--fw-m)}
-.gnode .gc{grid-column:2;grid-row:1/4;font-size:var(--fs-lg);color:var(--faint);
-  width:20px;text-align:center;line-height:1}
-.gnode:hover .gc{color:var(--ink)}
+.gnode .gh{grid-column:1;grid-row:1;min-width:0}
+.gnode .gt{display:block;font-size:var(--fs-2xs);font-weight:var(--fw-b);letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink);line-height:17px;height:17px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* one line here against the person card's two, plus the chevron row, brings
+   both card types to the same height */
+.gnode .gm{display:block;font-size:var(--fs-2xs);color:var(--muted);margin-top:3px;height:30px}
+.gnode .gc{grid-column:2;grid-row:1;font-size:var(--fs-lg);color:var(--faint);
+  width:18px;text-align:center;line-height:1.2}
+.gnode:hover .gc,.gnode.open .gc{color:var(--ink)}
+.gnode .gf{grid-column:1/-1;grid-row:2;align-self:end;min-width:0}
+.gnode .sr{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s2)}
+.gnode .gs{font-size:var(--fs-xl);font-weight:var(--fw-b);letter-spacing:-.03em;line-height:1;
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+.gnode .gs em{font-style:normal;font-size:var(--fs-xs);color:var(--faint);font-weight:var(--fw-m)}
+.gnode .stg{font-size:var(--fs-2xs);font-weight:var(--fw-b);white-space:nowrap}
+.gnode .stg.good{color:var(--good)}
+.gnode .stg.warn{color:var(--warn)}
+.gnode .stg.bad{color:var(--bad)}
+.gnode .stg.none{color:var(--faint);font-weight:var(--fw-m)}
 @media(max-width:760px){.gnode{width:100%;max-width:300px}}
 /* --------------------------------------------------------------- PROFILE --
    One dominant figure, three stats, then the KRAs that explain it. */
@@ -378,9 +421,14 @@ var Demo = {
   seed: function (s) { var h = 0; for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) & 0x7fffffff; return h; },
   apply: function (model) {
     var c = JSON.parse(JSON.stringify(model));
+    /* The period is part of the seed, so each month produces its own targets
+       and actuals and the month filter visibly changes the numbers. Without it
+       every period would render identically and the control would look broken. */
+    var period = S.month || c.month || (c.months && c.months[c.months.length - 1]) || '';
+    c.month = period;
     c.scorecards.forEach(function (sc) {
       sc.kpis.forEach(function (k) {
-        var seed = Demo.seed(sc.employee_id + k.kra + k.kpi), lower = k.direction === 'LOWER_IS_BETTER';
+        var seed = Demo.seed(period + sc.employee_id + k.kra + k.kpi), lower = k.direction === 'LOWER_IS_BETTER';
         var target = lower ? 5 : k.unit === 'CR' ? 1 + (seed % 900) / 100
                    : k.unit === 'PERCENT' ? 90 + (seed % 10) : 2 + (seed % 12);
         var ratio = 0.62 + ((seed >> 3) % 55) / 100;
@@ -397,7 +445,7 @@ var Demo = {
       sc.kpis.forEach(function (k) { e += k.weighted_score; m += k.weightage; });
       sc.measured_weightage = m; sc.overall_score = m ? Math.round(e * 10) / 10 : null;
     });
-    c.months = (c.months && c.months.length) ? c.months : ['2026-07', '2026-08'];
+    c.months = (c.months && c.months.length) ? c.months : ['2026-06', '2026-07', '2026-08'];
     c.month = c.month || c.months[c.months.length - 1];
     return c;
   }
@@ -463,7 +511,7 @@ var Seed = {
     return {
       ok: true,
       placeholder: true,
-      months: ['2026-07', '2026-08'],
+      months: ['2026-06', '2026-07', '2026-08'],
       month: '2026-08',
       teams: Seed.TEAMS.map(function (t) {
         return { team_id: t.team_id, team_name: t.team_name, team_lead: t.team_lead };
@@ -577,6 +625,18 @@ function statusOf(k) {
   if (k.achievement >= 90) return { c: 'good', t: 'On track' };
   if (k.achievement >= 75) return { c: 'warn', t: 'Near target' };
   return { c: 'bad', t: 'Below target' };
+}
+/* The stage a score sits at, on the same band boundaries the progress bar
+   notches: past 90 is on target, past 75 is near it, below that is behind.
+   One function, so the word beside a bar and the colour of its fill can never
+   disagree. */
+function scoreStatus(v) {
+  if (v == null) return { c: 'none', t: 'Not measured' };
+  if (v >= 100) return { c: 'good', t: 'Exceeding' };
+  if (v >= 90) return { c: 'good', t: 'On target' };
+  if (v >= 75) return { c: 'warn', t: 'Near target' };
+  if (v >= 60) return { c: 'bad', t: 'Behind' };
+  return { c: 'bad', t: 'Well behind' };
 }
 function monthLabel(m) {
   var p = String(m || '').split('-');
@@ -692,25 +752,47 @@ function buildTree(members) {
 
 /* Name, role, score. Enough to answer "who is performing well" — and nothing
    that begins to answer "why", which belongs inside the profile. */
+/* The bar is the score, drawn. The notches sit on the band boundaries the
+   scoring model already uses, so the fill's position against them says which
+   stage the person is at without a legend: past the third notch is on target,
+   short of the first is well behind. Notches are cut out of the fill rather
+   than laid over it, so they read at any width and in greyscale. */
+function ProgressBar(v, cls) {
+  var pct = v == null ? 0 : Math.max(0, Math.min(100, v));
+  return '<span class="pb" role="img" aria-label="' +
+    (v == null ? 'Not measured' : show(v) + ' out of 100') + '">' +
+    '<i class="' + cls + '" style="width:' + pct.toFixed(1) + '%"></i>' +
+    '<u style="left:60%"></u><u style="left:75%"></u><u style="left:90%"></u>' +
+    '</span>';
+}
+
 function Node(m, isLead) {
+  var st = scoreStatus(m.overall_score);
   return '<button class="node' + (isLead ? ' lead' : '') + '" data-emp="' + esc(m.employee_id) + '">' +
-    '<span><span class="nm">' + esc(m.employee_name) + '</span>' +
+    '<span class="nh"><span class="nm">' + esc(m.employee_name) + '</span>' +
     '<span class="rl">' + esc(m.designation || '') + '</span></span>' +
-    '<span class="sc">' + show(m.overall_score) + '<em> / 100</em></span>' +
-    '</button>';
+    '<span class="nf">' +
+      '<span class="sr"><span class="sc">' + show(m.overall_score) + '<em> / 100</em></span>' +
+      '<span class="stg ' + st.c + '">' + esc(st.t) + '</span></span>' +
+      ProgressBar(m.overall_score, st.c) +
+    '</span></button>';
 }
 
 /* A function, not a person: the name, how many people sit under it, and their
    mean score. It opens by expanding rather than by going anywhere, so the
    chevron is the whole affordance. */
 function GroupNode(node) {
-  var open = !!S.open[node.group];
-  return '<button class="gnode' + (open ? ' open' : '') + '" data-group="' + esc(node.group) + '">' +
-    '<span class="gt">' + esc(node.group) + '</span>' +
-    '<span class="gm">' + plural(node.count, 'person').replace('persons', 'people') + '</span>' +
-    '<span class="gs">' + show(node.score) + '<em> / 100</em></span>' +
+  var open = !!S.open[node.group], st = scoreStatus(node.score);
+  return '<button class="gnode' + (open ? ' open' : '') + '" data-group="' + esc(node.group) + '"' +
+    ' aria-expanded="' + (open ? 'true' : 'false') + '">' +
+    '<span class="gh"><span class="gt">' + esc(node.group) + '</span>' +
+    '<span class="gm">' + plural(node.count, 'person').replace('persons', 'people') + '</span></span>' +
     '<span class="gc" aria-hidden="true">' + (open ? '−' : '+') + '</span>' +
-    '</button>';
+    '<span class="gf"><span class="sr">' +
+      '<span class="gs">' + show(node.score) + '<em> / 100</em></span>' +
+      '<span class="stg ' + st.c + '">' + esc(st.t) + '</span></span>' +
+      ProgressBar(node.score, st.c) +
+    '</span></button>';
 }
 
 function renderNode(node) {
@@ -986,11 +1068,14 @@ document.addEventListener('click', function (e) {
 });
 document.addEventListener('change', function (e) {
   var id = e.target.id;
-  if (id === 'f-month') { S.month = e.target.value; S.detail = null; load(); }
-  else if (id === 'f-region') { S.region = e.target.value; S.employee = null; S.detail = null; render(); }
-  else if (id === 'f-emp') { S.employee = e.target.value || null; S.detail = null; render(); }
-  else if (id === 'f-kra') { S.kra = e.target.value; S.kpi = ''; render(); }
-  else if (id === 'f-kpi') { S.kpi = e.target.value; render(); }
+  /* The period is global: it survives every level, so changing it on a profile
+   * keeps you on that profile and simply restates it for the new month. Where
+   * a backend is attached the month is refetched; on the placeholder model it
+   * is re-derived in place. Either way nothing about where you are changes. */
+  if (id === 'f-month') {
+    S.month = e.target.value; S.detail = null; S._demo = null;
+    if (S.model && S.model.placeholder) { render(); } else { load(); }
+  }
 });
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape' && S.detail) { S.detail = null; renderModal(); }
