@@ -6,7 +6,7 @@
 <title>KRA / KPI Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 /* ============================================================================
    KRA / KPI Tracker
@@ -46,7 +46,7 @@
   --e3:0 24px 56px -20px rgba(24,24,27,.24);
 
   --ease:cubic-bezier(.2,.6,.35,1);--d1:130ms;--d2:220ms;
-  --maxw:1000px;--nodew:190px;
+  --maxw:1080px;--nodew:190px;
 }
 *{box-sizing:border-box}html,body{margin:0;padding:0}
 body{font-family:var(--font);background:var(--bg);color:var(--ink);font-size:var(--fs-sm);
@@ -350,11 +350,250 @@ b,strong{font-weight:var(--fw-b)}
 }
 @media(pointer:coarse){.tb,.btn,.sel{min-height:40px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* ============================================================================
+   RECYKAL BRAND
+   ----------------------------------------------------------------------------
+   The structure above is right; what it was missing was the brand. Everything
+   here comes from the official guidelines: Poppins across the family, Bright
+   Blue #005DFF as the single interactive accent, the blue→purple gradient on
+   the marks that carry identity, and Duke/Bright Green for success — green is
+   on-brand for Recykal, which is why the "achieved" state is the one status
+   colour that belongs to the palette rather than sitting outside it.
+
+   Amber and red are not in the guidelines. They stay, because a performance
+   system has to be able to say "behind", but they are held back to the muted
+   functional pair the guide allows for alerts and never used decoratively.
+   ============================================================================ */
+:root{
+  --font:'Poppins','Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+
+  /* Brand */
+  --brand:#005DFF;            /* Bright Blue — hero, the one interactive accent */
+  --brand-ink:#024C8A;        /* Midnight Blue — pressed, and accent text on light */
+  --brand-deep:#0000AF;       /* Blue — the deep end of the ramp */
+  --brand-2:#8460D4;          /* Medium Purple — closes the gradient */
+  --peri:#567DE8;             /* Periwinkle — informational, never performance */
+  --brand-soft:#EAF1FF;
+  --brand-line:#CFE0FF;
+  --grad:linear-gradient(135deg,#005DFF,#8460D4);
+  --grad-deep:linear-gradient(135deg,#024C8A,#0000AF);
+
+  /* Neutrals, tinted toward the brand blue so nothing reads as flat grey */
+  --bg:#F6F8FC;--card:#FFFFFF;--surface:#EFF3FA;--well:#DFE7F3;
+  --ink:#0B1B36;--ink-2:#3A4A66;--muted:#66748C;--faint:#93A0B5;
+  --line:#E3E9F3;--line-2:#CFD9E8;--line-soft:#EEF2F9;
+
+  /* Status. Green is the brand's own; amber and red are functional only. */
+  --good:#049769;--good-2:#1DC797;--good-soft:#E3F5EE;
+  --warn:#B0740E;--warn-soft:#FBF1DE;
+  --bad:#C0392F;--bad-soft:#FAEAE8;
+
+  /* Elevation, tinted blue so shadows belong to the same light as the ground */
+  --e1:0 1px 2px rgba(11,27,54,.05);
+  --e2:0 1px 3px rgba(11,27,54,.06),0 14px 32px -18px rgba(11,27,54,.22);
+  --e3:0 28px 60px -22px rgba(11,27,54,.30);
+}
+
+/* Poppins is geometric and sets a touch wider than Inter, so the tracking that
+   suited Inter has to come back a step or headings start to look loose. */
+body{letter-spacing:-.015em}
+.page-t,.prof .pid h1,.m-h h2{letter-spacing:-.035em}
+.node .sc,.gnode .gs,.tcard .tv .v,.ring .lbl b{letter-spacing:-.04em}
+
+/* ---------------------------------------------------------------- CHROME -- */
+.top{background:rgba(246,248,252,.86);border-bottom:1px solid var(--line)}
+.mark{color:var(--brand);font-weight:700;letter-spacing:.04em}
+.mark:hover{color:var(--brand-ink)}
+.tb{font-weight:500}
+.tb:hover{color:var(--brand)}
+.tb.on{color:var(--brand);font-weight:600}
+.tb.on::after{background:var(--brand);height:2px;border-radius:2px}
+.sel:hover:not(:disabled),.sel:focus{border-color:var(--brand)}
+.sel:focus{box-shadow:0 0 0 3px var(--brand-soft)}
+.back:hover{color:var(--brand)}
+*:focus-visible{outline-color:var(--brand)}
+.demo{background:var(--good-soft);border-bottom-color:var(--good-soft)}
+.demo .in{color:var(--good)}
+
+/* ----------------------------------------------------------------- TEAMS --
+   A team card carries the brand mark: the four-petal pinwheel from the guide,
+   drawn in the four brand hues. It is the one piece of ornament in the
+   product, and it earns its place by making the landing screen unmistakably
+   Recykal at a glance. */
+.tcard{border-color:var(--line);box-shadow:var(--e1);position:relative;overflow:hidden}
+.tcard::after{content:"";position:absolute;right:-28px;top:-28px;width:104px;height:104px;
+  border-radius:50%;background:var(--brand-soft);opacity:.55;pointer-events:none;
+  transition:opacity var(--d2) var(--ease),transform var(--d2) var(--ease)}
+.tcard:hover{border-color:var(--brand-line);box-shadow:var(--e2)}
+.tcard:hover::after{opacity:.9;transform:scale(1.08)}
+.tcard .tt{color:var(--ink)}
+.tcard .tv .v{color:var(--brand)}
+.tcard > *{position:relative;z-index:1}
+
+/* ------------------------------------------------------------- TEAM FLOW --
+   The lead is the identity node, so it takes the brand: a gradient rule across
+   its top edge. Everyone else stays white, which keeps the chart calm and lets
+   one card carry the hierarchy without a second border weight or a tint. */
+.node{box-shadow:var(--e1);border-color:var(--line)}
+.node:hover{border-color:var(--brand-line);box-shadow:var(--e2)}
+.node.lead{position:relative;overflow:hidden;box-shadow:var(--e2)}
+.node.lead::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:var(--grad)}
+.node .sc{color:var(--ink)}
+.node.lead .sc{color:var(--brand)}
+.gnode{border-color:var(--line);background:var(--surface)}
+.gnode:hover,.gnode.open{border-color:var(--brand-line);background:var(--card)}
+.gnode.open .gc,.gnode:hover .gc{color:var(--brand)}
+.gnode .gt{color:var(--brand-ink)}
+.drop,.branch .arm::before,.branch .arm .stem{background:var(--line-2)}
+
+/* Status words and bar fills, on the brand ramp where the brand has one. */
+.stg.good,.krow .ach.good,.st.good{color:var(--good)}
+.stg.warn,.krow .ach.warn,.st.warn{color:var(--warn)}
+.stg.bad,.krow .ach.bad,.st.bad{color:var(--bad)}
+.pb{background:var(--well);height:6px}
+.pb i{background:var(--brand)}
+.pb i.good{background:linear-gradient(90deg,var(--good),var(--good-2))}
+.pb i.warn{background:var(--warn)}
+.pb i.bad{background:var(--bad)}
+.kbar i.good{background:linear-gradient(90deg,var(--good),var(--good-2))}
+
+/* --------------------------------------------------------------- PROFILE --
+   The ring is the one place the full brand gradient appears at size. A flat
+   stroke cannot take a gradient, so the arc is painted through an SVG gradient
+   and the track sits behind it in the well tone. */
+.prof{border-bottom:1px solid var(--line)}
+.ring .tr{stroke:var(--well)}
+.ring .fg{stroke:url(#brandArc)}
+.ring .lbl b{color:var(--brand)}
+.pstat .si .v{color:var(--ink)}
+.kra-h .t{color:var(--brand-ink)}
+.kra-h .ln{background:var(--line)}
+.krow{border-bottom-color:var(--line-soft)}
+.krow:hover{background:var(--card);box-shadow:var(--e1)}
+.krow .kn{color:var(--ink)}
+
+/* ---------------------------------------------------------------- DRAWER -- */
+.modal{border-left:1px solid var(--line);box-shadow:var(--e3)}
+.m-h h2{color:var(--ink)}
+.m-h .sub{color:var(--brand-ink)}
+.sect-t{color:var(--brand-ink)}
+.kv{border-top-color:var(--line)}
+.m-perf .n{color:var(--brand)}
+.m-perf .n.good{color:var(--good)}
+.m-perf .n.warn{color:var(--warn)}
+.m-perf .n.bad{color:var(--bad)}
+.scrim{background:rgba(11,27,54,.36)}
+
+/* ----------------------------------------------------------------- STATE -- */
+.btn{background:var(--brand);border-color:var(--brand)}
+.btn:hover{background:var(--brand-ink);border-color:var(--brand-ink);opacity:1}
+.btn.ghost{background:var(--card);border-color:var(--line-2);color:var(--ink-2)}
+.btn.ghost:hover{border-color:var(--brand);color:var(--brand);background:var(--card)}
+
+/* ============================================================================
+   LOGO, RHYTHM AND FIT
+   ----------------------------------------------------------------------------
+   The mark is the four-petal pinwheel from the guidelines, in the four brand
+   hues at 0/90/180/270°. It sits with the product name so the top-left corner
+   identifies the product and returns you home in one control.
+
+   The rest of this block is about fit: the screens were carrying more air than
+   they earned. Whitespace is worth having when it separates things that mean
+   different things — it is dead weight when it is simply left over. Every
+   value below was measured against content rather than chosen for looks.
+   ============================================================================ */
+.mark{display:inline-flex;align-items:center;gap:9px;line-height:1}
+.mark .logo{flex:0 0 auto;display:grid;place-items:center}
+.mark .logo svg{width:22px;height:22px;display:block}
+.mark .wm{display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left}
+.mark .wm{font-size:13px;font-weight:700;color:var(--ink);letter-spacing:-.02em}
+.mark .wm b{font-size:9.5px;font-weight:600;color:var(--brand);letter-spacing:.1em;
+  text-transform:uppercase}
+.mark:hover .wm{color:var(--brand)}
+.nav{min-height:60px;gap:var(--s5)}
+
+/* --- Vertical rhythm ------------------------------------------------------
+   Was 56px above the title and 56px below the subtitle, which pushed the first
+   real content most of a screen down. A title needs air above it, not a void. */
+.wrap{padding-top:var(--s6);padding-bottom:var(--s7)}
+.page-t{font-size:26px;margin-bottom:var(--s1)}
+.page-s{font-size:var(--fs-xs);margin-bottom:var(--s5)}
+.back{margin-bottom:var(--s3)}
+
+/* --- Team grid ------------------------------------------------------------
+   Five teams into a three-column grid always left one slot empty and a band of
+   dead space beneath. A narrower minimum lets the row find its own count, and
+   the cards carry their content at a height that fits it. */
+/* Five teams, one row. An auto-fit grid put four across and left the fifth
+   stranded on a row of its own with a band of dead space beside it; naming the
+   count removes both. Below the width where five still read, it steps to three
+   and then two rather than drifting. */
+.tgrid{grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--s3)}
+@media(max-width:1080px){.tgrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:720px){.tgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:440px){.tgrid{grid-template-columns:minmax(0,1fr)}}
+.tcard{min-height:0;padding:var(--s4);gap:var(--s4)}
+.tcard::after{width:88px;height:88px;right:-24px;top:-24px}
+/* Two lines are reserved for the name whether or not it needs them, so a team
+   whose name wraps cannot stand taller than the four beside it. */
+.tcard .tt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;line-height:1.35;height:30px;font-size:10.5px;letter-spacing:.085em}
+.tcard .tm{font-size:var(--fs-2xs);line-height:1.4;height:17px;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
+.tcard .tv .l{font-size:10px}
+.tcard .tv .v{font-size:25px}
+
+/* --- Flow -----------------------------------------------------------------
+   The chart began 40px below a heading that already had 24px under it. One
+   gap, not two. */
+.flow{margin-top:var(--s5)}
+.lvl{gap:var(--s3)}
+.drop{height:20px}
+.branch .arm .stem{height:20px}
+.node,.gnode{padding:var(--s3) var(--s4)}
+.node{gap:var(--s3)}
+.gnode{gap:var(--s3) var(--s3)}
+
+/* --- Profile --------------------------------------------------------------
+   The identity block and the ring belong on one line at any comfortable width;
+   the stats sit between them rather than below, which removes a whole band of
+   empty space on the left. */
+.prof{margin-bottom:var(--s5);padding-bottom:var(--s5);gap:var(--s5);align-items:center}
+.prof .pid h1{font-size:26px}
+.prof .pid .meta{margin-top:var(--s1)}
+.prof .pr{gap:var(--s6)}
+.ring{width:96px;height:96px}
+.ring .lbl b{font-size:24px}
+.pstat{gap:var(--s3)}
+.pstat .si{min-width:172px}
+.pstat .si .v{font-size:var(--fs-md)}
+.kra-h{margin:var(--s5) 0 0}
+.kra-h:first-of-type{margin-top:var(--s4)}
+.krow{padding:var(--s3)}
+.krow .r2{margin-top:6px}
+.kbar,.krow .kbar{margin-top:var(--s2)}
+.hint{margin-top:var(--s5)}
+
+/* --- Drawer --------------------------------------------------------------- */
+.m-h{padding:var(--s5) var(--s5) var(--s3)}
+.m-b{padding:0 var(--s5) var(--s6)}
+.sect-t{margin:var(--s5) 0 var(--s2);padding-top:var(--s3)}
+
+@media(max-width:760px){
+  .wrap{padding-top:var(--s5)}
+  .mark .wm{font-size:12px}
+  .tgrid{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+  .prof{align-items:flex-start}
+}
 </style>
 </head>
 <body>
 <header class="top"><div class="nav">
-  <button class="mark" data-crumb="teams">KRA / KPI Tracker</button>
+  <button class="mark" data-crumb="teams" aria-label="Recykal KRA / KPI Tracker — all teams">
+    <span class="logo" aria-hidden="true"><svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><g transform="rotate(6 20 20)"><path d="M20 3.4C27.4 8.2 26.2 15.8 20 20 14.6 15.6 14.2 8.6 20 3.4Z" fill="#005DFF"/><path d="M20 3.4C27.4 8.2 26.2 15.8 20 20 14.6 15.6 14.2 8.6 20 3.4Z" transform="rotate(90 20 20)" fill="#567DE8"/><path d="M20 3.4C27.4 8.2 26.2 15.8 20 20 14.6 15.6 14.2 8.6 20 3.4Z" transform="rotate(180 20 20)" fill="#1DC797"/><path d="M20 3.4C27.4 8.2 26.2 15.8 20 20 14.6 15.6 14.2 8.6 20 3.4Z" transform="rotate(270 20 20)" fill="#8460D4"/></g></svg></span>
+    <span class="wm">Recykal<b>KRA / KPI</b></span>
+  </button>
   <nav class="teams" id="teams"></nav>
   <span id="months"></span>
 </div></header>
@@ -841,7 +1080,13 @@ function TeamScreen() {
 function Ring(v) {
   var pct = v == null ? 0 : Math.max(0, Math.min(100, v));
   var r = 50, c = 2 * Math.PI * r;
+  /* The arc carries the brand gradient, so it needs a paint server rather than
+     a flat stroke. The id is stable and the defs ride with the ring, so the
+     gradient exists wherever the ring is rendered. */
   return '<div class="ring"><svg viewBox="0 0 112 112">' +
+    '<defs><linearGradient id="brandArc" x1="0" y1="0" x2="1" y2="1">' +
+    '<stop offset="0" stop-color="#005DFF"/><stop offset="1" stop-color="#8460D4"/>' +
+    '</linearGradient></defs>' +
     '<circle class="tr" cx="56" cy="56" r="' + r + '"></circle>' +
     '<circle class="fg" cx="56" cy="56" r="' + r + '" stroke-dasharray="' + c.toFixed(1) +
       '" stroke-dashoffset="' + (c - c * pct / 100).toFixed(1) + '"></circle></svg>' +
