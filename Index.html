@@ -6,182 +6,262 @@
 <title>KRA / KPI Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 /* ============================================================================
-   A scorecard, not a dashboard.
-   Nine things earn a place on screen, in this order: team, employee, overall
-   score, KRA, KPI, weightage, target, actual, achievement, weighted score.
-   Anything that is not one of those was removed.
+   KRA / KPI — visual system
+   ----------------------------------------------------------------------------
+   A scorecard, not a dashboard: team, employee, overall score, KRA, KPI,
+   weightage, target, actual, achievement, weighted score. Nothing else earns a
+   place. What changed here is only how those things look and read — every class
+   name, every element and every behaviour is exactly as it was.
+
+   The language: a cool blue-white ground, white planes lifted on soft
+   blue-tinted shadow, one blue accent for identity and interaction, and a
+   restrained amber/green/red ramp that means performance and nothing else.
    ============================================================================ */
 :root{
-  --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
-  --bg:#FBFBFA;--card:#FFFFFF;--surface:#F5F5F4;--well:#E9E9E6;
-  --ink:#18181B;--ink-2:#3F3F46;--muted:#71717A;--faint:#A1A1AA;
-  --line:#E8E8E4;--line-2:#DBDBD6;--line-soft:#F2F2EF;
-  --accent:#18181B;--accent-soft:#EFEFEC;
-  --good:#3F6B47;--warn:#8A6320;--bad:#A3453A;
-  --fs-xxl:34px;--fs-xl:22px;--fs-lg:16px;--fs-md:14px;--fs-sm:13px;--fs-xs:12px;--fs-2xs:11px;
-  --fw-n:400;--fw-m:500;--fw-b:600;
-  --r-ctl:5px;--r-card:8px;
+  --font:'Plus Jakarta Sans','Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+
+  /* Ground — four surfaces. The page is coolest; a card is the only thing that
+     reads as raised, so content always advances toward the reader. */
+  --bg:#EFF3FA;--card:#FFFFFF;--surface:#F5F8FD;--well:#E3EAF5;
+
+  /* Ink — four steps, navy-black rather than neutral so text belongs to the
+     same light as the ground. */
+  --ink:#0F1B2E;--ink-2:#3B4A63;--muted:#5B6B85;--faint:#8496AF;
+
+  /* Line — borders are the last resort for separation; space does it first. */
+  --line:#E2E9F3;--line-2:#CFDAEA;--line-soft:#EEF3FA;
+
+  /* Accent — one blue. It means interactive and it means identity. It never
+     signals performance: the ramp below owns that job alone. */
+  --accent:#0D4EA6;--accent-2:#1668E3;--accent-ink:#093A7C;--accent-soft:#E6EFFC;
+  --navy:#0A2A5E;
+  --grad-blue:linear-gradient(145deg,#1668E3,#0A3E86);
+  --grad-navy:linear-gradient(145deg,#124A8F,#0A2A5E);
+  --grad-good:linear-gradient(145deg,#1FBE85,#0E8256);
+  --grad-bad:linear-gradient(145deg,#E8695E,#C23B30);
+
+  /* Performance ramp — semantic only, and always paired with a word. */
+  --good:#0E7A50;--good-soft:#E4F5EE;
+  --warn:#A66C10;--warn-soft:#FBF0DC;--warn-bar:#E5A032;
+  --bad:#A83428;--bad-soft:#FBE9E7;
+
+  /* Type — seven rungs, nothing between them. */
+  --fs-xxl:38px;--fs-xl:24px;--fs-lg:17px;--fs-md:14px;--fs-sm:13px;--fs-xs:12px;--fs-2xs:11px;
+  --fw-n:400;--fw-m:500;--fw-b:600;--fw-x:700;
+
+  /* Radius — four, each bound to a size of object. */
+  --r-ctl:9px;--r-card:18px;--r-lg:24px;--r-pill:999px;
+
+  /* 8px space foundation; 4 and 12 are the declared exceptions. */
   --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:24px;--s6:32px;--s7:40px;--s8:56px;
-  --ease:cubic-bezier(.2,.6,.35,1);--d1:110ms;--maxw:1080px;
+
+  /* Elevation — blue-tinted and faint. Depth is for things that float. */
+  --e1:0 1px 2px rgba(15,27,46,.04);
+  --e2:0 2px 6px rgba(15,27,46,.05),0 18px 40px -22px rgba(15,27,46,.20);
+  --e3:0 32px 64px -24px rgba(15,27,46,.28);
+
+  --ease:cubic-bezier(.2,.6,.35,1);--d1:130ms;--d2:200ms;--maxw:1160px;
 }
 *{box-sizing:border-box}html,body{margin:0;padding:0}
 body{font-family:var(--font);background:var(--bg);color:var(--ink);font-size:var(--fs-sm);
-  line-height:1.5;-webkit-font-smoothing:antialiased;font-feature-settings:'tnum' 1;letter-spacing:-.011em}
+  line-height:1.5;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  font-feature-settings:'tnum' 1;letter-spacing:-.008em}
 button,select{font-family:inherit;cursor:pointer}
+b,strong{font-weight:var(--fw-b)}
 *:focus{outline:none}
 *:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-ctl)}
+.btn:focus-visible,.tb:focus-visible,.sel:focus-visible,.more:focus-visible{
+  box-shadow:0 0 0 4px var(--accent-soft)}
 
-/* ------------------------------------------------------------------ NAV -- */
-.top{position:sticky;top:0;z-index:30;background:var(--bg);border-bottom:1px solid var(--line)}
-.nav{max-width:var(--maxw);margin:0 auto;padding:0 var(--s5);height:50px;
+/* ------------------------------------------------------------------ NAV --
+   The chrome takes the page ground so the content plane is the only thing that
+   lifts. The active team is the one solid shape in the bar. */
+.top{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--bg) 86%,transparent);
+  backdrop-filter:saturate(150%) blur(12px);border-bottom:1px solid var(--line)}
+.nav{max-width:var(--maxw);margin:0 auto;padding:0 var(--s5);height:58px;
   display:flex;align-items:center;gap:var(--s4)}
-.mark{font-size:var(--fs-2xs);font-weight:var(--fw-b);letter-spacing:.1em;text-transform:uppercase;
-  color:var(--muted);white-space:nowrap}
-.teams{display:flex;gap:2px;overflow-x:auto;flex:1;scrollbar-width:none}
+.mark{font-size:var(--fs-2xs);font-weight:var(--fw-x);letter-spacing:.12em;text-transform:uppercase;
+  color:var(--accent);white-space:nowrap}
+.teams{display:flex;gap:var(--s1);overflow-x:auto;flex:1;scrollbar-width:none}
 .teams::-webkit-scrollbar{display:none}
 .tb{border:none;background:transparent;color:var(--muted);font-size:var(--fs-sm);font-weight:var(--fw-m);
-  padding:5px var(--s3);border-radius:var(--r-ctl);white-space:nowrap;
+  padding:7px var(--s3);border-radius:var(--r-ctl);white-space:nowrap;
   transition:background var(--d1) var(--ease),color var(--d1) var(--ease)}
-.tb:hover{background:var(--accent-soft);color:var(--ink)}
-.tb.on{background:var(--accent);color:#fff}
+.tb:hover{background:var(--accent-soft);color:var(--accent-ink)}
+.tb.on{background:var(--accent);color:#fff;font-weight:var(--fw-b);box-shadow:var(--e1)}
 
 .wrap{max-width:var(--maxw);margin:0 auto;padding:var(--s7) var(--s5) var(--s8)}
 
-/* --------------------------------------------------------------- HEADER --
-   Team, what this is, and the period - then the score, alone. A single number
-   with nothing beside it is the fastest thing on the page to read. */
+/* --------------------------------------------------------------- HEADER -- */
 .head{display:flex;align-items:flex-start;gap:var(--s4);flex-wrap:wrap}
-.head h1{font-size:var(--fs-xl);font-weight:var(--fw-b);letter-spacing:-.02em;margin:0;line-height:1.2}
-.head .kind{font-size:var(--fs-sm);color:var(--muted);margin-top:2px}
+.head h1{font-size:var(--fs-xl);font-weight:var(--fw-x);letter-spacing:-.025em;margin:0;line-height:1.2}
+.head .kind{font-size:var(--fs-sm);color:var(--muted);margin-top:3px}
 .head .r{margin-left:auto;display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap}
 .back{border:none;background:none;color:var(--muted);font-size:var(--fs-xs);font-weight:var(--fw-m);
-  padding:0 0 var(--s2);display:inline-flex;align-items:center;gap:5px}
-.back:hover{color:var(--ink)}
+  padding:0 0 var(--s2);display:inline-flex;align-items:center;gap:5px;
+  transition:color var(--d1) var(--ease)}
+.back:hover{color:var(--accent)}
 
-.score{margin:var(--s6) 0 var(--s7);display:flex;align-items:baseline;gap:var(--s3);flex-wrap:wrap}
-.score .l{font-size:var(--fs-2xs);font-weight:var(--fw-m);color:var(--muted);
-  text-transform:uppercase;letter-spacing:.08em;flex:0 0 100%}
-.score .v{font-size:var(--fs-xxl);font-weight:var(--fw-b);letter-spacing:-.03em;line-height:1;
-  font-variant-numeric:tabular-nums}
-.score .v em{font-style:normal;font-size:var(--fs-lg);color:var(--muted);font-weight:var(--fw-m)}
-.score .cov{font-size:var(--fs-xs);color:var(--muted)}
+/* ---------------------------------------------------------------- SCORE --
+   The one number the page leads with, on its own plane, with a gradient mark
+   lifted off the top-left corner. A single figure with nothing beside it is the
+   fastest thing on the page to read. */
+.score{position:relative;margin:var(--s7) 0 var(--s7);padding:var(--s5);
+  background:var(--card);border-radius:var(--r-lg);box-shadow:var(--e2);
+  display:flex;align-items:baseline;gap:var(--s3);flex-wrap:wrap}
+.score::before{content:"";position:absolute;left:var(--s5);top:-22px;
+  width:56px;height:56px;border-radius:var(--r-card);
+  background:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='9' r='5.2'/%3E%3Cpath d='M8.6 13.4 7.3 21l4.7-2.6 4.7 2.6-1.3-7.6'/%3E%3C/svg%3E") center/26px 26px no-repeat,
+    var(--grad-blue);
+  box-shadow:0 12px 26px -10px rgba(13,78,166,.6)}
+.score .l{font-size:var(--fs-2xs);font-weight:var(--fw-b);color:var(--muted);
+  text-transform:uppercase;letter-spacing:.09em;flex:0 0 100%;padding-top:var(--s5)}
+.score .v{font-size:var(--fs-xxl);font-weight:var(--fw-x);letter-spacing:-.035em;line-height:1;
+  font-variant-numeric:tabular-nums;color:var(--accent)}
+.score .v em{font-style:normal;font-size:var(--fs-lg);color:var(--faint);font-weight:var(--fw-m)}
+.score .cov{font-size:var(--fs-xs);color:var(--muted);flex:0 0 100%;
+  padding-top:var(--s3);margin-top:var(--s1);border-top:1px solid var(--line-soft)}
 
 /* -------------------------------------------------------------- CONTROLS -- */
 .ctl{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap}
 .fl{display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-xs);color:var(--muted)}
 .sel{border:1px solid var(--line-2);background:var(--card);color:var(--ink);font-size:var(--fs-xs);
-  font-weight:var(--fw-m);padding:5px var(--s2);border-radius:var(--r-ctl);max-width:180px}
-.sel:disabled{color:var(--faint);background:var(--surface)}
+  font-weight:var(--fw-m);padding:7px var(--s3);border-radius:var(--r-ctl);max-width:190px;
+  transition:border-color var(--d1) var(--ease),box-shadow var(--d1) var(--ease)}
+.sel:hover:not(:disabled){border-color:var(--accent)}
+.sel:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.sel:disabled{color:var(--faint);background:var(--surface);cursor:not-allowed}
 .more{border:1px solid var(--line-2);background:var(--card);color:var(--muted);font-size:var(--fs-xs);
-  font-weight:var(--fw-m);padding:5px var(--s2);border-radius:var(--r-ctl)}
-.more:hover,.more.on{color:var(--ink);border-color:var(--ink)}
+  font-weight:var(--fw-m);padding:7px var(--s3);border-radius:var(--r-ctl);
+  transition:color var(--d1) var(--ease),border-color var(--d1) var(--ease),background var(--d1) var(--ease)}
+.more:hover{color:var(--accent);border-color:var(--accent)}
+.more.on{color:#fff;background:var(--accent);border-color:var(--accent)}
 
 /* ---------------------------------------------------------------- TABLE -- */
-.sect{font-size:var(--fs-2xs);font-weight:var(--fw-b);color:var(--muted);text-transform:uppercase;
-  letter-spacing:.08em;margin:0 0 var(--s3);display:flex;align-items:baseline;gap:var(--s2)}
-.sect .r{margin-left:auto;font-weight:var(--fw-n);letter-spacing:0;text-transform:none;font-size:var(--fs-xs)}
+.sect{font-size:var(--fs-2xs);font-weight:var(--fw-x);color:var(--muted);text-transform:uppercase;
+  letter-spacing:.09em;margin:0 0 var(--s3);display:flex;align-items:baseline;gap:var(--s2)}
+.sect .r{margin-left:auto;font-weight:var(--fw-m);letter-spacing:0;text-transform:none;
+  font-size:var(--fs-xs);color:var(--faint)}
 .block{margin-bottom:var(--s7)}
-.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);overflow:hidden}
+.panel{background:var(--card);border-radius:var(--r-card);overflow:hidden;box-shadow:var(--e2)}
 .tw{overflow-x:auto}
 table{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;min-width:680px;
   font-size:var(--fs-sm)}
-th{text-align:left;font-size:var(--fs-2xs);font-weight:var(--fw-m);color:var(--muted);
-  text-transform:uppercase;letter-spacing:.05em;padding:var(--s2) var(--s3);
-  border-bottom:1px solid var(--line-2);white-space:nowrap}
-td{padding:var(--s2) var(--s3);border-bottom:1px solid var(--line-soft);vertical-align:middle;
-  height:52px;overflow:hidden}
+th{text-align:left;font-size:var(--fs-2xs);font-weight:var(--fw-b);color:var(--muted);
+  text-transform:uppercase;letter-spacing:.06em;padding:var(--s3);
+  border-bottom:1px solid var(--line-2);white-space:nowrap;background:var(--surface)}
+td{padding:var(--s3);border-bottom:1px solid var(--line-soft);vertical-align:middle;
+  height:56px;overflow:hidden}
 tbody tr:last-child td{border-bottom:none}
 .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .quiet{color:var(--muted);font-weight:var(--fw-n)}
-.strong{font-weight:var(--fw-b)}
-.nm{font-weight:var(--fw-m);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.strong{font-weight:var(--fw-b);color:var(--ink)}
+.nm{font-weight:var(--fw-b);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 tr.click{cursor:pointer;transition:background var(--d1) var(--ease)}
 tr.click:hover{background:var(--surface)}
 
-/* KRA band: a rule with a label, the way a scorecard separates its sections */
-tr.kra td{padding:var(--s4) var(--s3) var(--s2);border-bottom:1px solid var(--line-2);
-  font-size:var(--fs-2xs);font-weight:var(--fw-b);color:var(--ink-2);
-  text-transform:uppercase;letter-spacing:.08em;cursor:pointer;background:var(--card)}
-tr.kra:first-child td{padding-top:var(--s2)}
+/* KRA band: the rule that separates a scorecard's sections. */
+tr.kra td{padding:var(--s5) var(--s3) var(--s2);border-bottom:1px solid var(--line-2);
+  font-size:var(--fs-2xs);font-weight:var(--fw-x);color:var(--accent-ink);
+  text-transform:uppercase;letter-spacing:.09em;cursor:pointer;background:var(--card)}
+tr.kra:first-child td{padding-top:var(--s3)}
 tr.kra .cv{display:inline-block;width:12px;color:var(--faint);font-weight:var(--fw-n)}
 tr.kra .rs{float:right;text-transform:none;letter-spacing:0;color:var(--muted);
-  font-weight:var(--fw-n);font-variant-numeric:tabular-nums}
+  font-weight:var(--fw-m);font-variant-numeric:tabular-nums}
 td.kpi{padding-left:var(--s5)}
 
-/* Achievement: the number with a fine rule beneath it. No separate column, no
-   chart - the bar is an annotation on the figure, not a second reading of it. */
+/* Achievement: the figure, with its bar as an annotation beneath it — not a
+   second reading of the same number. */
 .ach{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;
-  gap:5px;height:28px}
-.ach .n{font-variant-numeric:tabular-nums;font-weight:var(--fw-b)}
-.bar{display:block;position:relative;width:100%;height:3px;background:var(--well);border-radius:2px}
-.bar i{position:absolute;left:0;top:0;height:100%;border-radius:2px;background:var(--ink)}
-.bar i.good{background:var(--good)}.bar i.warn{background:var(--warn)}.bar i.bad{background:var(--bad)}
-.bar u{position:absolute;top:-2px;width:1px;height:7px;background:var(--line-2)}
+  gap:5px;height:30px}
+.ach .n{font-variant-numeric:tabular-nums;font-weight:var(--fw-x)}
+.bar{display:block;position:relative;width:100%;height:5px;background:var(--well);
+  border-radius:var(--r-pill)}
+.bar i{position:absolute;left:0;top:0;height:100%;border-radius:var(--r-pill);background:var(--accent)}
+.bar i.good{background:var(--good)}
+.bar i.warn{background:var(--warn-bar)}
+.bar i.bad{background:var(--bad)}
+.bar u{position:absolute;top:-1px;width:1px;height:7px;background:var(--line-2)}
 
-/* Status: a word, in the status colour. No pill, no badge. */
-.st{font-size:var(--fs-xs);font-weight:var(--fw-m);white-space:nowrap}
-.st.good{color:var(--good)}.st.warn{color:var(--warn)}.st.bad{color:var(--bad)}
-.st.none{color:var(--faint);font-weight:var(--fw-n)}
+/* Status: a word in the status colour, on its own tint. Colour is never the
+   only carrier — the word is always there. */
+.st{font-size:var(--fs-2xs);font-weight:var(--fw-b);white-space:nowrap;
+  padding:3px var(--s2);border-radius:var(--r-pill);display:inline-block}
+.st.good{color:var(--good);background:var(--good-soft)}
+.st.warn{color:var(--warn);background:var(--warn-soft)}
+.st.bad{color:var(--bad);background:var(--bad-soft)}
+.st.none{color:var(--muted);background:var(--surface);font-weight:var(--fw-m)}
 
 /* ---------------------------------------------------------------- MODAL -- */
-.scrim{position:fixed;inset:0;background:rgba(24,24,27,.32);opacity:0;pointer-events:none;
-  transition:opacity var(--d1) var(--ease);z-index:40}
+.scrim{position:fixed;inset:0;background:rgba(15,27,46,.38);opacity:0;pointer-events:none;
+  transition:opacity var(--d1) var(--ease);z-index:40;backdrop-filter:blur(2px)}
 .scrim.on{opacity:1;pointer-events:auto}
 .modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-48%) scale(.98);opacity:0;
-  pointer-events:none;width:380px;max-width:calc(100vw - 32px);max-height:86vh;overflow-y:auto;
-  background:var(--card);border:1px solid var(--line-2);border-radius:var(--r-card);
-  box-shadow:0 24px 56px -20px rgba(24,24,27,.24);z-index:41;
-  transition:opacity var(--d1) var(--ease),transform 160ms var(--ease)}
+  pointer-events:none;width:420px;max-width:calc(100vw - 32px);max-height:86vh;overflow-y:auto;
+  background:var(--card);border-radius:var(--r-lg);box-shadow:var(--e3);z-index:41;
+  transition:opacity var(--d1) var(--ease),transform var(--d2) var(--ease)}
 .modal.on{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
-.m-h{display:flex;align-items:flex-start;gap:var(--s3);padding:var(--s4) var(--s4) var(--s3);
+.m-h{display:flex;align-items:flex-start;gap:var(--s3);padding:var(--s5) var(--s5) var(--s3);
   border-bottom:1px solid var(--line-soft)}
-.m-h h2{font-size:var(--fs-lg);font-weight:var(--fw-b);margin:0;letter-spacing:-.018em;line-height:1.3}
+.m-h h2{font-size:var(--fs-lg);font-weight:var(--fw-x);margin:0;letter-spacing:-.022em;line-height:1.3}
 .m-h .x{margin-left:auto;border:none;background:none;color:var(--faint);font-size:var(--fs-lg);
-  line-height:1;padding:0 2px;flex:0 0 auto}
+  line-height:1;padding:0 2px;flex:0 0 auto;transition:color var(--d1) var(--ease)}
 .m-h .x:hover{color:var(--ink)}
-.m-b{padding:var(--s4)}
+.m-b{padding:var(--s5)}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:var(--s2) var(--s4)}
 .kv dt{color:var(--muted);font-size:var(--fs-xs);white-space:nowrap}
-.kv dd{margin:0;text-align:right;font-variant-numeric:tabular-nums;font-weight:var(--fw-m);
+.kv dd{margin:0;text-align:right;font-variant-numeric:tabular-nums;font-weight:var(--fw-b);
   font-size:var(--fs-sm)}
 .kv .rule{grid-column:1/-1;height:1px;background:var(--line-soft);margin:var(--s2) 0}
 .goal{margin-top:var(--s4);padding-top:var(--s3);border-top:1px solid var(--line-soft)}
-.goal .t{font-size:var(--fs-2xs);font-weight:var(--fw-m);color:var(--muted);
-  text-transform:uppercase;letter-spacing:.07em;margin-bottom:var(--s1)}
-.goal p{margin:0;color:var(--ink-2);line-height:1.6;font-size:var(--fs-xs)}
+.goal .t{font-size:var(--fs-2xs);font-weight:var(--fw-b);color:var(--muted);
+  text-transform:uppercase;letter-spacing:.08em;margin-bottom:var(--s1)}
+.goal p{margin:0;color:var(--ink-2);line-height:1.65;font-size:var(--fs-xs)}
 
 /* ---------------------------------------------------------------- STATE -- */
 .state{display:grid;place-items:center;min-height:50vh;text-align:center}
-.state h2{font-size:var(--fs-lg);font-weight:var(--fw-b);margin:0 0 var(--s2)}
-.state p{color:var(--muted);margin:0 0 var(--s4);max-width:42ch;line-height:1.6}
+.state h2{font-size:var(--fs-lg);font-weight:var(--fw-x);margin:0 0 var(--s2)}
+.state p{color:var(--muted);margin:0 0 var(--s4);max-width:44ch;line-height:1.65}
 .btn{border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:var(--r-ctl);
-  padding:7px 14px;font-size:var(--fs-sm);font-weight:var(--fw-m)}
-.btn:hover{opacity:.88}
-.empty{padding:var(--s5);text-align:center;color:var(--muted)}
-.hint{font-size:var(--fs-xs);color:var(--muted);margin-top:var(--s3);line-height:1.6}
+  padding:9px 18px;font-size:var(--fs-sm);font-weight:var(--fw-b);
+  transition:background var(--d1) var(--ease),border-color var(--d1) var(--ease)}
+.btn:hover{background:var(--accent-ink);border-color:var(--accent-ink)}
+.btn:active{filter:brightness(.95)}
+.empty{padding:var(--s6);text-align:center;color:var(--muted)}
+.hint{font-size:var(--fs-xs);color:var(--muted);margin-top:var(--s3);line-height:1.65}
 .skl{background:linear-gradient(90deg,var(--surface),var(--well),var(--surface));
   background-size:200% 100%;border-radius:var(--r-card);animation:sh 1.4s ease-in-out infinite}
 @keyframes sh{to{background-position:-200% 0}}
-.demo{border-bottom:1px solid var(--line)}
-.demo .in{max-width:var(--maxw);margin:0 auto;padding:7px var(--s5);display:flex;align-items:center;
-  gap:var(--s2);font-size:var(--fs-xs);color:var(--muted)}
-.demo button{margin-left:auto;border:1px solid var(--line-2);background:var(--card);color:var(--ink-2);
-  font-size:var(--fs-2xs);font-weight:var(--fw-m);padding:2px 8px;border-radius:var(--r-ctl)}
-.demo button:hover{border-color:var(--ink)}
+.demo{border-bottom:1px solid var(--line);background:var(--good-soft)}
+.demo .in{max-width:var(--maxw);margin:0 auto;padding:9px var(--s5);display:flex;align-items:center;
+  gap:var(--s2);font-size:var(--fs-xs);color:var(--good)}
+.demo button{margin-left:auto;border:1px solid var(--line-2);
+  background:var(--card);color:var(--good);font-size:var(--fs-2xs);font-weight:var(--fw-b);
+  padding:3px 10px;border-radius:var(--r-pill);transition:background var(--d1) var(--ease)}
+.demo button:hover{background:var(--good-soft)}
 
-/* ------------------------------------------------------------ RESPONSE -- */
+/* ------------------------------------------------------------ RESPONSE --
+   The frame tightens; the hierarchy does not change. Wide tables scroll in
+   their own well rather than truncate — a missing column is a wrong decision
+   waiting to happen. */
 @media(max-width:820px){
   .nav,.wrap,.demo .in{padding-left:var(--s4);padding-right:var(--s4)}
   .mark{display:none}
   .wrap{padding-top:var(--s5)}
-  .score{margin:var(--s5) 0 var(--s6)}
+  .score{margin:var(--s6) 0 var(--s6);padding:var(--s4)}
+  .score::before{left:var(--s4);width:48px;height:48px;top:-20px}
+  .score .l{padding-top:var(--s4)}
 }
 @media(max-width:520px){
   .head .r{margin-left:0;width:100%}
   .score .v{font-size:var(--fs-xl)}
+  .modal{width:calc(100vw - 24px)}
+}
+@media(pointer:coarse){
+  .tb,.btn,.more,.sel{min-height:44px}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
