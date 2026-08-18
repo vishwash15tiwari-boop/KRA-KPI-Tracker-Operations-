@@ -6,7 +6,7 @@
 <title>KRA / KPI Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 /* ============================================================================
    KRA / KPI Tracker
@@ -22,7 +22,7 @@
    around them at all.
    ============================================================================ */
 :root{
-  --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --font:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
 
   --bg:#FAFAFA;--card:#FFFFFF;--surface:#F4F4F5;--well:#E9E9EC;
   --ink:#18181B;--ink-2:#3F3F46;--muted:#71717A;--faint:#A1A1AA;
@@ -595,7 +595,7 @@ body{letter-spacing:-.015em}
    Most surfaces are flat with a hairline; elevation is reserved for the drawer.
    ============================================================================ */
 :root{
-  --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --font:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
 
   --bg:#F7F7F5;--card:#FFFFFF;--surface:#F1F1EF;--well:#E7E7E5;
   --ink:#161616;--ink-2:#3F3F3D;--muted:#6B6B6B;--faint:#9A9A9A;
@@ -1184,6 +1184,38 @@ body{background:var(--bg)}
    on its own; the slider rides over it in the same blue and supplies only the
    movement between tabs. */
 .tb.on{background:#005DFF;color:#fff}
+
+/* ============================================================================
+   POPPINS
+   ----------------------------------------------------------------------------
+   Poppins is the brand face, so it replaces Inter everywhere. It brings one
+   problem this design has to answer.
+
+   Poppins ships no tabular-figure feature, and its digits are far from equal
+   width: at 26px, "111" sets 27.8px and "999" sets 48.4px. font-variant-numeric
+   is a no-op against it. Two consequences, both real here - a score counting up
+   changes width on every frame, and "/ 100" lands at a different position on
+   every card.
+
+   So the figure gets a box of its own, held at the width of the longest value
+   it can ever hold ("100.0" = 2.6em) and right-aligned inside it. The unit that
+   follows never moves, the count-up cannot jitter, and a column of scores lines
+   up on the decimal the way tabular figures would have done.
+   ============================================================================ */
+.fig,.anchor .av span[data-count]{display:inline-block;min-width:2.62em;text-align:right;
+  font-weight:inherit;font-size:inherit;letter-spacing:inherit}
+
+/* Poppins carries more width per character and a smaller x-height than Inter,
+   so the tracking that suited Inter reads loose here and has to come back. */
+body{letter-spacing:-.01em}
+.page-t{letter-spacing:-.03em}
+.tcard .tt,.node .nm{letter-spacing:-.005em}
+.anchor .av,.tcard .tv .v,.node .sc,.gnode .gs{letter-spacing:-.03em}
+.kra-h .t,.tcard .tv .l,.anchor .al,.anchor .ai .l,.m-h .sub{letter-spacing:.08em}
+
+/* Uppercase labels set tighter in Poppins; the small caps need a little air to
+   stay readable at 10px. */
+.sect-t,.kra-h .t{letter-spacing:.09em}
 </style>
 </head>
 <body>
@@ -1561,7 +1593,7 @@ function TeamsScreen() {
       '</span>' +
       Spark(t.team_id, st.c) +
       '<span class="tv"><span class="l">Team score</span>' +
-      '<span class="v">' + show1(score) + '<em> / 100</em></span></span>' +
+      '<span class="v"><b class="fig">' + show1(score) + '</b><em> / 100</em></span></span>' +
       '</button>';
   }).join('');
 
@@ -1654,7 +1686,8 @@ function Node(m, isLead) {
     '<span class="nt"><span class="nm">' + esc(m.employee_name) + '</span>' +
     '<span class="rl">' + esc(m.designation || '') + '</span></span></span>' +
     '<span class="nf">' +
-      '<span class="sr"><span class="sc">' + show1(m.overall_score) + '<em> / 100</em></span>' +
+      '<span class="sr"><span class="sc"><b class="fig">' + show1(m.overall_score) +
+        '</b><em> / 100</em></span>' +
       '<span class="stg ' + st.c + '"><i class="dot ' + st.c + '"></i>' + esc(st.t) + '</span></span>' +
       ProgressBar(m.overall_score, st.c) +
     '</span></button>';
@@ -1671,7 +1704,7 @@ function GroupNode(node) {
     '<span class="gm">' + plural(node.count, 'person').replace('persons', 'people') + '</span></span>' +
     '<span class="gc" aria-hidden="true">' + (open ? '−' : '+') + '</span>' +
     '<span class="gf"><span class="sr">' +
-      '<span class="gs">' + show1(node.score) + '<em> / 100</em></span>' +
+      '<span class="gs"><b class="fig">' + show1(node.score) + '</b><em> / 100</em></span>' +
       '<span class="stg ' + st.c + '"><i class="dot ' + st.c + '"></i>' + esc(st.t) + '</span></span>' +
       ProgressBar(node.score, st.c) +
     '</span></button>';
