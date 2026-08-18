@@ -6,7 +6,7 @@
 <title>KRA / KPI Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 /* ============================================================================
    KRA / KPI Tracker
@@ -586,6 +586,310 @@ body{letter-spacing:-.015em}
   .tgrid{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
   .prof{align-items:flex-start}
 }
+
+/* ============================================================================
+   FINAL SYSTEM — minimal at the surface, precise underneath
+   ----------------------------------------------------------------------------
+   Typography, alignment and spacing carry the hierarchy. Colour answers one
+   question only — is there something I need to notice — and never decorates.
+   Most surfaces are flat with a hairline; elevation is reserved for the drawer.
+   ============================================================================ */
+:root{
+  --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+
+  --bg:#F7F7F5;--card:#FFFFFF;--surface:#F1F1EF;--well:#E7E7E5;
+  --ink:#161616;--ink-2:#3F3F3D;--muted:#6B6B6B;--faint:#9A9A9A;
+  --line:#E7E7E5;--line-2:#DCDCD9;--line-soft:#EFEFED;
+
+  /* One restrained accent. It marks the current thing and the interactive
+     thing, and appears almost nowhere else. */
+  --brand:#005DFF;--brand-ink:#024C8A;--brand-soft:#EDF3FF;
+
+  /* Muted semantics. Never bright, never decorative. */
+  --good:#3F6B52;--good-soft:#EDF3EF;--good-bar:#6E9C81;
+  --warn:#8A6A2F;--warn-soft:#F6F1E7;--warn-bar:#C0A063;
+  --bad:#8F423A;--bad-soft:#F6EDEC;--bad-bar:#B77A72;
+
+  --r-ctl:8px;--r-row:12px;--r-card:16px;--r-lg:20px;--r-pill:999px;
+  --maxw:1320px;--nodew:236px;
+
+  --e1:0 1px 2px rgba(22,22,22,.04);
+  --e2:0 1px 2px rgba(22,22,22,.05);
+  --e3:0 20px 48px -16px rgba(22,22,22,.22);
+  --d1:150ms;--d2:220ms;
+}
+body{letter-spacing:-.011em}
+
+/* --- Header: 60px, and everything on one line ---------------------------- */
+.top{background:rgba(247,247,245,.9);border-bottom:1px solid var(--line)}
+.nav{min-height:60px}
+.mark .wm{font-size:13px;font-weight:600;color:var(--ink);letter-spacing:-.02em}
+.mark .wm b{font-size:9.5px;font-weight:500;color:var(--muted);letter-spacing:.1em}
+.mark:hover .wm{color:var(--ink)}
+.tb{font-size:13px;font-weight:500;color:var(--muted);transition:color var(--d1) var(--ease),
+  background var(--d1) var(--ease);padding:5px 10px;border-radius:var(--r-ctl)}
+.tb:hover{color:var(--ink);background:var(--surface)}
+.tb.on{color:var(--ink);font-weight:600;background:transparent}
+.tb.on::after{background:var(--ink);height:1.5px;left:10px;right:10px}
+.sel{border-radius:var(--r-ctl);font-size:12px;font-weight:500;padding:6px 12px}
+.sel:hover:not(:disabled),.sel:focus{border-color:var(--ink)}
+.sel:focus{box-shadow:0 0 0 3px var(--surface)}
+.demo{background:var(--card);border-bottom:1px solid var(--line)}
+.demo .in{color:var(--muted)}
+
+/* --- Type scale ----------------------------------------------------------- */
+.page-t{font-size:24px;font-weight:600;line-height:30px;letter-spacing:-.022em;margin-bottom:var(--s1)}
+.page-s{font-size:13px;font-weight:400;color:var(--muted);margin-bottom:var(--s5)}
+.back{font-size:12px;font-weight:500;margin-bottom:var(--s3)}
+
+/* --- The one score per screen --------------------------------------------
+   Flat, no card, no dark plane. The figure and the ring are the whole thing;
+   the two supporting stats sit to the right in quiet type. */
+.anchor{display:flex;align-items:center;gap:var(--s6);flex-wrap:wrap;
+  background:transparent;border:none;border-bottom:1px solid var(--line);
+  border-radius:0;padding:0 0 var(--s5);margin-bottom:var(--s5);color:var(--ink)}
+.anchor::after{display:none}
+.anchor > div{min-width:0}
+/* The two supporting stats sit to the right of the score, not beneath it —
+   three values on one line is the whole summary a screen needs. */
+.anchor .ar{margin-left:auto;display:flex;align-items:center;flex-wrap:wrap}
+.anchor .ai{min-width:0}
+.anchor .al{font-size:11px;font-weight:500;letter-spacing:.08em;color:var(--muted)}
+.anchor .av{font-size:36px;font-weight:600;line-height:42px;letter-spacing:-.03em;
+  color:var(--ink);margin-top:2px}
+.anchor .av em{font-size:14px;font-weight:500;color:var(--faint);margin-left:3px}
+.anchor .as{font-size:12px;font-weight:400;color:var(--muted);margin-top:var(--s2)}
+.anchor .ar{gap:var(--s7)}
+.anchor .ai .l{font-size:11px;font-weight:500;color:var(--muted);letter-spacing:.04em;
+  text-transform:none}
+.anchor .ai .v{font-size:18px;font-weight:600;line-height:24px;color:var(--ink);margin-top:2px}
+.ring{width:88px;height:88px}
+.ring .tr{stroke:var(--well);stroke-width:5}
+.ring .fg{stroke:var(--ink);stroke-width:5}
+.ring .lbl b{font-size:20px;font-weight:600;color:var(--ink)}
+.ring .lbl span{font-size:10px;color:var(--faint)}
+
+/* --- Team cards ----------------------------------------------------------- */
+.tgrid{gap:var(--s3)}
+.tcard{border-radius:var(--r-card);box-shadow:none;padding:var(--s4);gap:var(--s5)}
+.tcard::after{display:none}
+.tcard:hover{border-color:var(--line-2);background:var(--card);box-shadow:var(--e1)}
+.tcard .tt{font-size:12px;font-weight:600;letter-spacing:.06em;color:var(--ink)}
+.tcard .tm{font-size:11px;font-weight:400;color:var(--muted)}
+.tcard .tv .l{font-size:11px;font-weight:500;color:var(--muted)}
+.tcard .tv .v{font-size:28px;font-weight:600;letter-spacing:-.028em;color:var(--ink)}
+.tcard .tv .v em{font-size:12px;color:var(--faint);font-weight:500}
+
+/* --- Employee node: left-aligned, avatar beside the name -----------------
+   Name top-left, role directly under it, score bottom-left. Nothing centred —
+   a common left edge down the card is what makes a chart of them read as one
+   system rather than a row of separate objects. */
+.node,.gnode{border-radius:var(--r-card);box-shadow:none;padding:var(--s4);
+  transition:border-color var(--d1) var(--ease),background var(--d1) var(--ease)}
+.node:hover,.gnode:hover{border-color:var(--line-2);background:var(--card);box-shadow:var(--e1)}
+.node.lead::before{display:none}
+.node.lead{border-color:var(--line-2)}
+.node .nh{display:flex;align-items:flex-start;gap:var(--s2)}
+.node .av{flex:0 0 auto;width:30px;height:30px;border-radius:var(--r-pill);background:var(--surface);
+  color:var(--ink-2);font-size:10.5px;font-weight:600;display:grid;place-items:center;
+  letter-spacing:.02em;margin-top:1px}
+.node .nt{min-width:0;flex:1}
+.node .nm{font-size:14px;font-weight:600;line-height:20px;height:20px;color:var(--ink)}
+.node .rl{font-size:12px;font-weight:400;line-height:16px;height:32px;color:var(--muted);margin-top:1px}
+.node .sr{align-items:baseline}
+.node .sc,.node.lead .sc{font-size:28px;font-weight:600;line-height:34px;letter-spacing:-.028em;
+  color:var(--ink)}
+.node .sc em{font-size:11px;color:var(--faint);font-weight:500}
+.gnode .gt{font-size:12px;font-weight:600;letter-spacing:.06em;color:var(--ink);height:20px;
+  line-height:20px}
+.gnode .gm{font-size:12px;font-weight:400;color:var(--muted);height:32px;line-height:16px}
+.gnode .gs{font-size:28px;font-weight:600;letter-spacing:-.028em;color:var(--ink)}
+.gnode .gs em{font-size:11px;color:var(--faint);font-weight:500}
+
+/* Status: a small label in subtle colour. Not a badge. */
+.stg,.node .stg,.gnode .stg{font-size:11px;font-weight:500;color:var(--muted);
+  display:inline-flex;align-items:center}
+.node .stg.good,.gnode .stg.good{color:var(--good)}
+.node .stg.warn,.gnode .stg.warn{color:var(--warn)}
+.node .stg.bad,.gnode .stg.bad{color:var(--bad)}
+.dot{display:none}
+
+/* Connectors: 1px, low contrast, position first. */
+.drop,.branch .arm::before,.branch .arm .stem{background:var(--line-2)}
+.lvl{gap:var(--s5)}
+.drop,.branch .arm .stem{height:var(--s5)}
+
+/* --- One progress bar, everywhere ---------------------------------------- */
+.pb,.kbar{background:var(--well);height:4px;border-radius:var(--r-pill)}
+.pb i,.kbar i{background:var(--ink);border-radius:var(--r-pill)}
+.pb i.good,.kbar i.good{background:var(--good-bar)}
+.pb i.warn,.kbar i.warn{background:var(--warn-bar)}
+.pb i.bad,.kbar i.bad{background:var(--bad-bar)}
+.pb i.none,.kbar i.none{background:var(--line-2)}
+.pb u{background:var(--card);width:1px}
+.gnode .pb u{background:var(--surface)}
+/* The bar animates its width, not a transform: a scaled fill renders at the
+   wrong length whenever the animation has not resolved, and a progress bar
+   that lies is worse than one that simply appears. */
+.pb i,.kbar i{transition:width 400ms var(--ease)}
+
+/* --- KRA header: whitespace, not a container ----------------------------- */
+.kra-h{margin:var(--s6) 0 var(--s2);align-items:baseline;gap:var(--s3)}
+.kra-h .ix{display:none}
+.kra-h .t{font-size:13px;font-weight:600;line-height:18px;letter-spacing:.06em;color:var(--ink)}
+.kra-h .ln{display:none}
+.kra-h .r{margin-left:auto;font-size:12px;font-weight:400;color:var(--muted)}
+
+/* --- KPI row -------------------------------------------------------------
+   Name and weightage on the first line, then actual → target → achievement,
+   then the bar. Text left, numbers right, one fixed height so a long name
+   never changes the rhythm of the list. */
+.krow{border-radius:var(--r-row);border:1px solid transparent;border-bottom:1px solid var(--line);
+  padding:var(--s4) var(--s3);transition:background var(--d1) var(--ease)}
+.krow:last-child{border-bottom:1px solid var(--line)}
+.krow:hover{background:var(--card);border-color:var(--line);box-shadow:none}
+.krow .kn{font-size:14px;font-weight:500;line-height:20px;color:var(--ink);white-space:normal;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.krow .kw{font-size:12px;font-weight:500;color:var(--muted)}
+.krow .r2{margin-top:var(--s2);align-items:baseline}
+.krow .flow-v{font-size:13px;font-weight:400;color:var(--muted);white-space:normal}
+.krow .flow-v b{font-weight:500;color:var(--ink)}
+.krow .ach{font-size:14px;font-weight:600;color:var(--ink)}
+.krow .ach.good{color:var(--good)}
+.krow .ach.warn{color:var(--warn)}
+.krow .ach.bad{color:var(--bad)}
+.krow .ach.none{color:var(--faint);font-weight:400}
+.krow .kbar{margin-top:var(--s3)}
+
+/* --- Drawer: 400px, page still visible behind ---------------------------- */
+.modal{width:400px;border-radius:0;border-left:1px solid var(--line);box-shadow:var(--e3)}
+.scrim{background:rgba(22,22,22,.20)}
+.m-h h2{font-size:20px;font-weight:600;line-height:26px;letter-spacing:-.02em}
+.m-h .sub{font-size:11px;font-weight:500;color:var(--muted);letter-spacing:.08em}
+.kv dt{font-size:12px;font-weight:400;color:var(--muted)}
+.kv dd{font-size:13px;font-weight:500;color:var(--ink)}
+.kv dd.hi{font-weight:600}
+.sect-t{font-size:11px;font-weight:500;letter-spacing:.08em;color:var(--muted)}
+.m-perf .n,.m-perf .n.good,.m-perf .n.warn,.m-perf .n.bad{font-size:28px;font-weight:600;
+  color:var(--ink);letter-spacing:-.028em}
+.goal p{font-size:12px;line-height:1.65;color:var(--ink-2)}
+
+.btn{background:var(--ink);border-color:var(--ink);border-radius:var(--r-ctl);font-weight:500}
+.btn:hover{background:#000;border-color:#000;opacity:1}
+.empty,.hint{font-size:12px;color:var(--muted)}
+
+@media(max-width:760px){
+  .anchor{gap:var(--s4)}
+  .anchor .ar{width:100%;gap:var(--s5)}
+  .modal{width:100%;border-left:none;border-top:1px solid var(--line);
+    top:auto;height:86vh;border-radius:var(--r-lg) var(--r-lg) 0 0;
+    transform:translateY(100%)}
+  .modal.on{transform:none}
+}
+
+/* ============================================================================
+   MOTION
+   ----------------------------------------------------------------------------
+   One grammar, used everywhere, so movement means something:
+
+     enter     fade + 8px up
+     hover     2px lift, a faint light that follows the cursor
+     press     scale 0.98
+     reveal    stagger, 40ms apart
+     score     count up, once, on arrival
+     progress  width
+     nav       one indicator that slides between teams
+     drawer    translate X + fade
+
+   Motion is ranked. Hover is almost invisible; selection and the drawer are
+   noticeable; the flowchart entrance and the score reveal are focal — and no
+   two focal animations ever run at once. Everything stops under
+   prefers-reduced-motion.
+   ============================================================================ */
+
+/* --- Enter ---------------------------------------------------------------- */
+@keyframes riseIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes drawLine{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes dropLine{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+
+.page-t,.page-s,.anchor{animation:riseIn 260ms var(--ease) both}
+.page-s{animation-delay:40ms}
+.anchor{animation-delay:80ms}
+
+/* The chart assembles from the top down: lead, then the connectors it owns,
+   then the people hanging off them. The order is the hierarchy. */
+.flow .lvl > .node{animation:riseIn 300ms var(--ease) both;animation-delay:200ms}
+.flow .drop{transform-origin:top center;animation:dropLine 220ms var(--ease) both;animation-delay:330ms}
+.flow .branch .arm::before{transform-origin:center;animation:drawLine 300ms var(--ease) both;
+  animation-delay:400ms}
+.flow .branch .arm .stem{transform-origin:top center;animation:dropLine 200ms var(--ease) both;
+  animation-delay:520ms}
+.flow .branch .arm > .node,.flow .branch .arm > .gnode{
+  animation:riseIn 320ms var(--ease) both;animation-delay:560ms}
+.flow .branch .arm:nth-child(2) > .node,.flow .branch .arm:nth-child(2) > .gnode{animation-delay:600ms}
+.flow .branch .arm:nth-child(3) > .node,.flow .branch .arm:nth-child(3) > .gnode{animation-delay:640ms}
+.flow .branch .arm:nth-child(4) > .node,.flow .branch .arm:nth-child(4) > .gnode{animation-delay:680ms}
+.flow .branch .arm:nth-child(5) > .node,.flow .branch .arm:nth-child(5) > .gnode{animation-delay:720ms}
+.flow .branch .arm:nth-child(n+6) > .node{animation-delay:760ms}
+
+/* Team cards on the landing screen arrive in reading order. */
+.tgrid .tcard{animation:riseIn 280ms var(--ease) both}
+.tgrid .tcard:nth-child(2){animation-delay:50ms}
+.tgrid .tcard:nth-child(3){animation-delay:100ms}
+.tgrid .tcard:nth-child(4){animation-delay:150ms}
+.tgrid .tcard:nth-child(5){animation-delay:200ms}
+
+/* --- Hover: a 2px lift and a light that notices the cursor ----------------
+   Held at 6% so it reads as the surface catching light, not as a glow. */
+.node,.gnode,.tcard{position:relative;isolation:isolate;
+  transition:transform var(--d1) var(--ease),border-color var(--d1) var(--ease),
+             box-shadow var(--d1) var(--ease)}
+.node::after,.gnode::after,.tcard::after{content:"";position:absolute;inset:0;z-index:-1;
+  border-radius:inherit;pointer-events:none;opacity:0;transition:opacity 200ms var(--ease);
+  background:radial-gradient(220px circle at var(--mx,50%) var(--my,50%),
+             rgba(22,22,22,.06),transparent 60%);display:block}
+.node:hover,.gnode:hover,.tcard:hover{transform:translateY(-2px)}
+.node:hover::after,.gnode:hover::after,.tcard:hover::after{opacity:1}
+.node:active,.gnode:active,.tcard:active{transform:scale(.985);transition-duration:80ms}
+
+/* --- KPI rows stay calm: no lift, the bar simply gains presence ----------- */
+.krow{transition:background var(--d1) var(--ease)}
+.krow .kbar{transition:height var(--d1) var(--ease),opacity var(--d1) var(--ease);opacity:.7}
+.krow:hover .kbar{opacity:1;height:6px}
+.krow:active{transform:none}
+
+/* --- Navigation: one indicator, and it slides ---------------------------- */
+.teams{position:relative}
+.teams .slider{position:absolute;bottom:0;height:1.5px;background:var(--ink);border-radius:2px;
+  transition:transform 200ms var(--ease),width 200ms var(--ease);pointer-events:none;
+  transform-origin:left center;left:0;opacity:0}
+.teams .slider.on{opacity:1}
+.tb.on::after{display:none}
+
+/* --- KRA sections reveal as they are reached ----------------------------- */
+.kra-h,.krow{opacity:1}
+.reveal{opacity:0;transform:translateY(8px)}
+.reveal.in{opacity:1;transform:none;
+  transition:opacity 320ms var(--ease),transform 320ms var(--ease)}
+
+/* --- The score, once ------------------------------------------------------
+   A single ring pulse when a score first lands. It says "this has loaded" and
+   then never repeats. */
+@keyframes pulseOnce{0%{box-shadow:0 0 0 0 rgba(22,22,22,.14)}
+  70%{box-shadow:0 0 0 6px rgba(22,22,22,0)}100%{box-shadow:0 0 0 0 rgba(22,22,22,0)}}
+.ring{animation:pulseOnce 900ms var(--ease) 360ms both;border-radius:50%}
+
+/* --- Drawer --------------------------------------------------------------- */
+.modal{transition:transform 240ms var(--ease)}
+.modal .m-b,.modal .m-h{animation:riseIn 260ms var(--ease) both;animation-delay:80ms}
+.scrim{transition:opacity 240ms var(--ease)}
+
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition-duration:.01ms!important}
+  .reveal{opacity:1!important;transform:none!important}
+  .teams .slider{transition:none!important}
+}
 </style>
 </head>
 <body>
@@ -885,6 +1189,10 @@ function monthLabel(m) {
   return (names[+p[1]] || p[1]) + ' ' + p[0];
 }
 function plural(n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); }
+function initials(n) {
+  return String(n || '?').trim().split(/\s+/).slice(0, 2)
+    .map(function (w) { return w.charAt(0); }).join('').toUpperCase();
+}
 
 /* Weighted achievement across a set of KPIs: earned score over the weightage
    that was actually measured. Presentation rollup only — it originates nothing. */
@@ -1008,11 +1316,12 @@ function ProgressBar(v, cls) {
 function Node(m, isLead) {
   var st = scoreStatus(m.overall_score);
   return '<button class="node' + (isLead ? ' lead' : '') + '" data-emp="' + esc(m.employee_id) + '">' +
-    '<span class="nh"><span class="nm">' + esc(m.employee_name) + '</span>' +
-    '<span class="rl">' + esc(m.designation || '') + '</span></span>' +
+    '<span class="nh"><span class="av">' + esc(initials(m.employee_name)) + '</span>' +
+    '<span class="nt"><span class="nm">' + esc(m.employee_name) + '</span>' +
+    '<span class="rl">' + esc(m.designation || '') + '</span></span></span>' +
     '<span class="nf">' +
       '<span class="sr"><span class="sc">' + show(m.overall_score) + '<em> / 100</em></span>' +
-      '<span class="stg ' + st.c + '">' + esc(st.t) + '</span></span>' +
+      '<span class="stg ' + st.c + '"><i class="dot ' + st.c + '"></i>' + esc(st.t) + '</span></span>' +
       ProgressBar(m.overall_score, st.c) +
     '</span></button>';
 }
@@ -1029,7 +1338,7 @@ function GroupNode(node) {
     '<span class="gc" aria-hidden="true">' + (open ? '−' : '+') + '</span>' +
     '<span class="gf"><span class="sr">' +
       '<span class="gs">' + show(node.score) + '<em> / 100</em></span>' +
-      '<span class="stg ' + st.c + '">' + esc(st.t) + '</span></span>' +
+      '<span class="stg ' + st.c + '"><i class="dot ' + st.c + '"></i>' + esc(st.t) + '</span></span>' +
       ProgressBar(node.score, st.c) +
     '</span></button>';
 }
@@ -1066,10 +1375,19 @@ function TeamScreen() {
   if (!t) return TeamsScreen();
   var members = Sel.members();
   var score = Sel.mean(members.map(function (m) { return m.overall_score; }));
+  var st = scoreStatus(score);
+  var rated = members.filter(function (m) { return m.overall_score != null; }).length;
   return '<button class="back" data-crumb="teams">← All teams</button>' +
     '<h1 class="page-t">' + esc(t.team_name) + '</h1>' +
-    '<p class="page-s">' + esc(S.month ? monthLabel(S.month) : 'No period loaded') +
-    ' · team score ' + show(score) + ' / 100</p>' +
+    '<p class="page-s">' + esc(S.month ? monthLabel(S.month) : 'No period loaded') + '</p>' +
+    '<div class="anchor"><div>' +
+      '<div class="al">Team score</div>' +
+      '<div class="av"><span data-count="' + (score == null ? '' : show(score)) + '">' + show(score) + '</span><em>/ 100</em></div>' +
+      '<div class="as">' + rated + ' of ' + plural(members.length, 'member') + ' measured</div>' +
+    '</div><div class="ar">' +
+      '<div class="ai"><div class="l">Stage</div><div class="v">' + esc(st.t) + '</div></div>' +
+      '<div class="ai"><div class="l">People</div><div class="v">' + members.length + '</div></div>' +
+    '</div></div>' +
     Flowchart(members);
 }
 
@@ -1120,15 +1438,23 @@ function ProfileScreen() {
   var rated = kpis.filter(function (k) { return k.achievement != null; });
   var meta = [m.designation, m.region].filter(Boolean).join(' · ');
 
+  /* Identity in the light, the score on the one dark plane. Three stats and no
+     more — enough to read the shape of the person's month before the KPIs
+     explain it. */
+  var a = achOf(rated), st = scoreStatus(m.overall_score);
   var prof = '<button class="back" data-crumb="team">← ' + esc(t ? t.team_name : 'Team') + '</button>' +
-    '<div class="prof"><div class="pid"><h1>' + esc(m.employee_name) + '</h1>' +
-    '<div class="meta">' + esc(meta) + '</div></div>' +
-    '<div class="pr"><div class="pstat">' +
-      '<div class="si"><span class="l">Overall score</span><span class="v">' + show(m.overall_score) + '</span></div>' +
-      '<div class="si"><span class="l">KPI achievement</span><span class="v">' +
-        (achOf(rated) == null ? '—' : achOf(rated) + '%') + '</span></div>' +
-      '<div class="si"><span class="l">KPIs assigned</span><span class="v">' + kpis.length + '</span></div>' +
-    '</div>' + Ring(m.overall_score) + '</div></div>';
+    '<h1 class="page-t">' + esc(m.employee_name) + '</h1>' +
+    '<p class="page-s">' + esc(meta) + '</p>' +
+    '<div class="anchor"><div>' +
+      '<div class="al">Overall score</div>' +
+      '<div class="av"><span data-count="' + (m.overall_score == null ? '' : show(m.overall_score)) + '">' + show(m.overall_score) + '</span><em>/ 100</em></div>' +
+      '<div class="as"><i class="dot ' + st.c + '"></i>' + esc(st.t) + ' · ' +
+        esc(S.month ? monthLabel(S.month) : 'no period') + '</div>' +
+    '</div><div class="ar">' +
+      '<div class="ai"><div class="l">KPI achievement</div><div class="v">' +
+        (a == null ? '—' : a + '%') + '</div></div>' +
+      '<div class="ai"><div class="l">KPIs assigned</div><div class="v">' + kpis.length + '</div></div>' +
+    '</div>' + Ring(m.overall_score) + '</div>';
 
   /* Grouped by KRA, in the order the backend supplied them. The heading is the
      hierarchy — no container, no card, just a label and a rule. */
@@ -1139,11 +1465,14 @@ function ProfileScreen() {
     if (!by[g]) { by[g] = []; order.push(g); }
     by[g].push(k);
   });
-  var body = order.map(function (g) {
+  /* Numbering the KRAs says how many parts the scorecard has and where you are
+     in them, at almost no visual cost. */
+  var body = order.map(function (g, gi) {
     var list = by[g], wt = 0;
     list.forEach(function (k) { wt += Number(k.weightage) || 0; });
     var a = achOf(list);
-    return '<div class="kra-h"><span class="t">' + esc(g) + '</span><span class="ln"></span>' +
+    return '<div class="kra-h"><span class="ix">' + (gi + 1 < 10 ? '0' : '') + (gi + 1) + '</span>' +
+      '<span class="t">' + esc(g) + '</span><span class="ln"></span>' +
       '<span class="r">' + show(wt) + '%' + (a == null ? '' : ' · ' + a + '% achieved') + '</span></div>' +
       list.map(function (k) { return KpiRow(k, k.__i); }).join('');
   }).join('');
@@ -1200,6 +1529,106 @@ function Skeleton() {
     '<div class="skl" style="height:150px;margin-top:56px"></div>';
 }
 
+
+/* ============================================================================
+   MOTION — behaviour
+   ----------------------------------------------------------------------------
+   Four behaviours the CSS cannot express on its own. All of them check
+   prefers-reduced-motion first and degrade to the finished state rather than
+   to nothing, so the interface is never left mid-animation.
+   ============================================================================ */
+var Motion = {
+  still: function () {
+    try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
+    catch (e) { return false; }
+  },
+
+  /* Count up. Only the figures a person actually reads as a result - a team
+     score, a person's score - never every number on the page, which turns a
+     screen into a slot machine. Eased out so it settles rather than stops. */
+  count: function (root) {
+    if (Motion.still()) return;
+    (root || document).querySelectorAll('[data-count]').forEach(function (el) {
+      var to = parseFloat(el.dataset.count);
+      if (isNaN(to)) return;
+      var dec = (el.dataset.count.split('.')[1] || '').length;
+      var dur = 520, t0 = null;
+      var step = function (t) {
+        if (t0 === null) t0 = t;
+        var p = Math.min(1, (t - t0) / dur);
+        var e = 1 - Math.pow(1 - p, 3);
+        el.textContent = (to * e).toFixed(dec);
+        if (p < 1) requestAnimationFrame(step);
+        else el.textContent = to.toFixed(dec);
+      };
+      el.textContent = (0).toFixed(dec);
+      requestAnimationFrame(step);
+    });
+  },
+
+  /* The light that follows the cursor. Two custom properties, written on the
+     card the pointer is actually over - no listener per card, and nothing runs
+     when the pointer is still. */
+  spotlight: function () {
+    document.addEventListener('pointermove', function (e) {
+      var c = e.target.closest && e.target.closest('.node,.gnode,.tcard');
+      if (!c) return;
+      var r = c.getBoundingClientRect();
+      c.style.setProperty('--mx', ((e.clientX - r.left) / r.width * 100).toFixed(1) + '%');
+      c.style.setProperty('--my', ((e.clientY - r.top) / r.height * 100).toFixed(1) + '%');
+    }, { passive: true });
+  },
+
+  /* One indicator for the team strip, moved to whichever tab is current. It is
+     measured from the live element rather than computed, so it stays correct
+     when a team name wraps or the strip scrolls. */
+  slider: function () {
+    var strip = document.querySelector('#teams');
+    if (!strip) return;
+    var el = strip.querySelector('.slider');
+    var on = strip.querySelector('.tb.on');
+    if (!on) { if (el) el.classList.remove('on'); return; }
+    if (!el) { el = document.createElement('span'); el.className = 'slider'; strip.appendChild(el); }
+    var r = on.getBoundingClientRect(), s = strip.getBoundingClientRect();
+    el.style.width = Math.round(r.width) + 'px';
+    el.style.transform = 'translateX(' + Math.round(r.left - s.left + strip.scrollLeft) + 'px)';
+    el.classList.add('on');
+  },
+
+  /* KRA sections and their rows arrive as they are reached. One observer for
+     the page, disconnected and rebuilt per render so it never holds nodes that
+     have been replaced. */
+  _io: null,
+  reveal: function () {
+    if (Motion._io) { Motion._io.disconnect(); Motion._io = null; }
+    var targets = Array.prototype.slice.call(document.querySelectorAll('.kra-h,.krow'));
+    if (!targets.length) return;
+    if (Motion.still() || !('IntersectionObserver' in window)) {
+      targets.forEach(function (t) { t.classList.remove('reveal'); });
+      return;
+    }
+    targets.forEach(function (t) { t.classList.add('reveal'); });
+    Motion._io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (!en.isIntersecting) return;
+        var i = targets.indexOf(en.target);
+        en.target.style.transitionDelay = Math.min(i, 6) * 40 + 'ms';
+        en.target.classList.add('in');
+        Motion._io.unobserve(en.target);
+      });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: .06 });
+    targets.forEach(function (t) { Motion._io.observe(t); });
+  },
+
+  /* Called after every render. The slider and the reveal observer both need
+     the new DOM; the count-up runs only on figures that just appeared. */
+  after: function () {
+    Motion.slider();
+    Motion.reveal();
+    Motion.count();
+  }
+};
+
 /* ============================== RENDER =================================== */
 function render() {
   if (S.loading) return void ($('#view').innerHTML = Skeleton());
@@ -1230,6 +1659,9 @@ function render() {
                        : S.employee ? ProfileScreen()
                        : TeamScreen();
   renderModal();
+  /* The slider, the reveal observer and the count-up all need the DOM this
+   * render just produced, so they run after it rather than inside it. */
+  Motion.after();
 }
 
 function load() {
@@ -1326,6 +1758,7 @@ document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape' && S.detail) { S.detail = null; renderModal(); }
 });
 
+Motion.spotlight();
 load();
 </script>
 </body>
