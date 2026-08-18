@@ -577,6 +577,7 @@ function buildModel_(teamId, month) {
                    kpi: String(kpi.kpi_name || ''),
                    weightage: wt == null ? 0 : wt,
                    goal: String(kpi.goal_description || ''),
+                   source: String(kpi.source_of_tracking || ''),
                    unit: String(kpi.measurement_type || ''),
                    direction: String(kpi.direction || ''),
                    bands: thrOf(m.kpi_id),
@@ -590,7 +591,9 @@ function buildModel_(teamId, month) {
         earned += r.weighted_score; measured += Number(r.weightage) || 0;
       });
       return { employee_id: e.employee_id, employee_name: e.employee_name, team_id: e.team_id,
-               designation: e.designation, region: e.region, kpis: rows,
+               designation: e.designation, region: e.region,
+               reporting_manager: String(e.reporting_manager || ''),
+               kpis: rows,
                assigned_weightage: rows.reduce(function (s, r) { return s + r.weightage; }, 0),
                measured_weightage: measured,
                overall_score: measured > 0 ? Math.round(earned * 10) / 10 : null };

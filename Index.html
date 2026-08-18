@@ -6,1250 +6,356 @@
 <title>KRA / KPI Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 /* ============================================================================
-   KRA / KPI Tracker
-   ----------------------------------------------------------------------------
-   The product answers four questions in order — who, what, how much, how well —
-   and shows nothing that does not serve one of them.
-
-   Three levels, and nothing beyond them is visible by default:
-       TEAMS  →  TEAM FLOW  →  PERSON  →  KPI
-
-   The restraint is the design. Almost monochrome until performance requires
-   emphasis; typography and space carry hierarchy so most values need no box
-   around them at all.
+   KRA / KPI Tracker — premium enterprise scorecard.
+   Left rail · top context bar · white canvas · right-side detail drawer.
+   Journey: Team → Flowchart → Employee → KRA/KPI → KPI detail.
+   Every element earns its place by defining, assigning, tracking, evaluating or
+   reviewing a KRA/KPI. Nothing else is on screen.
    ============================================================================ */
 :root{
-  --font:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
-
-  --bg:#FAFAFA;--card:#FFFFFF;--surface:#F4F4F5;--well:#E9E9EC;
-  --ink:#18181B;--ink-2:#3F3F46;--muted:#71717A;--faint:#A1A1AA;
-  --line:#E7E7EA;--line-2:#D6D6DB;--line-soft:#F1F1F3;
-
-  /* Status is the only colour, and it is muted enough that a screen full of it
-     still reads as one calm surface. */
-  --good:#2F6B4F;--good-soft:#EAF2ED;
-  --warn:#8A6320;--warn-soft:#F7F0E3;
-  --bad:#9C3B32;--bad-soft:#F7EAE8;
-
-  --fs-hero:44px;--fs-xxl:30px;--fs-xl:19px;--fs-lg:15px;--fs-md:14px;
-  --fs-sm:13px;--fs-xs:12px;--fs-2xs:11px;
-  --fw-n:400;--fw-m:500;--fw-b:600;
-
-  --r-ctl:6px;--r-card:10px;--r-lg:14px;--r-pill:999px;
-  --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:24px;--s6:32px;--s7:40px;--s8:56px;--s9:80px;
-
-  --e1:0 1px 2px rgba(24,24,27,.04);
-  --e2:0 1px 3px rgba(24,24,27,.06),0 10px 24px -16px rgba(24,24,27,.16);
-  --e3:0 24px 56px -20px rgba(24,24,27,.24);
-
-  --ease:cubic-bezier(.2,.6,.35,1);--d1:130ms;--d2:220ms;
-  --maxw:1080px;--nodew:190px;
+  --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  /* Navy rail, cool-slate neutrals biased toward the blue accent. */
+  --nav:#0E1A2E;--nav-2:#16253C;--nav-line:rgba(255,255,255,.08);
+  --nav-txt:#8695AC;--nav-active:#FFFFFF;--nav-accent:#4C8DF6;
+  /* On-navy text tiers (rail hover + navy summary card). */
+  --nav-hi:#C6D2E4;--nav-txt-2:#9FB0C8;--nav-muted:#8A9AB2;--nav-faint:#6E829E;
+  --bg:#F5F7FB;--card:#FFFFFF;--surface:#EEF2F8;--well:#E3E9F2;
+  --ink:#15202F;--ink-2:#3E4C63;--muted:#66738B;--faint:#98A3B6;
+  --line:#E7EBF2;--line-2:#D6DDE8;--line-soft:#F0F3F8;
+  --accent:#2C63D6;--accent-2:#2453BE;--accent-soft:#E9F0FD;
+  --good:#2C7D55;--good-soft:#E7F3EC;--warn:#B06A17;--warn-soft:#FAF1E1;--bad:#C13E31;--bad-soft:#FBECE9;
+  --warn-line:#EFDCBE;--warn-line-2:#E4CB9C;
+  --fs-xxl:33px;--fs-xl:21px;--fs-lg:16px;--fs-md:14px;--fs-sm:13px;--fs-xs:12px;--fs-2xs:11px;--fs-3xs:10px;
+  --fw-n:400;--fw-m:500;--fw-b:600;--fw-h:700;
+  --r-ctl:8px;--r-card:12px;--r-pill:999px;
+  --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:24px;--s6:32px;--s7:40px;--s8:56px;
+  --ease:cubic-bezier(.2,.6,.35,1);--d1:140ms;--d2:220ms;--rail:76px;--maxw:1160px;
+  --shadow-1:0 1px 2px rgba(20,32,52,.04);
+  --shadow-2:0 1px 3px rgba(20,32,52,.06),0 8px 24px -12px rgba(20,32,52,.18);
+  --shadow-3:0 24px 60px -22px rgba(15,26,46,.35);
 }
 *{box-sizing:border-box}html,body{margin:0;padding:0}
 body{font-family:var(--font);background:var(--bg);color:var(--ink);font-size:var(--fs-sm);
   line-height:1.5;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
-  font-feature-settings:'tnum' 1,'cv11' 1;letter-spacing:-.006em}
-button,select{font-family:inherit;cursor:pointer}
-b,strong{font-weight:var(--fw-b)}
+  font-feature-settings:'tnum' 1,'cv05' 1;letter-spacing:-.011em}
+button,select,input{font-family:inherit;cursor:pointer}
 *:focus{outline:none}
-*:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:var(--r-ctl)}
+*:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-ctl)}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
 
-/* ---------------------------------------------------------------- CHROME --
-   The navigation almost disappears: a wordmark, the period, and — once you are
-   inside a team — the team names as plain text. The platform is the navigation. */
-.top{position:sticky;top:0;z-index:30;background:rgba(250,250,250,.85);
-  backdrop-filter:saturate(150%) blur(10px);border-bottom:1px solid var(--line)}
-.nav{max-width:var(--maxw);margin:0 auto;padding:0 var(--s5);min-height:54px;
-  display:flex;align-items:center;gap:var(--s5);flex-wrap:wrap}
-.mark{font-size:var(--fs-xs);font-weight:var(--fw-b);letter-spacing:.02em;color:var(--ink);
-  white-space:nowrap;border:none;background:none;padding:0}
-.mark:hover{color:var(--muted)}
-.teams{display:flex;gap:var(--s4);overflow-x:auto;flex:1;scrollbar-width:none;align-items:center}
-.teams::-webkit-scrollbar{display:none}
-.tb{border:none;background:transparent;color:var(--muted);font-size:var(--fs-xs);
-  font-weight:var(--fw-m);padding:4px 0;white-space:nowrap;position:relative;
-  transition:color var(--d1) var(--ease)}
-.tb:hover{color:var(--ink)}
-.tb.on{color:var(--ink);font-weight:var(--fw-b)}
-.tb.on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1.5px;background:var(--ink)}
-.tb .ts{display:none}
+/* ============================== SHELL ==================================== */
+.app{display:flex;min-height:100vh}
 
-.wrap{max-width:var(--maxw);margin:0 auto;padding:var(--s8) var(--s5) var(--s9)}
-.demo{border-bottom:1px solid var(--line);background:var(--good-soft)}
-.demo .in{max-width:var(--maxw);margin:0 auto;padding:7px var(--s5);display:flex;align-items:center;
-  gap:var(--s2);font-size:var(--fs-xs);color:var(--good)}
-.demo button{margin-left:auto;border:1px solid var(--line-2);background:var(--card);color:var(--ink-2);
-  font-size:var(--fs-2xs);font-weight:var(--fw-m);padding:3px 10px;border-radius:var(--r-pill)}
-.demo button:hover{border-color:var(--ink)}
+/* Left rail — icon + small label, ~76px, never visually dominant. */
+.rail{flex:0 0 var(--rail);width:var(--rail);background:var(--nav);position:sticky;top:0;height:100vh;
+  display:flex;flex-direction:column;align-items:stretch;padding:var(--s4) 0;z-index:40}
+.rail-logo{display:flex;align-items:center;justify-content:center;height:40px;margin-bottom:var(--s5)}
+.rail-logo svg{width:26px;height:26px;display:block}
+.rail-nav{display:flex;flex-direction:column;gap:2px;padding:0 8px}
+.rail-i{appearance:none;border:none;background:transparent;color:var(--nav-txt);
+  display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 4px;border-radius:10px;
+  font-size:var(--fs-3xs);font-weight:var(--fw-m);letter-spacing:.01em;position:relative;
+  transition:color var(--d1) var(--ease),background var(--d1) var(--ease)}
+.rail-i svg{width:20px;height:20px;stroke-width:1.7}
+.rail-i:hover{color:var(--nav-hi);background:var(--nav-2)}
+.rail-i.on{color:var(--nav-active);background:var(--nav-2)}
+.rail-i:focus-visible{outline-color:var(--nav-accent)}
+.rail-i.on::before{content:"";position:absolute;left:-8px;top:12px;bottom:12px;width:3px;
+  border-radius:0 3px 3px 0;background:var(--nav-accent)}
+.rail-sp{flex:1}
 
-.sel{border:1px solid var(--line-2);background:var(--card);color:var(--ink);font-size:var(--fs-xs);
-  font-weight:var(--fw-m);padding:5px var(--s3);border-radius:var(--r-ctl);
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+
+/* Top context bar — team, month, then who you are. Compact. */
+.tbar{position:sticky;top:0;z-index:30;background:rgba(245,247,251,.85);backdrop-filter:saturate(180%) blur(10px);
+  border-bottom:1px solid var(--line);padding:0 var(--s6);height:58px;display:flex;align-items:center;gap:var(--s3)}
+.tbar .grow{flex:1}
+.fld{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-2xs);color:var(--muted);
+  text-transform:uppercase;letter-spacing:.06em;font-weight:var(--fw-m)}
+.sel{border:1px solid var(--line-2);background:var(--card);color:var(--ink);font-size:var(--fs-sm);
+  font-weight:var(--fw-m);padding:7px 10px;border-radius:var(--r-ctl);max-width:230px;box-shadow:var(--shadow-1);
   transition:border-color var(--d1) var(--ease)}
-.sel:hover:not(:disabled){border-color:var(--ink)}
-.sel:disabled{color:var(--faint);background:var(--surface);cursor:not-allowed}
-.nav .sel{margin-left:auto}
+.sel:hover{border-color:var(--line-2)}.sel:focus-visible{border-color:var(--accent)}
+.sel:disabled{color:var(--faint);background:var(--surface)}
+.greet{display:flex;align-items:center;gap:10px}
+.greet .who{text-align:right;line-height:1.25}
+.greet .who b{display:block;font-size:var(--fs-sm);font-weight:var(--fw-b)}
+.greet .who span{font-size:var(--fs-2xs);color:var(--muted)}
 
+.canvas{flex:1;min-height:0;overflow-y:auto}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:var(--s6) var(--s6) var(--s8)}
+
+/* ============================== PRIMITIVES =============================== */
+.avatar{flex:0 0 auto;border-radius:var(--r-pill);background:var(--accent-soft);color:var(--accent-2);
+  display:grid;place-items:center;font-weight:var(--fw-b);letter-spacing:-.02em;
+  width:34px;height:34px;font-size:var(--fs-xs)}
+.avatar.lg{width:56px;height:56px;font-size:var(--fs-lg)}
+.avatar.xl{width:48px;height:48px;font-size:var(--fs-md)}
+
+.page-h{display:flex;align-items:flex-start;gap:var(--s4);flex-wrap:wrap;margin-bottom:var(--s6)}
+.page-h h1{font-size:var(--fs-xl);font-weight:var(--fw-b);letter-spacing:-.02em;margin:0;line-height:1.2}
+.page-h .kind{font-size:var(--fs-sm);color:var(--muted);margin-top:3px}
+.page-h .r{margin-left:auto}
 .back{border:none;background:none;color:var(--muted);font-size:var(--fs-xs);font-weight:var(--fw-m);
-  padding:0;margin-bottom:var(--s5);display:inline-flex;align-items:center;gap:5px;
-  transition:color var(--d1) var(--ease)}
+  padding:6px 8px;margin-left:-8px;display:inline-flex;align-items:center;gap:6px;margin-bottom:var(--s2)}
 .back:hover{color:var(--ink)}
 
-/* ----------------------------------------------------------------- TEAMS --
-   The landing screen is deliberately almost empty: a title, and the five places
-   you can go. No totals, no charts, no summary. */
-.page-t{font-size:var(--fs-xxl);font-weight:var(--fw-b);letter-spacing:-.03em;margin:0 0 var(--s2)}
-.page-s{font-size:var(--fs-sm);color:var(--muted);margin:0 0 var(--s8)}
-.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:var(--s4)}
-.tcard{background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);
-  padding:var(--s5);text-align:left;display:flex;flex-direction:column;gap:var(--s5);
-  min-height:150px;cursor:pointer;
-  transition:border-color var(--d1) var(--ease),box-shadow var(--d1) var(--ease)}
-.tcard:hover{border-color:var(--line-2);box-shadow:var(--e2)}
-.tcard .tt{display:block;font-size:var(--fs-2xs);font-weight:var(--fw-b);letter-spacing:.1em;
-  text-transform:uppercase;color:var(--ink);line-height:1.4}
-.tcard .tm{display:block;font-size:var(--fs-xs);color:var(--muted);margin-top:var(--s1);line-height:1.5}
-.tcard .tv{margin-top:auto;display:block}
-.tcard .tv .l{display:block;font-size:var(--fs-2xs);color:var(--muted)}
-.tcard .tv .v{display:block;font-size:var(--fs-xxl);font-weight:var(--fw-b);letter-spacing:-.03em;
-  line-height:1;font-variant-numeric:tabular-nums;margin-top:var(--s1)}
-.tcard .tv .v em{font-style:normal;font-size:var(--fs-sm);color:var(--faint);font-weight:var(--fw-m)}
-
-/* ------------------------------------------------------------- TEAM FLOW --
-   People as performance nodes, not profile cards. Each node carries a name, a
-   role and a score — enough to answer "who is performing well", and nothing
-   that would begin to answer "why", which belongs inside the profile.
-
-   The connectors are hairlines. They state the reporting relationship and then
-   get out of the way. */
-.flow{display:flex;flex-direction:column;align-items:center;width:100%;margin-top:var(--s7)}
-.lvl{display:flex;justify-content:center;flex-wrap:wrap;gap:var(--s4);width:100%}
-.drop{width:1px;height:var(--s5);background:var(--line-2);flex:0 0 auto}
-.branch{display:flex;justify-content:center;width:100%}
-.branch .arm{position:relative;flex:1;min-width:0;display:flex;flex-direction:column;
-  align-items:center}
-.branch .arm::before{content:"";position:absolute;top:0;height:1px;background:var(--line-2);left:0;right:0}
-.branch .arm:first-child::before{left:50%}
-.branch .arm:last-child::before{right:50%}
-.branch .arm:only-child::before{display:none}
-.branch .arm .stem{width:1px;height:var(--s5);background:var(--line-2);flex:0 0 auto}
-
-/* Two fixed rows: identity on top, performance pinned to the bottom. Because
-   the identity block reserves exactly two lines for the role, the score, the
-   stage word and the bar land on the same baseline in every card in the row —
-   a name that wraps can never push one card's bar out of line with its
-   neighbours'. */
-.node{width:var(--nodew);background:var(--card);border:1px solid var(--line);
-  border-radius:var(--r-card);padding:var(--s4);text-align:left;cursor:pointer;
-  display:grid;grid-template-rows:auto 1fr;gap:var(--s4);
-  transition:border-color var(--d1) var(--ease),box-shadow var(--d1) var(--ease)}
-.node:hover{border-color:var(--line-2);box-shadow:var(--e2)}
-.node:active{background:var(--surface)}
-/* The lead is one step larger — the only size difference in the chart, and it
-   carries the hierarchy without a heavier border or a colour. */
-.node.lead{width:calc(var(--nodew) + 28px);box-shadow:var(--e1)}
-.node .nh,.node .nf{display:block;min-width:0}
-.node .nf{align-self:end}
-.node .nm{display:block;font-size:var(--fs-sm);font-weight:var(--fw-b);line-height:17px;height:17px;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-/* exactly two lines are reserved, so no node can grow taller than its siblings */
-.node .rl{display:-webkit-box;font-size:var(--fs-2xs);color:var(--muted);line-height:1.35;
-  margin-top:3px;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;height:30px}
-/* score and stage share a baseline; the score is the anchor and the word is
-   set small and quiet beside it, so the figure is still what you read first */
-.node .sr{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s2)}
-.node .sc{font-size:var(--fs-xl);font-weight:var(--fw-b);letter-spacing:-.03em;line-height:1;
-  font-variant-numeric:tabular-nums;white-space:nowrap}
-.node.lead .sc{font-size:var(--fs-xxl)}
-.node .sc em{font-style:normal;font-size:var(--fs-xs);color:var(--faint);font-weight:var(--fw-m)}
-.node .stg{font-size:var(--fs-2xs);font-weight:var(--fw-b);white-space:nowrap;letter-spacing:.01em}
-.node .stg.good{color:var(--good)}
-.node .stg.warn{color:var(--warn)}
-.node .stg.bad{color:var(--bad)}
-.node .stg.none{color:var(--faint);font-weight:var(--fw-m)}
-
-/* The bar itself. Notches are cut in the card's own colour so they read as
-   breaks in the fill rather than marks on top of it. */
-.pb{display:block;position:relative;height:6px;margin-top:var(--s3);
-  background:var(--well);border-radius:var(--r-pill);overflow:hidden}
-.pb i{position:absolute;left:0;top:0;height:100%;border-radius:var(--r-pill);
-  background:var(--ink);transition:width var(--d2) var(--ease)}
-.pb i.good{background:var(--good)}
-.pb i.warn{background:var(--warn)}
-.pb i.bad{background:var(--bad)}
-.pb i.none{background:var(--line-2)}
-.pb u{position:absolute;top:0;width:1.5px;height:100%;background:var(--card);
-  transform:translateX(-.75px)}
-.gnode .pb u{background:var(--surface)}
-.gnode.open .pb u,.gnode:hover .pb u{background:var(--card)}
-
-
-/* A function tier, not a person. It is visibly a different kind of object —
-   flatter, on the sunken surface, with a chevron — so no one mistakes it for
-   someone they can open a profile on. */
-/* Same two-row skeleton as a person node, so the two kinds of card align to
-   the same internal grid and their bars sit at the same height when they share
-   a row. */
-.gnode{width:var(--nodew);background:var(--surface);border:1px solid var(--line);
-  border-radius:var(--r-card);padding:var(--s4);text-align:left;cursor:pointer;
-  display:grid;grid-template-columns:1fr auto;grid-template-rows:auto 1fr;
-  gap:var(--s4) var(--s3);
-  transition:border-color var(--d1) var(--ease),background var(--d1) var(--ease)}
-.gnode:hover{border-color:var(--line-2);background:var(--card)}
-.gnode.open{background:var(--card);border-color:var(--line-2)}
-.gnode .gh{grid-column:1;grid-row:1;min-width:0}
-.gnode .gt{display:block;font-size:var(--fs-2xs);font-weight:var(--fw-b);letter-spacing:.1em;
-  text-transform:uppercase;color:var(--ink);line-height:17px;height:17px;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-/* one line here against the person card's two, plus the chevron row, brings
-   both card types to the same height */
-.gnode .gm{display:block;font-size:var(--fs-2xs);color:var(--muted);margin-top:3px;height:30px}
-.gnode .gc{grid-column:2;grid-row:1;font-size:var(--fs-lg);color:var(--faint);
-  width:18px;text-align:center;line-height:1.2}
-.gnode:hover .gc,.gnode.open .gc{color:var(--ink)}
-.gnode .gf{grid-column:1/-1;grid-row:2;align-self:end;min-width:0}
-.gnode .sr{display:flex;align-items:baseline;justify-content:space-between;gap:var(--s2)}
-.gnode .gs{font-size:var(--fs-xl);font-weight:var(--fw-b);letter-spacing:-.03em;line-height:1;
-  font-variant-numeric:tabular-nums;white-space:nowrap}
-.gnode .gs em{font-style:normal;font-size:var(--fs-xs);color:var(--faint);font-weight:var(--fw-m)}
-.gnode .stg{font-size:var(--fs-2xs);font-weight:var(--fw-b);white-space:nowrap}
-.gnode .stg.good{color:var(--good)}
-.gnode .stg.warn{color:var(--warn)}
-.gnode .stg.bad{color:var(--bad)}
-.gnode .stg.none{color:var(--faint);font-weight:var(--fw-m)}
-@media(max-width:760px){.gnode{width:100%;max-width:300px}}
-/* --------------------------------------------------------------- PROFILE --
-   One dominant figure, three stats, then the KRAs that explain it. */
-.prof{display:flex;align-items:flex-start;gap:var(--s6);flex-wrap:wrap;margin-bottom:var(--s8)}
-.prof .pid h1{font-size:var(--fs-xxl);font-weight:var(--fw-b);margin:0;letter-spacing:-.03em;line-height:1.15}
-.prof .pid .meta{font-size:var(--fs-sm);color:var(--muted);margin-top:var(--s2);line-height:1.6}
-.prof .pr{margin-left:auto;display:flex;align-items:center;gap:var(--s7)}
-.ring{position:relative;width:112px;height:112px;flex:0 0 auto}
-.ring svg{width:100%;height:100%;transform:rotate(-90deg);display:block}
-.ring .tr{fill:none;stroke:var(--well);stroke-width:6}
-.ring .fg{fill:none;stroke:var(--ink);stroke-width:6;stroke-linecap:round}
-.ring .lbl{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:0}
-.ring .lbl b{font-size:var(--fs-xxl);font-weight:var(--fw-b);letter-spacing:-.035em;
-  font-variant-numeric:tabular-nums;line-height:1}
-.ring .lbl span{font-size:var(--fs-2xs);color:var(--faint);margin-top:2px}
-/* Three stats. Not four, not a grid of tiles — a short list set in type. */
-.pstat{display:flex;flex-direction:column;gap:var(--s4)}
-.pstat .si{display:flex;align-items:baseline;gap:var(--s4);justify-content:space-between;min-width:180px}
-.pstat .si .l{font-size:var(--fs-xs);color:var(--muted)}
-.pstat .si .v{font-size:var(--fs-lg);font-weight:var(--fw-b);font-variant-numeric:tabular-nums;
-  letter-spacing:-.02em}
-
-/* ------------------------------------------------------------- KRA / KPI --
-   The KRA heading is the navigation hierarchy; a rule and a label are enough.
-   Each KPI is a row, not a card: name and weightage on one line, the numbers
-   on the next, and a hairline bar beneath. Rows sit directly on the page, so
-   twelve of them still read as one list rather than twelve objects. */
-.kra-h{display:flex;align-items:baseline;gap:var(--s3);margin:var(--s7) 0 var(--s2)}
-.kra-h .t{font-size:var(--fs-2xs);font-weight:var(--fw-b);color:var(--ink);
-  text-transform:uppercase;letter-spacing:.11em;white-space:nowrap}
-.kra-h .ln{flex:1;height:1px;background:var(--line)}
-.kra-h .r{font-size:var(--fs-2xs);color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
-
-.krow{display:block;width:100%;text-align:left;border:none;background:none;
-  padding:var(--s4) var(--s3);border-bottom:1px solid var(--line-soft);cursor:pointer;
-  transition:background var(--d1) var(--ease)}
-.krow:hover{background:var(--card)}
-.krow:last-child{border-bottom:none}
-.krow .r1{display:flex;align-items:baseline;gap:var(--s4)}
-.krow .kn{font-size:var(--fs-md);font-weight:var(--fw-b);flex:1;min-width:0;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-.012em}
-.krow .kw{font-size:var(--fs-xs);color:var(--muted);font-variant-numeric:tabular-nums;flex:0 0 auto}
-.krow .r2{display:flex;align-items:baseline;gap:var(--s4);margin-top:var(--s2)}
-.krow .flow-v{font-size:var(--fs-xs);color:var(--muted);font-variant-numeric:tabular-nums;
-  flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.krow .flow-v b{color:var(--ink);font-weight:var(--fw-m)}
-.krow .ach{font-size:var(--fs-md);font-weight:var(--fw-b);font-variant-numeric:tabular-nums;
-  flex:0 0 auto;letter-spacing:-.015em}
-.krow .ach.good{color:var(--good)}
-.krow .ach.warn{color:var(--warn)}
-.krow .ach.bad{color:var(--bad)}
-.krow .ach.none{color:var(--faint);font-weight:var(--fw-m)}
-.kbar{margin-top:var(--s3);height:3px;background:var(--well);border-radius:var(--r-pill);
-  position:relative;overflow:hidden}
-.kbar i{position:absolute;left:0;top:0;height:100%;border-radius:var(--r-pill);background:var(--ink)}
-.kbar i.good{background:var(--good)}
-.kbar i.warn{background:var(--warn)}
-.kbar i.bad{background:var(--bad)}
-
-/* ---------------------------------------------------------------- DRAWER --
-   One slim panel from the right. No modal stack, no nested popups. */
-.scrim{position:fixed;inset:0;background:rgba(24,24,27,.28);opacity:0;pointer-events:none;
-  transition:opacity var(--d2) var(--ease);z-index:40}
-.scrim.on{opacity:1;pointer-events:auto}
-.modal{position:fixed;top:0;right:0;bottom:0;width:380px;max-width:calc(100vw - 32px);
-  background:var(--card);border-left:1px solid var(--line);box-shadow:var(--e3);z-index:41;
-  transform:translateX(100%);transition:transform var(--d2) var(--ease);
-  overflow-y:auto;display:flex;flex-direction:column}
-.modal.on{transform:none}
-.m-h{padding:var(--s6) var(--s5) var(--s4);display:flex;align-items:flex-start;gap:var(--s3)}
-.m-h h2{font-size:var(--fs-xl);font-weight:var(--fw-b);margin:0;letter-spacing:-.022em;line-height:1.25}
-.m-h .sub{font-size:var(--fs-2xs);color:var(--muted);margin-top:var(--s1);text-transform:uppercase;
-  letter-spacing:.11em;font-weight:var(--fw-b)}
-.m-h .x{margin-left:auto;border:none;background:none;color:var(--faint);font-size:var(--fs-xl);
-  line-height:1;padding:0 2px;flex:0 0 auto;transition:color var(--d1) var(--ease)}
-.m-h .x:hover{color:var(--ink)}
-.m-b{padding:0 var(--s5) var(--s7)}
-.kv{display:grid;grid-template-columns:auto 1fr;gap:var(--s3) var(--s4);
-  padding-top:var(--s4);border-top:1px solid var(--line)}
-.kv dt{color:var(--muted);font-size:var(--fs-xs);white-space:nowrap}
-.kv dd{margin:0;text-align:right;font-variant-numeric:tabular-nums;font-weight:var(--fw-m);
-  font-size:var(--fs-sm)}
-.kv dd.hi{font-weight:var(--fw-b)}
-.sect-t{font-size:var(--fs-2xs);font-weight:var(--fw-b);color:var(--muted);text-transform:uppercase;
-  letter-spacing:.11em;margin:var(--s6) 0 var(--s3);padding-top:var(--s4);
-  border-top:1px solid var(--line)}
-.goal p{margin:0;color:var(--ink-2);line-height:1.65;font-size:var(--fs-xs)}
-.m-perf .n{font-size:var(--fs-xxl);font-weight:var(--fw-b);letter-spacing:-.03em;
-  font-variant-numeric:tabular-nums;line-height:1}
-.m-perf .n.good{color:var(--good)}.m-perf .n.warn{color:var(--warn)}.m-perf .n.bad{color:var(--bad)}
-.m-perf .kbar{margin-top:var(--s3);height:4px}
-
-/* ----------------------------------------------------------------- STATE -- */
-.state{display:grid;place-items:center;min-height:52vh;text-align:center}
-.state h2{font-size:var(--fs-xl);font-weight:var(--fw-b);margin:0 0 var(--s2)}
-.state p{color:var(--muted);margin:0 0 var(--s4);max-width:46ch;line-height:1.6}
-.btn{border:1px solid var(--ink);background:var(--ink);color:#fff;border-radius:var(--r-ctl);
-  padding:8px 16px;font-size:var(--fs-sm);font-weight:var(--fw-m);
-  transition:opacity var(--d1) var(--ease)}
-.btn:hover{opacity:.86}
-.btn.ghost{background:var(--card);border-color:var(--line-2);color:var(--ink-2);margin-left:var(--s2)}
-.btn.ghost:hover{border-color:var(--ink);color:var(--ink);opacity:1}
-.state .btn{margin-top:var(--s2)}
-.empty{padding:var(--s6);text-align:center;color:var(--muted);font-size:var(--fs-xs)}
-.hint{font-size:var(--fs-xs);color:var(--muted);margin-top:var(--s7);line-height:1.6}
-.skl{background:linear-gradient(90deg,var(--surface),var(--well),var(--surface));
-  background-size:200% 100%;border-radius:var(--r-card);animation:sh 1.4s ease-in-out infinite}
-@keyframes sh{to{background-position:-200% 0}}
-
-/* -------------------------------------------------------------- RESPONSE --
-   The flow becomes a single column; a child still sits below its parent joined
-   by the same hairline, so the structure survives the narrowing. */
-@media(max-width:760px){
-  .nav{padding:var(--s2) var(--s4);gap:var(--s3)}
-  .nav .sel{margin-left:auto}
-  .teams{order:3;flex-basis:100%;gap:var(--s4);padding-bottom:var(--s1)}
-  .wrap{padding:var(--s6) var(--s4) var(--s8)}
-  .demo .in{padding-left:var(--s4);padding-right:var(--s4)}
-  .prof{gap:var(--s5)}
-  .prof .pr{margin-left:0;width:100%;justify-content:space-between;gap:var(--s5)}
-  .lvl,.branch{flex-direction:column;align-items:center;gap:var(--s3)}
-  .branch{gap:0}
-  .branch .arm{width:100%}
-  .branch .arm::before{display:none}
-  .branch .arm .stem{height:var(--s4)}
-  .node,.node.lead{width:100%;max-width:300px}
-  .modal{width:100%;max-width:100%}
-}
-@media(pointer:coarse){.tb,.btn,.sel{min-height:40px}}
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
-
-/* ============================================================================
-   RECYKAL BRAND
-   ----------------------------------------------------------------------------
-   The structure above is right; what it was missing was the brand. Everything
-   here comes from the official guidelines: Poppins across the family, Bright
-   Blue #005DFF as the single interactive accent, the blue→purple gradient on
-   the marks that carry identity, and Duke/Bright Green for success — green is
-   on-brand for Recykal, which is why the "achieved" state is the one status
-   colour that belongs to the palette rather than sitting outside it.
-
-   Amber and red are not in the guidelines. They stay, because a performance
-   system has to be able to say "behind", but they are held back to the muted
-   functional pair the guide allows for alerts and never used decoratively.
-   ============================================================================ */
-:root{
-  --font:'Poppins','Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
-
-  /* Brand */
-  --brand:#005DFF;            /* Bright Blue — hero, the one interactive accent */
-  --brand-ink:#024C8A;        /* Midnight Blue — pressed, and accent text on light */
-  --brand-deep:#0000AF;       /* Blue — the deep end of the ramp */
-  --brand-2:#8460D4;          /* Medium Purple — closes the gradient */
-  --peri:#567DE8;             /* Periwinkle — informational, never performance */
-  --brand-soft:#EAF1FF;
-  --brand-line:#CFE0FF;
-  --grad:linear-gradient(135deg,#005DFF,#8460D4);
-  --grad-deep:linear-gradient(135deg,#024C8A,#0000AF);
-
-  /* Neutrals, tinted toward the brand blue so nothing reads as flat grey */
-  --bg:#F6F8FC;--card:#FFFFFF;--surface:#EFF3FA;--well:#DFE7F3;
-  --ink:#0B1B36;--ink-2:#3A4A66;--muted:#66748C;--faint:#93A0B5;
-  --line:#E3E9F3;--line-2:#CFD9E8;--line-soft:#EEF2F9;
-
-  /* Status. Green is the brand's own; amber and red are functional only. */
-  --good:#049769;--good-2:#1DC797;--good-soft:#E3F5EE;
-  --warn:#B0740E;--warn-soft:#FBF1DE;
-  --bad:#C0392F;--bad-soft:#FAEAE8;
-
-  /* Elevation, tinted blue so shadows belong to the same light as the ground */
-  --e1:0 1px 2px rgba(11,27,54,.05);
-  --e2:0 1px 3px rgba(11,27,54,.06),0 14px 32px -18px rgba(11,27,54,.22);
-  --e3:0 28px 60px -22px rgba(11,27,54,.30);
-}
-
-/* Poppins is geometric and sets a touch wider than Inter, so the tracking that
-   suited Inter has to come back a step or headings start to look loose. */
-body{letter-spacing:-.015em}
-.page-t,.prof .pid h1,.m-h h2{letter-spacing:-.035em}
-.node .sc,.gnode .gs,.tcard .tv .v,.ring .lbl b{letter-spacing:-.04em}
-
-/* ---------------------------------------------------------------- CHROME -- */
-.top{background:rgba(246,248,252,.86);border-bottom:1px solid var(--line)}
-.mark{color:var(--brand);font-weight:700;letter-spacing:.04em}
-.mark:hover{color:var(--brand-ink)}
-.tb{font-weight:500}
-.tb:hover{color:var(--brand)}
-.tb.on{color:var(--brand);font-weight:600}
-.tb.on::after{background:var(--brand);height:2px;border-radius:2px}
-.sel:hover:not(:disabled),.sel:focus{border-color:var(--brand)}
-.sel:focus{box-shadow:0 0 0 3px var(--brand-soft)}
-.back:hover{color:var(--brand)}
-*:focus-visible{outline-color:var(--brand)}
-.demo{background:var(--good-soft);border-bottom-color:var(--good-soft)}
-.demo .in{color:var(--good)}
-
-/* ----------------------------------------------------------------- TEAMS --
-   A team card carries the brand mark: the four-petal pinwheel from the guide,
-   drawn in the four brand hues. It is the one piece of ornament in the
-   product, and it earns its place by making the landing screen unmistakably
-   Recykal at a glance. */
-.tcard{border-color:var(--line);box-shadow:var(--e1);position:relative;overflow:hidden}
-.tcard::after{content:"";position:absolute;right:-28px;top:-28px;width:104px;height:104px;
-  border-radius:50%;background:var(--brand-soft);opacity:.55;pointer-events:none;
-  transition:opacity var(--d2) var(--ease),transform var(--d2) var(--ease)}
-.tcard:hover{border-color:var(--brand-line);box-shadow:var(--e2)}
-.tcard:hover::after{opacity:.9;transform:scale(1.08)}
-.tcard .tt{color:var(--ink)}
-.tcard .tv .v{color:var(--brand)}
-.tcard > *{position:relative;z-index:1}
-
-/* ------------------------------------------------------------- TEAM FLOW --
-   The lead is the identity node, so it takes the brand: a gradient rule across
-   its top edge. Everyone else stays white, which keeps the chart calm and lets
-   one card carry the hierarchy without a second border weight or a tint. */
-.node{box-shadow:var(--e1);border-color:var(--line)}
-.node:hover{border-color:var(--brand-line);box-shadow:var(--e2)}
-.node.lead{position:relative;overflow:hidden;box-shadow:var(--e2)}
-.node.lead::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:var(--grad)}
-.node .sc{color:var(--ink)}
-.node.lead .sc{color:var(--brand)}
-.gnode{border-color:var(--line);background:var(--surface)}
-.gnode:hover,.gnode.open{border-color:var(--brand-line);background:var(--card)}
-.gnode.open .gc,.gnode:hover .gc{color:var(--brand)}
-.gnode .gt{color:var(--brand-ink)}
-.drop,.branch .arm::before,.branch .arm .stem{background:var(--line-2)}
-
-/* Status words and bar fills, on the brand ramp where the brand has one. */
-.stg.good,.krow .ach.good,.st.good{color:var(--good)}
-.stg.warn,.krow .ach.warn,.st.warn{color:var(--warn)}
-.stg.bad,.krow .ach.bad,.st.bad{color:var(--bad)}
-.pb{background:var(--well);height:6px}
-.pb i{background:var(--brand)}
-.pb i.good{background:linear-gradient(90deg,var(--good),var(--good-2))}
-.pb i.warn{background:var(--warn)}
-.pb i.bad{background:var(--bad)}
-.kbar i.good{background:linear-gradient(90deg,var(--good),var(--good-2))}
-
-/* --------------------------------------------------------------- PROFILE --
-   The ring is the one place the full brand gradient appears at size. A flat
-   stroke cannot take a gradient, so the arc is painted through an SVG gradient
-   and the track sits behind it in the well tone. */
-.prof{border-bottom:1px solid var(--line)}
-.ring .tr{stroke:var(--well)}
-.ring .fg{stroke:url(#brandArc)}
-.ring .lbl b{color:var(--brand)}
-.pstat .si .v{color:var(--ink)}
-.kra-h .t{color:var(--brand-ink)}
-.kra-h .ln{background:var(--line)}
-.krow{border-bottom-color:var(--line-soft)}
-.krow:hover{background:var(--card);box-shadow:var(--e1)}
-.krow .kn{color:var(--ink)}
-
-/* ---------------------------------------------------------------- DRAWER -- */
-.modal{border-left:1px solid var(--line);box-shadow:var(--e3)}
-.m-h h2{color:var(--ink)}
-.m-h .sub{color:var(--brand-ink)}
-.sect-t{color:var(--brand-ink)}
-.kv{border-top-color:var(--line)}
-.m-perf .n{color:var(--brand)}
-.m-perf .n.good{color:var(--good)}
-.m-perf .n.warn{color:var(--warn)}
-.m-perf .n.bad{color:var(--bad)}
-.scrim{background:rgba(11,27,54,.36)}
-
-/* ----------------------------------------------------------------- STATE -- */
-.btn{background:var(--brand);border-color:var(--brand)}
-.btn:hover{background:var(--brand-ink);border-color:var(--brand-ink);opacity:1}
-.btn.ghost{background:var(--card);border-color:var(--line-2);color:var(--ink-2)}
-.btn.ghost:hover{border-color:var(--brand);color:var(--brand);background:var(--card)}
-
-/* ============================================================================
-   LOGO, RHYTHM AND FIT
-   ----------------------------------------------------------------------------
-   The mark is the four-petal pinwheel from the guidelines, in the four brand
-   hues at 0/90/180/270°. It sits with the product name so the top-left corner
-   identifies the product and returns you home in one control.
-
-   The rest of this block is about fit: the screens were carrying more air than
-   they earned. Whitespace is worth having when it separates things that mean
-   different things — it is dead weight when it is simply left over. Every
-   value below was measured against content rather than chosen for looks.
-   ============================================================================ */
-.mark{display:inline-flex;align-items:center;gap:9px;line-height:1}
-.mark .logo{flex:0 0 auto;display:grid;place-items:center}
-.mark .logo svg{width:22px;height:22px;display:block}
-.mark .wm{display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left}
-.mark .wm{font-size:13px;font-weight:700;color:var(--ink);letter-spacing:-.02em}
-.mark .wm b{font-size:9.5px;font-weight:600;color:var(--brand);letter-spacing:.1em;
-  text-transform:uppercase}
-.mark:hover .wm{color:var(--brand)}
-.nav{min-height:60px;gap:var(--s5)}
-
-/* --- Vertical rhythm ------------------------------------------------------
-   Was 56px above the title and 56px below the subtitle, which pushed the first
-   real content most of a screen down. A title needs air above it, not a void. */
-.wrap{padding-top:var(--s6);padding-bottom:var(--s7)}
-.page-t{font-size:26px;margin-bottom:var(--s1)}
-.page-s{font-size:var(--fs-xs);margin-bottom:var(--s5)}
-.back{margin-bottom:var(--s3)}
-
-/* --- Team grid ------------------------------------------------------------
-   Five teams into a three-column grid always left one slot empty and a band of
-   dead space beneath. A narrower minimum lets the row find its own count, and
-   the cards carry their content at a height that fits it. */
-/* Five teams, one row. An auto-fit grid put four across and left the fifth
-   stranded on a row of its own with a band of dead space beside it; naming the
-   count removes both. Below the width where five still read, it steps to three
-   and then two rather than drifting. */
-.tgrid{grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--s3)}
-@media(max-width:1080px){.tgrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media(max-width:720px){.tgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:440px){.tgrid{grid-template-columns:minmax(0,1fr)}}
-.tcard{min-height:0;padding:var(--s4);gap:var(--s4)}
-.tcard::after{width:88px;height:88px;right:-24px;top:-24px}
-/* Two lines are reserved for the name whether or not it needs them, so a team
-   whose name wraps cannot stand taller than the four beside it. */
-.tcard .tt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
-  overflow:hidden;line-height:1.35;height:30px;font-size:10.5px;letter-spacing:.085em}
-.tcard .tm{font-size:var(--fs-2xs);line-height:1.4;height:17px;overflow:hidden;
-  text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
-.tcard .tv .l{font-size:10px}
-.tcard .tv .v{font-size:25px}
-
-/* --- Flow -----------------------------------------------------------------
-   The chart began 40px below a heading that already had 24px under it. One
-   gap, not two. */
-.flow{margin-top:var(--s5)}
-.lvl{gap:var(--s3)}
-.drop{height:20px}
-.branch .arm .stem{height:20px}
-.node,.gnode{padding:var(--s3) var(--s4)}
-.node{gap:var(--s3)}
-.gnode{gap:var(--s3) var(--s3)}
-
-/* --- Profile --------------------------------------------------------------
-   The identity block and the ring belong on one line at any comfortable width;
-   the stats sit between them rather than below, which removes a whole band of
-   empty space on the left. */
-.prof{margin-bottom:var(--s5);padding-bottom:var(--s5);gap:var(--s5);align-items:center}
-.prof .pid h1{font-size:26px}
-.prof .pid .meta{margin-top:var(--s1)}
-.prof .pr{gap:var(--s6)}
-.ring{width:96px;height:96px}
-.ring .lbl b{font-size:24px}
-.pstat{gap:var(--s3)}
-.pstat .si{min-width:172px}
-.pstat .si .v{font-size:var(--fs-md)}
-.kra-h{margin:var(--s5) 0 0}
-.kra-h:first-of-type{margin-top:var(--s4)}
-.krow{padding:var(--s3)}
-.krow .r2{margin-top:6px}
-.kbar,.krow .kbar{margin-top:var(--s2)}
-.hint{margin-top:var(--s5)}
-
-/* --- Drawer --------------------------------------------------------------- */
-.m-h{padding:var(--s5) var(--s5) var(--s3)}
-.m-b{padding:0 var(--s5) var(--s6)}
-.sect-t{margin:var(--s5) 0 var(--s2);padding-top:var(--s3)}
-
-@media(max-width:760px){
-  .wrap{padding-top:var(--s5)}
-  .mark .wm{font-size:12px}
-  .tgrid{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
-  .prof{align-items:flex-start}
-}
-
-/* ============================================================================
-   FINAL SYSTEM — minimal at the surface, precise underneath
-   ----------------------------------------------------------------------------
-   Typography, alignment and spacing carry the hierarchy. Colour answers one
-   question only — is there something I need to notice — and never decorates.
-   Most surfaces are flat with a hairline; elevation is reserved for the drawer.
-   ============================================================================ */
-:root{
-  --font:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
-
-  --bg:#F7F7F5;--card:#FFFFFF;--surface:#F1F1EF;--well:#E7E7E5;
-  --ink:#161616;--ink-2:#3F3F3D;--muted:#6B6B6B;--faint:#9A9A9A;
-  --line:#E7E7E5;--line-2:#DCDCD9;--line-soft:#EFEFED;
-
-  /* One restrained accent. It marks the current thing and the interactive
-     thing, and appears almost nowhere else. */
-  --brand:#005DFF;--brand-ink:#024C8A;--brand-soft:#EDF3FF;
-
-  /* Muted semantics. Never bright, never decorative. */
-  --good:#3F6B52;--good-soft:#EDF3EF;--good-bar:#6E9C81;
-  --warn:#8A6A2F;--warn-soft:#F6F1E7;--warn-bar:#C0A063;
-  --bad:#8F423A;--bad-soft:#F6EDEC;--bad-bar:#B77A72;
-
-  --r-ctl:8px;--r-row:12px;--r-card:16px;--r-lg:20px;--r-pill:999px;
-  --maxw:1320px;--nodew:236px;
-
-  --e1:0 1px 2px rgba(22,22,22,.04);
-  --e2:0 1px 2px rgba(22,22,22,.05);
-  --e3:0 20px 48px -16px rgba(22,22,22,.22);
-  --d1:150ms;--d2:220ms;
-}
-body{letter-spacing:-.011em}
-
-/* --- Header: 60px, and everything on one line ---------------------------- */
-.top{background:rgba(247,247,245,.9);border-bottom:1px solid var(--line)}
-.nav{min-height:60px}
-.mark .wm{font-size:13px;font-weight:600;color:var(--ink);letter-spacing:-.02em}
-.mark .wm b{font-size:9.5px;font-weight:500;color:var(--muted);letter-spacing:.1em}
-.mark:hover .wm{color:var(--ink)}
-.tb{font-size:13px;font-weight:500;color:var(--muted);transition:color var(--d1) var(--ease),
-  background var(--d1) var(--ease);padding:5px 10px;border-radius:var(--r-ctl)}
-.tb:hover{color:var(--ink);background:var(--surface)}
-.tb.on{color:var(--ink);font-weight:600;background:transparent}
-.tb.on::after{background:var(--ink);height:1.5px;left:10px;right:10px}
-.sel{border-radius:var(--r-ctl);font-size:12px;font-weight:500;padding:6px 12px}
-.sel:hover:not(:disabled),.sel:focus{border-color:var(--ink)}
-.sel:focus{box-shadow:0 0 0 3px var(--surface)}
-.demo{background:var(--card);border-bottom:1px solid var(--line)}
-.demo .in{color:var(--muted)}
-
-/* --- Type scale ----------------------------------------------------------- */
-.page-t{font-size:24px;font-weight:600;line-height:30px;letter-spacing:-.022em;margin-bottom:var(--s1)}
-.page-s{font-size:13px;font-weight:400;color:var(--muted);margin-bottom:var(--s5)}
-.back{font-size:12px;font-weight:500;margin-bottom:var(--s3)}
-
-/* --- The one score per screen --------------------------------------------
-   Flat, no card, no dark plane. The figure and the ring are the whole thing;
-   the two supporting stats sit to the right in quiet type. */
-.anchor{display:flex;align-items:center;gap:var(--s6);flex-wrap:wrap;
-  background:transparent;border:none;border-bottom:1px solid var(--line);
-  border-radius:0;padding:0 0 var(--s5);margin-bottom:var(--s5);color:var(--ink)}
-.anchor::after{display:none}
-.anchor > div{min-width:0}
-/* The two supporting stats sit to the right of the score, not beneath it —
-   three values on one line is the whole summary a screen needs. */
-.anchor .ar{margin-left:auto;display:flex;align-items:center;flex-wrap:wrap}
-.anchor .ai{min-width:0}
-.anchor .al{font-size:11px;font-weight:500;letter-spacing:.08em;color:var(--muted)}
-.anchor .av{font-size:36px;font-weight:600;line-height:42px;letter-spacing:-.03em;
-  color:var(--ink);margin-top:2px}
-.anchor .av em{font-size:14px;font-weight:500;color:var(--faint);margin-left:3px}
-.anchor .as{font-size:12px;font-weight:400;color:var(--muted);margin-top:var(--s2)}
-.anchor .ar{gap:var(--s7)}
-.anchor .ai .l{font-size:11px;font-weight:500;color:var(--muted);letter-spacing:.04em;
-  text-transform:none}
-.anchor .ai .v{font-size:18px;font-weight:600;line-height:24px;color:var(--ink);margin-top:2px}
-.ring{width:88px;height:88px}
-.ring .tr{stroke:var(--well);stroke-width:5}
-.ring .fg{stroke:var(--ink);stroke-width:5}
-.ring .lbl b{font-size:20px;font-weight:600;color:var(--ink)}
-.ring .lbl span{font-size:10px;color:var(--faint)}
-
-/* --- Team cards ----------------------------------------------------------- */
-.tgrid{gap:var(--s3)}
-.tcard{border-radius:var(--r-card);box-shadow:none;padding:var(--s4);gap:var(--s5)}
-.tcard::after{display:none}
-.tcard:hover{border-color:var(--line-2);background:var(--card);box-shadow:var(--e1)}
-.tcard .tt{font-size:12px;font-weight:600;letter-spacing:.06em;color:var(--ink)}
-.tcard .tm{font-size:11px;font-weight:400;color:var(--muted)}
-.tcard .tv .l{font-size:11px;font-weight:500;color:var(--muted)}
-.tcard .tv .v{font-size:28px;font-weight:600;letter-spacing:-.028em;color:var(--ink)}
-.tcard .tv .v em{font-size:12px;color:var(--faint);font-weight:500}
-
-/* --- Employee node: left-aligned, avatar beside the name -----------------
-   Name top-left, role directly under it, score bottom-left. Nothing centred —
-   a common left edge down the card is what makes a chart of them read as one
-   system rather than a row of separate objects. */
-.node,.gnode{border-radius:var(--r-card);box-shadow:none;padding:var(--s4);
-  transition:border-color var(--d1) var(--ease),background var(--d1) var(--ease)}
-.node:hover,.gnode:hover{border-color:var(--line-2);background:var(--card);box-shadow:var(--e1)}
-.node.lead::before{display:none}
-.node.lead{border-color:var(--line-2)}
-.node .nh{display:flex;align-items:flex-start;gap:var(--s2)}
-.node .av{flex:0 0 auto;width:30px;height:30px;border-radius:var(--r-pill);background:var(--surface);
-  color:var(--ink-2);font-size:10.5px;font-weight:600;display:grid;place-items:center;
-  letter-spacing:.02em;margin-top:1px}
-.node .nt{min-width:0;flex:1}
-.node .nm{font-size:14px;font-weight:600;line-height:20px;height:20px;color:var(--ink)}
-.node .rl{font-size:12px;font-weight:400;line-height:16px;height:32px;color:var(--muted);margin-top:1px}
-.node .sr{align-items:baseline}
-.node .sc,.node.lead .sc{font-size:28px;font-weight:600;line-height:34px;letter-spacing:-.028em;
-  color:var(--ink)}
-.node .sc em{font-size:11px;color:var(--faint);font-weight:500}
-.gnode .gt{font-size:12px;font-weight:600;letter-spacing:.06em;color:var(--ink);height:20px;
-  line-height:20px}
-.gnode .gm{font-size:12px;font-weight:400;color:var(--muted);height:32px;line-height:16px}
-.gnode .gs{font-size:28px;font-weight:600;letter-spacing:-.028em;color:var(--ink)}
-.gnode .gs em{font-size:11px;color:var(--faint);font-weight:500}
-
-/* Status: a small label in subtle colour. Not a badge. */
-.stg,.node .stg,.gnode .stg{font-size:11px;font-weight:500;color:var(--muted);
-  display:inline-flex;align-items:center}
-.node .stg.good,.gnode .stg.good{color:var(--good)}
-.node .stg.warn,.gnode .stg.warn{color:var(--warn)}
-.node .stg.bad,.gnode .stg.bad{color:var(--bad)}
-.dot{display:none}
-
-/* Connectors: 1px, low contrast, position first. */
-.drop,.branch .arm::before,.branch .arm .stem{background:var(--line-2)}
-.lvl{gap:var(--s5)}
-.drop,.branch .arm .stem{height:var(--s5)}
-
-/* --- One progress bar, everywhere ---------------------------------------- */
-.pb,.kbar{background:var(--well);height:4px;border-radius:var(--r-pill)}
-.pb i,.kbar i{background:var(--ink);border-radius:var(--r-pill)}
-.pb i.good,.kbar i.good{background:var(--good-bar)}
-.pb i.warn,.kbar i.warn{background:var(--warn-bar)}
-.pb i.bad,.kbar i.bad{background:var(--bad-bar)}
-.pb i.none,.kbar i.none{background:var(--line-2)}
-.pb u{background:var(--card);width:1px}
-.gnode .pb u{background:var(--surface)}
-/* The bar animates its width, not a transform: a scaled fill renders at the
-   wrong length whenever the animation has not resolved, and a progress bar
-   that lies is worse than one that simply appears. */
-.pb i,.kbar i{transition:width 400ms var(--ease)}
-
-/* --- KRA header: whitespace, not a container ----------------------------- */
-.kra-h{margin:var(--s6) 0 var(--s2);align-items:baseline;gap:var(--s3)}
-.kra-h .ix{display:none}
-.kra-h .t{font-size:13px;font-weight:600;line-height:18px;letter-spacing:.06em;color:var(--ink)}
-.kra-h .ln{display:none}
-.kra-h .r{margin-left:auto;font-size:12px;font-weight:400;color:var(--muted)}
-
-/* --- KPI row -------------------------------------------------------------
-   Name and weightage on the first line, then actual → target → achievement,
-   then the bar. Text left, numbers right, one fixed height so a long name
-   never changes the rhythm of the list. */
-.krow{border-radius:var(--r-row);border:1px solid transparent;border-bottom:1px solid var(--line);
-  padding:var(--s4) var(--s3);transition:background var(--d1) var(--ease)}
-.krow:last-child{border-bottom:1px solid var(--line)}
-.krow:hover{background:var(--card);border-color:var(--line);box-shadow:none}
-.krow .kn{font-size:14px;font-weight:500;line-height:20px;color:var(--ink);white-space:normal;
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.krow .kw{font-size:12px;font-weight:500;color:var(--muted)}
-.krow .r2{margin-top:var(--s2);align-items:baseline}
-.krow .flow-v{font-size:13px;font-weight:400;color:var(--muted);white-space:normal}
-.krow .flow-v b{font-weight:500;color:var(--ink)}
-.krow .ach{font-size:14px;font-weight:600;color:var(--ink)}
-.krow .ach.good{color:var(--good)}
-.krow .ach.warn{color:var(--warn)}
-.krow .ach.bad{color:var(--bad)}
-.krow .ach.none{color:var(--faint);font-weight:400}
-.krow .kbar{margin-top:var(--s3)}
-
-/* --- Drawer: 400px, page still visible behind ---------------------------- */
-.modal{width:400px;border-radius:0;border-left:1px solid var(--line);box-shadow:var(--e3)}
-.scrim{background:rgba(22,22,22,.20)}
-.m-h h2{font-size:20px;font-weight:600;line-height:26px;letter-spacing:-.02em}
-.m-h .sub{font-size:11px;font-weight:500;color:var(--muted);letter-spacing:.08em}
-.kv dt{font-size:12px;font-weight:400;color:var(--muted)}
-.kv dd{font-size:13px;font-weight:500;color:var(--ink)}
-.kv dd.hi{font-weight:600}
-.sect-t{font-size:11px;font-weight:500;letter-spacing:.08em;color:var(--muted)}
-.m-perf .n,.m-perf .n.good,.m-perf .n.warn,.m-perf .n.bad{font-size:28px;font-weight:600;
-  color:var(--ink);letter-spacing:-.028em}
-.goal p{font-size:12px;line-height:1.65;color:var(--ink-2)}
-
-.btn{background:var(--ink);border-color:var(--ink);border-radius:var(--r-ctl);font-weight:500}
-.btn:hover{background:#000;border-color:#000;opacity:1}
-.empty,.hint{font-size:12px;color:var(--muted)}
-
-@media(max-width:760px){
-  .anchor{gap:var(--s4)}
-  .anchor .ar{width:100%;gap:var(--s5)}
-  .modal{width:100%;border-left:none;border-top:1px solid var(--line);
-    top:auto;height:86vh;border-radius:var(--r-lg) var(--r-lg) 0 0;
-    transform:translateY(100%)}
-  .modal.on{transform:none}
-}
-
-/* ============================================================================
-   MOTION
-   ----------------------------------------------------------------------------
-   One grammar, used everywhere, so movement means something:
-
-     enter     fade + 8px up
-     hover     2px lift, a faint light that follows the cursor
-     press     scale 0.98
-     reveal    stagger, 40ms apart
-     score     count up, once, on arrival
-     progress  width
-     nav       one indicator that slides between teams
-     drawer    translate X + fade
-
-   Motion is ranked. Hover is almost invisible; selection and the drawer are
-   noticeable; the flowchart entrance and the score reveal are focal — and no
-   two focal animations ever run at once. Everything stops under
-   prefers-reduced-motion.
-   ============================================================================ */
-
-/* --- Enter ---------------------------------------------------------------- */
-@keyframes riseIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
-@keyframes drawLine{from{transform:scaleX(0)}to{transform:scaleX(1)}}
-@keyframes dropLine{from{transform:scaleY(0)}to{transform:scaleY(1)}}
-
-/* Every entrance rule sits behind .mo, which scripting adds on boot. An
-   animation must never be the thing that makes content visible: if scripting
-   is blocked, or the animation never runs, the finished state is what renders
-   rather than an empty page. */
-.mo .page-t,.mo .page-s,.mo .anchor{animation:riseIn 260ms var(--ease) both}
-.mo .page-s{animation-delay:40ms}
-.mo .anchor{animation-delay:80ms}
-
-/* The chart assembles from the top down: lead, then the connectors it owns,
-   then the people hanging off them. The order is the hierarchy. */
-.mo .flow .lvl > .node{animation:riseIn 300ms var(--ease) both;animation-delay:200ms}
-.mo .flow .drop{transform-origin:top center;animation:dropLine 220ms var(--ease) both;
-  animation-delay:330ms}
-.mo .flow .branch .arm::before{transform-origin:center;animation:drawLine 300ms var(--ease) both;
-  animation-delay:400ms}
-.mo .flow .branch .arm .stem{transform-origin:top center;animation:dropLine 200ms var(--ease) both;
-  animation-delay:520ms}
-.mo .flow .branch .arm > .node,.mo .flow .branch .arm > .gnode{
-  animation:riseIn 320ms var(--ease) both;animation-delay:560ms}
-.mo .flow .branch .arm:nth-child(2) > .node,.mo .flow .branch .arm:nth-child(2) > .gnode{animation-delay:600ms}
-.mo .flow .branch .arm:nth-child(3) > .node,.mo .flow .branch .arm:nth-child(3) > .gnode{animation-delay:640ms}
-.mo .flow .branch .arm:nth-child(4) > .node,.mo .flow .branch .arm:nth-child(4) > .gnode{animation-delay:680ms}
-.mo .flow .branch .arm:nth-child(5) > .node,.mo .flow .branch .arm:nth-child(5) > .gnode{animation-delay:720ms}
-.mo .flow .branch .arm:nth-child(n+6) > .node{animation-delay:760ms}
-
-/* Team cards on the landing screen arrive in reading order. */
-.mo .tgrid .tcard{animation:riseIn 280ms var(--ease) both}
-.mo .tgrid .tcard:nth-child(2){animation-delay:50ms}
-.mo .tgrid .tcard:nth-child(3){animation-delay:100ms}
-.mo .tgrid .tcard:nth-child(4){animation-delay:150ms}
-.mo .tgrid .tcard:nth-child(5){animation-delay:200ms}
-
-/* --- Hover: a 2px lift and a light that notices the cursor ----------------
-   Held at 6% so it reads as the surface catching light, not as a glow. */
-.node,.gnode,.tcard{position:relative;isolation:isolate;
-  transition:transform var(--d1) var(--ease),border-color var(--d1) var(--ease),
-             box-shadow var(--d1) var(--ease)}
-.node::after,.gnode::after,.tcard::after{content:"";position:absolute;inset:0;z-index:-1;
-  border-radius:inherit;pointer-events:none;opacity:0;transition:opacity 200ms var(--ease);
-  background:radial-gradient(220px circle at var(--mx,50%) var(--my,50%),
-             rgba(22,22,22,.06),transparent 60%);display:block}
-.node:hover,.gnode:hover,.tcard:hover{transform:translateY(-2px)}
-.node:hover::after,.gnode:hover::after,.tcard:hover::after{opacity:1}
-.node:active,.gnode:active,.tcard:active{transform:scale(.985);transition-duration:80ms}
-
-/* --- KPI rows stay calm: no lift, the bar simply gains presence ----------- */
-.krow{transition:background var(--d1) var(--ease)}
-.krow .kbar{transition:height var(--d1) var(--ease),opacity var(--d1) var(--ease);opacity:.7}
-.krow:hover .kbar{opacity:1;height:6px}
-.krow:active{transform:none}
-
-/* --- Navigation: one indicator, and it slides ---------------------------- */
-.teams{position:relative}
-.teams .slider{position:absolute;bottom:0;height:1.5px;background:var(--ink);border-radius:2px;
-  transition:transform 200ms var(--ease),width 200ms var(--ease);pointer-events:none;
-  transform-origin:left center;left:0;opacity:0}
-.teams .slider.on{opacity:1}
-.tb.on::after{display:none}
-
-/* --- KRA sections reveal as they are reached ----------------------------- */
-.kra-h,.krow{opacity:1}
-.reveal{opacity:0;transform:translateY(8px)}
-.reveal.in{opacity:1;transform:none;
-  transition:opacity 320ms var(--ease),transform 320ms var(--ease)}
-
-/* --- The score, once ------------------------------------------------------
-   A single ring pulse when a score first lands. It says "this has loaded" and
-   then never repeats. */
-@keyframes pulseOnce{0%{box-shadow:0 0 0 0 rgba(22,22,22,.14)}
-  70%{box-shadow:0 0 0 6px rgba(22,22,22,0)}100%{box-shadow:0 0 0 0 rgba(22,22,22,0)}}
-.mo .ring{animation:pulseOnce 900ms var(--ease) 360ms both;border-radius:50%}
-
-/* --- Drawer --------------------------------------------------------------- */
-.modal{transition:transform 240ms var(--ease)}
-.mo .modal .m-b,.mo .modal .m-h{animation:riseIn 260ms var(--ease) both;animation-delay:80ms}
-.scrim{transition:opacity 240ms var(--ease)}
-
-@media(prefers-reduced-motion:reduce){
-  *,*::before,*::after{animation:none!important;transition-duration:.01ms!important}
-  .reveal{opacity:1!important;transform:none!important}
-  .teams .slider{transition:none!important}
-}
-
-/* ============================================================================
-   PREMIUM — depth, colour, and a face for every card
-   ----------------------------------------------------------------------------
-   The reference dashboard earns its richness with three devices, and only
-   three: a saturated gradient tile that gives each card a face, real elevation
-   so cards float rather than sit in a grid of boxes, and colour used at full
-   strength in small, deliberate places.
-
-   All three are adopted here. The gradients are Recykal's own four brand hues
-   rather than the reference's magenta, so the product gains the richness
-   without borrowing another company's identity.
-
-   Structure, flow and every function are untouched: this layer only changes
-   how the existing pieces look.
-   ============================================================================ */
-
-:root{
-  /* The four brand hues, each as a two-stop gradient. One per team, assigned
-     by position, so a team is recognisable by its colour before its name is
-     read. */
-  --g1:linear-gradient(135deg,#005DFF,#4D8BFF);
-  --g2:linear-gradient(135deg,#1DC797,#4ADFB4);
-  --g3:linear-gradient(135deg,#8460D4,#A98BE8);
-  --g4:linear-gradient(135deg,#567DE8,#7FA0F2);
-  --g5:linear-gradient(135deg,#F2994A,#F7BE7E);
-  --gd:linear-gradient(135deg,#2E3138,#4A4E57);
-
-  /* Elevation returns. Two shadows per level: a tight one that defines the
-     edge, a wide soft one that lifts it off the page. */
-  --el1:0 2px 4px rgba(22,22,26,.05),0 6px 16px -6px rgba(22,22,26,.10);
-  --el2:0 4px 10px rgba(22,22,26,.06),0 16px 34px -12px rgba(22,22,26,.16);
-  --el3:0 8px 20px rgba(22,22,26,.08),0 32px 64px -20px rgba(22,22,26,.26);
-  /* A tinted shadow under a coloured tile reads as that colour's own light. */
-  --elc:0 6px 16px -4px rgba(0,93,255,.36);
-
-  --bg:#F4F5F7;
-  --line:#E9EAEE;
-  /* Both greys darkened to clear AA against every surface they sit on. */
-  --muted:#63636C;
-  --faint:#70707A;
-}
-
-body{background:var(--bg)}
-
-/* --- Header: lifted off the page ----------------------------------------- */
-.top{background:rgba(255,255,255,.86);backdrop-filter:saturate(180%) blur(12px);
-  -webkit-backdrop-filter:saturate(180%) blur(12px);border-bottom:1px solid var(--line);
-  box-shadow:0 1px 3px rgba(22,22,26,.04)}
-
-/* --- The gradient tile ---------------------------------------------------
-   The reference's signature: a rounded square of saturated colour carrying a
-   single white glyph, sitting slightly proud of the card it belongs to. It is
-   what makes a card look designed rather than drawn. */
-.gt-tile{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;
-  flex:0 0 auto;background:var(--g1);box-shadow:var(--elc);position:relative}
-.gt-tile svg{width:24px;height:24px;display:block}
-.gt-tile[data-g="2"]{background:var(--g2);box-shadow:0 6px 16px -4px rgba(29,199,151,.40)}
-.gt-tile[data-g="3"]{background:var(--g3);box-shadow:0 6px 16px -4px rgba(132,96,212,.38)}
-.gt-tile[data-g="4"]{background:var(--g4);box-shadow:0 6px 16px -4px rgba(86,125,232,.38)}
-.gt-tile[data-g="5"]{background:var(--g5);box-shadow:0 6px 16px -4px rgba(242,153,74,.38)}
-
-/* --- Team cards ----------------------------------------------------------
-   Restructured around the tile: face, then name, then the score as the largest
-   thing on the card, then a sparkline that gives the number a direction. */
-.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:20px}
-.tcard{background:var(--card);border:1px solid transparent;border-radius:18px;
-  padding:20px;box-shadow:var(--el1);display:flex;flex-direction:column;gap:14px;
-  align-items:stretch;text-align:left;height:auto;width:auto;position:relative;overflow:hidden;
-  transition:transform var(--d1) var(--ease),box-shadow var(--d2) var(--ease)}
-.tcard:hover{box-shadow:var(--el2);transform:translateY(-3px);border-color:transparent}
-.tcard::after{display:none}
-.tcard .th{display:flex;align-items:flex-start;gap:14px}
-.tcard .tt{font-size:15px;font-weight:600;letter-spacing:-.01em;color:var(--ink);
-  text-transform:none;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;
-  -webkit-box-orient:vertical;overflow:hidden;height:39px}
-.tcard .tm{font-size:12px;color:var(--muted);font-weight:400;margin-top:3px;height:auto;
-  white-space:normal;letter-spacing:0;text-transform:none}
-.tcard .tv{display:flex;align-items:baseline;justify-content:space-between;gap:8px;
-  border-top:1px solid var(--line);padding-top:13px;margin-top:auto}
-.tcard .tv .l{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
-  color:var(--faint)}
-.tcard .tv .v{font-size:26px;font-weight:700;letter-spacing:-.035em;color:var(--ink);
-  font-variant-numeric:tabular-nums;line-height:1}
-.tcard .tv .v em{font-size:12px;font-weight:500;color:var(--faint);letter-spacing:0}
-
-/* The sparkline: six months of shape behind one number. Decorative in the
-   strict sense — the figure is always stated in text beside it. */
-.spark{display:block;width:100%;height:34px;margin-top:-2px}
-.spark path.ln{fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.spark path.fl{stroke:none;opacity:.13}
-
-/* --- Flow nodes: a coloured face and real lift --------------------------- */
-.node,.gnode{border-radius:16px;box-shadow:var(--el1);border:1px solid transparent;
+.sect{font-size:var(--fs-2xs);font-weight:var(--fw-b);color:var(--muted);text-transform:uppercase;
+  letter-spacing:.07em;margin:0 0 var(--s3);display:flex;align-items:baseline;gap:var(--s2)}
+.sect .r{margin-left:auto;font-weight:var(--fw-n);letter-spacing:0;text-transform:none;font-size:var(--fs-xs)}
+.block{margin-bottom:var(--s7)}
+
+/* Summary cards — small label, large number, quiet context. No big icons. */
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--s4);margin-bottom:var(--s7)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);
+  padding:var(--s4) var(--s5);box-shadow:var(--shadow-1)}
+.card .l{font-size:var(--fs-2xs);font-weight:var(--fw-m);color:var(--muted);text-transform:uppercase;
+  letter-spacing:.06em}
+.card .v{font-size:var(--fs-xxl);font-weight:var(--fw-b);letter-spacing:-.03em;line-height:1.05;
+  margin-top:var(--s2);font-variant-numeric:tabular-nums}
+.card .v em{font-style:normal;font-size:var(--fs-lg);color:var(--faint);font-weight:var(--fw-m);letter-spacing:-.01em}
+.card .s{font-size:var(--fs-xs);color:var(--muted);margin-top:6px}
+.card.hl{background:var(--nav);border-color:var(--nav)}
+.card.hl .l{color:var(--nav-txt-2)}.card.hl .v{color:var(--nav-active)}.card.hl .v em{color:var(--nav-faint)}.card.hl .s{color:var(--nav-muted)}
+
+/* KRA-wise bars — name left, bar centre, score right; one rhythm. */
+.kbars{display:flex;flex-direction:column}
+.kbar{display:grid;grid-template-columns:minmax(120px,1.1fr) 2.4fr auto;align-items:center;
+  gap:var(--s4);padding:9px 0;border-bottom:1px solid var(--line-soft)}
+.kbar:last-child{border-bottom:none}
+.kbar .kn{font-weight:var(--fw-m);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kbar .kn small{color:var(--muted);font-weight:var(--fw-n);margin-left:6px}
+.kbar .tr{position:relative;height:6px;background:var(--well);border-radius:var(--r-pill)}
+.kbar .tr i{position:absolute;left:0;top:0;height:100%;border-radius:var(--r-pill);background:var(--accent);
+  transform-origin:left;animation:grow .5s var(--ease) backwards}
+.kbar .tr i.good{background:var(--good)}.kbar .tr i.warn{background:var(--warn)}.kbar .tr i.bad{background:var(--bad)}
+.kbar .tr u{position:absolute;top:-2px;height:10px;width:1px;background:var(--line-2)}
+.kbar .kv{font-weight:var(--fw-b);text-align:right;min-width:52px}
+@keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+
+/* Ranking — derived from overall score, subtle top marker. */
+.rank{display:flex;flex-direction:column}
+.rrow{display:flex;align-items:center;gap:var(--s3);padding:10px var(--s2);border-radius:10px;
+  border-bottom:1px solid var(--line-soft);transition:background var(--d1) var(--ease)}
+.rrow:last-child{border-bottom:none}
+.rrow.click{cursor:pointer}.rrow.click:hover{background:var(--surface)}
+.rrow .pos{flex:0 0 22px;text-align:center;font-size:var(--fs-xs);font-weight:var(--fw-b);color:var(--faint);
+  font-variant-numeric:tabular-nums}
+.rrow.top .pos{color:var(--accent)}
+.rrow .nm{flex:1;min-width:0}
+.rrow .nm b{display:block;font-weight:var(--fw-m);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rrow .nm span{font-size:var(--fs-xs);color:var(--muted)}
+.rrow .mt{width:96px;flex:0 0 96px}
+.rrow .sc{font-weight:var(--fw-b);font-variant-numeric:tabular-nums;min-width:46px;text-align:right}
+.rrow .chev{color:var(--faint);flex:0 0 12px;text-align:center}
+.rrow.click:hover .chev{color:var(--muted)}
+.microbar{position:relative;height:4px;background:var(--well);border-radius:var(--r-pill)}
+.microbar i{position:absolute;left:0;top:0;height:100%;border-radius:var(--r-pill);background:var(--ink);opacity:.72}
+
+/* ============================== FLOWCHART ================================ */
+.flow{display:flex;flex-direction:column;align-items:center}
+.flow-stem{width:1px;height:24px;background:var(--line-2)}
+.flow-bus{width:100%;height:1px;background:var(--line-2)}
+.flow-kids{display:grid;grid-template-columns:repeat(auto-fit,minmax(184px,1fr));gap:var(--s4);width:100%;
+  padding-top:var(--s5)}
+.node{background:var(--card);border:1px solid var(--line-2);border-radius:var(--r-card);padding:var(--s4);
+  display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px;box-shadow:var(--shadow-1);
+  cursor:pointer;transition:border-color var(--d1) var(--ease),box-shadow var(--d1) var(--ease),transform var(--d1) var(--ease);
+  animation:rise .42s var(--ease) backwards}
+.node:hover{border-color:var(--line-2);box-shadow:var(--shadow-2);transform:translateY(-2px)}
+.node.lead{border-color:var(--accent-soft);box-shadow:0 0 0 3px var(--accent-soft),var(--shadow-1);
+  min-width:210px;padding:var(--s5)}
+.node .avatar{margin-bottom:6px}
+.node .nn{font-weight:var(--fw-b);letter-spacing:-.01em}
+.node .nd{font-size:var(--fs-xs);color:var(--muted);line-height:1.35}
+.node .ns{margin-top:6px;font-size:var(--fs-lg);font-weight:var(--fw-h);letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums}
+.node .ns em{font-style:normal;font-size:var(--fs-xs);color:var(--faint);font-weight:var(--fw-m)}
+.node .tag{margin-top:5px;font-size:var(--fs-3xs);font-weight:var(--fw-b);letter-spacing:.06em;text-transform:uppercase;
+  color:var(--accent-2);background:var(--accent-soft);padding:2px 8px;border-radius:var(--r-pill)}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ============================== TABLE =================================== */
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);
+  overflow:hidden;box-shadow:var(--shadow-1)}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;min-width:640px;font-size:var(--fs-sm)}
+th{text-align:left;font-size:var(--fs-2xs);font-weight:var(--fw-m);color:var(--muted);text-transform:uppercase;
+  letter-spacing:.05em;padding:11px var(--s3);border-bottom:1px solid var(--line-2);white-space:nowrap;
+  background:var(--surface)}
+td{padding:var(--s2) var(--s3);border-bottom:1px solid var(--line-soft);vertical-align:middle;height:52px;overflow:hidden}
+tbody tr:last-child td{border-bottom:none}
+.quiet{color:var(--muted);font-weight:var(--fw-n)}
+.strong{font-weight:var(--fw-b)}
+.nm{font-weight:var(--fw-m);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nm small{display:block;font-size:var(--fs-2xs);color:var(--muted);font-weight:var(--fw-n);
+  text-transform:none;letter-spacing:0}
+tr.click{cursor:pointer;transition:background var(--d1) var(--ease)}
+tr.click:hover{background:var(--surface)}
+
+/* KRA band: a rule with the KRA name and its rolled-up score. */
+tr.kra td{padding:var(--s4) var(--s3) 10px;border-bottom:1px solid var(--line-2);font-size:var(--fs-2xs);
+  font-weight:var(--fw-b);color:var(--ink-2);text-transform:uppercase;letter-spacing:.07em;cursor:pointer;
   background:var(--card)}
-.node:hover,.gnode:hover{box-shadow:var(--el2);border-color:transparent}
-.node::after,.gnode::after{display:none}
-.node.lead{box-shadow:var(--el2)}
-.node.lead::before{display:none}
+tr.kra:first-child td{padding-top:var(--s3)}
+tr.kra .cv{display:inline-block;width:14px;color:var(--faint);font-weight:var(--fw-n)}
+tr.kra .rs{float:right;text-transform:none;letter-spacing:0;color:var(--muted);font-weight:var(--fw-m);
+  font-variant-numeric:tabular-nums}
+tr.kra .rs b{color:var(--ink);font-weight:var(--fw-b)}
+td.kpi{padding-left:var(--s6)}
 
-/* Initials on a gradient. The lead's is the dark plane so the top of the chart
-   is unmistakable; everyone else takes a brand hue by position. */
-.node .av{background:var(--g4);color:#fff;font-weight:600;font-size:11px;
-  box-shadow:0 3px 8px -2px rgba(86,125,232,.44);border-radius:12px}
-.node[data-a="1"] .av{background:var(--g1);box-shadow:0 3px 8px -2px rgba(0,93,255,.40)}
-.node[data-a="2"] .av{background:var(--g2);box-shadow:0 3px 8px -2px rgba(29,199,151,.40)}
-.node[data-a="3"] .av{background:var(--g3);box-shadow:0 3px 8px -2px rgba(132,96,212,.40)}
-.node[data-a="4"] .av{background:var(--g5);box-shadow:0 3px 8px -2px rgba(242,153,74,.40)}
-.node.lead .av{background:var(--gd);box-shadow:0 3px 8px -2px rgba(46,49,56,.34)}
+/* Achievement: the % over a fine bar. Bar 60–100px, tick at target. */
+.ach{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:5px;height:30px;
+  margin-left:auto;width:96px}
+.ach .n{font-variant-numeric:tabular-nums;font-weight:var(--fw-b)}
+.bar{display:block;position:relative;width:100%;height:4px;background:var(--well);border-radius:var(--r-pill)}
+.bar i{position:absolute;left:0;top:0;height:100%;border-radius:var(--r-pill);background:var(--accent);
+  transform-origin:left;animation:grow .5s var(--ease) backwards}
+.bar i.good{background:var(--good)}.bar i.warn{background:var(--warn)}.bar i.bad{background:var(--bad)}
+.bar u{position:absolute;top:-2px;width:1px;height:8px;background:var(--line-2)}
 
-/* Uniform width, lead included: a single left edge down the chart is what
-   makes six cards read as one structure. */
-.node.lead{width:var(--nodew)}
+.st{font-size:var(--fs-xs);font-weight:var(--fw-m);white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.st::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;flex:0 0 auto}
+.st.good{color:var(--good)}.st.warn{color:var(--warn)}.st.bad{color:var(--bad)}
+.st.none{color:var(--faint);font-weight:var(--fw-n)}
 
-.gnode{background:linear-gradient(180deg,#FFFFFF,#F7F8FA)}
-.gnode .gc{width:22px;height:22px;border-radius:8px;background:var(--surface);
-  display:grid;place-items:center;font-size:13px;color:var(--ink-2);line-height:1}
-.gnode.open .gc{background:var(--g1);color:#fff}
+.mini{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--s4);margin-bottom:var(--s7)}
+.mstat{background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);padding:var(--s4);box-shadow:var(--shadow-1)}
+.mstat .l{font-size:var(--fs-2xs);font-weight:var(--fw-m);color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.mstat .v{font-size:var(--fs-xl);font-weight:var(--fw-b);letter-spacing:-.02em;margin-top:5px;font-variant-numeric:tabular-nums}
+.mstat .v em{font-style:normal;font-size:var(--fs-sm);color:var(--faint);font-weight:var(--fw-m)}
 
-/* --- Bars: colour at full strength, which is the one place it belongs ---- */
-.pb{height:6px;border-radius:999px;background:#EDEEF2;overflow:hidden}
-.pb i{border-radius:999px;transition:width 500ms var(--ease)}
-.pb i.good{background:linear-gradient(90deg,#1DC797,#3FD9AC)}
-.pb i.warn{background:linear-gradient(90deg,#E9A23B,#F2BE6B)}
-.pb i.bad{background:linear-gradient(90deg,#DE6B5E,#EC8E82)}
-.pb i.none{background:#D3D5DC}
-.pb u{background:rgba(255,255,255,.85);width:1px}
-.kbar{height:6px;border-radius:999px;background:#EDEEF2;overflow:hidden}
-.kbar i{border-radius:999px}
-.kbar i.good{background:linear-gradient(90deg,#1DC797,#3FD9AC)}
-.kbar i.warn{background:linear-gradient(90deg,#E9A23B,#F2BE6B)}
-.kbar i.bad{background:linear-gradient(90deg,#DE6B5E,#EC8E82)}
-.kbar i.none{background:#D3D5DC}
-.krow:hover .kbar{height:6px}
+/* Profile header card */
+.phead{display:flex;align-items:center;gap:var(--s4);flex-wrap:wrap;background:var(--card);
+  border:1px solid var(--line);border-radius:var(--r-card);padding:var(--s5);box-shadow:var(--shadow-1);
+  margin-bottom:var(--s6)}
+.phead .id h1{font-size:var(--fs-xl);font-weight:var(--fw-b);letter-spacing:-.02em;margin:0;line-height:1.2}
+.phead .id .meta{color:var(--muted);font-size:var(--fs-sm);margin-top:3px}
+.phead .id .meta .dot{color:var(--faint);margin:0 6px}
+.phead .badge{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-2xs);font-weight:var(--fw-m);
+  color:var(--good);background:var(--good-soft);padding:3px 9px;border-radius:var(--r-pill);margin-top:8px}
+.phead .badge::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.phead .pscore{margin-left:auto;text-align:right}
+.phead .pscore .v{font-size:var(--fs-xxl);font-weight:var(--fw-h);letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
+.phead .pscore .v em{font-style:normal;font-size:var(--fs-lg);color:var(--faint);font-weight:var(--fw-m)}
+.phead .pscore .l{font-size:var(--fs-2xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:4px}
 
-/* --- The profile anchor: the one full-bleed gradient in the product ------ */
-.anchor{background:var(--g1);border:none;border-radius:20px;color:#fff;padding:24px 26px;
-  box-shadow:0 10px 28px -10px rgba(0,93,255,.45);position:relative;overflow:hidden}
-.anchor::before{content:"";position:absolute;right:-70px;top:-90px;width:260px;height:260px;
-  border-radius:50%;background:rgba(255,255,255,.10);pointer-events:none}
-.anchor::after{content:"";position:absolute;right:40px;bottom:-110px;width:190px;height:190px;
-  border-radius:50%;background:rgba(255,255,255,.07);pointer-events:none}
-.anchor > *{position:relative;z-index:1}
-.anchor .al{color:rgba(255,255,255,.72)}
-.anchor .av{color:#fff}
-.anchor .av em{color:rgba(255,255,255,.62)}
-.anchor .as{color:rgba(255,255,255,.80)}
-.anchor .ai .l{color:rgba(255,255,255,.66)}
-.anchor .ai .v{color:#fff}
-.anchor .ring .fg{stroke:#fff}
-.anchor .ring .bg{stroke:rgba(255,255,255,.26)}
-.anchor .ring .lbl,.anchor .ring .lbl b{color:#fff}
+.two{display:grid;grid-template-columns:1.5fr 1fr;gap:var(--s5);align-items:start}
+.pcard{background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);padding:var(--s5);box-shadow:var(--shadow-1)}
 
-/* --- KPI rows: taller, so the three lines can breathe -------------------- */
-.krow{padding:16px 18px;border-radius:14px;min-height:92px;border-bottom:1px solid var(--line)}
-.krow:hover{background:#fff;box-shadow:var(--el1);border-color:transparent}
-.krow .r2{margin-top:7px}
-.krow .kbar{margin-top:12px}
+/* ============================== DRAWER =================================== */
+.scrim{position:fixed;inset:0;background:rgba(15,26,46,.34);opacity:0;pointer-events:none;
+  transition:opacity var(--d2) var(--ease);z-index:50}
+.scrim.on{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;height:100vh;width:412px;max-width:92vw;background:var(--card);
+  box-shadow:var(--shadow-3);transform:translateX(100%);transition:transform var(--d2) var(--ease);
+  z-index:51;display:flex;flex-direction:column}
+.drawer.on{transform:none}
+.d-h{padding:var(--s5) var(--s5) var(--s4);border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:var(--s3)}
+.d-h .eyebrow{font-size:var(--fs-2xs);font-weight:var(--fw-b);color:var(--accent-2);text-transform:uppercase;letter-spacing:.07em}
+.d-h h2{font-size:var(--fs-lg);font-weight:var(--fw-b);margin:5px 0 0;letter-spacing:-.017em;line-height:1.3}
+.d-h .x{margin-left:auto;border:1px solid var(--line-2);background:var(--card);color:var(--muted);width:30px;height:30px;
+  border-radius:var(--r-ctl);font-size:16px;line-height:1;flex:0 0 auto;display:grid;place-items:center}
+.d-h .x:hover{color:var(--ink);border-color:var(--ink)}
+.d-b{padding:var(--s5);overflow-y:auto;flex:1}
+/* Stacked field pairs: label, 4px, value, 24px between pairs. */
+.pair{margin-bottom:var(--s5)}
+.pair:last-child{margin-bottom:0}
+.pair .k{font-size:var(--fs-2xs);font-weight:var(--fw-m);color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.pair .v{font-size:var(--fs-md);font-weight:var(--fw-m);margin-top:4px;font-variant-numeric:tabular-nums;line-height:1.4;overflow-wrap:anywhere}
+.d-meas{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);
+  border-radius:var(--r-ctl);overflow:hidden;margin-bottom:var(--s5)}
+.d-meas>div{background:var(--card);padding:var(--s3) var(--s4)}
+.d-meas .k{font-size:var(--fs-2xs);color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.d-meas .v{font-size:var(--fs-lg);font-weight:var(--fw-b);margin-top:4px;font-variant-numeric:tabular-nums}
+.d-rule{height:1px;background:var(--line);margin:0 0 var(--s5)}
+.d-goal .k{font-size:var(--fs-2xs);font-weight:var(--fw-m);color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.d-goal p{margin:6px 0 0;color:var(--ink-2);line-height:1.65;font-size:var(--fs-sm)}
+.d-ach{position:relative;height:4px;background:var(--well);border-radius:var(--r-pill);margin-top:8px}
+.d-ach i{position:absolute;left:0;top:0;height:100%;border-radius:var(--r-pill)}
+.d-ach i.good{background:var(--good)}.d-ach i.warn{background:var(--warn)}.d-ach i.bad{background:var(--bad)}
+.d-ach u{position:absolute;top:-2px;width:1px;height:8px;background:var(--line-2)}
 
-/* --- Cards and panels ---------------------------------------------------- */
-.card,.panel,.pstat{background:var(--card);border:1px solid transparent;border-radius:18px;
-  box-shadow:var(--el1)}
+/* ============================== STATES ================================== */
+.state{display:grid;place-items:center;min-height:56vh;text-align:center;padding:var(--s5)}
+.state h2{font-size:var(--fs-lg);font-weight:var(--fw-b);margin:0 0 var(--s2)}
+.state p{color:var(--muted);margin:0 0 var(--s4);max-width:46ch;line-height:1.65}
+.btn{border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:var(--r-ctl);
+  padding:9px 16px;font-size:var(--fs-sm);font-weight:var(--fw-m);box-shadow:var(--shadow-1)}
+.btn:hover{background:var(--accent-2)}
+.btn.ghost{background:var(--card);border-color:var(--line-2);color:var(--ink-2)}
+.btn.ghost:hover{border-color:var(--ink);color:var(--ink)}
+.empty{padding:var(--s6);text-align:center;color:var(--muted)}
+.hint{font-size:var(--fs-xs);color:var(--muted);margin-top:var(--s4);line-height:1.65}
+.skl{background:linear-gradient(90deg,var(--surface),var(--well),var(--surface));background-size:200% 100%;
+  border-radius:var(--r-card);animation:sh 1.4s ease-in-out infinite}
+@keyframes sh{to{background-position:-200% 0}}
+.demo{background:var(--warn-soft);border-bottom:1px solid var(--warn-line)}
+.demo .in{max-width:var(--maxw);margin:0 auto;padding:8px var(--s6);display:flex;align-items:center;gap:var(--s2);
+  font-size:var(--fs-xs);color:var(--warn)}
+.demo button{margin-left:auto;border:1px solid var(--warn-line-2);background:var(--card);color:var(--warn);font-size:var(--fs-2xs);
+  font-weight:var(--fw-m);padding:3px 10px;border-radius:var(--r-ctl)}
+.demo button:hover{border-color:var(--warn)}
 
-/* --- Drawer: gradient head, floating sheet ------------------------------- */
-.modal{border-radius:20px 0 0 20px;box-shadow:var(--el3);border-left:none}
-.m-h{background:var(--g1);color:#fff;padding:22px 24px;border-bottom:none;
-  border-radius:20px 0 0 0}
-.m-h h2{color:#fff}
-.m-h .sub{color:rgba(255,255,255,.74)}
-.m-h .x{color:rgba(255,255,255,.86);width:32px;height:32px;border-radius:10px;
-  display:grid;place-items:center;padding:0;font-size:18px;
-  background:rgba(255,255,255,.14)}
-.m-h .x:hover{background:rgba(255,255,255,.26);color:#fff}
-.m-b{padding-top:20px}
-
-/* --- Controls ------------------------------------------------------------ */
-.sel{border-radius:10px;border:1px solid var(--line);background:#fff;
-  box-shadow:0 1px 2px rgba(22,22,26,.04);font-weight:500}
-.sel:hover{border-color:#D3D5DC}
-.btn{background:var(--g1);border:none;color:#fff;border-radius:10px;
-  box-shadow:var(--elc);font-weight:600}
-.btn:hover{box-shadow:0 8px 20px -4px rgba(0,93,255,.46);transform:translateY(-1px)}
-.back{min-height:32px;align-items:center}
-
-/* Team tabs become pills, which is what the sliding indicator wanted all along */
-.tb{border-radius:999px;padding:7px 14px;font-weight:500;transition:all var(--d1) var(--ease)}
-.tb:hover{background:rgba(0,93,255,.06);color:var(--brand)}
-.tb.on{color:#fff}
-.teams .slider{height:100%;top:0;bottom:auto;background:var(--g1);border-radius:999px;
-  z-index:0;box-shadow:0 3px 10px -2px rgba(0,93,255,.44)}
-.teams .tb{position:relative;z-index:1}
-
-/* --- Status dots regain their colour ------------------------------------- */
-.dot.good{background:#1DC797}
-.dot.warn{background:#E9A23B}
-.dot.bad{background:#DE6B5E}
-.dot.none{background:#C9CBD2}
-
-/* --- Section heads ------------------------------------------------------- */
-.kra-h .t{color:var(--ink);font-weight:600}
-.kra-h .ix{background:var(--surface);border-radius:7px;padding:2px 7px;color:var(--ink-2);
-  font-weight:600}
-
-/* --- Type scale: the two half-pixel sizes rejoin the scale --------------- */
-.tcard .tt{font-size:15px}
-.mark .wm b{font-size:10px}
-
-@media(max-width:640px){
-  .tgrid{grid-template-columns:1fr}
-  .modal{border-radius:20px 20px 0 0}
-  .m-h{border-radius:20px 20px 0 0}
+/* ============================== RESPONSIVE ============================== */
+@media(max-width:1080px){.cards,.mini{grid-template-columns:repeat(2,1fr)}.two{grid-template-columns:1fr}}
+@media(max-width:860px){
+  .app{flex-direction:column}
+  .rail{width:100%;height:auto;flex-direction:row;position:sticky;top:0;padding:6px var(--s3);align-items:center;
+    gap:var(--s2);overflow-x:auto}
+  .rail-logo{margin:0 var(--s2) 0 0;height:auto}
+  .rail-nav{flex-direction:row;padding:0;gap:2px;flex:1}
+  .rail-i{flex-direction:row;gap:7px;padding:8px 12px;font-size:var(--fs-xs)}
+  .rail-i.on::before{display:none}.rail-sp{display:none}
+  .wrap{padding:var(--s5) var(--s4) var(--s7)}.tbar{padding:0 var(--s4);height:auto;flex-wrap:wrap;gap:8px;padding-top:8px;padding-bottom:8px}
 }
-
-@media(prefers-reduced-motion:reduce){
-  .tcard:hover,.btn:hover{transform:none}
-  .pb i{transition:none}
+@media(max-width:560px){
+  .cards,.mini{grid-template-columns:1fr}
+  .page-h .r{margin-left:0;width:100%}
+  .greet .who{display:none}
+  .card .v{font-size:var(--fs-xl)}
+  /* Comfortable tap targets on small screens (~44px). */
+  .sel{padding:11px 12px}
+  .d-h .x{width:40px;height:40px}
+  .demo button{padding:9px 14px}
+  .back{padding:10px 8px}
 }
-
-/* ============================================================================
-   AUDIT FIXES
-   ============================================================================ */
-
-/* .kbar is a <span>. Without an explicit display it stays inline, which gives
-   it no width and no height - the KPI bars were rendering as nothing. */
-.kbar{display:block;width:100%}
-.kbar i{display:block;height:100%}
-.pb{display:block}
-.pb i{display:block;height:100%}
-
-/* KPI rows become their own white cards, so the list reads as a stack of
-   objects rather than text sitting loose on the page background. */
-.krow{background:var(--card);box-shadow:var(--el1);border:1px solid transparent;
-  border-bottom:1px solid transparent;margin-bottom:10px;border-radius:14px}
-.krow:last-child{border-bottom:1px solid transparent}
-.krow:hover{background:#fff;box-shadow:var(--el2);border-color:transparent;
-  transform:translateY(-1px)}
-
-/* The anchor's supporting labels were below AA on the blue. */
-.anchor .al{color:rgba(255,255,255,.86)}
-.anchor .as{color:rgba(255,255,255,.92)}
-.anchor .ai .l{color:rgba(255,255,255,.86)}
-.anchor .av em{color:rgba(255,255,255,.78)}
-.anchor .ring{margin-left:8px}
-.anchor .ring .lbl{display:grid;place-items:center;color:#fff}
-.anchor .ring .lbl b{color:#fff;font-size:17px;font-weight:600;letter-spacing:-.02em}
-
-/* The ring reads as a gauge, so it needs weight and a track that is visible
-   against the gradient behind it. */
-.anchor .ring .fg{stroke:#fff;stroke-width:6}
-.anchor .ring .tr{stroke:rgba(255,255,255,.28);stroke-width:6}
-
-/* Section heads sit above their cards rather than on the same plane. */
-.kra-h{margin:26px 0 12px}
-.kra-h:first-of-type{margin-top:20px}
-.kra-h .r{color:var(--muted)}
-
-/* Tap targets reach the 24px minimum on touch. */
-.back{min-height:32px;display:inline-flex}
-.mark{min-height:36px;display:inline-flex;align-items:center}
-
-/* ============================================================================
-   AVATAR CONTRAST
-   ----------------------------------------------------------------------------
-   The tile gradients are tuned for a white stroke icon, which only has to
-   reach 3:1. Initials are text and have to reach 4.5:1, and the lighter hues
-   did not: white on the mid green measured 2.2:1.
-
-   So avatars get their own darker set of the same four hues. The family still
-   reads as one palette; each member is simply deep enough to carry type.
-   ============================================================================ */
-.node .av{background:linear-gradient(135deg,#2F4FB8,#3B5FCC);
-  box-shadow:0 3px 8px -2px rgba(59,95,204,.42)}
-.node[data-a="1"] .av{background:linear-gradient(135deg,#0047C4,#005DFF);
-  box-shadow:0 3px 8px -2px rgba(0,71,196,.42)}
-.node[data-a="2"] .av{background:linear-gradient(135deg,#0B6B50,#0E7A5B);
-  box-shadow:0 3px 8px -2px rgba(14,122,91,.42)}
-.node[data-a="3"] .av{background:linear-gradient(135deg,#5C3CB0,#6B47C0);
-  box-shadow:0 3px 8px -2px rgba(107,71,192,.42)}
-.node[data-a="4"] .av{background:linear-gradient(135deg,#8A4F0E,#9A5A10);
-  box-shadow:0 3px 8px -2px rgba(154,90,16,.42)}
-.node.lead .av{background:linear-gradient(135deg,#24272D,#3A3E47);
-  box-shadow:0 3px 8px -2px rgba(36,39,45,.38)}
-
-/* The active tab's white label sat on the slider, which is a sibling element
-   placed by script. If the slider never moves, the label is white on a light
-   header and disappears. The pill carries its own background so it is legible
-   on its own; the slider rides over it in the same blue and supplies only the
-   movement between tabs. */
-.tb.on{background:#005DFF;color:#fff}
-
-/* ============================================================================
-   POPPINS
-   ----------------------------------------------------------------------------
-   Poppins is the brand face, so it replaces Inter everywhere. It brings one
-   problem this design has to answer.
-
-   Poppins ships no tabular-figure feature, and its digits are far from equal
-   width: at 26px, "111" sets 27.8px and "999" sets 48.4px. font-variant-numeric
-   is a no-op against it. Two consequences, both real here - a score counting up
-   changes width on every frame, and "/ 100" lands at a different position on
-   every card.
-
-   So the figure gets a box of its own, held at the width of the longest value
-   it can ever hold ("100.0" = 2.6em) and right-aligned inside it. The unit that
-   follows never moves, the count-up cannot jitter, and a column of scores lines
-   up on the decimal the way tabular figures would have done.
-   ============================================================================ */
-.fig,.anchor .av span[data-count]{display:inline-block;min-width:2.62em;text-align:right;
-  font-weight:inherit;font-size:inherit;letter-spacing:inherit}
-
-/* Poppins carries more width per character and a smaller x-height than Inter,
-   so the tracking that suited Inter reads loose here and has to come back. */
-body{letter-spacing:-.01em}
-.page-t{letter-spacing:-.03em}
-.tcard .tt,.node .nm{letter-spacing:-.005em}
-.anchor .av,.tcard .tv .v,.node .sc,.gnode .gs{letter-spacing:-.03em}
-.kra-h .t,.tcard .tv .l,.anchor .al,.anchor .ai .l,.m-h .sub{letter-spacing:.08em}
-
-/* Uppercase labels set tighter in Poppins; the small caps need a little air to
-   stay readable at 10px. */
-.sect-t,.kra-h .t{letter-spacing:.09em}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
 </head>
 <body>
-<header class="top"><div class="nav">
-  <button class="mark" data-crumb="teams" aria-label="Recykal KRA / KPI Tracker — all teams">
-    <span class="logo" aria-hidden="true"><svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><g transform="rotate(6 20 20)"><path d="M20 3.4C27.4 8.2 26.2 15.8 20 20 14.6 15.6 14.2 8.6 20 3.4Z" fill="#005DFF"/><path d="M20 3.4C27.4 8.2 26.2 15.8 20 20 14.6 15.6 14.2 8.6 20 3.4Z" transform="rotate(90 20 20)" fill="#567DE8"/><path d="M20 3.4C27.4 8.2 26.2 15.8 20 20 14.6 15.6 14.2 8.6 20 3.4Z" transform="rotate(180 20 20)" fill="#1DC797"/><path d="M20 3.4C27.4 8.2 26.2 15.8 20 20 14.6 15.6 14.2 8.6 20 3.4Z" transform="rotate(270 20 20)" fill="#8460D4"/></g></svg></span>
-    <span class="wm">Recykal<b>KRA / KPI</b></span>
-  </button>
-  <nav class="teams" id="teams"></nav>
-  <span id="months"></span>
-</div></header>
-<div id="demo"></div>
-<main class="wrap" id="view"></main>
+<div class="app">
+  <aside class="rail">
+    <div class="rail-logo" title="Recykal">
+      <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <rect x="1" y="1" width="30" height="30" rx="8" fill="#16253C"/>
+        <path d="M10 21V11l6 4 6-4v10" stroke="#4C8DF6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <nav class="rail-nav" id="rail"></nav>
+    <div class="rail-sp"></div>
+  </aside>
+  <div class="main">
+    <header class="tbar" id="tbar"></header>
+    <div class="canvas"><main class="wrap" id="view"></main></div>
+  </div>
+</div>
 <div class="scrim" id="scrim"></div>
-<div class="modal" id="modal" role="dialog" aria-modal="true" aria-label="KPI detail"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="KPI detail" aria-hidden="true" inert tabindex="-1"></aside>
 
 <script>
 'use strict';
 /* ============================================================================
    KRA / KPI Tracker
-   ----------------------------------------------------------------------------
    Api -> Store -> Sel -> render. One backend call; every derived list computed
-   in one place; pure render functions.
-
-   The frontend calculates nothing about performance. Achievement %, weighted
-   score, level and status arrive derived from the backend, which owns the
-   scoring rules. The only arithmetic here is presentational rollup - restating
-   backend weighted scores at KRA or team grain - and it is marked where it
-   happens.
-
-   Nothing about any team is hard-coded. Teams, people, KRAs, KPIs, weightages,
-   units, directions and thresholds all arrive from apiMasterModel().
+   in one place; pure render functions. The frontend calculates nothing about
+   performance — achievement %, weighted score, level and status all arrive
+   derived from apiMasterModel(); the only arithmetic here is presentational
+   rollup (restating backend weighted scores at KRA or team grain).
    ============================================================================ */
-
 var $ = function (s) { return document.querySelector(s); };
 var esc = function (s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -1258,209 +364,79 @@ var esc = function (s) {
 };
 var n1 = function (v) { return (v == null || v === '' || isNaN(v)) ? null : Math.round(v * 10) / 10; };
 var show = function (v) { var n = n1(v); return n == null ? '—' : n; };
-/* Scores always carry one decimal, so a column of them lines up and no figure
-   looks rounder than the one above it. Weightages keep show(), which has to
-   stay 5% rather than 5.0%. */
-var show1 = function (v) { var n = n1(v); return n == null ? '—' : n.toFixed(1); };
+var initials = function (s) {
+  return String(s || '?').trim().split(/\s+/).slice(0, 2).map(function (w) { return w[0] || ''; }).join('').toUpperCase();
+};
 
 var S = { model: null, loading: true, error: null,
-          team: null, employee: null, month: null, kra: '', kpi: '', region: '',
-          showFilters: false, closed: {}, open: {}, detail: null, demo: false, _demo: null };
+          view: 'overview', team: null, employee: null, month: null,
+          closed: {}, detail: null, demo: false, _demo: null,
+          _trigger: null, _drawerOpen: false };
 
-/* ============================== API ====================================== */
+/* ============================== API ===================================== */
 var Api = {
   live: function () { return !!(window.google && google.script && google.script.run); },
   fetch: function (month, done, fail) {
     if (!Api.live()) return fail({ message: 'Open this page through the deployed Apps Script URL to load live data.' });
     google.script.run.withSuccessHandler(done).withFailureHandler(fail).apiMasterModel(null, month || null);
   },
-  /* If the model comes back empty we need to know which failure it was, so the
-   * message can name a cause instead of guessing. apiPing carries almost no
-   * payload: if it answers, the deployment and permissions are fine and the
-   * problem was the model's data; if it does not, the deployment is stale. */
   ping: function (done, fail) {
     if (!Api.live()) return fail({ message: 'Not running inside the deployed web app.' });
     google.script.run.withSuccessHandler(done).withFailureHandler(fail).apiPing();
   }
 };
 
-/* ============================== DEMO =====================================
-   Placeholder values for visual demonstration only, confined to this function.
-   It clones the model, fills targets and actuals, then re-derives using the
-   SAME rules the backend applies - 105% cap, direction-aware, weightage x
-   achievement - so the shape on screen matches the real thing. Delete this and
-   its toggle; nothing else changes. */
+/* ============================== DEMO ====================================
+   Sample targets/actuals for visual preview only, confined here. It re-derives
+   using the same rules the backend applies, so the shape on screen matches. */
 var Demo = {
   seed: function (s) { var h = 0; for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) & 0x7fffffff; return h; },
   apply: function (model) {
     var c = JSON.parse(JSON.stringify(model));
-    /* The period is part of the seed, so each month produces its own targets
-       and actuals and the month filter visibly changes the numbers. Without it
-       every period would render identically and the control would look broken. */
-    var period = S.month || c.month || (c.months && c.months[c.months.length - 1]) || '';
-    c.month = period;
     c.scorecards.forEach(function (sc) {
       sc.kpis.forEach(function (k) {
-        var seed = Demo.seed(period + sc.employee_id + k.kra + k.kpi), lower = k.direction === 'LOWER_IS_BETTER';
+        var seed = Demo.seed(sc.employee_id + k.kra + k.kpi), lower = k.direction === 'LOWER_IS_BETTER';
         var target = lower ? 5 : k.unit === 'CR' ? 1 + (seed % 900) / 100
                    : k.unit === 'PERCENT' ? 90 + (seed % 10) : 2 + (seed % 12);
         var ratio = 0.62 + ((seed >> 3) % 55) / 100;
         k.target = Math.round(target * 100) / 100;
         k.actual = lower ? Math.max(1, Math.round(target / ratio)) : Math.round(target * ratio * 100) / 100;
-        k.variance = Math.round((k.actual - k.target) * 100) / 100;
         var ach = lower ? k.target / k.actual * 100 : k.actual / k.target * 100;
         k.achievement = Math.round(Math.min(ach, 105) * 10) / 10;
         k.weighted_score = Math.round(k.weightage * (k.achievement / 100) * 1000) / 1000;
-        k.performance_level = k.achievement >= 100 ? 5 : k.achievement >= 90 ? 4 : k.achievement >= 75 ? 3 : k.achievement >= 60 ? 2 : 1;
-        k.status = ['', 'Below Target', 'Below Target', 'At Risk', 'Achieved', 'Achieved'][k.performance_level];
+        k.level = k.achievement >= 100 ? 5 : k.achievement >= 90 ? 4 : k.achievement >= 75 ? 3 : k.achievement >= 60 ? 2 : 1;
+        k.status = ['', 'Critical', 'At Risk', 'Near', 'Above Expectation', 'Exceeded'][k.level];
       });
       var e = 0, m = 0;
       sc.kpis.forEach(function (k) { e += k.weighted_score; m += k.weightage; });
       sc.measured_weightage = m; sc.overall_score = m ? Math.round(e * 10) / 10 : null;
     });
-    c.months = (c.months && c.months.length) ? c.months : ['2026-06', '2026-07', '2026-08'];
+    c.months = (c.months && c.months.length) ? c.months : ['2026-08'];
     c.month = c.month || c.months[c.months.length - 1];
     return c;
   }
 };
 
-/* ============================== SELECTORS ================================ */
-/* ============================== SEED =====================================
-   The structural model the app falls back to when no backend is reachable, so
-   the whole interface can be seen and operated before a sheet is connected.
-   It carries STRUCTURE ONLY - teams, people, KRAs, KPIs, weightages, units and
-   directions. It holds no target, no actual and no score; Demo fills those and
-   labels them as sample values on screen.
-
-   The moment apiMasterModel answers, the real model replaces this wholesale.
-   Everything here is confined to this one object: delete it and the app still
-   works against the backend, it simply has nothing to show until data loads. */
-var Seed = {
-  KPIS: [
-    { perspective: 'Process',  kra: 'Retention',   kpi: 'Repeat Seller Transaction Rate',   weightage: 5,  unit: 'PERCENT', direction: 'HIGHER_IS_BETTER', goal: 'Share of existing sellers transacting again in the month.' },
-    { perspective: 'Customer', kra: 'Acquisition', kpi: 'New Buyer Acquisition',            weightage: 15, unit: 'COUNT',   direction: 'HIGHER_IS_BETTER', goal: 'New buyers onboarded against the monthly plan.' },
-    { perspective: 'Customer', kra: 'Acquisition', kpi: 'New Seller Acquisition',           weightage: 15, unit: 'COUNT',   direction: 'HIGHER_IS_BETTER', goal: 'New sellers onboarded against the monthly plan.' },
-    { perspective: 'Process',  kra: 'Activation',  kpi: 'New Buyer Same-Month Transaction', weightage: 5,  unit: 'PERCENT', direction: 'HIGHER_IS_BETTER', goal: 'New buyers who transact within their onboarding month.' },
-    { perspective: 'Sales',    kra: 'GMV',         kpi: 'Monthly GMV Target Achievement',   weightage: 40, unit: 'CR',      direction: 'HIGHER_IS_BETTER', goal: 'Delivered GMV against the monthly buyer-wise plan.' },
-    { perspective: 'Sales',    kra: 'Closure',     kpi: 'Successfully Closed Transactions', weightage: 10, unit: 'COUNT',   direction: 'HIGHER_IS_BETTER', goal: 'Transactions closed end to end, including POD.' },
-    { perspective: 'Process',  kra: 'Cash Flow',   kpi: 'Days Sales Outstanding',           weightage: 10, unit: 'DAYS',    direction: 'LOWER_IS_BETTER',  goal: 'Average days to collect. Lower is better.' }
-  ],
-  TEAMS: [
-    { team_id: 'MET', team_name: 'Metal', team_lead: 'Amit', people: [
-      ['MET001', 'Amit',                'Team Lead — Business Development',        'Central'],
-      ['MET002', 'Arijit Dutta',       'Senior Executive — Business Development', 'East'],
-      ['MET003', 'Arghyadeep Samanta', 'Senior Executive — Business Development', 'East'],
-      ['MET004', 'Abhisek Sanyal',     'Assistant Manager — Business Development','South'],
-      ['MET005', 'Adarsh Krishna',     'Assistant Manager — Business Development','South'],
-      ['MET006', 'Ayush Goyal',        'Assistant Manager — Business Development','East']
-    ]},
-    /* Plastic runs through two functions, so its people carry a sub_team and
-       the chart grows a tier between the lead and the members. Nothing about
-       this is specific to Plastic in the code — any team whose people carry a
-       sub_team will draw the same way. */
-    { team_id: 'PLA', team_name: 'Plastic', team_lead: 'Tabesh', people: [
-      ['PLA001', 'Tabesh',        'Team Lead — Business Development',         'West',  null],
-      ['PLA002', 'Rahul Sharma',  'Senior Executive — Supply',                'West',  'Supply'],
-      ['PLA003', 'Nikhil Verma',  'Assistant Manager — Supply',               'North', 'Supply'],
-      ['PLA004', 'Sneha Iyer',    'Senior Executive — Demand',                'South', 'Demand'],
-      ['PLA005', 'Imran Qureshi', 'Assistant Manager — Demand',               'West',  'Demand']
-    ]},
-    { team_id: 'ONB', team_name: 'Onboarding', team_lead: 'Ajay', people: [
-      ['ONB001', 'Ajay',          'Team Lead — Onboarding',       'Central'],
-      ['ONB002', 'Naveen Ranga',  'Executive — Onboarding',       'South'],
-      ['ONB003', 'Vishwash Tiwari','Executive — Onboarding',      'Central']
-    ]},
-    { team_id: 'COL', team_name: 'Collections', team_lead: 'Srinivas', people: [
-      ['COL001', 'Srinivas',    'Team Lead — Collections', 'West'],
-      ['COL002', 'Megaraj S',   'Executive — Collections', 'South']
-    ]},
-    { team_id: 'MCT', team_name: 'Marketplace — Control Tower', team_lead: 'Ashwin', people: [
-      ['MCT001', 'Ashwin',       'Team Lead — Control Tower',  'Central'],
-      ['MCT002', 'Priya Menon',  'Executive — Control Tower','South'],
-      ['MCT003', 'Karan Bhatia', 'Executive — Control Tower','North']
-    ]}
-  ],
-  model: function () {
-    return {
-      ok: true,
-      placeholder: true,
-      months: ['2026-06', '2026-07', '2026-08'],
-      month: '2026-08',
-      teams: Seed.TEAMS.map(function (t) {
-        return { team_id: t.team_id, team_name: t.team_name, team_lead: t.team_lead };
-      }),
-      kpis: Seed.KPIS.map(function (k) { return JSON.parse(JSON.stringify(k)); }),
-      scorecards: Seed.TEAMS.reduce(function (acc, t) {
-        t.people.forEach(function (p) {
-          acc.push({
-            team_id: t.team_id, employee_id: p[0], employee_name: p[1],
-            designation: p[2], region: p[3],
-            /* The lead is the first person listed; everyone else reports to
-               them. The real EMPLOYEE_MASTER carries manager_id and will
-               replace this the moment the sheet is connected. */
-            manager_id: p[1] === t.team_lead ? null : t.people[0][0],
-            sub_team: p[4] || null,
-            kpis: Seed.KPIS.map(function (k) { return JSON.parse(JSON.stringify(k)); })
-          });
-        });
-        return acc;
-      }, [])
-    };
-  }
-};
-
-/* ============================== SUMMARY ==================================
-   The four figures a lead reads first, in the order the questions arrive:
-   how are we doing, is the revenue line landing, is onboarding landing, and
-   what is broken. Each is a rollup of backend weighted scores - none of them
-   originates a number. */
+/* ============================== SELECTORS =============================== */
 var Sel = {
   model: function () { return S.demo && S.model ? (S._demo || (S._demo = Demo.apply(S.model))) : S.model; },
   teams: function () { var m = Sel.model(); return (m && m.teams) || []; },
   team: function () { return Sel.teams().filter(function (t) { return t.team_id === S.team; })[0] || null; },
-  employee: function () {
-    return Sel.members().filter(function (m) { return m.employee_id === S.employee; })[0] || null;
-  },
   months: function () { var m = Sel.model(); return (m && m.months) || []; },
   members: function () {
     var m = Sel.model();
     return ((m && m.scorecards) || []).filter(function (s) { return s.team_id === S.team; });
   },
-  visible: function () {
-    var l = Sel.members();
-    if (S.region) l = l.filter(function (m) { return (m.region || 'Unassigned') === S.region; });
-    return S.employee ? l.filter(function (m) { return m.employee_id === S.employee; }) : l;
-  },
-  regions: function () {
-    var seen = {}, out = [];
-    Sel.members().forEach(function (m) {
-      var r = m.region || 'Unassigned';
-      if (!seen[r]) { seen[r] = 1; out.push(r); }
-    });
-    return out.sort();
-  },
-  kpisOf: function (m) {
-    return m.kpis.filter(function (k) { return (!S.kra || k.kra === S.kra) && (!S.kpi || k.kpi === S.kpi); });
-  },
+  member: function (id) { return Sel.members().filter(function (m) { return m.employee_id === id; })[0] || null; },
   allKpis: function () {
     var out = [];
-    Sel.visible().forEach(function (m) {
-      Sel.kpisOf(m).forEach(function (k) { k.__owner = m.employee_id; out.push(k); });
+    Sel.members().forEach(function (m) {
+      m.kpis.forEach(function (k) { k.__owner = m.employee_id; k.__ownerName = m.employee_name; out.push(k); });
     });
     return out;
   },
-  names: function (field, within) {
-    var seen = {}, out = [];
-    Sel.members().forEach(function (m) {
-      m.kpis.forEach(function (k) {
-        if (within && k.kra !== within) return;
-        if (!seen[k[field]]) { seen[k[field]] = 1; out.push(k[field]); }
-      });
-    });
-    return out.sort();
-  },
-  /* Rollup: a KRA line restates its KPIs' backend weighted scores over their
-     combined weightage. Presentation only; it originates nothing. */
+  /* KRA rollup: restates KPIs' backend weighted scores over their combined
+     weightage. Presentation only; it originates nothing. */
   byKra: function (kpis) {
     var by = {}, order = [];
     kpis.forEach(function (k) {
@@ -1469,9 +445,7 @@ var Sel = {
       if (k.weighted_score != null) { g.earned += k.weighted_score; g.measured += Number(k.weightage) || 0; }
     });
     return order.map(function (n) {
-      var g = by[n];
-      g.achievement = g.measured > 0 ? Math.round(g.earned / g.measured * 1000) / 10 : null;
-      return g;
+      var g = by[n]; g.achievement = g.measured > 0 ? Math.round(g.earned / g.measured * 1000) / 10 : null; return g;
     });
   },
   mean: function (vals) {
@@ -1479,618 +453,374 @@ var Sel = {
     if (!v.length) return null;
     var s = 0; v.forEach(function (x) { s += x; });
     return Math.round(s / v.length * 10) / 10;
+  },
+  ranked: function () {
+    return Sel.members().slice().sort(function (a, b) {
+      return (b.overall_score == null ? -1 : b.overall_score) - (a.overall_score == null ? -1 : a.overall_score);
+    });
+  },
+  rankOf: function (id) {
+    var me = Sel.member(id);
+    if (!me || me.overall_score == null) return null;   // no score, no rank — never a fabricated position
+    var r = Sel.ranked().filter(function (x) { return x.overall_score != null; });
+    for (var i = 0; i < r.length; i++) if (r[i].employee_id === id) return i + 1;
+    return null;
+  },
+  /* The person the greeting names and "My profile" opens: the org root of the
+     team (empty reporting manager), else the named team lead / category head. */
+  lead: function () {
+    var team = Sel.team(), ms = Sel.members();
+    if (!ms.length) return null;
+    var root = ms.filter(function (m) { return !m.reporting_manager; })[0];
+    if (root) return root;
+    var name = team && (team.team_lead || team.category_head);
+    var byName = name && ms.filter(function (m) { return m.employee_name === name; })[0];
+    return byName || Sel.ranked()[0];
   }
 };
 
-/* ============================== FORMAT =================================== */
-/* ============================== FORMAT =================================== */
+/* ============================== FORMAT ================================== */
 function fmt(v, unit) {
-  if (v == null || v === '' || isNaN(v)) return '—';
-  var n = Math.round(v * 100) / 100;
-  if (unit === 'CR') return '₹' + n + ' Cr';
-  if (unit === 'PERCENT') return n + '%';
-  if (unit === 'DAYS') return n + (Math.abs(n) === 1 ? ' day' : ' days');
-  return String(n);
+  var n = n1(v); if (n == null) return '—';
+  return unit === 'CR' ? '₹' + n + ' Cr'
+       : unit === 'MT' ? n + ' MT'
+       : unit === 'DAYS' ? n + (Math.abs(n) === 1 ? ' day' : ' days')
+       : unit === 'PERCENT' ? n + '%' : String(n);
 }
-function statusOf(k) {
-  if (k.achievement == null) return { c: 'none', t: 'Not measured' };
-  if (k.achievement >= 100) return { c: 'good', t: 'Achieved' };
-  if (k.achievement >= 90) return { c: 'good', t: 'On track' };
-  if (k.achievement >= 75) return { c: 'warn', t: 'Near target' };
-  return { c: 'bad', t: 'Below target' };
-}
-/* The stage a score sits at, on the same band boundaries the progress bar
-   notches: past 90 is on target, past 75 is near it, below that is behind.
-   One function, so the word beside a bar and the colour of its fill can never
-   disagree. */
-function scoreStatus(v) {
-  if (v == null) return { c: 'none', t: 'Not measured' };
-  if (v >= 100) return { c: 'good', t: 'Exceeding' };
-  if (v >= 90) return { c: 'good', t: 'On target' };
-  if (v >= 75) return { c: 'warn', t: 'Near target' };
-  if (v >= 60) return { c: 'bad', t: 'Behind' };
-  return { c: 'bad', t: 'Well behind' };
-}
+function tone(ach) { return ach == null ? 'none' : ach >= 90 ? 'good' : ach >= 75 ? 'warn' : 'bad'; }
+/* Pill tone from the backend's own level (5/4 met, 3 near, 2/1 short). The
+   status TEXT always comes verbatim from k.status — the frontend never
+   re-classifies performance, it only colours what the backend decided. */
+function levelTone(level) { return level == null ? 'none' : level >= 4 ? 'good' : level === 3 ? 'warn' : 'bad'; }
 function monthLabel(m) {
-  var p = String(m || '').split('-');
-  if (p.length !== 2) return String(m || '');
-  var names = ['', 'January', 'February', 'March', 'April', 'May', 'June',
-               'July', 'August', 'September', 'October', 'November', 'December'];
-  return (names[+p[1]] || p[1]) + ' ' + p[0];
+  var M = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  var x = /^(\d{4})-(\d{2})$/.exec(m || '');
+  return x ? (M[+x[2]] || x[2]) + ' ' + x[1] : (m || '');
 }
 function plural(n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); }
-/* A glyph per team, drawn rather than lettered, so a card is recognisable
-   before its name is read. Order matches the team order; a sixth team falls
-   back to the first shape rather than to nothing. */
-function teamGlyph(i) {
-  var p = [
-    'M12 2 2 7l10 5 10-5-10-5ZM2 12l10 5 10-5M2 17l10 5 10-5',        /* layers  */
-    'M12 3c4 4.5 6 7.3 6 9.8A6 6 0 0 1 6 12.8C6 10.3 8 7.5 12 3Z',    /* drop    */
-    'M16 20v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V20M9.5 3a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7ZM18 8v6M21 11h-6', /* add     */
-    'M3 7h18v12H3zM3 7l2-3h14l2 3M8 12h8',                            /* wallet  */
-    'M12 12v9M8 21h8M4 4h16v8H4zM8 8h.01M12 8h.01M16 8h.01'           /* tower   */
-  ][i % 5];
-  return '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" ' +
-         'stroke-linecap="round" stroke-linejoin="round"><path d="' + p + '"/></svg>';
+
+/* ============================== PIECES ================================= */
+function Avatar(name, cls) { return '<div class="avatar ' + (cls || '') + '">' + esc(initials(name)) + '</div>'; }
+
+/* Achievement % over a fine bar on the KPI's own 105% ladder, with one tick at
+   target (100%) — the same target reference the KRA rollup and drawer draw, so
+   "at target" reads at an identical position everywhere. The bar annotates the
+   figure; it is not a second reading. */
+var TARGET_TICK = '<u style="left:' + (100 / 105 * 100) + '%"></u>';
+function achBar(ach) {
+  if (ach == null) return '';
+  var w = Math.max(0, Math.min(100, ach / 105 * 100)), c = tone(ach);
+  return '<span class="bar">' + TARGET_TICK + '<i class="' + c + '" style="width:' + w + '%"></i></span>';
 }
-
-/* Six months of shape behind one number. Entirely derived from the id, so it
-   is stable per team across renders and never implies data the model does not
-   have; the figure itself is always stated in text beside it. */
-function Spark(id, cls) {
-  var stroke = { good: '#1DC797', warn: '#E9A23B', bad: '#DE6B5E', none: '#C9CBD2' }[cls] || '#1DC797';
-  var h = Demo.seed(String(id)), pts = [], i;
-  for (i = 0; i < 7; i++) { h = (h * 1103515245 + 12345) & 0x7fffffff; pts.push(4 + (h % 26)); }
-  var d = pts.map(function (v, n) { return (n ? 'L' : 'M') + (n * 100 / 6).toFixed(1) + ' ' + (30 - v); }).join(' ');
-  return '<svg class="spark" viewBox="0 0 100 32" preserveAspectRatio="none" aria-hidden="true">' +
-    '<path class="fl" d="' + d + ' L100 32 L0 32 Z" fill="' + stroke + '"/>' +
-    '<path class="ln" d="' + d + '" stroke="' + stroke + '"/></svg>';
+function Ach(k) {
+  if (k.achievement == null) return '<span class="quiet">—</span>';
+  return '<span class="ach"><span class="n">' + show(k.achievement) + '%</span>' +
+    achBar(k.achievement) + '</span>';
 }
-
-function initials(n) {
-  return String(n || '?').trim().split(/\s+/).slice(0, 2)
-    .map(function (w) { return w.charAt(0); }).join('').toUpperCase();
-}
-
-/* Weighted achievement across a set of KPIs: earned score over the weightage
-   that was actually measured. Presentation rollup only — it originates nothing. */
-function achOf(kpis) {
-  var e = 0, w = 0;
-  kpis.forEach(function (k) {
-    if (k.weighted_score != null) { e += k.weighted_score; w += Number(k.weightage) || 0; }
-  });
-  return w > 0 ? Math.round(e / w * 1000) / 10 : null;
-}
-
-function MonthSelect() {
-  var months = Sel.months();
-  return '<select class="sel" id="f-month"' + (months.length ? '' : ' disabled') + '>' +
-    (months.length ? months.map(function (x) {
-      return '<option value="' + esc(x) + '"' + (x === S.month ? ' selected' : '') + '>' +
-        esc(monthLabel(x)) + '</option>';
-    }).join('') : '<option>No period</option>') + '</select>';
-}
-
-/* ============================== LEVEL 1 — TEAMS ==========================
-   The landing screen is deliberately almost empty: the five places you can go
-   and the one number that tells you where to look first. No totals, no charts,
-   no summary of any kind. */
-function TeamsScreen() {
-  var m = Sel.model(), cards = (m && m.scorecards) || [];
-  var teams = Sel.teams();
-  if (!teams.length) return '<div class="state"><div><h2>No teams</h2><p>The backend returned no team records.</p></div></div>';
-
-  var grid = teams.map(function (t, i) {
-    var people = cards.filter(function (s) { return s.team_id === t.team_id; });
-    var score = Sel.mean(people.map(function (p) { return p.overall_score; }));
-    var st = scoreStatus(score);
-    return '<button class="tcard" data-team="' + esc(t.team_id) + '">' +
-      '<span class="th">' +
-        '<span class="gt-tile" data-g="' + ((i % 5) + 1) + '" aria-hidden="true">' + teamGlyph(i) + '</span>' +
-        '<span class="tx"><span class="tt">' + esc(t.team_name) + '</span>' +
-        '<span class="tm">' + plural(people.length, 'person').replace('persons', 'people') +
-        (t.team_lead ? ' · led by ' + esc(t.team_lead) : '') + '</span></span>' +
-      '</span>' +
-      Spark(t.team_id, st.c) +
-      '<span class="tv"><span class="l">Team score</span>' +
-      '<span class="v"><b class="fig">' + show1(score) + '</b><em> / 100</em></span></span>' +
-      '</button>';
-  }).join('');
-
-  return '<h1 class="page-t">Performance</h1>' +
-    '<p class="page-s">' + esc(S.month ? monthLabel(S.month) : 'No period loaded') + '</p>' +
-    '<div class="tgrid">' + grid + '</div>';
-}
-
-/* ============================== LEVEL 2 — TEAM FLOW ======================
-   People as performance nodes. The tree is read from the data, never assumed:
-   whoever has no manager inside the team is a root, everyone else hangs off the
-   person they report to. A flat team draws one row; a two-layer team draws two.
-   Nothing here knows the name of any team. */
-function buildTree(members) {
-  var byId = {}, roots = [];
-  members.forEach(function (m) { byId[m.employee_id] = { m: m, kids: [] }; });
-  members.forEach(function (m) {
-    var pid = m.manager_id || m.reports_to || null;
-    if (pid && byId[pid] && pid !== m.employee_id) byId[pid].kids.push(byId[m.employee_id]);
-    else roots.push(byId[m.employee_id]);
-  });
-  /* No reporting line recorded anywhere: fall back to the lead named on the
-     team record, so the shape still reflects how the team actually runs. */
-  if (roots.length === members.length && members.length > 1) {
-    var t = Sel.team(), lead = t && t.team_lead;
-    var head = lead && members.filter(function (m) { return m.employee_name === lead; })[0];
-    if (head) {
-      var hn = byId[head.employee_id];
-      hn.kids = roots.filter(function (n) { return n !== hn; });
-      roots = [hn];
-    }
-  }
-  var byScore = function (a, b) {
-    return (b.m.overall_score == null ? -1 : b.m.overall_score) -
-           (a.m.overall_score == null ? -1 : a.m.overall_score);
-  };
-  var order = function (n) { n.kids.sort(byScore); n.kids.forEach(order); };
-  roots.sort(function (a, b) { return b.kids.length - a.kids.length || byScore(a, b); });
-  roots.forEach(order);
-
-  /* A team that splits into functions gets a tier between its lead and its
-     people. The tier is not a person — it is the function itself — so it draws
-     as a different kind of node and opens by expanding rather than by going to
-     a profile. Any team whose people carry a sub_team grows this tier; no team
-     is named anywhere in this code. */
-  roots.forEach(function (r) {
-    var groups = {}, names = [];
-    r.kids.forEach(function (k) {
-      var g = k.m.sub_team || k.m.sub_function || k.m.function_name || null;
-      if (!g) return;
-      if (!groups[g]) { groups[g] = []; names.push(g); }
-      groups[g].push(k);
-    });
-    if (!names.length) return;
-    var ungrouped = r.kids.filter(function (k) {
-      return !(k.m.sub_team || k.m.sub_function || k.m.function_name);
-    });
-    r.kids = names.map(function (n) {
-      var kids = groups[n];
-      var scores = kids.map(function (k) { return k.m.overall_score; });
-      return { group: n, kids: kids, score: Sel.mean(scores), count: kids.length };
-    }).concat(ungrouped);
-  });
-  return roots;
-}
-
-/* Name, role, score. Enough to answer "who is performing well" — and nothing
-   that begins to answer "why", which belongs inside the profile. */
-/* The bar is the score, drawn. The notches sit on the band boundaries the
-   scoring model already uses, so the fill's position against them says which
-   stage the person is at without a legend: past the third notch is on target,
-   short of the first is well behind. Notches are cut out of the fill rather
-   than laid over it, so they read at any width and in greyscale. */
-function ProgressBar(v, cls) {
-  var pct = v == null ? 0 : Math.max(0, Math.min(100, v));
-  return '<span class="pb" role="img" aria-label="' +
-    (v == null ? 'Not measured' : show(v) + ' out of 100') + '">' +
-    '<i class="' + cls + '" style="width:' + pct.toFixed(1) + '%"></i>' +
-    '<u style="left:60%"></u><u style="left:75%"></u><u style="left:90%"></u>' +
-    '</span>';
-}
-
-function Node(m, isLead) {
-  var st = scoreStatus(m.overall_score);
-  /* The avatar hue is derived from the id, so a person keeps the same colour on
-     every screen and across reloads rather than shifting with sort order. */
-  return '<button class="node' + (isLead ? ' lead' : '') + '" data-emp="' + esc(m.employee_id) + '"' +
-    ' data-a="' + (Demo.seed(String(m.employee_id)) % 5) + '">' +
-    '<span class="nh"><span class="av">' + esc(initials(m.employee_name)) + '</span>' +
-    '<span class="nt"><span class="nm">' + esc(m.employee_name) + '</span>' +
-    '<span class="rl">' + esc(m.designation || '') + '</span></span></span>' +
-    '<span class="nf">' +
-      '<span class="sr"><span class="sc"><b class="fig">' + show1(m.overall_score) +
-        '</b><em> / 100</em></span>' +
-      '<span class="stg ' + st.c + '"><i class="dot ' + st.c + '"></i>' + esc(st.t) + '</span></span>' +
-      ProgressBar(m.overall_score, st.c) +
-    '</span></button>';
-}
-
-/* A function, not a person: the name, how many people sit under it, and their
-   mean score. It opens by expanding rather than by going anywhere, so the
-   chevron is the whole affordance. */
-function GroupNode(node) {
-  var open = !!S.open[node.group], st = scoreStatus(node.score);
-  return '<button class="gnode' + (open ? ' open' : '') + '" data-group="' + esc(node.group) + '"' +
-    ' aria-expanded="' + (open ? 'true' : 'false') + '">' +
-    '<span class="gh"><span class="gt">' + esc(node.group) + '</span>' +
-    '<span class="gm">' + plural(node.count, 'person').replace('persons', 'people') + '</span></span>' +
-    '<span class="gc" aria-hidden="true">' + (open ? '−' : '+') + '</span>' +
-    '<span class="gf"><span class="sr">' +
-      '<span class="gs"><b class="fig">' + show1(node.score) + '</b><em> / 100</em></span>' +
-      '<span class="stg ' + st.c + '"><i class="dot ' + st.c + '"></i>' + esc(st.t) + '</span></span>' +
-      ProgressBar(node.score, st.c) +
-    '</span></button>';
-}
-
-function renderNode(node) {
-  if (node.group) {
-    var open = !!S.open[node.group];
-    return '<div class="arm"><div class="stem"></div>' + GroupNode(node) +
-      (open ? '<div class="drop"></div><div class="branch">' +
-        node.kids.map(renderNode).join('') + '</div>' : '') + '</div>';
-  }
-  var card = Node(node.m, false);
-  if (!node.kids.length) return '<div class="arm"><div class="stem"></div>' + card + '</div>';
-  return '<div class="arm"><div class="stem"></div>' + card +
-    '<div class="drop"></div><div class="branch">' +
-    node.kids.map(renderNode).join('') + '</div></div>';
-}
-
-function Flowchart(members) {
-  if (!members.length) return '<div class="empty">No people are mapped to this team.</div>';
-  var roots = buildTree(members);
-  var top = '<div class="lvl">' + roots.map(function (r) {
-    return Node(r.m, r.kids.length > 0);
+function KraBars(groups) {
+  if (!groups.length) return '<div class="empty">No KRAs tagged.</div>';
+  return '<div class="kbars">' + groups.map(function (g) {
+    var ach = g.achievement, c = tone(ach), w = ach == null ? 0 : Math.max(0, Math.min(100, ach / 105 * 100));
+    return '<div class="kbar"><div class="kn">' + esc(g.kra) +
+      '<small>' + plural(g.kpis.length, 'KPI') + '</small></div>' +
+      '<div class="tr">' + TARGET_TICK + '<i class="' + c + '" style="width:' + w + '%"></i></div>' +
+      '<div class="kv">' + (ach == null ? '—' : show(ach) + '%') + '</div></div>';
   }).join('') + '</div>';
-  var below = roots.filter(function (r) { return r.kids.length; }).map(function (r) {
-    return '<div class="drop"></div><div class="branch">' +
-      r.kids.map(renderNode).join('') + '</div>';
-  }).join('');
-  return '<div class="flow">' + top + below + '</div>';
 }
-
-function TeamScreen() {
-  var t = Sel.team();
-  if (!t) return TeamsScreen();
-  var members = Sel.members();
-  var score = Sel.mean(members.map(function (m) { return m.overall_score; }));
-  var st = scoreStatus(score);
-  var rated = members.filter(function (m) { return m.overall_score != null; }).length;
-  return '<button class="back" data-crumb="teams">← All teams</button>' +
-    '<h1 class="page-t">' + esc(t.team_name) + '</h1>' +
-    '<p class="page-s">' + esc(S.month ? monthLabel(S.month) : 'No period loaded') + '</p>' +
-    '<div class="anchor"><div>' +
-      '<div class="al">Team score</div>' +
-      '<div class="av"><span data-count="' + (score == null ? '' : show1(score)) + '">' + show1(score) + '</span><em>/ 100</em></div>' +
-      '<div class="as">' + rated + ' of ' + plural(members.length, 'member') + ' measured</div>' +
-    '</div><div class="ar">' +
-      '<div class="ai"><div class="l">Stage</div><div class="v">' + esc(st.t) + '</div></div>' +
-      '<div class="ai"><div class="l">People</div><div class="v">' + members.length + '</div></div>' +
-    '</div></div>' +
-    Flowchart(members);
-}
-
-/* ============================== LEVEL 3 — PROFILE ========================
-   One reusable profile for every team. Which KRAs and KPIs appear is decided
-   entirely by that person's backend mapping, so two people on the same team can
-   carry different KPIs at different weightages and both render correctly. */
-function Ring(v) {
-  var pct = v == null ? 0 : Math.max(0, Math.min(100, v));
-  var r = 50, c = 2 * Math.PI * r;
-  /* The arc carries the brand gradient, so it needs a paint server rather than
-     a flat stroke. The id is stable and the defs ride with the ring, so the
-     gradient exists wherever the ring is rendered. */
-  return '<div class="ring"><svg viewBox="0 0 112 112" aria-hidden="true" focusable="false">' +
-    '<defs><linearGradient id="brandArc" x1="0" y1="0" x2="1" y2="1">' +
-    '<stop offset="0" stop-color="#005DFF"/><stop offset="1" stop-color="#8460D4"/>' +
-    '</linearGradient></defs>' +
-    '<circle class="tr" cx="56" cy="56" r="' + r + '"></circle>' +
-    '<circle class="fg" cx="56" cy="56" r="' + r + '" stroke-dasharray="' + c.toFixed(1) +
-      '" stroke-dashoffset="' + (c - c * pct / 100).toFixed(1) + '"></circle></svg>' +
-    /* The arc needs its figure: an empty ring reads as a spinner, not a gauge.
-       The "/ 100" goes, though - the denominator is already stated twice in
-       this header, and the ring only has to carry the number. */
-    '<div class="lbl"><b>' + show1(v) + '</b></div></div>';
-}
-
-/* A row, not a card. Name and weightage on one line, the numbers on the next,
-   a hairline bar beneath. Twelve of these still read as one list. */
-function KpiRow(k, i) {
-  var st = statusOf(k);
-  var pct = k.achievement == null ? 0 : Math.max(0, Math.min(100, k.achievement));
-  var flow = (k.target == null && k.actual == null)
-    ? 'No target or actual for this period'
-    : '<b>' + esc(fmt(k.target, k.unit)) + '</b> → <b>' + esc(fmt(k.actual, k.unit)) + '</b>' +
-      (k.weighted_score == null ? '' : ' · score ' + show(k.weighted_score) + ' / ' + show(k.weightage));
-  return '<button class="krow" data-kpi="' + i + '">' +
-    '<span class="r1"><span class="kn">' + esc(k.kpi) + '</span>' +
-    '<span class="kw">' + show(k.weightage) + '%</span></span>' +
-    '<span class="r2"><span class="flow-v">' + flow + '</span>' +
-    '<span class="ach ' + st.c + '">' +
-      (k.achievement == null ? '—' : show(k.achievement) + '%') + '</span></span>' +
-    '<span class="kbar"><i class="' + st.c + '" style="width:' + pct + '%"></i></span>' +
-    '</button>';
-}
-
-function ProfileScreen() {
-  var m = Sel.employee();
-  if (!m) return '<div class="state"><div><h2>Not found</h2><p>That person is not on the selected team.</p></div></div>';
-  var t = Sel.team();
-  var kpis = m.kpis || [];
-  var rated = kpis.filter(function (k) { return k.achievement != null; });
-  var meta = [m.designation, m.region].filter(Boolean).join(' · ');
-
-  /* Identity in the light, the score on the one dark plane. Three stats and no
-     more — enough to read the shape of the person's month before the KPIs
-     explain it. */
-  var a = achOf(rated), st = scoreStatus(m.overall_score);
-  var prof = '<button class="back" data-crumb="team">← ' + esc(t ? t.team_name : 'Team') + '</button>' +
-    '<h1 class="page-t">' + esc(m.employee_name) + '</h1>' +
-    '<p class="page-s">' + esc(meta) + '</p>' +
-    '<div class="anchor"><div>' +
-      '<div class="al">Overall score</div>' +
-      '<div class="av"><span data-count="' + (m.overall_score == null ? '' : show1(m.overall_score)) + '">' + show1(m.overall_score) + '</span><em>/ 100</em></div>' +
-      '<div class="as"><i class="dot ' + st.c + '"></i>' + esc(st.t) + ' · ' +
-        esc(S.month ? monthLabel(S.month) : 'no period') + '</div>' +
-    '</div><div class="ar">' +
-      '<div class="ai"><div class="l">KPI achievement</div><div class="v">' +
-        (a == null ? '—' : a + '%') + '</div></div>' +
-      '<div class="ai"><div class="l">KPIs assigned</div><div class="v">' + kpis.length + '</div></div>' +
-    '</div>' + Ring(m.overall_score) + '</div>';
-
-  /* Grouped by KRA, in the order the backend supplied them. The heading is the
-     hierarchy — no container, no card, just a label and a rule. */
-  var by = {}, order = [];
-  kpis.forEach(function (k, i) {
-    k.__i = i;
-    var g = k.kra || 'Other';
-    if (!by[g]) { by[g] = []; order.push(g); }
-    by[g].push(k);
+/* Ranking is derived only from real measured scores. Unmeasured members get no
+   position, no ★ and no bar — array order is never dressed up as a rank. When
+   nobody in the set is measured there is simply no order to show. */
+function RankList(members, clickable) {
+  var rk = members.slice().sort(function (a, b) {
+    return (b.overall_score == null ? -1 : b.overall_score) - (a.overall_score == null ? -1 : a.overall_score);
   });
-  /* Numbering the KRAs says how many parts the scorecard has and where you are
-     in them, at almost no visual cost. */
-  var body = order.map(function (g, gi) {
-    var list = by[g], wt = 0;
-    list.forEach(function (k) { wt += Number(k.weightage) || 0; });
-    var a = achOf(list);
-    return '<div class="kra-h"><span class="ix">' + (gi + 1 < 10 ? '0' : '') + (gi + 1) + '</span>' +
-      '<span class="t">' + esc(g) + '</span><span class="ln"></span>' +
-      '<span class="r">' + show(wt) + '%' + (a == null ? '' : ' · ' + a + '% achieved') + '</span></div>' +
-      list.map(function (k) { return KpiRow(k, k.__i); }).join('');
-  }).join('');
-  if (!kpis.length) body = '<div class="empty">No KPIs are mapped to this person.</div>';
+  var max = rk.reduce(function (m, x) { return Math.max(m, x.overall_score == null ? 0 : x.overall_score); }, 0) || 100;
+  var pos = 0;
+  return '<div class="rank">' + rk.map(function (m) {
+    var meas = m.overall_score != null;
+    var rank = meas ? ++pos : null;
+    var top = meas && rank === 1;
+    var w = meas ? Math.max(4, m.overall_score / max * 100) : 0;
+    return '<div class="rrow' + (top ? ' top' : '') + (clickable ? ' click' : '') + '"' +
+      (clickable ? ' data-emp="' + esc(m.employee_id) + '" tabindex="0" role="button"' : '') + '>' +
+      '<span class="pos">' + (top ? '★' : (rank == null ? '—' : rank)) + '</span>' +
+      '<div class="nm"><b>' + esc(m.employee_name) + '</b><span>' + esc(m.designation || '—') + '</span></div>' +
+      '<div class="mt">' + (meas ? '<div class="microbar"><i style="width:' + w + '%"></i></div>' : '') + '</div>' +
+      '<div class="sc">' + show(m.overall_score) + '</div>' +
+      (clickable ? '<span class="chev">›</span>' : '') + '</div>';
+  }).join('') + '</div>';
+}
 
-  var pending = kpis.length - rated.length;
+/* One table, six columns: KPI · Weight · Target · Actual · Achievement · Score.
+   Perspective rides on the KRA band, not in a column (spec §14). The team-wide
+   view names the owner under the KPI rather than adding a column, so the numeric
+   columns line up the same way on every screen. */
+function KpiTable(kpis, prefix, showOwner) {
+  var groups = Sel.byKra(kpis);
+  var body = groups.length ? groups.map(function (g) {
+    var id = prefix + '|' + g.kra, open = !S.closed[id];
+    var head = '<tr class="kra" data-kra="' + esc(id) + '" tabindex="0" role="button" aria-expanded="' + (open ? 'true' : 'false') + '"><td colspan="6">' +
+      '<span class="cv">' + (open ? '▾' : '▸') + '</span>' + esc(g.kra) +
+      '<span class="rs">' + (g.perspective ? esc(g.perspective) + ' · ' : '') + plural(g.kpis.length, 'KPI') +
+      (g.achievement == null ? '' : ' · <b>' + show(g.achievement) + '%</b>') + '</span></td></tr>';
+    if (!open) return head;
+    return head + g.kpis.map(function (k) {
+      return '<tr class="click" data-kpi="' + esc((k.__owner || '') + '::' + k.kra + '::' + k.kpi) + '" tabindex="0" role="button">' +
+        '<td class="kpi nm">' + esc(k.kpi) +
+          (showOwner ? '<small>' + esc(k.__ownerName || '') + '</small>' : '') + '</td>' +
+        '<td class="num quiet">' + show(k.weightage) + '%</td>' +
+        '<td class="num quiet">' + (k.target == null ? 'Not set' : fmt(k.target, k.unit)) + '</td>' +
+        '<td class="num">' + (k.actual == null ? '<span class="quiet">Pending</span>' : fmt(k.actual, k.unit)) + '</td>' +
+        '<td class="num">' + Ach(k) + '</td>' +
+        '<td class="num strong">' + show(k.weighted_score) + '</td></tr>';
+    }).join('');
+  }).join('') : '<tr><td colspan="6" class="empty">No KPIs assigned.</td></tr>';
+  var cg = '<colgroup><col style="width:34%"><col style="width:10%"><col style="width:14%"><col style="width:14%"><col style="width:20%"><col style="width:8%"></colgroup>';
+  var thead = '<thead><tr><th>KPI</th><th class="num">Weight</th><th class="num">Target</th><th class="num">Actual</th><th class="num">Achievement</th><th class="num">Score</th></tr></thead>';
+  return '<div class="panel"><div class="tw"><table>' + cg + thead + '<tbody>' + body + '</tbody></table></div></div>';
+}
+
+/* ============================== SCREENS ================================ */
+function DashboardScreen() {
+  var t = Sel.team();
+  if (!t) return PageHead('No team selected', '') + '<div class="empty">No teams are available to show for this period.</div>';
+  var members = Sel.members(), kpis = Sel.allKpis();
+  var score = Sel.mean(members.map(function (m) { return m.overall_score; }));
+  var measured = members.filter(function (m) { return m.overall_score != null; }).length;
+  var scored = kpis.filter(function (k) { return k.achievement != null; });
+  var kpiAch = (function () {
+    var e = 0, w = 0; scored.forEach(function (k) { e += k.weighted_score; w += k.weightage; });
+    return w > 0 ? Math.round(e / w * 1000) / 10 : null;
+  })();
+  var onTrack = scored.filter(function (k) { return k.achievement >= 90; }).length;
+  var kraGroups = Sel.byKra(kpis);
+
+  var cards = '<div class="cards">' +
+    Card('Team score', score == null ? '—' : String(show(score)), measured + ' of ' + plural(members.length, 'member') + ' measured', true) +
+    Card('KPI achievement', kpiAch == null ? '—' : show(kpiAch) + '<em>%</em>', scored.length + ' of ' + kpis.length + ' KPIs with results') +
+    Card('KPIs on track', String(onTrack), (scored.length - onTrack) + ' below target · ' + scored.length + ' measured') +
+    Card('KPIs assigned', String(kpis.length), plural(members.length, 'employee')) +
+    '</div>';
+
+  var kra = '<div class="block"><div class="sect">KRA performance<span class="r">achievement %</span></div>' +
+    '<div class="pcard">' + KraBars(kraGroups) + '</div></div>';
+
+  var rank = '<div class="block"><div class="sect">Team ranking<span class="r">by overall score</span></div>' +
+    '<div class="pcard" style="padding-top:var(--s2);padding-bottom:var(--s2)">' + RankList(members, true) + '</div></div>';
+
+  return PageHead(t.team_name, 'Team performance · ' + esc(monthLabel(S.month))) + cards +
+    '<div class="two">' + kra + rank + '</div>';
+}
+function Card(label, value, sub, hl) {
+  return '<div class="card' + (hl ? ' hl' : '') + '"><div class="l">' + esc(label) + '</div>' +
+    '<div class="v">' + value + '</div>' + (sub ? '<div class="s">' + esc(sub) + '</div>' : '') + '</div>';
+}
+
+function FlowchartScreen() {
+  var t = Sel.team(), members = Sel.members();
+  if (!members.length) return PageHead(t ? t.team_name : 'Team', '') + '<div class="empty">No members mapped for this team.</div>';
+  var lead = Sel.lead();
+  var reports = members.filter(function (m) { return !lead || m.employee_id !== lead.employee_id; });
+
+  var node = function (m, isLead, idx) {
+    return '<div class="node' + (isLead ? ' lead' : '') + '" data-emp="' + esc(m.employee_id) + '"' +
+      ' tabindex="0" role="button"' +
+      ' style="animation-delay:' + (isLead ? 0 : Math.min(idx * 45, 400)) + 'ms">' +
+      Avatar(m.employee_name, isLead ? 'lg' : 'xl') +
+      '<div class="nn">' + esc(m.employee_name) + '</div>' +
+      '<div class="nd">' + esc(m.designation || '—') + '</div>' +
+      '<div class="ns">' + show(m.overall_score) + '</div>' +
+      (isLead ? '<div class="tag">Team lead</div>' : '') + '</div>';
+  };
+
+  var chart = '<div class="flow">' +
+    (lead ? node(lead, true, 0) + '<div class="flow-stem"></div><div class="flow-bus"></div>' : '') +
+    '<div class="flow-kids">' + reports.map(function (m, i) { return node(m, false, i); }).join('') + '</div></div>';
+
+  var rank = '<div class="block" style="margin-top:var(--s7)"><div class="sect">Ranking<span class="r">by overall score</span></div>' +
+    '<div class="pcard" style="padding-top:var(--s2);padding-bottom:var(--s2)">' + RankList(members, true) + '</div></div>';
+
+  return PageHead(t.team_name, 'Team structure · ' + esc(monthLabel(S.month))) +
+    '<div class="block">' + chart + '</div>' + rank;
+}
+
+function EmployeeScreen() {
+  var m = Sel.member(S.employee);
+  if (!m) return PageHead('Employee not found', '') + '<div class="empty">That employee is not part of the selected team.</div>';
+  var t = Sel.team();
+  m.kpis.forEach(function (k) { k.__owner = m.employee_id; });
+  var kpis = m.kpis;
+  var scored = kpis.filter(function (k) { return k.achievement != null; });
+  var kpiAch = (function () {
+    var e = 0, w = 0; scored.forEach(function (k) { e += k.weighted_score; w += k.weightage; });
+    return w > 0 ? Math.round(e / w * 1000) / 10 : null;
+  })();
+  var rank = Sel.rankOf(m.employee_id), total = Sel.members().filter(function (x) { return x.overall_score != null; }).length;
+  var kraGroups = Sel.byKra(kpis);
+
+  var back = '<button class="back" data-back="1">‹ ' + esc(t ? t.team_name : 'Team') + '</button>';
+  var head = '<div class="phead">' + Avatar(m.employee_name, 'lg') +
+    '<div class="id"><h1>' + esc(m.employee_name) + '</h1>' +
+    '<div class="meta">' + esc(m.designation || '—') + (m.region ? '<span class="dot">·</span>' + esc(m.region) : '') + '</div></div>' +
+    '<div class="pscore"><div class="v">' + show(m.overall_score) + '</div><div class="l">Overall score</div></div></div>';
+
+  var mini = '<div class="mini">' +
+    MiniStat('KPI achievement', kpiAch == null ? '—' : show(kpiAch) + '<em>%</em>') +
+    MiniStat('KPIs assigned', String(kpis.length)) +
+    MiniStat('Weightage measured', m.measured_weightage == null ? '—' : show(m.measured_weightage) + '<em>%</em>') +
+    MiniStat('Team rank', rank == null ? '—' : rank + '<em> / ' + total + '</em>') +
+    '</div>';
+
+  var kraBlock = '<div class="block"><div class="sect">KRA performance<span class="r">strengths &amp; gaps</span></div>' +
+    '<div class="pcard">' + KraBars(kraGroups) + '</div></div>';
+
+  var table = '<div class="block"><div class="sect">Assigned KRA / KPI<span class="r">click a KPI for detail</span></div>' +
+    KpiTable(kpis, 'emp', false) + '</div>';
+
+  var pending = kpis.length - scored.length;
   var hint = pending ? '<div class="hint">' + pending + ' of ' + kpis.length +
     ' KPIs have no target or actual for this period, so they are excluded from the score rather than counted as zero.</div>' : '';
 
-  return prof + body + hint;
+  return back + head + mini + kraBlock + table + hint;
+}
+function MiniStat(l, v) { return '<div class="mstat"><div class="l">' + esc(l) + '</div><div class="v">' + v + '</div></div>'; }
+
+function KpiScreen() {
+  var t = Sel.team(), kpis = Sel.allKpis();
+  if (!t) return PageHead('No team selected', '') + '<div class="empty">No teams are available to show for this period.</div>';
+  return PageHead(t.team_name + ' — KRA / KPI', 'Every assigned KPI · ' + esc(monthLabel(S.month))) +
+    '<div class="block"><div class="sect">Performance<span class="r">click a KPI for detail</span></div>' +
+    KpiTable(kpis, 'team', true) + '</div>';
 }
 
-/* ============================== LEVEL 4 — KPI DRAWER =====================
-   One slim panel from the right: the numbers, the goal, the performance. No
-   modal stack, no nested popups. */
-function renderModal() {
-  var mo = $('#modal'), sc = $('#scrim');
-  var k = S.detail;
-  if (!k) { mo.classList.remove("on"); sc.classList.remove("on"); if (S._rf && S._rf.isConnected) { S._rf.focus(); } S._rf = null; return; }
-  var st = statusOf(k);
-  var pct = k.achievement == null ? 0 : Math.max(0, Math.min(100, k.achievement));
-  var lower = k.direction === 'LOWER_IS_BETTER';
-
-  mo.innerHTML =
-    '<div class="m-h"><div><h2>' + esc(k.kpi) + '</h2>' +
-    '<div class="sub">' + esc(k.kra || '') + '</div></div>' +
-    '<button class="x" data-close="1" aria-label="Close">×</button></div>' +
-    '<div class="m-b">' +
-      '<dl class="kv">' +
-        kv('Weightage', show(k.weightage) + '%') +
-        kv('Target', esc(fmt(k.target, k.unit))) +
-        kv('Actual', esc(fmt(k.actual, k.unit))) +
-        kv('Achievement', k.achievement == null ? '—' : show(k.achievement) + '%') +
-        kv('Variance', k.variance == null ? '—'
-           : (k.variance > 0 ? '+' : '') + esc(fmt(k.variance, k.unit))) +
-        kv('Weighted score', '<span class="hi">' + show(k.weighted_score) + ' / ' + show(k.weightage) + '</span>') +
-      '</dl>' +
-      (k.goal ? '<div class="sect-t">Goal</div><div class="goal"><p>' + esc(k.goal) + '</p></div>' : '') +
-      '<div class="sect-t">Performance</div>' +
-      '<div class="m-perf"><div class="n ' + st.c + '">' +
-        (k.achievement == null ? '—' : show(k.achievement) + '%') + '</div>' +
-        '<div class="kbar"><i class="' + st.c + '" style="width:' + pct + '%"></i></div>' +
-        '<p class="goal" style="margin-top:12px"><span style="color:var(--muted);font-size:var(--fs-xs)">' +
-        esc(st.t) + (lower ? ' · lower is better, so achievement is target ÷ actual' : '') +
-        '</span></p></div>' +
-    '</div>';
-  mo.classList.add('on'); sc.classList.add('on');
-  /* A dialog that opens without taking focus leaves a keyboard user stranded on
-     the page behind it, and Escape closing it would return them nowhere. Focus
-     moves to the close button, and the element that opened the drawer is
-     remembered so it can be handed back on close. */
-  if (!S._rf) S._rf = document.activeElement;
-  var first = mo.querySelector('[data-close]');
-  if (first) first.focus();
+function PageHead(title, kind) {
+  return '<div class="page-h"><div><h1>' + esc(title) + '</h1>' +
+    (kind ? '<div class="kind">' + kind + '</div>' : '') + '</div></div>';
 }
 
-/* Tab is confined to the drawer while it is open, so the pages behind it cannot
-   be reached without closing it first. */
-document.addEventListener('keydown', function (e) {
-  if (e.key !== 'Tab' || !S.detail) return;
-  var mo = $('#modal');
-  var f = [].slice.call(mo.querySelectorAll('button,[href],select,input,[tabindex]:not([tabindex="-1"])'))
-    .filter(function (el) { return el.offsetParent !== null; });
-  if (!f.length) return;
-  var a = f[0], z = f[f.length - 1];
-  if (e.shiftKey && document.activeElement === a) { e.preventDefault(); z.focus(); }
-  else if (!e.shiftKey && document.activeElement === z) { e.preventDefault(); a.focus(); }
-});
-function kv(k, v) { return '<dt>' + esc(k) + '</dt><dd>' + v + '</dd>'; }
-
-function Skeleton() {
-  return '<div class="skl" style="height:30px;width:220px"></div>' +
-    '<div class="skl" style="height:16px;width:140px;margin-top:12px"></div>' +
-    '<div class="skl" style="height:150px;margin-top:56px"></div>';
-}
-
-
-/* ============================================================================
-   MOTION — behaviour
-   ----------------------------------------------------------------------------
-   Four behaviours the CSS cannot express on its own. All of them check
-   prefers-reduced-motion first and degrade to the finished state rather than
-   to nothing, so the interface is never left mid-animation.
-   ============================================================================ */
-var Motion = {
-  still: function () {
-    try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
-    catch (e) { return false; }
-  },
-
-  /* Count up. Only the figures a person actually reads as a result - a team
-     score, a person's score - never every number on the page, which turns a
-     screen into a slot machine. Eased out so it settles rather than stops. */
-  count: function (root) {
-    if (Motion.still()) return;
-    (root || document).querySelectorAll('[data-count]').forEach(function (el) {
-      var to = parseFloat(el.dataset.count);
-      if (isNaN(to)) return;
-      var dec = (el.dataset.count.split('.')[1] || '').length;
-      var dur = 520, t0 = null;
-      var step = function (t) {
-        if (t0 === null) { t0 = t; }
-        var p = Math.min(1, (t - t0) / dur);
-        var e = 1 - Math.pow(1 - p, 3);
-        el.textContent = (to * e).toFixed(dec);
-        if (p < 1) requestAnimationFrame(step);
-        else el.textContent = to.toFixed(dec);
-      };
-      /* The element is only blanked inside the first frame, so if rAF never
-         runs the true figure is what stays on screen rather than a zero. */
-      if (!window.requestAnimationFrame) { el.textContent = to.toFixed(dec); return; }
-      requestAnimationFrame(step);
-    });
-  },
-
-  /* The light that follows the cursor. Two custom properties, written on the
-     card the pointer is actually over - no listener per card, and nothing runs
-     when the pointer is still. */
-  spotlight: function () {
-    document.addEventListener('pointermove', function (e) {
-      var c = e.target.closest && e.target.closest('.node,.gnode,.tcard');
-      if (!c) return;
-      var r = c.getBoundingClientRect();
-      c.style.setProperty('--mx', ((e.clientX - r.left) / r.width * 100).toFixed(1) + '%');
-      c.style.setProperty('--my', ((e.clientY - r.top) / r.height * 100).toFixed(1) + '%');
-    }, { passive: true });
-  },
-
-  /* One indicator for the team strip, moved to whichever tab is current. It is
-     measured from the live element rather than computed, so it stays correct
-     when a team name wraps or the strip scrolls. */
-  slider: function () {
-    var strip = document.querySelector('#teams');
-    if (!strip) return;
-    var el = strip.querySelector('.slider');
-    var on = strip.querySelector('.tb.on');
-    if (!on) { if (el) el.classList.remove('on'); return; }
-    if (!el) { el = document.createElement('span'); el.className = 'slider'; strip.appendChild(el); }
-    var r = on.getBoundingClientRect(), s = strip.getBoundingClientRect();
-    el.style.width = Math.round(r.width) + 'px';
-    el.style.transform = 'translateX(' + Math.round(r.left - s.left + strip.scrollLeft) + 'px)';
-    el.classList.add('on');
-  },
-
-  /* KRA sections and their rows arrive as they are reached. One observer for
-     the page, disconnected and rebuilt per render so it never holds nodes that
-     have been replaced. */
-  _io: null,
-  reveal: function () {
-    if (Motion._io) { Motion._io.disconnect(); Motion._io = null; }
-    var targets = Array.prototype.slice.call(document.querySelectorAll('.kra-h,.krow'));
-    if (!targets.length) return;
-    if (Motion.still() || !('IntersectionObserver' in window)) {
-      targets.forEach(function (t) { t.classList.remove('reveal'); });
-      return;
+/* ============================== DRAWER ================================= */
+/* Modal detail drawer. On open it takes focus and makes the shell inert; on
+   close it returns focus to whatever opened it. The Status shown is the
+   backend's own k.status, coloured by k.level — never re-classified here. */
+function renderDrawer() {
+  var dr = $('#drawer'), sc = $('#scrim'), app = $('.app');
+  if (!S.detail) {
+    dr.classList.remove('on'); sc.classList.remove('on');
+    dr.setAttribute('aria-hidden', 'true'); dr.setAttribute('inert', '');
+    if (S._drawerOpen) {
+      app.removeAttribute('inert'); app.removeAttribute('aria-hidden');
+      if (S._trigger && document.contains(S._trigger)) { try { S._trigger.focus(); } catch (e) {} }
+      S._trigger = null; S._drawerOpen = false;
     }
-    targets.forEach(function (t) { t.classList.add('reveal'); });
-    Motion._io = new IntersectionObserver(function (entries) {
-      entries.forEach(function (en) {
-        if (!en.isIntersecting) return;
-        var i = targets.indexOf(en.target);
-        en.target.style.transitionDelay = Math.min(i, 6) * 40 + 'ms';
-        en.target.classList.add('in');
-        Motion._io.unobserve(en.target);
-      });
-    }, { rootMargin: '0px 0px -8% 0px', threshold: .06 });
-    targets.forEach(function (t) { Motion._io.observe(t); });
-    /* Same guarantee as the entrance: anything still waiting to be revealed a
-       second from now is shown regardless, so a row can never be stranded
-       hidden because the callback did not arrive. */
-    clearTimeout(Motion._r);
-    Motion._r = setTimeout(function () {
-      targets.forEach(function (t) { t.classList.add('in'); });
-    }, 1000);
-  },
-
-  /* Called after every render. The slider and the reveal observer both need
-     the new DOM; the count-up runs only on figures that just appeared. */
-  /* The entrance animations hold their opening frame until they run. If they
-     never run - a tab that is not compositing, an embedded webview, a browser
-     that throttles background frames - that opening frame is opacity 0, and
-     the flowchart would stay invisible for good.
-
-     So the entrance is time-boxed. The class is added for one render and taken
-     away once the longest sequence (760ms delay + 320ms) has had time to
-     finish. If the animations played, removing it changes nothing, because
-     they have already landed on the finished state. If they never played, this
-     is what puts the chart on screen. A timer fires in cases where a frame
-     does not, which is exactly the case being guarded against. */
-  guard: function () {
-    var b = document.body;
-    b.classList.add('mo');
-    clearTimeout(Motion._g);
-    Motion._g = setTimeout(function () { b.classList.remove('mo'); }, 1200);
-  },
-
-  after: function () {
-    Motion.guard();
-    Motion.slider();
-    Motion.reveal();
-    Motion.count();
-  }
-};
-
-/* ============================== RENDER =================================== */
-function render() {
-  if (S.loading) return void ($('#view').innerHTML = Skeleton());
-  if (S.error) {
-    $('#view').innerHTML = '<div class="state"><div><h2>Could not load</h2><p>' + esc(S.error) +
-      '</p><button class="btn" data-retry="1">Try again</button>' +
-      '<button class="btn ghost" data-demo="on">Preview the interface</button></div></div>';
     return;
   }
-  /* The team strip only exists once you are inside a team; on the landing
-   * screen the team cards are the navigation, so a second copy of it would be
-   * one control too many. */
-  $('#teams').innerHTML = S.team ? Sel.teams().map(function (t) {
-    return '<button class="tb' + (t.team_id === S.team ? ' on' : '') + '" data-team="' + esc(t.team_id) + '">' +
-      esc(t.team_name) + '</button>';
-  }).join('') : '';
-  $('#months').innerHTML = MonthSelect();
+  var k = S.detail;
+  var achW = k.achievement == null ? 0 : Math.max(0, Math.min(100, k.achievement / 105 * 100));
+  dr.innerHTML =
+    '<div class="d-h"><div><div class="eyebrow">' + esc(k.kra || 'KPI') + '</div><h2>' + esc(k.kpi) + '</h2></div>' +
+    '<button class="x" data-close="1" aria-label="Close">×</button></div>' +
+    '<div class="d-b">' +
+      '<div class="d-meas">' +
+        '<div><div class="k">Target</div><div class="v">' + (k.target == null ? '—' : fmt(k.target, k.unit)) + '</div></div>' +
+        '<div><div class="k">Actual</div><div class="v">' + (k.actual == null ? '—' : fmt(k.actual, k.unit)) + '</div></div>' +
+        '<div><div class="k">Achievement</div><div class="v">' + (k.achievement == null ? '—' : show(k.achievement) + '%') + '</div></div>' +
+      '</div>' +
+      (k.achievement == null ? '' : '<div class="pair" style="margin-top:calc(var(--s4)*-1)"><div class="d-ach">' + TARGET_TICK + '<i class="' + tone(k.achievement) + '" style="width:' + achW + '%"></i></div></div>') +
+      '<div class="d-meas" style="grid-template-columns:1fr 1fr">' +
+        '<div><div class="k">Weightage</div><div class="v">' + show(k.weightage) + '%</div></div>' +
+        '<div><div class="k">Weighted score</div><div class="v">' + show(k.weighted_score) + '<span style="color:var(--faint);font-weight:var(--fw-m)"> / ' + show(k.weightage) + '</span></div></div>' +
+      '</div>' +
+      pair('Perspective', esc(k.perspective || '—')) +
+      pair('Status', '<span class="st ' + levelTone(k.level) + '">' + esc(k.status || '—') + '</span>') +
+      (k.goal || k.source || k.unit ? '<div class="d-rule"></div>' : '') +
+      (k.goal ? '<div class="d-goal pair"><div class="k">Goal / description</div><p>' + esc(k.goal) + '</p></div>' : '') +
+      (k.unit ? pair('Measurement', measureLabel(k.unit)) : '') +
+      (k.source ? pair('Source of tracking', esc(k.source)) : '') +
+    '</div>';
+  if (!S._drawerOpen) { S._trigger = document.activeElement; S._drawerOpen = true; }
+  dr.classList.add('on'); sc.classList.add('on');
+  dr.removeAttribute('aria-hidden'); dr.removeAttribute('inert');
+  app.setAttribute('inert', ''); app.setAttribute('aria-hidden', 'true');
+  var x = dr.querySelector('[data-close]'); if (x) x.focus();
+}
+function pair(k, v) { return '<div class="pair"><div class="k">' + esc(k) + '</div><div class="v">' + v + '</div></div>'; }
+function measureLabel(u) {
+  return { PERCENT: 'Percentage', CR: 'Value (₹ Cr)', MT: 'Volume (MT)', DAYS: 'Days', COUNT: 'Count', NUMBER: 'Number' }[u] || esc(u);
+}
 
-  var noPerf = !(S.model.scorecards || []).some(function (s) {
+function Skeleton() {
+  return '<div class="skl" style="height:26px;width:180px"></div>' +
+    '<div class="cards" style="margin-top:var(--s6)"><div class="skl" style="height:96px"></div>' +
+    '<div class="skl" style="height:96px"></div><div class="skl" style="height:96px"></div>' +
+    '<div class="skl" style="height:96px"></div></div><div class="skl" style="height:300px"></div>';
+}
+
+/* ============================== CHROME ================================= */
+var NAV = [
+  { id: 'overview', label: 'Overview', icon: '<path d="M4 13h6V4H4zM14 20h6v-9h-6zM14 8h6V4h-6zM4 20h6v-4H4z"/>' },
+  { id: 'team', label: 'Team', icon: '<circle cx="9" cy="8" r="3"/><path d="M4 20a5 5 0 0 1 10 0"/><circle cx="17.5" cy="9" r="2.4"/><path d="M15 20a4.5 4.5 0 0 1 6.5-4"/>' },
+  { id: 'kpi', label: 'KRA / KPI', icon: '<path d="M4 6h16M4 12h16M4 18h10"/><circle cx="19" cy="18" r="2"/>' },
+  { id: 'profile', label: 'Profile', icon: '<circle cx="12" cy="8" r="3.4"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/>' }
+];
+function buildRail() {
+  var active = S.employee ? 'profile' : S.view;
+  $('#rail').innerHTML = NAV.map(function (n) {
+    return '<button class="rail-i' + (n.id === active ? ' on' : '') + '" data-view="' + n.id + '" title="' + esc(n.label) + '">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">' + n.icon + '</svg>' +
+      '<span>' + esc(n.label) + '</span></button>';
+  }).join('');
+}
+function buildTopbar() {
+  var teams = Sel.teams(), months = Sel.months(), lead = Sel.lead();
+  var teamSel = '<span class="fld">Team<select class="sel" id="f-team">' +
+    teams.map(function (t) { return '<option value="' + esc(t.team_id) + '"' + (t.team_id === S.team ? ' selected' : '') + '>' + esc(t.team_name) + '</option>'; }).join('') +
+    '</select></span>';
+  var monthSel = '<span class="fld">Month<select class="sel" id="f-month"' + (months.length ? '' : ' disabled') + '>' +
+    (months.length ? months.map(function (x) { return '<option value="' + esc(x) + '"' + (x === S.month ? ' selected' : '') + '>' + esc(monthLabel(x)) + '</option>'; }).join('')
+                   : '<option>No period loaded</option>') + '</select></span>';
+  var empSel = '';
+  if (S.employee) {
+    empSel = '<span class="fld">Employee<select class="sel" id="f-emp">' +
+      Sel.members().map(function (p) { return '<option value="' + esc(p.employee_id) + '"' + (p.employee_id === S.employee ? ' selected' : '') + '>' + esc(p.employee_name) + '</option>'; }).join('') +
+      '</select></span>';
+  }
+  var greet = lead ? '<div class="greet"><div class="who"><b>' + esc(lead.employee_name) + '</b>' +
+    '<span>' + esc((lead.designation || '').split(' - ')[0] || 'Recykal') + '</span></div>' + Avatar(lead.employee_name) + '</div>' : '';
+  $('#tbar').innerHTML = teamSel + monthSel + empSel + '<span class="grow"></span>' + greet;
+}
+
+/* ============================== RENDER ================================= */
+function render() {
+  if (S.loading) { $('#view').innerHTML = Skeleton(); return; }
+  if (S.error) {
+    $('#view').innerHTML = '<div class="state"><div><h2>Could not load</h2><p>' + esc(S.error) +
+      '</p><button class="btn" data-retry="1">Try again</button></div></div>';
+    $('#tbar').innerHTML = ''; $('#rail').innerHTML = ''; return;
+  }
+  buildRail(); buildTopbar();
+  var noPerf = !(Sel.model().scorecards || []).some(function (s) {
     return s.kpis.some(function (k) { return k.achievement != null; });
   });
-  $('#demo').innerHTML = S.demo
+  var demo = S.demo
     ? '<div class="demo"><div class="in"><span>Showing sample values. Teams, employees, KRAs, KPIs and weightages are real; targets and actuals are not.</span><button data-demo="off">Show real data</button></div></div>'
-    : (noPerf ? '<div class="demo"><div class="in"><span>No targets or actuals loaded yet.</span><button data-demo="on">Preview with sample values</button></div></div>' : '');
+    : (noPerf ? '<div class="demo"><div class="in"><span>No targets or actuals loaded for this period yet.</span><button data-demo="on">Preview with sample values</button></div></div>' : '');
 
-  /* Three levels, and the state says which one you are on. */
-  $('#view').innerHTML = !S.team ? TeamsScreen()
-                       : S.employee ? ProfileScreen()
-                       : TeamScreen();
-  renderModal();
-  /* The slider, the reveal observer and the count-up all need the DOM this
-   * render just produced, so they run after it rather than inside it. */
-  Motion.after();
+  var body = S.employee ? EmployeeScreen()
+    : S.view === 'team' ? FlowchartScreen()
+    : S.view === 'kpi' ? KpiScreen()
+    : DashboardScreen();
+  $('#view').innerHTML = body;
+  // demo banner rides above the canvas content
+  var host = $('#view');
+  if (demo) host.insertAdjacentHTML('afterbegin', demo);
+  renderDrawer();
 }
 
 function load() {
   S.loading = true; S.error = null; S._demo = null; render();
   Api.fetch(S.month, function (m) {
     S.loading = false;
-    /* google.script.run hands back null when a server function throws or its
-     * result cannot be serialised, and the two look identical from here - so
-     * say which case this is rather than "no data". */
     if (!m) {
-      /* Ask the smallest possible question to tell the two cases apart. */
       Api.ping(function (pong) {
         S.error = (pong && pong.ok)
           ? 'The dashboard data could not be sent back, although the connection is fine. This is usually one unreadable value in the sheet — a target or weight holding text such as "-" or "TBD". Open MONTHLY_TARGETS and ACTUAL_PERFORMANCE and clear any non-numeric target, actual or weight, then reload.'
@@ -2104,84 +834,70 @@ function load() {
     }
     if (!m.ok) { S.error = (m.error || 'The backend reported a failure.') + (m.where ? ' (' + m.where + ')' : ''); return render(); }
     S.model = m; S._demo = null;
-    /* No team is chosen for the user: the landing screen is the first decision. */
+    if (!S.team && m.teams && m.teams.length) S.team = m.teams[0].team_id;
     if (!S.month) { var mo = Sel.months(); S.month = mo[mo.length - 1] || null; }
     render();
   }, function (e) {
-    S.loading = false;
-    /* No backend reachable — fall back to the structural seed so the whole
-     * interface can still be seen and operated. The banner says plainly that
-     * the values are samples, and the real model replaces this the moment
-     * apiMasterModel answers. */
-    if (!Api.live()) return usePlaceholder();
-    S.error = (e && e.message) || 'The backend could not be reached.'; render();
+    S.loading = false; S.error = (e && e.message) || 'The backend could not be reached.'; render();
   });
 }
 
-function usePlaceholder() {
-  var m = Seed.model();
-  S.model = m; S._demo = null; S.demo = true; S.loading = false; S.error = null;
-  /* land on the teams screen, not inside a team */
-  if (!S.month) S.month = m.month;
-  render();
+/* ============================== EVENTS ================================= */
+function toView(v) {
+  S.detail = null;
+  if (v === 'profile') { var l = Sel.lead(); S.employee = l ? l.employee_id : null; }
+  else { S.employee = null; S.view = v; }
+  render(); $('.canvas').scrollTop = 0;
 }
-
-/* ============================== EVENTS =================================== */
 document.addEventListener('click', function (e) {
-  var t = e.target.closest('[data-team]');
-  if (t) { S.team = t.dataset.team; S.employee = null; S.open = {}; S.detail = null; render(); scrollTo(0, 0); return; }
+  var nv = e.target.closest('[data-view]');
+  if (nv) { toView(nv.dataset.view); return; }
   var emp = e.target.closest('[data-emp]');
-  if (emp) { S.employee = emp.dataset.emp; S.detail = null; render(); scrollTo(0, 0); return; }
-  /* One step back per level: KPI → person → team → all teams. */
-  var cb = e.target.closest('[data-crumb]');
-  if (cb) {
-    var to = cb.dataset.crumb;
-    if (to === 'teams') { S.team = null; S.employee = null; }
-    if (to === 'team') S.employee = null;
-    S.detail = null; render(); scrollTo(0, 0); return;
-  }
-  var grp = e.target.closest('[data-group]');
-  if (grp) { var g = grp.dataset.group; S.open[g] = !S.open[g]; render(); return; }
+  if (emp) { S.employee = emp.dataset.emp; S.detail = null; render(); $('.canvas').scrollTop = 0; return; }
+  if (e.target.closest('[data-back]')) { S.employee = null; S.detail = null; render(); $('.canvas').scrollTop = 0; return; }
+  var g = e.target.closest('[data-kra]');
+  if (g) { var id = g.dataset.kra; S.closed[id] = !S.closed[id]; render(); return; }
   var k = e.target.closest('[data-kpi]');
   if (k) {
-    var owner = Sel.employee();
-    /* Remember the row itself rather than whatever happens to hold focus: a
-       mouse click leaves focus on the body, and closing the drawer would then
-       drop a keyboard user back at the top of the page instead of the row they
-       opened. */
-    S._rf = k;
-    S.detail = owner ? (owner.kpis || [])[Number(k.dataset.kpi)] : null;
-    renderModal(); return;
+    var p = k.dataset.kpi.split('::'), owner = Sel.member(p[0]);
+    S.detail = owner ? owner.kpis.filter(function (x) { return x.kra === p[1] && x.kpi === p[2]; })[0] : null;
+    renderDrawer(); return;
   }
-  if (e.target.closest('[data-close]') || e.target.id === 'scrim') { S.detail = null; renderModal(); return; }
+  if (e.target.closest('[data-close]') || e.target.id === 'scrim') { S.detail = null; renderDrawer(); return; }
   var d = e.target.closest('[data-demo]');
-  if (d) {
-    var on = d.dataset.demo === 'on';
-    /* If the backend never answered there is no model to sample from, so the
-     * structural seed stands in — the interface is fully operable either way. */
-    if (on && !S.model) return usePlaceholder();
-    S.demo = on; S._demo = null; S.detail = null;
-    if (!on && S.model && S.model.placeholder) { S.model = null; S.error = 'No sheet connected yet.'; }
-    render(); return;
-  }
+  if (d) { S.demo = d.dataset.demo === 'on'; S._demo = null; S.detail = null; render(); return; }
   if (e.target.closest('[data-retry]')) load();
 });
 document.addEventListener('change', function (e) {
   var id = e.target.id;
-  /* The period is global: it survives every level, so changing it on a profile
-   * keeps you on that profile and simply restates it for the new month. Where
-   * a backend is attached the month is refetched; on the placeholder model it
-   * is re-derived in place. Either way nothing about where you are changes. */
-  if (id === 'f-month') {
-    S.month = e.target.value; S.detail = null; S._demo = null;
-    if (S.model && S.model.placeholder) { render(); } else { load(); }
-  }
+  if (id === 'f-team') { S.team = e.target.value; S.employee = null; S.detail = null; render(); $('.canvas').scrollTop = 0; }
+  else if (id === 'f-month') { S.month = e.target.value; S.detail = null; load(); }
+  else if (id === 'f-emp') { S.employee = e.target.value || null; S.detail = null; render(); }
 });
 document.addEventListener('keydown', function (e) {
-  if (e.key === 'Escape' && S.detail) { S.detail = null; renderModal(); }
+  // While the drawer is open: Escape closes it, Tab stays trapped inside it.
+  if (S.detail) {
+    if (e.key === 'Escape') { S.detail = null; renderDrawer(); return; }
+    if (e.key === 'Tab') {
+      var dr = $('#drawer');
+      var f = dr.querySelectorAll('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])');
+      if (f.length) {
+        var first = f[0], last = f[f.length - 1];
+        if (!dr.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+        else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+      return;
+    }
+  }
+  // Enter / Space activate the focusable-but-not-button drill targets (rows,
+  // flow nodes, KRA bands), routing through the same delegated click handler.
+  if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+    var act = e.target.closest ? e.target.closest('[data-emp],[data-kpi],[data-kra]') : null;
+    if (act && act.getAttribute('role') === 'button') { e.preventDefault(); act.click(); }
+  }
 });
 
-Motion.spotlight();
 load();
 </script>
 </body>
