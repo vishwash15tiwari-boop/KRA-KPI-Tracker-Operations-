@@ -2991,337 +2991,481 @@ function targetSelfTest() {
 
 /*******************************************************************************
  * ============================================================================
- * KRA BACKEND - normalized data model + calculation engine
+ * KRA / KPI MASTER BACKEND - five teams, individual assignments
  * ============================================================================
- * The Excel plan is a PLANNING INPUT, not a schema. This section defines the
- * model the product actually runs on:
+ * Three kinds of data, never mixed:
  *
- *   Master Data -> Monthly Targets -> Actuals -> KPI Calculation -> KRA Score
+ *   KRA/KPI definitions are MASTER data  (frozen here)
+ *   Targets are PERIOD data              (MONTHLY_TARGETS, loaded later)
+ *   Actuals are PERFORMANCE data         (ACTUAL_PERFORMANCE, loaded later)
  *
- * Rules held throughout:
- *  - ONE sheet is the single source of truth. No other spreadsheet id exists
- *    anywhere in this project.
- *  - Nothing is stored that can be derived. Achievement %, band, weighted
- *    score, variance, status and rank are computed on read, never typed in, so
- *    changing an actual in the sheet updates everything downstream with no
- *    code change and the tracker stays auditable.
- *  - PUBLISHED figures are never silently recomputed. Where a published total
- *    disagrees with the sum of its own line items - which July does and August
- *    does not - both are kept and the difference is surfaced.
- *  - Direction is first class. DSO is LOWER_IS_BETTER: 3 days against a 5 day
- *    target is over-achievement, not a 60% shortfall.
+ * The central fact this model exists to express: people on the same team do
+ * NOT share a KPI set. Vamsi and Harshita are both Onboarding and have six
+ * KPIs each, but not the same six. Divya has four KPIs weighted 40/35/15/10
+ * while Ashwin, her manager, has five weighted 20/10/20/20/30. So ownership
+ * lives in EMPLOYEE_KPI_MAPPING, never in the team record and never in a
+ * frontend conditional.
+ *
+ * Authoring note: assignments below are written in readable form - team,
+ * person, perspective, KRA, KPI, weight - and provisioning DERIVES
+ * KRA_MASTER, KPI_MASTER and EMPLOYEE_KPI_MAPPING from them with generated
+ * ids. Hand-writing foreign keys across six tables is how referential
+ * integrity dies; here it cannot drift because there is one source.
  *******************************************************************************/
 
-
-var TAB = {
-  EMPLOYEE:'Employee_Master', KPI:'KPI_Master', TARGETS:'Monthly_Targets',
-  ALLOCATION:'Target_Allocations', ONBOARDING:'Onboarding_Targets',
-  TRANSACTION:'Transactions', ACTUALS:'KPI_Actuals', BANDS:'Performance_Bands',
-  CALC:'KPI_Calculations', SUMMARY:'Dashboard_Summary', PUBLISHED:'Published_Totals'
-};
-
-/* Controlled enumerations, applied as sheet data-validation on provisioning */
-var ENUM = {
-  DIRECTION:['HIGHER_IS_BETTER','LOWER_IS_BETTER'],
-  UNIT:['CR','MT','COUNT','PERCENT','DAYS'],
-  REGION:['East','South','Central'],
-  STATUS:['Exceeded','Achieved','Near','At Risk','Critical','Awaiting data'],
-  BOOL:['TRUE','FALSE'],
-  CLOSURE:['Closed','Pending POD','Cancelled','In Progress'],
-  SOURCE:['GMV Plan','Onboarding Plan','Transactions','Manual','Published']
-};
-
-var SCHEMA = {};
-SCHEMA[TAB.EMPLOYEE]   = ['employee_id','employee_name','short_name','designation','department','team','region','manager_id','active','joining_date'];
-SCHEMA[TAB.KPI]        = ['kpi_id','perspective','kra','kpi_name','goal_description','weightage_pct','unit','direction','calculation_method','source'];
-SCHEMA[TAB.TARGETS]    = ['target_id','period','employee_id','kpi_id','target_value','unit','source','notes'];
-SCHEMA[TAB.ALLOCATION] = ['allocation_id','period','employee_id','buyer_name','region','product_category','qty_target_mt','gmv_target_cr','gmv_actual_cr','status'];
-SCHEMA[TAB.ONBOARDING] = ['onboarding_id','period','employee_id','region','new_seller_target','new_buyer_target','total_onboarding_target','new_seller_actual','new_buyer_actual','focus_area'];
-SCHEMA[TAB.TRANSACTION]= ['transaction_id','txn_date','period','employee_id','buyer_name','seller_name','product_category','qty_mt','gmv_cr','txn_status','closure_status'];
-SCHEMA[TAB.ACTUALS]    = ['actual_id','period','employee_id','kpi_id','actual_value','unit','source','captured_at','notes'];
-SCHEMA[TAB.BANDS]      = ['band_id','kpi_id','band','band_label','threshold_value','rating'];
-SCHEMA[TAB.CALC]       = ['calc_id','period','employee_id','kpi_id','weightage_pct','target_value','actual_value','achievement_pct','band','rating','weighted_score','variance','status'];
-SCHEMA[TAB.SUMMARY]    = ['period','scope','scope_id','scope_name','region','overall_kra_score','measured_weightage_pct','gmv_target_cr','gmv_actual_cr','gmv_achievement_pct','onboarding_target','onboarding_actual','kpis_measured','kpis_at_risk','rank','status'];
-SCHEMA[TAB.PUBLISHED]  = ['period','metric','published_value','derived_value','unit','variance','reconciled','note'];
-
-/* ------------------------------------------------------------------- SEED */
-
-var SEED_EMPLOYEES = [
-  ['MET001','Amit Jha','Amit','Team Lead - Business Development','Metal','Metal','Central','','TRUE',''],
-  ['MET002','Arijit Dutta','Arijit','Senior Executive - Business Development','Metal','Metal','East','MET001','TRUE',''],
-  ['MET003','Arghyadeep Samanta','Arghyadeep','Senior Executive - Business Development','Metal','Metal','East','MET001','TRUE',''],
-  ['MET004','Abhisek Sanyal','Abhisek','Assistant Manager - Business Development','Metal','Metal','South','MET001','TRUE',''],
-  ['MET005','Adarsh Krishna','Adarsh','Assistant Manager - Business Development','Metal','Metal','South','MET001','TRUE',''],
-  ['MET006','Ayush Goyal','Ayush','Assistant Manager - Business Development','Metal','Metal','East','MET001','TRUE','']
+var TEAMS = [
+  /* team_id, name, short, type, team_lead, category_head */
+  ['TEAM01','Metal','MET','Category','Amit Jha',''],
+  ['TEAM02','Plastic','PLA','Category','','Tabesh Mohammad'],
+  ['TEAM03','Onboarding','ONB','Function','Ajay',''],
+  ['TEAM04','Collections','COL','Function','Ravi Naik',''],
+  ['TEAM05','Marketplace - Control Tower','MCT','Function','Ashwin Kumar Singh','']
 ];
 
-/* Weightages total exactly 100 and that is asserted on provisioning - a
- * framework that does not sum to 100 is not scoreable. */
-var SEED_KPIS = [
-  ['KPI01','Process','Retention','Repeat Seller Transaction Rate','Share of existing sellers transacting again in the month',5,'PERCENT','HIGHER_IS_BETTER','repeat_sellers / active_sellers','Transactions'],
-  ['KPI02','Customer','Acquisition','New Buyer Acquisition','New buyers onboarded against the monthly plan',15,'COUNT','HIGHER_IS_BETTER','count(new_buyers) vs target','Onboarding Plan'],
-  ['KPI03','Customer','Acquisition','New Seller Acquisition','New sellers onboarded against the monthly plan',15,'COUNT','HIGHER_IS_BETTER','count(new_sellers) vs target','Onboarding Plan'],
-  ['KPI04','Process','Activation','New Buyer Same-Month Transaction Rate','Share of newly onboarded buyers transacting in the same month',5,'PERCENT','HIGHER_IS_BETTER','new_buyers_transacted / new_buyers','Transactions'],
-  ['KPI05','Sales','GMV','Monthly GMV Target Achievement','GMV delivered against the buyer-wise monthly plan',40,'CR','HIGHER_IS_BETTER','sum(txn gmv) vs sum(allocation target)','GMV Plan'],
-  ['KPI06','Sales','Closure','Successfully Closed Transactions','Transactions reaching closed status against plan',10,'COUNT','HIGHER_IS_BETTER','count(closure_status=Closed) vs target','Transactions'],
-  ['KPI07','Process','Cash Flow','DSO','Days sales outstanding - lower is better',10,'DAYS','LOWER_IS_BETTER','avg(collection_days)','Manual']
+var PEOPLE = [
+  /* employee_id, name, team_id, designation, region, reporting_manager */
+  ['MET001','Amit Jha','TEAM01','Team Lead - Business Development','Central',''],
+  ['MET002','Arijit Dutta','TEAM01','Senior Executive - Business Development','East','MET001'],
+  ['MET003','Arghyadeep Samanta','TEAM01','Senior Executive - Business Development','East','MET001'],
+  ['MET004','Abhisek Sanyal','TEAM01','Assistant Manager - Business Development','South','MET001'],
+  ['MET005','Adarsh Krishna','TEAM01','Assistant Manager - Business Development','South','MET001'],
+  ['MET006','Ayush Goyal','TEAM01','Assistant Manager - Business Development','East','MET001'],
+
+  ['PLA001','Tabesh Mohammad','TEAM02','General Manager - Business Development / Category Head - Plastics','',''],
+  ['PLA002','Ashish Kumar Rai','TEAM02','Point of Contact','','PLA001'],
+  ['PLA003','Raju B','TEAM02','Point of Contact','','PLA001'],
+  ['PLA004','Brajendra Upadhyay','TEAM02','Point of Contact','','PLA001'],
+  ['PLA005','Atharva Sudhir Patil','TEAM02','Point of Contact','','PLA001'],
+  ['PLA006','Praveen Raj P','TEAM02','Point of Contact','','PLA001'],
+  ['PLA007','Asraful Hasan','TEAM02','Point of Contact','','PLA001'],
+  ['PLA008','Rustumpet Ashwin Kumar','TEAM02','Point of Contact','','PLA001'],
+  ['PLA009','Joydeep Das','TEAM02','Point of Contact','','PLA001'],
+  ['PLA010','Parth Gautam','TEAM02','Regional Head','','PLA001'],
+  ['PLA011','Uday Kiran Kumar Thota','TEAM02','Regional Head','','PLA001'],
+
+  ['ONB001','Ajay','TEAM03','Manager - Onboarding','',''],
+  ['ONB002','Vamsi','TEAM03','Senior Executive - Onboarding','','ONB001'],
+  ['ONB003','Harshita','TEAM03','Executive - Onboarding','','ONB001'],
+  ['ONB004','Naveen Ranga','TEAM03','Senior Executive - Onboarding','','ONB001'],
+  ['ONB005','Vishwash','TEAM03','Management Trainee','','ONB001'],
+
+  ['COL001','Ravi Naik','TEAM04','Manager - Collections','',''],
+  ['COL002','Sai Nitin','TEAM04','Executive - Collections','','COL001'],
+  ['COL003','Ankur','TEAM04','Assistant Manager - Collections','','COL001'],
+  ['COL004','Venkat','TEAM04','Assistant Manager - Collections','','COL001'],
+  ['COL005','Srinivas Reddy','TEAM04','Assistant Manager - Collections','','COL001'],
+
+  ['MCT001','Ashwin Kumar Singh','TEAM05','Manager','',''],
+  ['MCT002','Divya Boppuri','TEAM05','Executive','','MCT001'],
+  ['MCT003','Jithender Chitakodur','TEAM05','Executive','','MCT001'],
+  ['MCT004','Bharath Kumar','TEAM05','Senior Executive','','MCT001'],
+  ['MCT005','Rajeswari','TEAM05','Executive','','MCT001'],
+  ['MCT006','Aishwarya Karanam','TEAM05','Executive','','MCT001'],
+  ['MCT007','Megaraj','TEAM05','Senior Executive','','MCT001'],
+  ['MCT008','Arvind Jakkula','TEAM05','Executive','','MCT001']
 ];
 
-/* Five bands. Standard KPIs run 60/75/90/100/105 percent of target; DSO is
- * absolute days and DESCENDS, because lower is the better outcome. Rating 1..5
- * maps to band index in both cases, so one scoring path serves both. */
-var SEED_BANDS = (function () {
-  var rows = [], std = [60,75,90,100,105], dso = [15,10,5,3,2];
-  var stdKpis = ['KPI01','KPI02','KPI03','KPI04','KPI05','KPI06'], i, k;
-  for (k = 0; k < stdKpis.length; k++)
-    for (i = 0; i < 5; i++)
-      rows.push([stdKpis[k]+'-P'+(i+1), stdKpis[k], 'P'+(i+1), 'Target '+(i+1), std[i], i+1]);
-  for (i = 0; i < 5; i++)
-    rows.push(['KPI07-P'+(i+1), 'KPI07', 'P'+(i+1), 'Target '+(i+1), dso[i], i+1]);
-  return rows;
+/* Threshold profiles. Referenced by name from the assignments so a ladder is
+ * defined once and shared, and a KPI with no published ladder is explicitly
+ * marked rather than given invented numbers. */
+var THRESHOLD_SETS = {
+  STD_PCT:  { dir:'HIGHER_IS_BETTER', unit:'PERCENT', levels:[60,75,90,100,105] },
+  TAT_PCT:  { dir:'HIGHER_IS_BETTER', unit:'PERCENT', levels:[80,85,90,95,100] },
+  DSO_DAYS: { dir:'LOWER_IS_BETTER',  unit:'DAYS',    levels:[15,10,5,3,2] },
+  DEBIT_NOTE:{dir:'LOWER_IS_BETTER',  unit:'PERCENT', levels:[1.30,1.20,1.00,0.80,0.60] },
+  NONE:     { dir:'HIGHER_IS_BETTER', unit:'PERCENT', levels:null }   /* not defined in source */
+};
+
+/* ---------------------------------------------------------- ASSIGNMENTS --
+ * [ employee_id, perspective, kra_name, kpi_name, weightage, threshold_set ]
+ * Provisioning asserts each person's weightages total 100 and reports any that
+ * do not, rather than quietly normalising them. */
+var ASSIGNMENTS = [];
+
+/* --- Metal: one shared seven-KPI structure across the team --------------- */
+(function () {
+  var rows = [
+    ['Process','Retention of Existing Transacted Sellers','Repeat Seller Transaction Rate',5,'STD_PCT'],
+    ['Customer','New Buyer Acquisition','Monthly Target Achievement',15,'STD_PCT'],
+    ['Customer','New Seller Acquisition','Monthly Target Achievement',15,'STD_PCT'],
+    ['Process','Transaction from New Onboarded Buyers','New Buyer Same-Month Transaction Rate',5,'STD_PCT'],
+    ['Sales','GMV','Monthly Target Achievement',40,'STD_PCT'],
+    ['Sales','Transaction Closure','Successfully Closed Transactions',10,'STD_PCT'],
+    ['Process','DSO Days','Days Sales Outstanding',10,'DSO_DAYS']
+  ];
+  ['MET001','MET002','MET003','MET004','MET005','MET006'].forEach(function (e) {
+    rows.forEach(function (r) { ASSIGNMENTS.push([e, r[0], r[1], r[2], r[3], r[4]]); });
+  });
 })();
 
-/* Buyer-level GMV allocations, verbatim from the Metal GMV plan. Kept at buyer
- * granularity so employee and team targets are SUMS of real rows and the
- * dashboard can drill Team -> Region -> Employee -> Buyer.
- * July carries a GMV achievement column; August is plan-only so far. */
-var SEED_ALLOCATIONS = [
-  /* period, employee, buyer, region, category, qty_mt, gmv_target, gmv_actual */
-  ['2026-07','MET002','NATRAJ','East','MS SCRAP',100,0.36,0.36],
-  ['2026-07','MET002','ADHUNIK','East','MS SCRAP',100,0.36,0.36],
-  ['2026-07','MET002','GAGAN FERRO','East','MS SCRAP',100,0.36,0.36],
-  ['2026-07','MET003','KEJRIWAL','East','MS SCRAP',50,0.16,0.16],
-  ['2026-07','MET003','BS','East','MS SCRAP',50,0.16,0.16],
-  ['2026-07','MET003','BEEKAY','East','MS SCRAP',100,0.16,0.16],
-  ['2026-07','MET004','MS AGARWAL','South','MS SCRAP',50,0.16,0.16],
-  ['2026-07','MET004','BINJUSARIA','South','MS SCRAP',50,0.16,0.16],
-  ['2026-07','MET004','SEIL','South','MS SCRAP',50,0.16,0.16],
-  ['2026-07','MET005','OFB','South','MS SCRAP',50,0.16,0.16],
-  ['2026-07','MET005','PRINCE','South','MS SCRAP',50,0.16,0.16],
-  ['2026-07','MET005','ARS','South','MS SCRAP',50,0.16,0.16],
-  ['2026-07','MET001','WALDIES','Central','LEAD',50,1.50,1.50],
-  ['2026-07','MET001','NKW METALS','Central','LEAD',75,2.00,2.00],
-  ['2026-07','MET001','RAJ METALS','Central','LEAD',100,1.50,1.50],
-  ['2026-07','MET006','FORTUNE','East','MS SCRAP',25,0.13,0.13],
-  ['2026-07','MET006','MANGAL SPONGE','East','MS SCRAP',25,0.13,0.13],
-  ['2026-07','MET006','REAL ISPAT','East','MS SCRAP',50,0.13,0.13],
-  ['2026-08','MET002','SHYAM STEEL','East','MS',100,0.35,''],
-  ['2026-08','MET002','NATRAJ','East','MS',150,0.51,''],
-  ['2026-08','MET002','NIF','East','MS',25,0.09,''],
-  ['2026-08','MET002','NEW BUYER','East','MS',50,0.15,''],
-  ['2026-08','MET003','BEEKAY','East','MS',100,0.33,''],
-  ['2026-08','MET003','KEJRIWAL','East','MS',100,0.33,''],
-  ['2026-08','MET003','NEW BUYER','East','MS',50,0.24,''],
-  ['2026-08','MET006','MANGAL','East','MS',85,0.30,''],
-  ['2026-08','MET006','HINDUSTAN','East','MS',200,0.70,''],
-  ['2026-08','MET006','CREST/AMALGAM/FORTUNE/TOPWORTH','East','MS',100,0.30,''],
-  ['2026-08','MET004','MS AGARWAL 1','South','MS',75,0.25,''],
-  ['2026-08','MET004','VINAYAKA STEEL','South','MS',75,0.25,''],
-  ['2026-08','MET004','NEW BUYER','South','MS',75,0.25,''],
-  ['2026-08','MET005','RD TMT','South','MS',50,0.15,''],
-  ['2026-08','MET005','MS AGARWAL 2','South','MS',50,0.15,''],
-  ['2026-08','MET005','PRINCE TMT','South','MS',50,0.15,''],
-  ['2026-08','MET001','WALDIES','Central','LEAD',200,3.00,''],
-  ['2026-08','MET001','EKTA','Central','LEAD',80,1.00,''],
-  ['2026-08','MET001','ESWARI','Central','LEAD',30,1.00,''],
-  ['2026-08','MET001','COPPER BUYER','Central','COPPER',20,1.50,'']
-];
+/* --- Plastic: the category head and the field team run DIFFERENT sets ----
+ * Tabesh carries the eight-KPI category framework (demand + supply + quality
+ * + working capital); everyone else carries the five-KPI supply-side set that
+ * the individual scorecards actually publish. */
+(function () {
+  var head = [
+    ['Sales','Demand Activation','Existing Buyer Monthly Transaction Rate',10,'STD_PCT'],
+    ['Scale','New Demand Activation','New Buyer Same-Month Transaction Rate',10,'STD_PCT'],
+    ['Sales','Supply Activation','Existing Seller Monthly Transaction Rate',10,'STD_PCT'],
+    ['Scale','New Supply Activation','New Seller Same-Month Transaction Rate',10,'STD_PCT'],
+    ['Sales / Profit','Category GMV Growth','GMV Target Achievement',30,'STD_PCT'],
+    ['Customer','Transaction Quality','Debit Note Rate',10,'DEBIT_NOTE'],
+    ['Process / Profit','Working Capital Management','DSO',15,'DSO_DAYS'],
+    ['Sales / Profit','Category Growth & Balance','Demand-Supply Conversion Rate',5,'STD_PCT']
+  ];
+  head.forEach(function (r) { ASSIGNMENTS.push(['PLA001', r[0], r[1], r[2], r[3], r[4]]); });
 
-/* Onboarding plan, member-wise. total_onboarding_target is derived on write. */
-var SEED_ONBOARDING = [
-  /* period, employee, region, seller_target, buyer_target, focus_area */
-  ['2026-07','MET002','East',2,2,'GAGAN'],
-  ['2026-07','MET003','East',4,1,'BS'],
-  ['2026-07','MET004','South',2,2,'Binjusaria SEIL'],
-  ['2026-07','MET005','South',2,1,'AONE METAL'],
-  ['2026-07','MET001','Central',3,2,'NKW METALS/DIWAKAR ENTERPRISES/SHRISON'],
-  ['2026-07','MET006','East',2,2,'FORTUNE/REAL ISPAT/MANGAL SPONGE'],
-  ['2026-08','MET002','East',2,3,'NIF/VIRAJ STEEL/BALAJI'],
-  ['2026-08','MET003','East',2,1,'AARTI STEEL/HINDUSTAN STEEL'],
-  ['2026-08','MET004','South',2,2,'BINJUSARIA/HARIOM/JAIDURGA'],
-  ['2026-08','MET005','South',1,2,'APPLE/AONE'],
-  ['2026-08','MET006','East',3,2,'AGS/SN ENTERPRISE'],
-  ['2026-08','MET001','Central',2,2,'NIKITA INDUSTRIES/LEADSTONE/DIACH']
-];
+  var field = [
+    ['Sales','Transaction from Existing Sellers','Monthly Target Achievement',15,'STD_PCT'],
+    ['Sales','Transaction from New Onboarded Sellers','Monthly Target Achievement',15,'STD_PCT'],
+    ['Customer','New Seller Acquisition','Monthly Target Achievement',15,'STD_PCT'],
+    ['Sales','GMV','Monthly Target Achievement',40,'STD_PCT'],
+    ['Process','Retention of Existing Transacted Sellers','Monthly Target Achievement',15,'STD_PCT']
+  ];
+  ['PLA002','PLA003','PLA004','PLA005','PLA006','PLA007','PLA008','PLA009','PLA010','PLA011'].forEach(function (e) {
+    field.forEach(function (r) { ASSIGNMENTS.push([e, r[0], r[1], r[2], r[3], r[4]]); });
+  });
+})();
 
-/* PUBLISHED team figures, kept exactly as published even where they disagree
- * with the sum of their own line items. July does disagree: buyer rows total
- * 7.91 Cr against a published 8.00 Cr target, and the plan states achievement
- * twice - 8.46 on the grand-total row, 8.45 in the target-vs-achievement block.
- * These are recorded, not reconciled away: silently recomputing a published
- * target is how a tracker loses the trust of the people it reports on. */
-var SEED_PUBLISHED = [
-  /* period, metric, published, derived('' = compute on provision), unit, note */
-  ['2026-07','GMV_TARGET',8.00,'', 'CR','Published team target. Buyer rows sum lower - see derived_value.'],
-  ['2026-07','GMV_ACTUAL',8.45,8.46,'CR','Plan states 8.45 in the summary block and 8.46 on the grand-total row.'],
-  ['2026-07','QTY_TARGET',1125,'', 'MT','Published team quantity target.'],
-  ['2026-07','SELLER_ONBOARDING_TARGET',15,'','COUNT',''],
-  ['2026-07','SELLER_ONBOARDING_ACTUAL',20,'','COUNT',''],
-  ['2026-07','BUYER_ONBOARDING_TARGET',10,'','COUNT',''],
-  ['2026-07','BUYER_ONBOARDING_ACTUAL',17,'','COUNT',''],
-  ['2026-08','GMV_TARGET',11.00,'','CR','Published team target. August rows reconcile exactly.'],
-  ['2026-08','QTY_TARGET',1665,'','MT','Published team quantity target.'],
-  ['2026-08','SELLER_ONBOARDING_TARGET',12,'','COUNT',''],
-  ['2026-08','BUYER_ONBOARDING_TARGET',12,'','COUNT','']
-];
+/* --- Onboarding: every person a different set --------------------------- */
+[
+  ['ONB002','Process','Open Marketplace - Buyer & Seller Onboarding','TAT - 1 Day',35,'TAT_PCT'],
+  ['ONB002','Process','Re-Commerce - Seller Onboarding','TAT - 1 Day',10,'TAT_PCT'],
+  ['ONB002','Process','Fall Back - AFR & INFRA','TAT - 3 Days',10,'TAT_PCT'],
+  ['ONB002','Process','Audit & Monitoring','Document Completeness',20,'NONE'],
+  ['ONB002','Process','On-Site Verification','TAT - 4 Days',15,'TAT_PCT'],
+  ['ONB002','Process','Vendor Payments - Finoscale / Carma One','Timely Validation',10,'NONE'],
 
-/* ------------------------------------------------------- SHEET PLUMBING -- */
+  ['ONB003','Process','INFRA - Buyer & Seller Onboarding','TAT - 3 Days',30,'TAT_PCT'],
+  ['ONB003','Process','AFR - Buyer & Seller Onboarding','TAT - 3 Days',30,'TAT_PCT'],
+  ['ONB003','Process','Audit & Monitoring','Document Completeness',20,'NONE'],
+  ['ONB003','Process','Fall Back - EPR','TAT',10,'TAT_PCT'],
+  ['ONB003','Process','Vendor Payments - Ongrid','Timely Validation',10,'NONE'],
+  ['ONB003','Process','Vendor Payments - Finoscale / Carma One','Timely Validation',10,'NONE'],
+
+  ['ONB004','Process','EPR - Buyer & Seller Onboarding','TAT',35,'TAT_PCT'],
+  ['ONB004','Process','Audit & Monitoring','Document Completeness',20,'NONE'],
+  ['ONB004','Process','Transporter Onboarding','TAT',15,'TAT_PCT'],
+  ['ONB004','Process','Fall Back - Open Marketplace','TAT',10,'TAT_PCT'],
+  ['ONB004','Process','Open Marketplace - NBFC Coordination','NBFC Coordination & Case Management',10,'NONE'],
+  ['ONB004','Process','GST Payments','Compliance Check',10,'NONE'],
+
+  ['ONB005','Process','Fall Back for All Verticals','TAT',10,'TAT_PCT'],
+  ['ONB005','Process','Design Standard Operating Procedures','Approved SOPs',20,'NONE'],
+  ['ONB005','Process','Digitalization of Onboarding','Automation of Process',30,'NONE'],
+  ['ONB005','Process','Daily Reports Across Verticals','Accuracy & Timeliness',30,'NONE'],
+  ['ONB005','Process','Audit Process for Entire Onboarding & Collections','Reporting & Escalations',10,'NONE'],
+
+  ['ONB001','Process','All Verticals - Vendor & Buyer Onboarding','TAT',40,'TAT_PCT'],
+  ['ONB001','Process','Design Standard Operating Procedures','Approved SOPs',20,'NONE'],
+  ['ONB001','Process','Audit & Monitoring','Document Completeness',10,'NONE'],
+  ['ONB001','Process','Digitalization','Automation of Process',20,'NONE'],
+  ['ONB001','Process','Vendor Payments','Timely Validation',10,'NONE']
+].forEach(function (r) { ASSIGNMENTS.push(r); });
+
+/* --- Collections -------------------------------------------------------- */
+[
+  ['COL002','Sales','Due Date + 7 Days Collections - Marketplace & EPR','Collection % vs Target',60,'STD_PCT'],
+  ['COL002','Process','Balance Confirmation','Confirmation Coverage %',10,'STD_PCT'],
+  ['COL002','Process','Reminder Emails','Adherence to Reminder',10,'STD_PCT'],
+  ['COL002','Process','Payment Posting','TAT - Days',10,'NONE'],
+  ['COL002','Process','Cross-Functional Coordination','Coordination Adherence %',10,'STD_PCT'],
+
+  ['COL001','Sales','Due Date + 7 Days Collections - Marketplace & EPR','Collection % vs Target',30,'STD_PCT'],
+  ['COL001','Process / Profit','DSO - Marketplace & EPR','DSO Days',30,'DSO_DAYS'],
+  ['COL001','Sales','Legacy Collections','Legacy Collection % of LD',15,'STD_PCT'],
+  ['COL001','Sales','PDD','PDD Cr Recovered',10,'STD_PCT'],
+  ['COL001','Process','Legal Actions','Legal Action Coordination %',5,'STD_PCT'],
+  ['COL001','Sales','Collection of Previous Dues','Previous Financial Year Collections',10,'STD_PCT'],
+
+  ['COL005','Sales','Collection of Previous Dues','Previous Dues Collection',10,'STD_PCT'],
+  ['COL005','Process / Profit','DSO - Marketplace & EPR','DSO Days',10,'DSO_DAYS'],
+  ['COL005','Process','Transaction - Marketplace','Coordination Adherence',15,'STD_PCT'],
+  ['COL005','Process','Payment Posting & Reconciliation','TAT - Days',15,'NONE'],
+  ['COL005','Process','Process Improvement & Automation','Process Automation',30,'NONE'],
+  ['COL005','Process','Compliance & Audit','Documentation Completion',20,'NONE']
+].forEach(function (r) { ASSIGNMENTS.push(r); });
+
+/* --- Marketplace - Control Tower: role-based sets ------------------------ */
+(function () {
+  var dispatch = [
+    ['Process','Dispatch Execution','Timely Dispatch Rate',40,'STD_PCT'],
+    ['Process','Dispatch Documentation Management','Dispatch Documentation Accuracy',35,'STD_PCT'],
+    ['Process','Dispatch Coordination & Resolution','Dispatch Issue Resolution',15,'STD_PCT'],
+    ['Process','SOP & Process Compliance','Dispatch SOP Compliance',10,'NONE']
+  ];
+  var transit = [
+    ['Process','In-Transit Delivery Management','On-Time Transit Completion',50,'STD_PCT'],
+    ['Process','Shipment Visibility & Monitoring','Tracking Accuracy',30,'STD_PCT'],
+    ['Customer','Buyer Coordination & Delay Management','Pre-Arrival & Delay Resolution',10,'STD_PCT'],
+    ['Process','In-Transit SOP Compliance','Transit Process Compliance',10,'NONE']
+  ];
+  var pod = [
+    ['Process','POD Closure Management','POD Collection TAT',35,'TAT_PCT'],
+    ['Process','POD Documentation Management','POD First-Time-Right',40,'STD_PCT'],
+    ['Customer','Delivery Coordination & Exception Resolution','Delivery Exception Resolution',15,'STD_PCT'],
+    ['Process','POD & Exception Compliance','POD Process Compliance',10,'NONE']
+  ];
+  var mgr = [
+    ['Process','Compliance (Documentation)','Documentation Completion',20,'NONE'],
+    ['Sales','Match Making','Demand & Listing Conversion',10,'STD_PCT'],
+    ['Process','Transaction Tracking','Transaction Closure & Tracking',20,'STD_PCT'],
+    ['Customer','DN / CN Tracking','CN & DN Closure Rate',20,'STD_PCT'],
+    ['Process','Process Improvement & Automation','Process Automation',30,'NONE']
+  ];
+  var pay = [
+    ['Process','Payment Release Management','Timely Payment Release',30,'STD_PCT'],
+    ['Process','QC & Settlement Management','QC & Settlement Accuracy',40,'STD_PCT'],
+    ['Customer','Dispute & Payment Resolution','Dispute & Follow-Up Resolution',20,'STD_PCT'],
+    ['Process','Settlement Process Compliance','QC & Settlement SOP Compliance',10,'NONE']
+  ];
+  function assign(emp, set) { set.forEach(function (r) { ASSIGNMENTS.push([emp, r[0], r[1], r[2], r[3], r[4]]); }); }
+  assign('MCT001', mgr);
+  assign('MCT002', dispatch);
+  assign('MCT003', dispatch);
+  assign('MCT004', transit);
+  assign('MCT005', pod);
+  assign('MCT006', pay);
+  assign('MCT007', pod);
+  assign('MCT008', transit);
+})();
+
+/* People known to exist but whose KPI sets are not fully enumerated in any
+ * source I have. They are seeded into EMPLOYEE_MASTER so the roster is
+ * complete, and left unmapped rather than given guessed weightages. */
+var UNMAPPED_NOTE = {
+  COL003: 'Ankur - described as the same six-KRA structure as Ravi Naik with a Marketplace-specific previous-dues KPI, but individual weightages are not enumerated in the source.',
+  COL004: 'Venkat - same six-KRA structure with an EPR-specific previous-dues KPI; weightages not enumerated in the source.'
+};
+
+/* ------------------------------------------------------- MASTER SCHEMAS -- */
+
+var M_TAB = {
+  TEAM:'TEAM_MASTER', EMP:'EMPLOYEE_MASTER', KRA:'KRA_MASTER', KPI:'KPI_MASTER',
+  MAP:'EMPLOYEE_KPI_MAPPING', THR:'KPI_THRESHOLDS',
+  TGT:'MONTHLY_TARGETS', ACT:'ACTUAL_PERFORMANCE', PERF:'KPI_PERFORMANCE'
+};
+
+var M_SCHEMA = {};
+M_SCHEMA[M_TAB.TEAM] = ['team_id','team_name','team_short_code','team_type','team_lead','category_head','active'];
+M_SCHEMA[M_TAB.EMP]  = ['employee_id','employee_name','team_id','designation','region','reporting_manager','employment_status','active_from','active_to','notes'];
+M_SCHEMA[M_TAB.KRA]  = ['kra_id','team_id','perspective','kra_name','goal_description','active'];
+M_SCHEMA[M_TAB.KPI]  = ['kpi_id','kra_id','kpi_name','goal_description','weightage','source_of_tracking','measurement_type','direction','target_type','threshold_set','active'];
+M_SCHEMA[M_TAB.MAP]  = ['mapping_id','employee_id','kpi_id','weightage','effective_from','effective_to','applicable'];
+M_SCHEMA[M_TAB.THR]  = ['threshold_id','kpi_id','level','threshold_value','threshold_unit','label','comparison_operator','threshold_not_defined'];
+M_SCHEMA[M_TAB.TGT]  = ['target_id','month','team_id','employee_id','kpi_id','target_value','target_unit','target_source','approved'];
+M_SCHEMA[M_TAB.ACT]  = ['actual_id','month','team_id','employee_id','kpi_id','actual_value','actual_unit','source','updated_at'];
+M_SCHEMA[M_TAB.PERF] = ['performance_id','month','team_id','employee_id','kpi_id','target','actual','achievement_percentage','variance','weighted_score','performance_level','status'];
+
+/* --------------------------------------------------------- PROVISIONING -- */
+
+/**
+ * Builds the master backend. Derives KRA_MASTER, KPI_MASTER,
+ * EMPLOYEE_KPI_MAPPING and KPI_THRESHOLDS from ASSIGNMENTS so every foreign
+ * key is generated from one source and cannot drift.
+ *
+ * Master tabs are rewritten on every run. The three performance tabs
+ * (MONTHLY_TARGETS, ACTUAL_PERFORMANCE, KPI_PERFORMANCE) are created but never
+ * cleared - master data is frozen, period data is not, and re-freezing the
+ * master must never destroy a month of actuals.
+ */
+function provisionMaster() {
+  var teamOf = {}, i;
+  PEOPLE.forEach(function (p) { teamOf[p[0]] = p[2]; });
+
+  /* 1. Teams and people */
+  var teams = TEAMS.map(function (t) { return [t[0],t[1],t[2],t[3],t[4],t[5],'TRUE']; });
+  var emps  = PEOPLE.map(function (p) {
+    return [p[0],p[1],p[2],p[3],p[4],p[5],'ACTIVE','','', UNMAPPED_NOTE[p[0]] || ''];
+  });
+
+  /* 2. Derive KRAs, KPIs, mappings, thresholds */
+  var kraIdx = {}, kraRows = [], kpiIdx = {}, kpiRows = [], mapRows = [], thrRows = [];
+  var kraSeq = 0, kpiSeq = 0, mapSeq = 0, thrSeq = 0;
+
+  ASSIGNMENTS.forEach(function (a) {
+    var emp = a[0], persp = a[1], kraName = a[2], kpiName = a[3], wt = a[4], thrSet = a[5];
+    var team = teamOf[emp];
+    if (!team) throw new Error('Assignment references unknown employee ' + emp);
+
+    var kraKey = team + '|' + kraName;
+    if (!kraIdx[kraKey]) {
+      kraIdx[kraKey] = 'KRA-' + shortOf_(team) + '-' + pad3_(++kraSeq);
+      kraRows.push([kraIdx[kraKey], team, persp, kraName, '', 'TRUE']);
+    }
+    /* A KPI is unique per KRA *and* weightage: the same KPI name under the same
+     * KRA can carry a different weight for a different person, and collapsing
+     * those would silently rewrite someone's scorecard. */
+    var kpiKey = kraIdx[kraKey] + '|' + kpiName + '|' + wt;
+    if (!kpiIdx[kpiKey]) {
+      var set = THRESHOLD_SETS[thrSet] || THRESHOLD_SETS.NONE;
+      kpiIdx[kpiKey] = 'KPI-' + shortOf_(team) + '-' + pad3_(++kpiSeq);
+      kpiRows.push([kpiIdx[kpiKey], kraIdx[kraKey], kpiName, '', wt, '',
+                    set.unit, set.dir, set.levels ? 'THRESHOLD' : 'NOT_DEFINED', thrSet, 'TRUE']);
+      if (set.levels) {
+        set.levels.forEach(function (v, li) {
+          thrRows.push(['THR' + pad3_(++thrSeq), kpiIdx[kpiKey], li + 1, v, set.unit,
+                        'Target ' + (li + 1), set.dir === 'LOWER_IS_BETTER' ? '<=' : '>=', 'FALSE']);
+        });
+      } else {
+        thrRows.push(['THR' + pad3_(++thrSeq), kpiIdx[kpiKey], '', '', '', 'Not defined in source', '', 'TRUE']);
+      }
+    }
+    mapRows.push(['MAP' + pad3_(++mapSeq), emp, kpiIdx[kpiKey], wt, '', '', 'TRUE']);
+  });
+
+  /* 3. Integrity: every mapped person's weightages must total 100 */
+  var byEmp = {}, issues = [];
+  mapRows.forEach(function (m) { byEmp[m[1]] = (byEmp[m[1]] || 0) + Number(m[3]); });
+  Object.keys(byEmp).forEach(function (e) {
+    if (Math.round(byEmp[e]) !== 100) issues.push(e + ' totals ' + byEmp[e] + '%');
+  });
+
+  mWrite_(M_TAB.TEAM, teams);
+  mWrite_(M_TAB.EMP, emps);
+  mWrite_(M_TAB.KRA, kraRows);
+  mWrite_(M_TAB.KPI, kpiRows);
+  mWrite_(M_TAB.MAP, mapRows);
+  mWrite_(M_TAB.THR, thrRows);
+  mTab_(M_TAB.TGT); mTab_(M_TAB.ACT); mTab_(M_TAB.PERF);
+
+  var unmapped = PEOPLE.filter(function (p) { return !byEmp[p[0]]; }).map(function (p) { return p[1]; });
+  return [
+    'Teams: ' + teams.length,
+    'Employees: ' + emps.length,
+    'KRAs: ' + kraRows.length,
+    'KPIs: ' + kpiRows.length,
+    'Mappings: ' + mapRows.length,
+    'Thresholds: ' + thrRows.length,
+    'Unmapped (no KPI set in source): ' + (unmapped.length ? unmapped.join(', ') : 'none'),
+    'Weightage issues: ' + (issues.length ? issues.join('; ') : 'none - every mapped person totals 100%')
+  ].join('\n');
+}
+
+function shortOf_(teamId) {
+  var t = TEAMS.filter(function (x) { return x[0] === teamId; })[0];
+  return t ? t[2] : 'GEN';
+}
+function mTab_(name) {
+  var ss = bkSS_(), sh = ss.getSheetByName(name);
+  if (!sh) sh = ss.insertSheet(name);
+  var h = M_SCHEMA[name];
+  sh.getRange(1, 1, 1, h.length).setValues([h]).setFontWeight('bold').setBackground('#F2F0E8');
+  sh.setFrozenRows(1);
+  return sh;
+}
+function mWrite_(name, rows) {
+  var sh = mTab_(name), h = M_SCHEMA[name];
+  if (sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, h.length).clearContent();
+  if (rows.length) sh.getRange(2, 1, rows.length, h.length).setValues(rows);
+  return rows.length;
+}
+function mRead_(name) {
+  var ss = bkSS_(), sh = ss.getSheetByName(name);
+  if (!sh || sh.getLastRow() < 2) return [];
+  var h = M_SCHEMA[name], v = sh.getRange(2, 1, sh.getLastRow() - 1, h.length).getValues();
+  return v.filter(function (r) { return String(r[0]).trim() !== ''; })
+          .map(function (r) { var o = {}; h.forEach(function (k, i) { o[k] = r[i]; }); return o; });
+}
+
+/**
+ * The record shape the frontend consumes. It carries no business logic: every
+ * derived value is already computed here, so the UI only ever visualises.
+ */
+function apiMasterModel(teamId, month) {
+  var teams = mRead_(M_TAB.TEAM), emps = mRead_(M_TAB.EMP);
+  var kras = mRead_(M_TAB.KRA), kpis = mRead_(M_TAB.KPI), maps = mRead_(M_TAB.MAP);
+  var kraById = {}; kras.forEach(function (k) { kraById[k.kra_id] = k; });
+  var kpiById = {}; kpis.forEach(function (k) { kpiById[k.kpi_id] = k; });
+  var tgt = mRead_(M_TAB.TGT), act = mRead_(M_TAB.ACT);
+  function find(list, empId, kpiId) {
+    var h = list.filter(function (r) { return r.employee_id === empId && r.kpi_id === kpiId && (!month || r.month === month); })[0];
+    return h || null;
+  }
+  var scorecards = emps
+    .filter(function (e) { return !teamId || e.team_id === teamId; })
+    .map(function (e) {
+      var rows = maps.filter(function (m) { return m.employee_id === e.employee_id && String(m.applicable).toUpperCase() !== 'FALSE'; })
+        .map(function (m) {
+          var kpi = kpiById[m.kpi_id] || {}, kra = kraById[kpi.kra_id] || {};
+          var t = find(tgt, e.employee_id, m.kpi_id), a = find(act, e.employee_id, m.kpi_id);
+          var tv = t ? Number(t.target_value) : null, av = a ? Number(a.actual_value) : null;
+          var ach = (tv == null || av == null) ? null : achievementPct_(tv, av, kpi.direction);
+          var ws = weightedScore_(m.weightage, ach);
+          return { kpi_id: m.kpi_id, perspective: kra.perspective || '', kra: kra.kra_name || '',
+                   kpi: kpi.kpi_name || '', weightage: Number(m.weightage),
+                   unit: kpi.measurement_type || '', direction: kpi.direction || '',
+                   target: tv, actual: av, achievement: ach, weighted_score: ws,
+                   status: ach == null ? 'Awaiting data' : statusFor_(ach, ach >= 100 ? 5 : ach >= 90 ? 4 : ach >= 75 ? 3 : ach >= 60 ? 2 : 1) };
+        });
+      var earned = 0, measured = 0;
+      rows.forEach(function (r) { if (r.weighted_score != null) { earned += r.weighted_score; measured += r.weightage; } });
+      return { employee_id: e.employee_id, employee_name: e.employee_name, team_id: e.team_id,
+               designation: e.designation, region: e.region, kpis: rows,
+               assigned_weightage: rows.reduce(function (s, r) { return s + r.weightage; }, 0),
+               measured_weightage: measured,
+               overall_score: measured > 0 ? Math.round(earned * 10) / 10 : null };
+    });
+  return { ok: true, month: month || null, teams: teams, scorecards: scorecards,
+           generatedAt: new Date().toISOString() };
+}
+
+/** Proves the master is internally consistent before any target is loaded. */
+function masterSelfTest() {
+  var out = [], byEmp = {}, teamOf = {};
+  PEOPLE.forEach(function (p) { teamOf[p[0]] = p[2]; });
+  ASSIGNMENTS.forEach(function (a) { byEmp[a[0]] = (byEmp[a[0]] || 0) + Number(a[4]); });
+  out.push('Teams: ' + TEAMS.length);
+  out.push('People: ' + PEOPLE.length);
+  out.push('Assignments: ' + ASSIGNMENTS.length);
+  var bad = Object.keys(byEmp).filter(function (e) { return Math.round(byEmp[e]) !== 100; });
+  out.push('Weightage != 100: ' + (bad.length ? bad.map(function (e) { return e + '=' + byEmp[e]; }).join(', ') : 'none'));
+  var orphan = ASSIGNMENTS.filter(function (a) { return !teamOf[a[0]]; });
+  out.push('Orphan assignments: ' + orphan.length);
+  var unmapped = PEOPLE.filter(function (p) { return !byEmp[p[0]]; }).map(function (p) { return p[1]; });
+  out.push('People with no KPI set: ' + (unmapped.length ? unmapped.join(', ') : 'none'));
+  return out.join('\n');
+}
+
+/* ---------------------------------------------------- SHARED PRIMITIVES --
+ * Opening the source of truth, id padding, and the scoring rules. These are
+ * the only place a number is turned into a judgement, so they live together.
+ */
 
 function bkSS_() {
   try { return SpreadsheetApp.openById(BACKEND_SHEET_ID); }
   catch (e) {
     throw new Error('Cannot open the backend spreadsheet ' + BACKEND_SHEET_ID +
-      '. Confirm the id is correct and that the account running this script has edit access. (' +
-      (e && e.message || e) + ')');
+      '. Confirm the id is correct and that ' +
+      (function () { try { return Session.getEffectiveUser().getEmail() || 'this account'; } catch (x) { return 'this account'; } })() +
+      ' has edit access. (' + (e && e.message || e) + ')');
   }
-}
-function bkTab_(name, headers) {
-  var ss = bkSS_(), sh = ss.getSheetByName(name);
-  if (!sh) { sh = ss.insertSheet(name); }
-  if (headers && headers.length) {
-    var cur = sh.getRange(1, 1, 1, headers.length).getValues()[0];
-    var same = true, i;
-    for (i = 0; i < headers.length; i++) if (String(cur[i]) !== headers[i]) { same = false; break; }
-    if (!same) {
-      sh.getRange(1, 1, 1, headers.length).setValues([headers])
-        .setFontWeight('bold').setBackground('#F2F0E8');
-      sh.setFrozenRows(1);
-    }
-  }
-  return sh;
-}
-function bkWrite_(name, headers, rows) {
-  var sh = bkTab_(name, headers);
-  if (sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, headers.length).clearContent();
-  if (rows && rows.length) sh.getRange(2, 1, rows.length, headers.length).setValues(rows);
-  return rows ? rows.length : 0;
-}
-function bkRead_(name) {
-  var ss = bkSS_(), sh = ss.getSheetByName(name);
-  if (!sh || sh.getLastRow() < 2) return [];
-  var headers = SCHEMA[name], vals = sh.getRange(2, 1, sh.getLastRow() - 1, headers.length).getValues();
-  return vals.filter(function (r) { return String(r[0]).trim() !== ''; })
-             .map(function (r) { var o = {}; headers.forEach(function (h, i) { o[h] = r[i]; }); return o; });
-}
-function bkValidate_(name, colIndex, list) {
-  var sh = bkSS_().getSheetByName(name); if (!sh) return;
-  var rule = SpreadsheetApp.newDataValidation().requireValueInList(list, true).setAllowInvalid(false).build();
-  sh.getRange(2, colIndex, Math.max(sh.getMaxRows() - 1, 500), 1).setDataValidation(rule);
-}
-
-/* -------------------------------------------------------- PROVISIONING -- */
-
-/**
- * Creates the whole backend in the single source-of-truth spreadsheet and
- * seeds it from the Metal plan. Safe to re-run: master tabs are rewritten,
- * Transactions and KPI_Actuals are created but never cleared, so operational
- * data entered by the team is preserved across re-provisioning.
- */
-function provisionBackend() {
-  var weight = 0;
-  SEED_KPIS.forEach(function (k) { weight += Number(k[5]); });
-  if (weight !== 100) throw new Error('KPI weightages total ' + weight + '%, expected 100%.');
-
-  var log = [];
-  log.push(TAB.EMPLOYEE + ': ' + bkWrite_(TAB.EMPLOYEE, SCHEMA[TAB.EMPLOYEE], SEED_EMPLOYEES));
-  log.push(TAB.KPI + ': ' + bkWrite_(TAB.KPI, SCHEMA[TAB.KPI], SEED_KPIS));
-  log.push(TAB.BANDS + ': ' + bkWrite_(TAB.BANDS, SCHEMA[TAB.BANDS], SEED_BANDS));
-
-  var alloc = SEED_ALLOCATIONS.map(function (r, i) {
-    return ['ALL' + pad3_(i + 1), r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7], r[7] === '' ? 'Planned' : 'Actualised'];
-  });
-  log.push(TAB.ALLOCATION + ': ' + bkWrite_(TAB.ALLOCATION, SCHEMA[TAB.ALLOCATION], alloc));
-
-  var onb = SEED_ONBOARDING.map(function (r, i) {
-    return ['ONB' + pad3_(i + 1), r[0], r[1], r[2], r[3], r[4], Number(r[3]) + Number(r[4]), '', '', r[5]];
-  });
-  log.push(TAB.ONBOARDING + ': ' + bkWrite_(TAB.ONBOARDING, SCHEMA[TAB.ONBOARDING], onb));
-
-  /* Monthly targets are DERIVED from the granular plans, so a buyer allocation
-   * edit flows straight through to the KPI target with nothing to re-key. */
-  log.push(TAB.TARGETS + ': ' + bkWrite_(TAB.TARGETS, SCHEMA[TAB.TARGETS], buildMonthlyTargets_(alloc, onb)));
-
-  /* Published totals, with derived values computed for comparison */
-  var pub = SEED_PUBLISHED.map(function (r) {
-    var derived = r[3] === '' ? derivePublished_(r[0], r[1], alloc, onb) : r[3];
-    var variance = (typeof derived === 'number' && typeof r[2] === 'number')
-      ? Math.round((derived - r[2]) * 1000) / 1000 : '';
-    return [r[0], r[1], r[2], derived, r[4], variance, variance === 0 ? 'TRUE' : 'FALSE', r[5]];
-  });
-  log.push(TAB.PUBLISHED + ': ' + bkWrite_(TAB.PUBLISHED, SCHEMA[TAB.PUBLISHED], pub));
-
-  /* Operational tabs: created, never cleared */
-  bkTab_(TAB.TRANSACTION, SCHEMA[TAB.TRANSACTION]);
-  bkTab_(TAB.ACTUALS, SCHEMA[TAB.ACTUALS]);
-  bkTab_(TAB.CALC, SCHEMA[TAB.CALC]);
-  bkTab_(TAB.SUMMARY, SCHEMA[TAB.SUMMARY]);
-
-  applyValidation_();
-  refreshCalculations();
-  return 'Provisioned. ' + log.join(' | ');
 }
 
 function pad3_(n) { return ('00' + n).slice(-3); }
 
-function applyValidation_() {
-  bkValidate_(TAB.EMPLOYEE, 7, ENUM.REGION);
-  bkValidate_(TAB.EMPLOYEE, 9, ENUM.BOOL);
-  bkValidate_(TAB.KPI, 7, ENUM.UNIT);
-  bkValidate_(TAB.KPI, 8, ENUM.DIRECTION);
-  bkValidate_(TAB.TARGETS, 6, ENUM.UNIT);
-  bkValidate_(TAB.TARGETS, 7, ENUM.SOURCE);
-  bkValidate_(TAB.ALLOCATION, 5, ENUM.REGION);
-  bkValidate_(TAB.ONBOARDING, 4, ENUM.REGION);
-  bkValidate_(TAB.TRANSACTION, 11, ENUM.CLOSURE);
-  bkValidate_(TAB.ACTUALS, 6, ENUM.UNIT);
-  bkValidate_(TAB.ACTUALS, 7, ENUM.SOURCE);
-}
-
-/* GMV target per employee = SUM of that employee's buyer allocations.
- * Onboarding targets map to the two acquisition KPIs. */
-function buildMonthlyTargets_(alloc, onb) {
-  var out = [], seq = 0, gmv = {};
-  alloc.forEach(function (a) {
-    var key = a[1] + '|' + a[2];
-    gmv[key] = (gmv[key] || 0) + Number(a[7] || 0);
-  });
-  Object.keys(gmv).sort().forEach(function (key) {
-    var p = key.split('|');
-    out.push(['TGT' + pad3_(++seq), p[0], p[1], 'KPI05', Math.round(gmv[key] * 1000) / 1000, 'CR', 'GMV Plan', 'Sum of buyer allocations']);
-  });
-  onb.forEach(function (o) {
-    out.push(['TGT' + pad3_(++seq), o[1], o[2], 'KPI03', Number(o[4]), 'COUNT', 'Onboarding Plan', 'New seller target']);
-    out.push(['TGT' + pad3_(++seq), o[1], o[2], 'KPI02', Number(o[5]), 'COUNT', 'Onboarding Plan', 'New buyer target']);
-  });
-  return out;
-}
-
-function derivePublished_(period, metric, alloc, onb) {
-  var sum = 0;
-  if (metric === 'GMV_TARGET') { alloc.forEach(function (a) { if (a[1] === period) sum += Number(a[7] || 0); }); return Math.round(sum * 100) / 100; }
-  if (metric === 'QTY_TARGET') { alloc.forEach(function (a) { if (a[1] === period) sum += Number(a[6] || 0); }); return sum; }
-  if (metric === 'SELLER_ONBOARDING_TARGET') { onb.forEach(function (o) { if (o[1] === period) sum += Number(o[4] || 0); }); return sum; }
-  if (metric === 'BUYER_ONBOARDING_TARGET') { onb.forEach(function (o) { if (o[1] === period) sum += Number(o[5] || 0); }); return sum; }
-  return '';
-}
-
-/* --------------------------------------------------- CALCULATION ENGINE -- */
+/* Achievement is capped at the top band. The published scorecards show GMV of
+ * 0.83 against 0.6 as 105.0%, not 138%, and score it 42 against a weightage of
+ * 40 - so the cap is part of the contract, not display rounding. */
+var ACHIEVEMENT_CAP_PCT = 105;
+function capAch_(pct) { return round1_(Math.min(Number(pct), ACHIEVEMENT_CAP_PCT)); }
 
 /**
  * Achievement %, direction-aware.
- * HIGHER_IS_BETTER: actual / target.
- * LOWER_IS_BETTER : target / actual - so DSO of 3 days against a 5 day target
- * returns 167%, and 15 days against 5 returns 33%. Without this inversion the
- * two KPI families cannot share a scoring path.
+ *   HIGHER_IS_BETTER: actual / target
+ *   LOWER_IS_BETTER : target / actual - so a DSO of 3 days against a 5 day
+ *   target over-achieves, and 15 days against 5 does not. Without this
+ *   inversion the two KPI families cannot share one scoring path.
+ *
+ * A target of zero means the KPI was not asked of this person this period. It
+ * is neither zero achievement nor full achievement - the source sheets do both,
+ * returning 0% for one person and 100% for another on identical 0/0 input.
+ * Returning null makes it N/A and excludes it from the weighted denominator, so
+ * nobody is rewarded or punished for a target that was never set.
  */
 function achievementPct_(target, actual, direction) {
   var t = Number(target), a = Number(actual);
   if (!isFinite(t) || !isFinite(a)) return null;
-  /* A target of zero means the KPI was not asked of this person this month.
-   * It is NOT zero achievement and NOT full achievement - the source sheet
-   * does both, returning 0% for one person and 100% for another on identical
-   * 0/0 input. Returning null makes it N/A, excluded from the score, so no one
-   * is rewarded or punished for a target never assigned. */
   if (t === 0) return null;
   if (direction === 'LOWER_IS_BETTER') {
     if (a === 0) return null;          /* zero days is not a real measurement */
@@ -3330,254 +3474,22 @@ function achievementPct_(target, actual, direction) {
   return capAch_(a / t * 100);
 }
 
-/* Achievement is capped at the top band. The published sheets show GMV of
- * 0.83 against 0.6 as 105.0%, not 138%, and score it 42 of a 40 weightage -
- * so the cap is part of the contract, not a display rounding. */
-var ACHIEVEMENT_CAP_PCT = 105;
-function capAch_(pct) { return round1_(Math.min(Number(pct), ACHIEVEMENT_CAP_PCT)); }
-
-/**
- * Band and rating from the achievement, using the thresholds in the sheet so
- * the scoring model is configurable without touching code. Standard KPIs
- * compare achievement % against ascending thresholds; DSO compares the raw
- * day count against descending ones.
- */
-function bandFor_(kpiId, direction, achPct, rawActual, bands) {
-  var rows = bands.filter(function (b) { return b.kpi_id === kpiId; })
-                  .sort(function (x, y) { return Number(x.rating) - Number(y.rating); });
-  if (!rows.length) return { band: '', rating: null };
-  var pick = null, i;
-  if (direction === 'LOWER_IS_BETTER') {
-    var a = Number(rawActual);
-    if (!isFinite(a)) return { band: '', rating: null };
-    for (i = 0; i < rows.length; i++) if (a <= Number(rows[i].threshold_value)) pick = rows[i];
-  } else {
-    if (achPct == null) return { band: '', rating: null };
-    for (i = 0; i < rows.length; i++) if (achPct >= Number(rows[i].threshold_value)) pick = rows[i];
-  }
-  if (!pick) return { band: 'Below P1', rating: 0 };
-  return { band: pick.band, rating: Number(pick.rating) };
-}
-
-/* Weighted score = weightage x capped achievement.
- *
- * This is what the published team sheets actually compute: GMV at weightage 40
- * and 105% achievement scores 42.0; a KPI at weightage 15 and 85.7% scores
- * 12.857. An earlier version of this engine used weightage x (rating / 5) off
- * the 5-band ladder, which is coarser - everything from 100% to 104% collapsed
- * to one value - and did not reproduce a single published figure.
- *
- * The 60/75/90/100/105 bands remain, but as STATUS thresholds: they label a
- * result, they do not score it. */
+/* Weighted score = weightage x capped achievement. This is what the published
+ * scorecards compute: weightage 40 at 105% scores 42.0; weightage 15 at 85.7%
+ * scores 12.857. An earlier version used weightage x (rating / 5) off the band
+ * ladder, which collapsed everything from 100% to 104% into one value and
+ * reproduced none of the published figures. The bands remain, but as STATUS
+ * thresholds: they label a result, they do not score it. */
 function weightedScore_(weightPct, achPct) {
   if (achPct == null) return null;
   return Math.round(Number(weightPct) * (Number(achPct) / 100) * 1000) / 1000;
 }
 
-function statusFor_(achPct, rating) {
-  if (achPct == null || rating == null) return 'Awaiting data';
-  if (rating >= 5) return 'Exceeded';
-  if (rating >= 4) return 'Achieved';
-  if (rating >= 3) return 'Near';
-  if (rating >= 2) return 'At Risk';
+function statusFor_(achPct, level) {
+  if (achPct == null) return 'Awaiting data';
+  if (level >= 5) return 'Exceeded';
+  if (level >= 4) return 'Above Expectation';
+  if (level >= 3) return 'Near';
+  if (level >= 2) return 'At Risk';
   return 'Critical';
-}
-
-
-/**
- * Builds every KPI calculation row for a period from targets + actuals.
- * Nothing here is read from a stored achievement: change an actual in the
- * sheet and this recomputes target, achievement, band, score and status.
- */
-function computeCalculations(period) {
-  var emps = bkRead_(TAB.EMPLOYEE).filter(function (e) { return String(e.active).toUpperCase() !== 'FALSE'; });
-  var kpis = bkRead_(TAB.KPI);
-  var bands = bkRead_(TAB.BANDS);
-  var targets = bkRead_(TAB.TARGETS).filter(function (t) { return t.period === period; });
-  var actuals = bkRead_(TAB.ACTUALS).filter(function (a) { return a.period === period; });
-  var alloc = bkRead_(TAB.ALLOCATION).filter(function (a) { return a.period === period; });
-  var onb = bkRead_(TAB.ONBOARDING).filter(function (o) { return o.period === period; });
-
-  function targetOf(empId, kpiId) {
-    var hit = targets.filter(function (t) { return t.employee_id === empId && t.kpi_id === kpiId; })[0];
-    return hit ? Number(hit.target_value) : null;
-  }
-  /* Actuals resolve from the most specific operational source available, and
-   * fall back to an explicitly entered KPI actual. Manually stored percentages
-   * are the last resort, never the first. */
-  function actualOf(empId, kpiId) {
-    if (kpiId === 'KPI05') {
-      var got = 0, any = false;
-      alloc.forEach(function (a) {
-        if (a.employee_id === empId && a.gmv_actual_cr !== '' && a.gmv_actual_cr != null) { got += Number(a.gmv_actual_cr); any = true; }
-      });
-      if (any) return Math.round(got * 1000) / 1000;
-    }
-    if (kpiId === 'KPI03' || kpiId === 'KPI02') {
-      var row = onb.filter(function (o) { return o.employee_id === empId; })[0];
-      if (row) {
-        var v = kpiId === 'KPI03' ? row.new_seller_actual : row.new_buyer_actual;
-        if (v !== '' && v != null) return Number(v);
-      }
-    }
-    var man = actuals.filter(function (a) { return a.employee_id === empId && a.kpi_id === kpiId; })[0];
-    return man && man.actual_value !== '' && man.actual_value != null ? Number(man.actual_value) : null;
-  }
-
-  var rows = [], seq = 0;
-  emps.forEach(function (e) {
-    kpis.forEach(function (k) {
-      var t = targetOf(e.employee_id, k.kpi_id);
-      var a = actualOf(e.employee_id, k.kpi_id);
-      var ach = (t == null || a == null) ? null : achievementPct_(t, a, k.direction);
-      var b = bandFor_(k.kpi_id, k.direction, ach, a, bands);
-      var ws = weightedScore_(k.weightage_pct, ach);
-      var variance = (t == null || a == null) ? '' : round1_(a - t);
-      rows.push(['CALC' + pad3_(++seq), period, e.employee_id, k.kpi_id, Number(k.weightage_pct),
-        t == null ? '' : t, a == null ? '' : a, ach == null ? '' : ach,
-        b.band, b.rating == null ? '' : b.rating, ws == null ? '' : ws, variance,
-        statusFor_(ach, b.rating)]);
-    });
-  });
-  return rows;
-}
-
-/**
- * Overall KRA score over MEASURED weightage only. A KPI with no actual is not
- * scored as zero - that would read as failure when it is missing instrumentation
- * - it is excluded from the denominator and the coverage is reported alongside,
- * so a score of 80 always means "80 of the 70% we can currently measure".
- */
-function scoreForEmployee_(calcRows, empId) {
-  var mine = calcRows.filter(function (r) { return r[2] === empId; });
-  var earned = 0, measured = 0, atRisk = 0, counted = 0;
-  mine.forEach(function (r) {
-    var w = Number(r[4]), ws = r[10];
-    if (ws === '' || ws == null) return;
-    measured += w; earned += Number(ws); counted++;
-    if (r[12] === 'At Risk' || r[12] === 'Critical') atRisk++;
-  });
-  return {
-    score: measured > 0 ? round1_(earned / measured * 100) : null,
-    earned: round1_(earned), measuredWeight: round1_(measured),
-    kpisMeasured: counted, kpisAtRisk: atRisk
-  };
-}
-
-function refreshCalculations() {
-  var periods = listPeriods_();
-  var all = [];
-  periods.forEach(function (p) { all = all.concat(computeCalculations(p)); });
-  bkWrite_(TAB.CALC, SCHEMA[TAB.CALC], all);
-  bkWrite_(TAB.SUMMARY, SCHEMA[TAB.SUMMARY], buildSummary_(periods, all));
-  return 'Recalculated ' + all.length + ' rows across ' + periods.length + ' periods.';
-}
-
-function listPeriods_() {
-  var seen = {}, out = [];
-  bkRead_(TAB.TARGETS).forEach(function (t) { if (t.period && !seen[t.period]) { seen[t.period] = 1; out.push(t.period); } });
-  return out.sort();
-}
-
-function buildSummary_(periods, allCalc) {
-  var emps = bkRead_(TAB.EMPLOYEE).filter(function (e) { return String(e.active).toUpperCase() !== 'FALSE'; });
-  var alloc = bkRead_(TAB.ALLOCATION), onb = bkRead_(TAB.ONBOARDING);
-  var rows = [];
-  periods.forEach(function (p) {
-    var calc = allCalc.filter(function (r) { return r[1] === p; });
-    var ranked = emps.map(function (e) {
-      var s = scoreForEmployee_(calc, e.employee_id);
-      var gt = 0, ga = 0, hasA = false;
-      alloc.forEach(function (a) {
-        if (a.period === p && a.employee_id === e.employee_id) {
-          gt += Number(a.gmv_target_cr || 0);
-          if (a.gmv_actual_cr !== '' && a.gmv_actual_cr != null) { ga += Number(a.gmv_actual_cr); hasA = true; }
-        }
-      });
-      var o = onb.filter(function (x) { return x.period === p && x.employee_id === e.employee_id; })[0];
-      var ot = o ? Number(o.total_onboarding_target || 0) : 0;
-      var oa = o && o.new_seller_actual !== '' && o.new_buyer_actual !== ''
-        ? Number(o.new_seller_actual || 0) + Number(o.new_buyer_actual || 0) : '';
-      return { e: e, s: s, gt: round1_(gt), ga: hasA ? round1_(ga) : '', ot: ot, oa: oa };
-    }).sort(function (x, y) { return (y.s.score == null ? -1 : y.s.score) - (x.s.score == null ? -1 : x.s.score); });
-
-    ranked.forEach(function (r, i) {
-      rows.push([p, 'EMPLOYEE', r.e.employee_id, r.e.employee_name, r.e.region,
-        r.s.score == null ? '' : r.s.score, r.s.measuredWeight,
-        r.gt, r.ga, r.ga === '' ? '' : (r.gt ? round1_(r.ga / r.gt * 100) : ''),
-        r.ot, r.oa, r.s.kpisMeasured, r.s.kpisAtRisk, i + 1,
-        r.s.score == null ? 'Awaiting data' : statusFor_(r.s.score, r.s.score >= 95 ? 5 : r.s.score >= 80 ? 4 : r.s.score >= 60 ? 3 : r.s.score >= 40 ? 2 : 1)]);
-    });
-
-    /* Region and team rollups, summed from the same employee rows so a total
-     * can never disagree with the lines it is made of. */
-    ['East','South','Central'].forEach(function (reg) {
-      var inReg = ranked.filter(function (r) { return r.e.region === reg; });
-      if (!inReg.length) return;
-      rows.push(regionRow_(p, 'REGION', reg, reg, reg, inReg));
-    });
-    rows.push(regionRow_(p, 'TEAM', 'METAL', 'Metal', '', ranked));
-  });
-  return rows;
-}
-
-function regionRow_(period, scope, id, name, region, list) {
-  var gt = 0, ga = 0, ot = 0, oa = 0, hasA = false, hasOa = false, meas = 0, risk = 0, earned = 0, wsum = 0;
-  list.forEach(function (r) {
-    gt += Number(r.gt || 0); if (r.ga !== '') { ga += Number(r.ga); hasA = true; }
-    ot += Number(r.ot || 0); if (r.oa !== '') { oa += Number(r.oa); hasOa = true; }
-    meas += r.s.kpisMeasured; risk += r.s.kpisAtRisk;
-    if (r.s.score != null) { earned += r.s.score; wsum++; }
-  });
-  var score = wsum ? round1_(earned / wsum) : '';
-  return [period, scope, id, name, region, score, '', round1_(gt), hasA ? round1_(ga) : '',
-    hasA && gt ? round1_(ga / gt * 100) : '', ot, hasOa ? oa : '', meas, risk, '',
-    score === '' ? 'Awaiting data' : statusFor_(score, score >= 95 ? 5 : score >= 80 ? 4 : score >= 60 ? 3 : score >= 40 ? 2 : 1)];
-}
-
-/* --------------------------------------------------------------- API --- */
-
-/** Everything the dashboard needs for one period, joined by id. */
-function apiBackendModel(period) {
-  period = period || listPeriods_().slice(-1)[0];
-  var calc = computeCalculations(period);
-  var emps = bkRead_(TAB.EMPLOYEE).filter(function (e) { return String(e.active).toUpperCase() !== 'FALSE'; });
-  var kpis = bkRead_(TAB.KPI);
-  return {
-    ok: true, connected: true, period: period, periods: listPeriods_(),
-    employees: emps, kpis: kpis, bands: bkRead_(TAB.BANDS),
-    allocations: bkRead_(TAB.ALLOCATION).filter(function (a) { return a.period === period; }),
-    onboarding: bkRead_(TAB.ONBOARDING).filter(function (o) { return o.period === period; }),
-    published: bkRead_(TAB.PUBLISHED).filter(function (p) { return p.period === period; }),
-    calculations: calc.map(function (r) {
-      var o = {}; SCHEMA[TAB.CALC].forEach(function (h, i) { o[h] = r[i]; }); return o;
-    }),
-    scores: emps.map(function (e) {
-      var s = scoreForEmployee_(calc, e.employee_id);
-      return { employee_id: e.employee_id, employee_name: e.employee_name, region: e.region, score: s.score,
-               measured_weightage_pct: s.measuredWeight, kpis_measured: s.kpisMeasured, kpis_at_risk: s.kpisAtRisk };
-    }),
-    generatedAt: new Date().toISOString()
-  };
-}
-
-/** Health check: proves every displayed number can be traced to a record. */
-function backendSelfTest() {
-  var out = [], w = 0;
-  SEED_KPIS.forEach(function (k) { w += Number(k[5]); });
-  out.push('KPI weightage total: ' + w + '% ' + (w === 100 ? 'OK' : 'FAIL'));
-  try {
-    bkSS_();
-    out.push('Spreadsheet reachable: OK');
-    out.push('Employees: ' + bkRead_(TAB.EMPLOYEE).length);
-    out.push('KPIs: ' + bkRead_(TAB.KPI).length);
-    out.push('Bands: ' + bkRead_(TAB.BANDS).length);
-    out.push('Allocations: ' + bkRead_(TAB.ALLOCATION).length);
-    out.push('Periods: ' + listPeriods_().join(', '));
-    /* orphan join check */
-    var empIds = {}; bkRead_(TAB.EMPLOYEE).forEach(function (e) { empIds[e.employee_id] = 1; });
-    var orphans = bkRead_(TAB.ALLOCATION).filter(function (a) { return !empIds[a.employee_id]; }).length;
-    out.push('Orphan allocations: ' + orphans + ' ' + (orphans === 0 ? 'OK' : 'FAIL'));
-  } catch (e) { out.push('Spreadsheet reachable: FAIL - ' + (e && e.message || e)); }
-  return out.join('\n');
 }
