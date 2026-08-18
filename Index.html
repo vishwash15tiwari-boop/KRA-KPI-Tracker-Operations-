@@ -3,187 +3,225 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Recykal · KRA / KPI Tracker</title>
+<title>KRA / KPI Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 /* ============================================================================
-   FOUNDATION
-   Every value is a token. No component rule below invents a colour, size,
-   radius or spacing step of its own.
+   TOKENS - every value below is one. No rule invents a colour, size or step.
    ============================================================================ */
 :root{
   --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
-
-  --bg:#FAFAF9;--card:#FFFFFF;--surface:#F4F4F2;--well:#E9E8E4;
-  --ink:#18181B;--ink-2:#3F3F46;--muted:#6B6B72;--faint:#8A8A92;
-  --line:#E6E6E2;--line-2:#D6D6D1;--line-soft:#F0F0EC;
-
-  /* one accent, and it means INTERACTIVE - never performance */
-  --accent:#1F1F23;--accent-soft:#EFEFED;
-
-  /* the status ramp means performance, and nothing else does */
-  --good:#3F6B47;--good-soft:#EAF0EA;
-  --warn:#8A6320;--warn-soft:#F5EFE2;
-  --bad:#A3453A;--bad-soft:#F6E9E6;
-  --none:#6B6B72;--none-soft:#F1F1EF;
-
-  --fs-page:26px;--fs-xl:20px;--fs-lg:15px;--fs-md:13px;--fs-sm:12px;--fs-xs:11px;
+  --bg:#FAFAF9;--card:#FFFFFF;--surface:#F5F5F3;--well:#EAEAE6;
+  --ink:#18181B;--ink-2:#3F3F46;--muted:#71717A;--faint:#A1A1AA;
+  --line:#E7E7E3;--line-2:#D8D8D3;--line-soft:#F1F1EE;
+  --accent:#18181B;--accent-soft:#EFEFEC;          /* accent = interactive only */
+  --good:#3F6B47;--good-soft:#ECF2EC;              /* status ramp = performance only */
+  --warn:#8A6320;--warn-soft:#F6F0E4;
+  --bad:#A3453A;--bad-soft:#F7EAE7;
+  --fs-xl:26px;--fs-lg:19px;--fs-md:15px;--fs-sm:13px;--fs-xs:12px;--fs-2xs:11px;
   --fw-n:400;--fw-m:500;--fw-b:600;
   --r-ctl:6px;--r-card:10px;--r-pill:999px;
   --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:24px;--s6:32px;--s8:48px;
-  --ease:cubic-bezier(.2,.6,.35,1);--d1:120ms;
-  --maxw:1200px;
+  --ease:cubic-bezier(.2,.6,.35,1);--d1:120ms;--maxw:1240px;
 }
 *{box-sizing:border-box}html,body{margin:0;padding:0}
-body{font-family:var(--font);background:var(--bg);color:var(--ink);font-size:var(--fs-md);
-  line-height:1.5;-webkit-font-smoothing:antialiased;font-feature-settings:'tnum' 1;
-  letter-spacing:-.01em}
+body{font-family:var(--font);background:var(--bg);color:var(--ink);font-size:var(--fs-sm);
+  line-height:1.5;-webkit-font-smoothing:antialiased;font-feature-settings:'tnum' 1;letter-spacing:-.01em}
 button,select{font-family:inherit;cursor:pointer}
 b,strong{font-weight:var(--fw-b)}
-small{font-size:var(--fs-xs)}
 *:focus{outline:none}
 *:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-ctl)}
 
 /* ---------------------------------------------------------------- SHELL -- */
-.top{position:sticky;top:0;z-index:20;background:rgba(250,250,249,.88);
+.top{position:sticky;top:0;z-index:30;background:rgba(250,250,249,.9);
   backdrop-filter:saturate(140%) blur(12px);border-bottom:1px solid var(--line)}
-.top-in{max-width:var(--maxw);margin:0 auto;padding:0 var(--s5);
-  height:52px;display:flex;align-items:center;gap:var(--s4)}
-.mark{font-size:var(--fs-sm);font-weight:var(--fw-b);letter-spacing:.08em;
-  text-transform:uppercase;color:var(--muted);white-space:nowrap}
-.teams{display:flex;gap:var(--s1);overflow-x:auto;flex:1;scrollbar-width:none}
+.bar1,.bar2{max-width:var(--maxw);margin:0 auto;padding:0 var(--s5);display:flex;align-items:center;gap:var(--s3)}
+.bar1{height:52px}
+.bar2{height:44px;border-top:1px solid var(--line-soft);gap:var(--s2);flex-wrap:wrap}
+.mark{font-size:var(--fs-xs);font-weight:var(--fw-b);letter-spacing:.09em;text-transform:uppercase;
+  color:var(--muted);white-space:nowrap}
+.teams{display:flex;gap:2px;overflow-x:auto;flex:1;scrollbar-width:none}
 .teams::-webkit-scrollbar{display:none}
-.tb{border:none;background:transparent;color:var(--muted);font-size:var(--fs-md);
-  font-weight:var(--fw-m);padding:var(--s1) var(--s3);border-radius:var(--r-ctl);
-  white-space:nowrap;transition:background var(--d1) var(--ease),color var(--d1) var(--ease)}
+.tb{border:none;background:transparent;color:var(--muted);font-size:var(--fs-sm);font-weight:var(--fw-m);
+  padding:5px var(--s3);border-radius:var(--r-ctl);white-space:nowrap;
+  transition:background var(--d1) var(--ease),color var(--d1) var(--ease)}
 .tb:hover{background:var(--accent-soft);color:var(--ink)}
 .tb.on{background:var(--accent);color:#fff}
-.tb .n{opacity:.6;margin-left:5px;font-size:var(--fs-xs)}
-.sel{border:1px solid var(--line-2);background:var(--card);color:var(--ink);
-  font-size:var(--fs-sm);font-weight:var(--fw-m);padding:5px var(--s2);
-  border-radius:var(--r-ctl);max-width:170px}
+.tb .n{opacity:.55;margin-left:6px;font-size:var(--fs-2xs)}
+.fl{display:flex;align-items:center;gap:var(--s1);font-size:var(--fs-xs);color:var(--muted)}
+.sel{border:1px solid var(--line-2);background:var(--card);color:var(--ink);font-size:var(--fs-xs);
+  font-weight:var(--fw-m);padding:5px var(--s2);border-radius:var(--r-ctl);max-width:190px}
+.sel:disabled{color:var(--faint);background:var(--surface)}
+.clr{border:none;background:none;color:var(--muted);font-size:var(--fs-xs);
+  text-decoration:underline;text-underline-offset:2px;padding:0 var(--s1)}
+.clr:hover{color:var(--ink)}
 .wrap{max-width:var(--maxw);margin:0 auto;padding:var(--s6) var(--s5) var(--s8)}
 
+/* demo banner - the only place placeholder data is acknowledged */
+.demo{background:var(--warn-soft);border-bottom:1px solid rgba(138,99,32,.18);
+  font-size:var(--fs-xs);color:var(--warn)}
+.demo .in{max-width:var(--maxw);margin:0 auto;padding:7px var(--s5);display:flex;align-items:center;gap:var(--s2)}
+.demo button{border:1px solid rgba(138,99,32,.3);background:transparent;color:var(--warn);
+  font-size:var(--fs-2xs);font-weight:var(--fw-m);padding:2px 8px;border-radius:var(--r-ctl);margin-left:auto}
+
 /* ----------------------------------------------------------------- TYPE -- */
-h1{font-size:var(--fs-page);font-weight:var(--fw-b);letter-spacing:-.02em;line-height:1.2;margin:0}
-.sub{color:var(--muted);margin-top:var(--s1)}
-.sect{font-size:var(--fs-lg);font-weight:var(--fw-b);letter-spacing:-.015em;
+h1{font-size:var(--fs-xl);font-weight:var(--fw-b);letter-spacing:-.022em;line-height:1.2;margin:0}
+.sub{color:var(--muted);margin-top:var(--s1);font-size:var(--fs-sm)}
+.sect{font-size:var(--fs-md);font-weight:var(--fw-b);letter-spacing:-.015em;
   margin:var(--s6) 0 var(--s3);display:flex;align-items:baseline;gap:var(--s2)}
-.sect .r{margin-left:auto;font-size:var(--fs-sm);font-weight:var(--fw-n);color:var(--muted)}
-.crumb{display:flex;align-items:center;gap:var(--s2);font-size:var(--fs-sm);
-  color:var(--muted);margin-bottom:var(--s3)}
-.crumb button{border:none;background:none;color:var(--ink);font-size:var(--fs-sm);
-  font-weight:var(--fw-m);padding:0;text-decoration:underline;text-underline-offset:2px}
+.sect .r{margin-left:auto;font-size:var(--fs-xs);font-weight:var(--fw-n);color:var(--muted)}
+.crumb{display:flex;align-items:center;gap:var(--s2);font-size:var(--fs-xs);color:var(--muted);margin-bottom:var(--s3)}
+.crumb button{border:none;background:none;color:var(--ink);font-size:var(--fs-xs);font-weight:var(--fw-m);
+  padding:0;text-decoration:underline;text-underline-offset:2px}
 
 /* ---------------------------------------------------------------- CARDS -- */
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:var(--s3)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:var(--s3)}
 .stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);padding:var(--s4)}
-.stat .l{font-size:var(--fs-xs);font-weight:var(--fw-m);color:var(--muted);
-  text-transform:uppercase;letter-spacing:.05em}
-.stat .v{font-size:var(--fs-page);font-weight:var(--fw-b);letter-spacing:-.02em;
-  line-height:1.15;margin-top:var(--s2);font-variant-numeric:tabular-nums}
-.stat .v small{font-size:var(--fs-lg);color:var(--muted);font-weight:var(--fw-m)}
-.stat .s{font-size:var(--fs-sm);color:var(--muted);margin-top:var(--s1)}
+.stat .l{font-size:var(--fs-2xs);font-weight:var(--fw-m);color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.stat .v{font-size:var(--fs-xl);font-weight:var(--fw-b);letter-spacing:-.022em;line-height:1.15;
+  margin-top:var(--s2);font-variant-numeric:tabular-nums}
+.stat .v small{font-size:var(--fs-md);color:var(--muted);font-weight:var(--fw-m)}
+.stat .s{font-size:var(--fs-xs);color:var(--muted);margin-top:var(--s1)}
 
 /* ---------------------------------------------------------------- TABLE -- */
 .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);overflow:hidden}
 .tw{overflow-x:auto}
-table{width:100%;border-collapse:separate;border-spacing:0;font-size:var(--fs-md)}
-th{text-align:left;font-size:var(--fs-xs);font-weight:var(--fw-m);color:var(--muted);
-  text-transform:uppercase;letter-spacing:.04em;padding:var(--s2) var(--s3);
-  border-bottom:1px solid var(--line-2);white-space:nowrap;background:var(--card)}
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:var(--fs-sm)}
+th{text-align:left;font-size:var(--fs-2xs);font-weight:var(--fw-m);color:var(--muted);text-transform:uppercase;
+  letter-spacing:.05em;padding:var(--s2) var(--s3);border-bottom:1px solid var(--line-2);
+  white-space:nowrap;background:var(--card)}
 td{padding:var(--s3);border-bottom:1px solid var(--line-soft);vertical-align:middle}
 tr:last-child td{border-bottom:none}
 .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .quiet{color:var(--muted);font-weight:var(--fw-n)}
 .strong{font-weight:var(--fw-b)}
 .nm{font-weight:var(--fw-m)}
-.nm small{display:block;color:var(--muted);font-weight:var(--fw-n);margin-top:1px}
+.nm small{display:block;color:var(--muted);font-weight:var(--fw-n);margin-top:1px;font-size:var(--fs-2xs)}
 tr.click{cursor:pointer;transition:background var(--d1) var(--ease)}
 tr.click:hover{background:var(--surface)}
-/* KRA group header is a row, not a nested table, so every column keeps one
-   alignment the whole way down the page */
-tr.grp td{background:var(--surface);font-size:var(--fs-xs);font-weight:var(--fw-b);
-  color:var(--ink-2);text-transform:uppercase;letter-spacing:.05em;
-  padding:var(--s2) var(--s3);border-bottom:1px solid var(--line);cursor:pointer}
-tr.grp .cv{display:inline-block;width:10px;color:var(--muted);font-weight:var(--fw-n)}
-tr.grp .rs{float:right;font-variant-numeric:tabular-nums;text-transform:none;letter-spacing:0}
+tr.grp td{background:var(--surface);font-size:var(--fs-2xs);font-weight:var(--fw-b);color:var(--ink-2);
+  text-transform:uppercase;letter-spacing:.06em;padding:var(--s2) var(--s3);
+  border-bottom:1px solid var(--line);cursor:pointer}
+tr.grp .cv{display:inline-block;width:11px;color:var(--muted);font-weight:var(--fw-n)}
+tr.grp .rs{float:right;font-variant-numeric:tabular-nums;text-transform:none;letter-spacing:0;color:var(--muted)}
 td.kpi{padding-left:var(--s5)}
 
+/* ------------------------------------------------------------------ KRA -- */
+.kras{display:grid;gap:var(--s2)}
+.kra{display:flex;align-items:center;gap:var(--s3);background:var(--card);border:1px solid var(--line);
+  border-radius:var(--r-card);padding:var(--s3) var(--s4)}
+.kra .k{font-weight:var(--fw-m);min-width:0;flex:0 0 38%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kra .k small{display:block;color:var(--muted);font-weight:var(--fw-n);font-size:var(--fs-2xs)}
+.kra .v{margin-left:auto;font-weight:var(--fw-b);font-variant-numeric:tabular-nums;min-width:52px;text-align:right}
+
 /* ----------------------------------------------------------------- PILL -- */
-.pill{display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-xs);
-  font-weight:var(--fw-m);padding:2px 9px;border-radius:var(--r-pill);white-space:nowrap}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-2xs);font-weight:var(--fw-m);
+  padding:2px 9px;border-radius:var(--r-pill);white-space:nowrap}
 .pill::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor}
 .pill.good{background:var(--good-soft);color:var(--good)}
 .pill.warn{background:var(--warn-soft);color:var(--warn)}
 .pill.bad{background:var(--bad-soft);color:var(--bad)}
-.pill.none{background:var(--none-soft);color:var(--muted)}
+.pill.none{background:var(--surface);color:var(--muted)}
 
-/* ------------------------------------------------------------------ BAR --
-   Magnitude on a nominal list: one ink, length carries the value. The band
-   ticks mark the KPI's own thresholds so a bar can be read against its ladder
-   rather than against an assumed 100. */
-.bar{position:relative;height:6px;background:var(--well);border-radius:var(--r-pill);
-  overflow:hidden;min-width:64px}
-.bar i{display:block;height:100%;border-radius:var(--r-pill);background:var(--ink)}
+/* ------------------------------------------------------------------ BAR -- */
+.bw{display:flex;align-items:center;gap:var(--s2);min-width:130px}
+.bar{position:relative;height:6px;background:var(--well);border-radius:var(--r-pill);flex:1;min-width:64px}
+.bar i{position:absolute;left:0;top:0;height:100%;border-radius:var(--r-pill);background:var(--ink)}
 .bar i.good{background:var(--good)}.bar i.warn{background:var(--warn)}.bar i.bad{background:var(--bad)}
-.barwrap{display:flex;align-items:center;gap:var(--s2);min-width:120px}
-.barwrap .p{font-size:var(--fs-xs);color:var(--muted);font-variant-numeric:tabular-nums;min-width:34px;text-align:right}
+.bar u{position:absolute;top:-2px;width:1px;height:10px;background:var(--line-2)}  /* threshold tick */
+.bw .p{font-size:var(--fs-2xs);color:var(--muted);font-variant-numeric:tabular-nums;min-width:36px;text-align:right}
+
+/* --------------------------------------------------------------- DETAIL -- */
+.scrim{position:fixed;inset:0;background:rgba(24,24,27,.28);opacity:0;pointer-events:none;
+  transition:opacity var(--d1) var(--ease);z-index:40}
+.scrim.on{opacity:1;pointer-events:auto}
+.side{position:fixed;top:0;right:0;height:100vh;width:400px;max-width:92vw;background:var(--card);
+  border-left:1px solid var(--line);transform:translateX(100%);transition:transform 200ms var(--ease);
+  z-index:41;display:flex;flex-direction:column;box-shadow:-24px 0 48px -24px rgba(24,24,27,.18)}
+.side.on{transform:none}
+.side-h{padding:var(--s4) var(--s5);border-bottom:1px solid var(--line);display:flex;gap:var(--s3);align-items:flex-start}
+.side-h h2{font-size:var(--fs-lg);font-weight:var(--fw-b);margin:0;letter-spacing:-.018em;line-height:1.25}
+.side-h .x{margin-left:auto;border:1px solid var(--line);background:var(--card);width:28px;height:28px;
+  border-radius:var(--r-ctl);color:var(--muted);flex:0 0 28px;line-height:1}
+.side-h .x:hover{background:var(--surface);color:var(--ink)}
+.side-b{padding:var(--s5);overflow-y:auto;flex:1}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:var(--s2) var(--s4);font-size:var(--fs-sm)}
+.kv dt{color:var(--muted);white-space:nowrap}
+.kv dd{margin:0;text-align:right;font-variant-numeric:tabular-nums;font-weight:var(--fw-m)}
+.goal{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);
+  padding:var(--s3);color:var(--ink-2);line-height:1.6;margin-bottom:var(--s4)}
+.lad{margin:var(--s4) 0 0}
+.lad .t{font-size:var(--fs-2xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:var(--s2)}
+.lad ol{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(5,1fr);gap:3px}
+.lad li{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-ctl);
+  padding:var(--s2) 2px;text-align:center;font-size:var(--fs-2xs);color:var(--muted)}
+.lad li b{display:block;color:var(--ink);font-variant-numeric:tabular-nums;font-size:var(--fs-xs)}
+.lad li.hit{background:var(--accent);border-color:var(--accent);color:rgba(255,255,255,.7)}
+.lad li.hit b{color:#fff}
 
 /* ---------------------------------------------------------------- STATE -- */
-.state{display:grid;place-items:center;min-height:56vh;padding:var(--s5);text-align:center}
-.state h2{font-size:var(--fs-xl);font-weight:var(--fw-b);margin:0 0 var(--s2)}
+.state{display:grid;place-items:center;min-height:52vh;padding:var(--s5);text-align:center}
+.state h2{font-size:var(--fs-lg);font-weight:var(--fw-b);margin:0 0 var(--s2)}
 .state p{color:var(--muted);margin:0 0 var(--s4);max-width:44ch;line-height:1.6}
 .btn{border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:var(--r-ctl);
-  padding:8px 16px;font-size:var(--fs-md);font-weight:var(--fw-m)}
+  padding:8px 16px;font-size:var(--fs-sm);font-weight:var(--fw-m)}
 .btn:hover{opacity:.88}
 .empty{padding:var(--s5);text-align:center;color:var(--muted)}
-.note{font-size:var(--fs-sm);color:var(--muted);line-height:1.6;margin-top:var(--s3);
-  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:var(--s3)}
-.skl{background:linear-gradient(90deg,var(--surface),var(--well),var(--surface));
-  background-size:200% 100%;border-radius:var(--r-card);animation:sh 1.4s ease-in-out infinite}
+.note{font-size:var(--fs-xs);color:var(--muted);line-height:1.6;margin-top:var(--s3);background:var(--surface);
+  border:1px solid var(--line);border-radius:var(--r-card);padding:var(--s3)}
+.skl{background:linear-gradient(90deg,var(--surface),var(--well),var(--surface));background-size:200% 100%;
+  border-radius:var(--r-card);animation:sh 1.4s ease-in-out infinite}
 @keyframes sh{to{background-position:-200% 0}}
 
 /* ------------------------------------------------------------ RESPONSE -- */
-@media(max-width:860px){
-  .top-in{padding:0 var(--s4);gap:var(--s3)}
-  .mark{display:none}
-  .wrap{padding:var(--s5) var(--s4) var(--s6)}
+@media(max-width:900px){
+  .bar1,.bar2{padding:0 var(--s4)} .mark{display:none} .wrap{padding:var(--s5) var(--s4) var(--s6)}
+  .kra .k{flex-basis:50%}
 }
 @media(max-width:560px){
-  .wrap{padding:var(--s4) var(--s3) var(--s6)}
-  h1{font-size:var(--fs-xl)}
+  .wrap{padding:var(--s4) var(--s3) var(--s6)} h1{font-size:var(--fs-lg)}
   .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .side{width:100%} .bar2{height:auto;padding-top:var(--s2);padding-bottom:var(--s2)}
 }
-@media(prefers-reduced-motion:reduce){
-  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
-}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
 </head>
 <body>
-<header class="top"><div class="top-in">
-  <span class="mark">KRA / KPI</span>
-  <nav class="teams" id="teams"></nav>
-  <select class="sel" id="month" aria-label="Month"></select>
-</div></header>
+<header class="top">
+  <div class="bar1">
+    <span class="mark">KRA / KPI Tracker</span>
+    <nav class="teams" id="teams"></nav>
+  </div>
+  <div class="bar2" id="filters"></div>
+</header>
+<div id="demo"></div>
 <main class="wrap" id="view"></main>
+<div class="scrim" id="scrim"></div>
+<aside class="side" id="side" role="dialog" aria-label="KPI detail"></aside>
 
 <script>
 'use strict';
 /* ============================================================================
-   KRA / KPI Tracker - visualisation layer
+   KRA / KPI TRACKER - visualisation layer
    ----------------------------------------------------------------------------
-   This file renders; it does not calculate. Achievement %, weighted score and
-   status arrive already derived from the backend, so there is exactly one
-   calculation engine in the product and it is not here. The only arithmetic
-   below is presentational rollup - averaging KPI scores into a KRA line - and
-   it is marked where it happens.
+   Layering, deliberately:
+       Api      one call to the backend, nowhere else
+       Store    the fetched model plus UI selection
+       Select   every derived list the views need (filters, rollups)
+       Demo     placeholder values, isolated to ONE function
+       render   pure functions from state to markup
+
+   The frontend performs no business calculation. Achievement %, weighted score,
+   performance level and status all arrive derived from the backend, which owns
+   the scoring rules. The only arithmetic here is presentational rollup - taking
+   backend weighted scores and expressing them at KRA or team grain - and each
+   place it happens is marked.
 
    Nothing about any team is hard-coded. Teams, people, KRAs, KPIs, weightages,
-   units and directions all arrive from apiMasterModel(). A sixth team, or one
-   person's KPI set changing, needs no edit here.
+   units, directions and thresholds all arrive from apiMasterModel(). A sixth
+   team, or one person's KPI set changing, requires no edit to this file.
    ============================================================================ */
 
 var $ = function (s) { return document.querySelector(s); };
@@ -192,57 +230,169 @@ var esc = function (s) {
     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
   });
 };
-/* Null-safe throughout: a missing measurement renders as an em dash, never as
-   undefined, NaN or null. */
-var n1 = function (v) { return (v == null || isNaN(v)) ? null : Math.round(v * 10) / 10; };
+var n1 = function (v) { return (v == null || v === '' || isNaN(v)) ? null : Math.round(v * 10) / 10; };
 var show = function (v) { var n = n1(v); return n == null ? '—' : n; };
 
-var APP = { model: null, teamId: null, empId: null, month: null, open: {} };
+/* ============================== STORE ==================================== */
+var S = {
+  model: null, loading: true, error: null,
+  team: null, employee: null, kra: '', kpi: '', month: null,
+  openKra: {}, detail: null, demo: false
+};
 
-/* --------------------------------------------------------------- FORMAT --
- * Presentation follows the KPI's own measurement type, so a currency target
- * and a days target never render the same way. */
-function fmt(value, unit) {
-  var n = n1(value);
-  if (n == null) return '—';
+/* ============================== API ======================================
+   The only place the backend is touched. Every view reads from the store. */
+var Api = {
+  live: function () { return !!(window.google && google.script && google.script.run); },
+  fetchModel: function (month, done, fail) {
+    if (!Api.live()) return fail({ message: 'Open this page through the deployed Apps Script URL to load live data.' });
+    google.script.run.withSuccessHandler(done).withFailureHandler(fail).apiMasterModel(null, month || null);
+  }
+};
+
+/* ============================== DEMO =====================================
+   Placeholder values for visual demonstration ONLY, kept to this one function
+   and never mixed into the fetched model in place. It fills targets and
+   actuals where the backend has none, then re-derives using the SAME rules the
+   backend applies - capped achievement, direction-aware, weightage x
+   achievement - so what is on screen is shaped exactly like the real thing.
+   Delete this function and the toggle that calls it, and nothing else changes. */
+var Demo = {
+  seedFor: function (str) {                    /* stable per KPI, so it never flickers */
+    var h = 0; for (var i = 0; i < str.length; i++) { h = (h * 31 + str.charCodeAt(i)) & 0x7fffffff; }
+    return h;
+  },
+  apply: function (model) {
+    var copy = JSON.parse(JSON.stringify(model));
+    copy.scorecards.forEach(function (sc) {
+      sc.kpis.forEach(function (k) {
+        var seed = Demo.seedFor(sc.employee_id + k.kpi + k.kra);
+        var lower = k.direction === 'LOWER_IS_BETTER';
+        var target = lower ? 5 : (k.unit === 'CR' ? 1 + (seed % 900) / 100
+                                : k.unit === 'PERCENT' ? 90 + (seed % 10)
+                                : 2 + (seed % 12));
+        var ratio = 0.62 + ((seed >> 3) % 55) / 100;       /* 62% .. 117% of target */
+        var actual = lower ? Math.max(1, Math.round(target / ratio)) : Math.round(target * ratio * 100) / 100;
+        k.target = Math.round(target * 100) / 100;
+        k.actual = actual;
+        k.variance = Math.round((k.actual - k.target) * 100) / 100;
+        var ach = lower ? (k.target / k.actual) * 100 : (k.actual / k.target) * 100;
+        k.achievement = Math.round(Math.min(ach, 105) * 10) / 10;   /* same 105 cap as backend */
+        k.weighted_score = Math.round(k.weightage * (k.achievement / 100) * 1000) / 1000;
+        k.performance_level = k.achievement >= 100 ? 5 : k.achievement >= 90 ? 4
+                            : k.achievement >= 75 ? 3 : k.achievement >= 60 ? 2 : 1;
+        k.status = ['', 'Critical', 'At Risk', 'Near', 'Above Expectation', 'Exceeded'][k.performance_level];
+      });
+      var earned = 0, measured = 0;
+      sc.kpis.forEach(function (k) { earned += k.weighted_score; measured += k.weightage; });
+      sc.measured_weightage = measured;
+      sc.overall_score = measured ? Math.round(earned * 10) / 10 : null;
+    });
+    copy.months = copy.months && copy.months.length ? copy.months : ['2026-07', '2026-08'];
+    copy.month = copy.month || copy.months[copy.months.length - 1];
+    copy.isDemo = true;
+    return copy;
+  }
+};
+
+/* ============================== SELECTORS ================================
+   Every list a view needs, derived in one place so no component re-implements
+   a filter or a rollup. */
+var Sel = {
+  model: function () { return S.demo && S.model ? (S._demo || (S._demo = Demo.apply(S.model))) : S.model; },
+  teams: function () { var m = Sel.model(); return (m && m.teams) || []; },
+  team: function () { return Sel.teams().filter(function (t) { return t.team_id === S.team; })[0] || null; },
+  months: function () { var m = Sel.model(); return (m && m.months) || []; },
+  members: function () {
+    var m = Sel.model();
+    return ((m && m.scorecards) || []).filter(function (s) { return s.team_id === S.team; });
+  },
+  /* Filters compose: employee narrows the people, KRA and KPI narrow the rows
+     inside whoever remains. */
+  visibleMembers: function () {
+    var list = Sel.members();
+    if (S.employee) list = list.filter(function (m) { return m.employee_id === S.employee; });
+    return list;
+  },
+  kpisOf: function (member) {
+    return member.kpis.filter(function (k) {
+      return (!S.kra || k.kra === S.kra) && (!S.kpi || k.kpi === S.kpi);
+    });
+  },
+  allKpis: function () {
+    var out = [];
+    Sel.visibleMembers().forEach(function (m) { out = out.concat(Sel.kpisOf(m)); });
+    return out;
+  },
+  kraNames: function () {
+    var seen = {}, out = [];
+    Sel.members().forEach(function (m) { m.kpis.forEach(function (k) { if (!seen[k.kra]) { seen[k.kra] = 1; out.push(k.kra); } }); });
+    return out.sort();
+  },
+  kpiNames: function () {
+    var seen = {}, out = [];
+    Sel.members().forEach(function (m) {
+      m.kpis.forEach(function (k) { if ((!S.kra || k.kra === S.kra) && !seen[k.kpi]) { seen[k.kpi] = 1; out.push(k.kpi); } });
+    });
+    return out.sort();
+  },
+  /* Rollup: a KRA line is the sum of its KPIs' backend weighted scores over
+     their combined weightage. Presentation only - it re-expresses backend
+     values at a coarser grain and originates nothing. */
+  rollup: function (kpis) {
+    var by = {}, order = [];
+    kpis.forEach(function (k) {
+      if (!by[k.kra]) { by[k.kra] = { kra: k.kra, perspective: k.perspective, kpis: [], wt: 0, earned: 0, measured: 0 }; order.push(k.kra); }
+      var g = by[k.kra];
+      g.kpis.push(k); g.wt += Number(k.weightage) || 0;
+      if (k.weighted_score != null) { g.earned += k.weighted_score; g.measured += Number(k.weightage) || 0; }
+    });
+    return order.map(function (n) {
+      var g = by[n];
+      g.achievement = g.measured > 0 ? Math.round(g.earned / g.measured * 1000) / 10 : null;
+      g.score = g.measured > 0 ? Math.round(g.earned * 10) / 10 : null;
+      return g;
+    });
+  },
+  mean: function (vals) {
+    var v = vals.filter(function (x) { return x != null; });
+    if (!v.length) return null;
+    var s = 0; v.forEach(function (x) { s += x; });
+    return Math.round(s / v.length * 10) / 10;
+  },
+  /* Totals only exist where addition is meaningful. Two conditions must hold:
+     the filtered KPIs share one unit, AND that unit is additive. Crores and
+     tonnes and counts add up; percentages and days do not - summing a 95% TAT
+     with a 90% TAT to get 185% is arithmetic on nonsense, and a DSO of 5 days
+     plus 3 days is not an 8-day team. Where it does not hold the card shows a
+     dash rather than a confident wrong number. */
+  ADDITIVE: { CR: 1, MT: 1, COUNT: 1 },
+  totals: function (kpis) {
+    var units = {}; kpis.forEach(function (k) { if (k.target != null) units[k.unit] = 1; });
+    var u = Object.keys(units);
+    if (u.length !== 1 || !Sel.ADDITIVE[u[0]]) return null;
+    var t = 0, a = 0, anyA = false;
+    kpis.forEach(function (k) {
+      if (k.target != null) t += Number(k.target);
+      if (k.actual != null) { a += Number(k.actual); anyA = true; }
+    });
+    return { unit: u[0], target: t, actual: anyA ? a : null };
+  }
+};
+
+/* ============================== FORMAT =================================== */
+function fmt(v, unit) {
+  var n = n1(v); if (n == null) return '—';
   switch (unit) {
-    case 'CR':      return '₹' + n + ' Cr';
-    case 'MT':      return n + ' MT';
-    case 'DAYS':    return n + (Math.abs(n) === 1 ? ' day' : ' days');
+    case 'CR': return '₹' + n + ' Cr';
+    case 'MT': return n + ' MT';
+    case 'DAYS': return n + (Math.abs(n) === 1 ? ' day' : ' days');
     case 'PERCENT': return n + '%';
-    default:        return String(n);
+    default: return String(n);
   }
 }
 function targetCell(k) { return k.target == null ? '<span class="quiet">Target not defined</span>' : fmt(k.target, k.unit); }
 function actualCell(k) { return k.actual == null ? '<span class="quiet">Actual pending</span>' : fmt(k.actual, k.unit); }
-
-/* --------------------------------------------------------------- DATA --- */
-function load() {
-  render(skeleton());
-  if (!(window.google && google.script && google.script.run)) {
-    return render(state('Not connected',
-      'Open this page through the deployed Apps Script web app URL to load data.'));
-  }
-  google.script.run
-    .withSuccessHandler(function (m) {
-      if (!m || !m.ok) return render(state('Could not load', (m && m.error) || 'The backend returned no data.'));
-      APP.model = m;
-      if (!APP.teamId && m.teams && m.teams.length) APP.teamId = m.teams[0].team_id;
-      draw();
-    })
-    .withFailureHandler(function (e) {
-      render(state('Could not load', (e && e.message) || 'The backend could not be reached.'));
-    })
-    .apiMasterModel(null, APP.month);
-}
-
-/* ------------------------------------------------------------ HELPERS --- */
-function teamById(id) {
-  return (APP.model.teams || []).filter(function (t) { return t.team_id === id; })[0] || null;
-}
-function membersOf(id) {
-  return (APP.model.scorecards || []).filter(function (s) { return s.team_id === id; });
-}
 function statusClass(s) {
   if (!s || s === 'Awaiting data') return 'none';
   if (s === 'Exceeded' || s === 'Above Expectation') return 'good';
@@ -251,259 +401,326 @@ function statusClass(s) {
 }
 function scoreStatus(v) {
   if (v == null) return 'Awaiting data';
-  if (v >= 100) return 'Exceeded';
-  if (v >= 90) return 'Above Expectation';
-  if (v >= 75) return 'Near';
-  if (v >= 60) return 'At Risk';
-  return 'Critical';
-}
-/* Members with no actuals are not counted as zero - that reports missing data
-   as failure. They are excluded and the coverage is stated instead. */
-function mean(list) {
-  var v = list.filter(function (x) { return x != null; });
-  if (!v.length) return null;
-  var s = 0; v.forEach(function (x) { s += x; });
-  return Math.round(s / v.length * 10) / 10;
+  return v >= 100 ? 'Exceeded' : v >= 90 ? 'Above Expectation' : v >= 75 ? 'Near' : v >= 60 ? 'At Risk' : 'Critical';
 }
 function plural(n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); }
-
-/* Rollup: a KRA line is the weighted-score sum of its KPIs over their combined
-   weightage. This is presentation only - it re-expresses backend values at a
-   coarser grain and invents nothing. */
-function rollupByKra(kpis) {
-  var by = {}, order = [];
-  kpis.forEach(function (k) {
-    if (!by[k.kra]) { by[k.kra] = { kra: k.kra, perspective: k.perspective, kpis: [], wt: 0, earned: 0, measured: 0 }; order.push(k.kra); }
-    var g = by[k.kra];
-    g.kpis.push(k); g.wt += Number(k.weightage) || 0;
-    if (k.weighted_score != null) { g.earned += k.weighted_score; g.measured += Number(k.weightage) || 0; }
-  });
-  return order.map(function (n) {
-    var g = by[n];
-    g.achievement = g.measured > 0 ? Math.round(g.earned / g.measured * 1000) / 10 : null;
-    g.score = g.measured > 0 ? Math.round(g.earned * 10) / 10 : null;
-    return g;
-  });
-}
-
-/* --------------------------------------------------------------- VIEWS -- */
-function draw() {
-  drawTeams(); drawMonths();
-  render(APP.empId ? individual() : team());
-}
-
-function drawTeams() {
-  $('#teams').innerHTML = (APP.model.teams || []).map(function (t) {
-    return '<button class="tb' + (t.team_id === APP.teamId ? ' on' : '') +
-      '" data-team="' + esc(t.team_id) + '">' + esc(t.team_name) +
-      '<span class="n">' + membersOf(t.team_id).length + '</span></button>';
-  }).join('');
-}
-
-/* Months come from the backend. When no period data exists yet the control
-   says so rather than offering invented dates. */
-function drawMonths() {
-  var months = APP.model.months || [];
-  var sel = $('#month');
-  if (!months.length) {
-    sel.innerHTML = '<option>No period loaded</option>';
-    sel.disabled = true; return;
-  }
-  sel.disabled = false;
-  sel.innerHTML = months.map(function (m) {
-    return '<option value="' + esc(m) + '"' + (m === APP.month ? ' selected' : '') + '>' + esc(monthLabel(m)) + '</option>';
-  }).join('');
-}
 function monthLabel(m) {
-  var M = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July',
-           'August', 'September', 'October', 'November', 'December'];
+  var M = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   var x = /^(\d{4})-(\d{2})$/.exec(m || '');
   return x ? (M[+x[2]] || x[2]) + ' ' + x[1] : (m || '');
 }
 
-function team() {
-  var t = teamById(APP.teamId);
-  if (!t) return state('No team selected', 'Choose a team above.');
-  var members = membersOf(APP.teamId);
-  var scored = members.filter(function (m) { return m.overall_score != null; });
-  var score = mean(members.map(function (m) { return m.overall_score; }));
-
-  /* Team KRA rollup across every member's own assignment - not an assumed
-     team-wide KPI list, because the teams do not have one. */
-  var all = [];
-  members.forEach(function (m) { all = all.concat(m.kpis); });
-  var kras = rollupByKra(all);
-  var achievement = mean(all.map(function (k) { return k.achievement; }));
-
-  var head = '<h1>' + esc(t.team_name) + '</h1><div class="sub">Team performance · ' +
-    esc(APP.month ? monthLabel(APP.month) : 'no period loaded') + '</div>';
-
-  var stats = '<div class="stats" style="margin-top:var(--s5)">' +
-    stat('Overall score', score == null ? '—' : show(score) + '<small> / 100</small>',
-      scored.length + ' of ' + members.length + ' measured') +
-    stat('KPI achievement', achievement == null ? '—' : show(achievement) + '%',
-      'mean across assigned KPIs') +
-    stat('Members', String(members.length), plural(distinctSets(members), 'distinct KPI set')) +
-    stat('KPIs assigned', String(all.length), plural(kras.length, 'KRA')) +
-    '</div>';
-
-  var kraRows = kras.map(function (g) {
-    var open = APP.open[g.kra] !== false;
-    var head = '<tr class="grp" data-kra="' + esc(g.kra) + '"><td colspan="7">' +
-      '<span class="cv">' + (open ? '▾' : '▸') + '</span>' + esc(g.kra) +
-      '<span class="rs">' + (g.achievement == null ? '—' : show(g.achievement) + '%') + '</span></td></tr>';
-    if (!open) return head;
-    return head + g.kpis.map(function (k) {
-      return '<tr>' +
-        '<td class="kpi nm">' + esc(k.kpi) + '<small>' + esc(k.perspective || '') + '</small></td>' +
-        '<td class="num quiet">' + show(k.weightage) + '%</td>' +
-        '<td class="num quiet">' + targetCell(k) + '</td>' +
-        '<td class="num">' + actualCell(k) + '</td>' +
-        '<td class="num strong">' + (k.achievement == null ? '—' : show(k.achievement) + '%') + '</td>' +
-        '<td>' + barFor(k.achievement) + '</td>' +
-        '<td class="num">' + show(k.weighted_score) + '</td></tr>';
-    }).join('');
-  }).join('');
-
-  var kraTable = '<div class="sect">KRA / KPI performance<span class="r">weightage · target · actual · achievement · score</span></div>' +
-    '<div class="panel"><div class="tw"><table><thead><tr>' +
-    '<th>KRA / KPI</th><th class="num">Weight</th><th class="num">Target</th>' +
-    '<th class="num">Actual</th><th class="num">Achievement</th><th></th><th class="num">Score</th>' +
-    '</tr></thead><tbody>' +
-    (kraRows || '<tr><td colspan="7" class="empty">No KPIs assigned for this team.</td></tr>') +
-    '</tbody></table></div></div>';
-
-  var peopleRows = members.slice().sort(function (a, b) {
-    return (b.overall_score == null ? -1 : b.overall_score) - (a.overall_score == null ? -1 : a.overall_score);
-  }).map(function (m) {
-    return '<tr class="click" data-emp="' + esc(m.employee_id) + '">' +
-      '<td class="nm">' + esc(m.employee_name) + '<small>' + esc(m.designation || '') +
-      (m.region ? ' · ' + esc(m.region) : '') + '</small></td>' +
-      '<td class="num quiet">' + m.kpis.length + '</td>' +
-      '<td class="num strong">' + show(m.overall_score) + '</td>' +
-      '<td>' + barFor(m.overall_score) + '</td>' +
-      '<td>' + pill(scoreStatus(m.overall_score)) + '</td></tr>';
-  }).join('');
-
-  var peopleTable = '<div class="sect">Individual performance<span class="r">score / 100</span></div>' +
-    '<div class="panel"><div class="tw"><table><thead><tr>' +
-    '<th>Employee</th><th class="num">KPIs</th><th class="num">Score</th><th></th><th>Status</th>' +
-    '</tr></thead><tbody>' +
-    (peopleRows || '<tr><td colspan="5" class="empty">No members mapped to this team.</td></tr>') +
-    '</tbody></table></div></div>';
-
-  var unmapped = members.filter(function (m) { return !m.kpis.length; });
-  var note = unmapped.length
-    ? '<div class="note">' + plural(unmapped.length, 'member') + ' without a KPI set: ' +
-      unmapped.map(function (m) { return esc(m.employee_name); }).join(', ') +
-      ' — in the roster, but not yet assigned in the master.</div>' : '';
-
-  return head + stats + kraTable + peopleTable + note;
+/* ============================== COMPONENTS =============================== */
+function Stat(label, value, sub) {
+  return '<div class="stat"><div class="l">' + esc(label) + '</div><div class="v">' + value + '</div>' +
+    (sub ? '<div class="s">' + esc(sub) + '</div>' : '') + '</div>';
 }
-
-function individual() {
-  var m = (APP.model.scorecards || []).filter(function (s) { return s.employee_id === APP.empId; })[0];
-  if (!m) return state('Not found', 'That employee is not in the current model.');
-  var t = teamById(m.team_id);
-  var kras = rollupByKra(m.kpis);
-
-  var crumb = '<div class="crumb"><button data-back="1">' + esc(t ? t.team_name : 'Team') +
-    '</button><span>›</span><span>' + esc(m.employee_name) + '</span></div>';
-  var head = '<h1>' + esc(m.employee_name) + '</h1><div class="sub">' +
-    esc([m.designation, t ? t.team_name : '', m.region].filter(Boolean).join(' · ')) + '</div>';
-
-  var pending = m.kpis.filter(function (k) { return k.achievement == null; }).length;
-  var stats = '<div class="stats" style="margin-top:var(--s5)">' +
-    stat('Overall score', show(m.overall_score) + (m.overall_score == null ? '' : '<small> / 100</small>'),
-      m.overall_score == null ? 'Awaiting targets and actuals'
-        : show(m.measured_weightage) + '% of weightage measured') +
-    stat('KPIs', String(m.kpis.length), plural(kras.length, 'KRA')) +
-    stat('Weightage', show(m.assigned_weightage) + '%', 'assigned in the master') +
-    stat('Awaiting data', String(pending), 'excluded from the score') +
-    '</div>';
-
-  var rows = kras.map(function (g) {
-    var open = APP.open[g.kra] !== false;
-    var h = '<tr class="grp" data-kra="' + esc(g.kra) + '"><td colspan="7">' +
+function Pill(s) { return '<span class="pill ' + statusClass(s) + '">' + esc(s || 'Awaiting data') + '</span>'; }
+/* The bar carries the KPI's own threshold ladder as ticks, so a value is read
+   against the bands that KPI is actually judged on rather than an assumed 100. */
+function Bar(k, value) {
+  if (value == null) return '<div class="bw"><div class="bar"></div><span class="p">—</span></div>';
+  var w = Math.max(0, Math.min(100, value / 105 * 100));
+  var cls = value >= 90 ? 'good' : value >= 75 ? 'warn' : 'bad';
+  var ticks = '';
+  if (k && k.thresholds && k.thresholds.length && k.direction !== 'LOWER_IS_BETTER' && k.unit === 'PERCENT') {
+    k.thresholds.forEach(function (t) {
+      var p = Math.max(0, Math.min(100, t.value / 105 * 100));
+      ticks += '<u style="left:' + p + '%"></u>';
+    });
+  }
+  return '<div class="bw"><div class="bar">' + ticks + '<i class="' + cls + '" style="width:' + w + '%"></i></div>' +
+    '<span class="p">' + show(value) + '%</span></div>';
+}
+function KpiRows(kpis, keyPrefix) {
+  var groups = Sel.rollup(kpis);
+  if (!groups.length) return '<tr><td colspan="7" class="empty">No KPIs match the current filters.</td></tr>';
+  return groups.map(function (g) {
+    var id = keyPrefix + '|' + g.kra;
+    var open = S.openKra[id] !== false;
+    var head = '<tr class="grp" data-kra-toggle="' + esc(id) + '"><td colspan="7">' +
       '<span class="cv">' + (open ? '▾' : '▸') + '</span>' + esc(g.kra) +
-      '<span class="rs">' + (g.achievement == null ? '—' : show(g.achievement) + '%') + '</span></td></tr>';
-    if (!open) return h;
-    return h + g.kpis.map(function (k) {
-      return '<tr>' +
+      '<span class="rs">' + (g.achievement == null ? 'Awaiting data' : show(g.achievement) + '%') + '</span></td></tr>';
+    if (!open) return head;
+    return head + g.kpis.map(function (k, i) {
+      return '<tr class="click" data-kpi="' + esc(k.__ownerId + '::' + k.kra + '::' + k.kpi) + '">' +
         '<td class="kpi nm">' + esc(k.kpi) + '<small>' + esc(k.perspective || '') +
         (k.direction === 'LOWER_IS_BETTER' ? ' · lower is better' : '') + '</small></td>' +
         '<td class="num quiet">' + show(k.weightage) + '%</td>' +
         '<td class="num quiet">' + targetCell(k) + '</td>' +
         '<td class="num">' + actualCell(k) + '</td>' +
         '<td class="num strong">' + (k.achievement == null ? '—' : show(k.achievement) + '%') + '</td>' +
-        '<td>' + barFor(k.achievement) + '</td>' +
+        '<td>' + Bar(k, k.achievement) + '</td>' +
         '<td class="num">' + show(k.weighted_score) + '</td></tr>';
     }).join('');
   }).join('');
+}
+function KpiTable(kpis, keyPrefix) {
+  return '<div class="panel"><div class="tw"><table><thead><tr>' +
+    '<th>KRA / KPI</th><th class="num">Weightage</th><th class="num">Target</th><th class="num">Actual</th>' +
+    '<th class="num">Achievement</th><th></th><th class="num">Score</th>' +
+    '</tr></thead><tbody>' + KpiRows(kpis, keyPrefix) + '</tbody></table></div></div>';
+}
 
-  var table = '<div class="sect">KRA / KPI<span class="r">only this employee\'s assignment</span></div>' +
+/* ============================== VIEWS ==================================== */
+function TeamView() {
+  var t = Sel.team();
+  if (!t) return State('No team selected', 'Choose a team above.');
+  var members = Sel.visibleMembers();
+  var kpis = Sel.allKpis();
+  /* tag each KPI with its owner so a row can open the right detail panel */
+  members.forEach(function (m) { m.kpis.forEach(function (k) { k.__ownerId = m.employee_id; }); });
+
+  var scores = members.map(function (m) { return m.overall_score; });
+  var score = Sel.mean(scores);
+  var ach = Sel.mean(kpis.map(function (k) { return k.achievement; }));
+  var tot = Sel.totals(kpis);
+  var scored = scores.filter(function (s) { return s != null; }).length;
+
+  var head = '<h1>' + esc(t.team_name) + '</h1><div class="sub">Team performance · ' +
+    esc(S.month ? monthLabel(S.month) : 'no period loaded') +
+    (t.team_lead ? ' · Lead ' + esc(t.team_lead) : '') +
+    (t.category_head ? ' · Category head ' + esc(t.category_head) : '') + '</div>';
+
+  var stats = '<div class="stats" style="margin-top:var(--s5)">' +
+    Stat('Overall score', score == null ? '—' : show(score) + '<small> / 100</small>',
+      scored + ' of ' + members.length + ' measured') +
+    Stat('KPI achievement', ach == null ? '—' : show(ach) + '%', 'mean across ' + plural(kpis.length, 'KPI')) +
+    Stat('Total target', tot ? fmt(tot.target, tot.unit) : '—',
+      tot ? 'summed across ' + plural(kpis.length, 'KPI') : 'not summable for this mix of KPIs') +
+    Stat('Total actual', tot && tot.actual != null ? fmt(tot.actual, tot.unit) : '—',
+      tot ? (tot.actual == null ? 'Actual pending' : 'summed across ' + plural(kpis.length, 'KPI'))
+          : 'not summable for this mix of KPIs') +
+    '</div>';
+
+  var groups = Sel.rollup(kpis);
+  var kraSection = '<div class="sect">KRA performance<span class="r">weighted score over assigned weightage</span></div>' +
+    (groups.length
+      ? '<div class="kras">' + groups.map(function (g) {
+          return '<div class="kra"><div class="k">' + esc(g.kra) +
+            '<small>' + esc(g.perspective || '') + ' · ' + plural(g.kpis.length, 'KPI') + ' · ' + show(g.wt) + '%</small></div>' +
+            Bar(null, g.achievement) + '<div class="v">' + (g.achievement == null ? '—' : show(g.achievement) + '%') + '</div></div>';
+        }).join('') + '</div>'
+      : '<div class="panel"><div class="empty">No KRAs match the current filters.</div></div>');
+
+  var kpiSection = '<div class="sect">KPI performance<span class="r">click a KPI for detail</span></div>' + KpiTable(kpis, 'team');
+
+  var rows = members.slice().sort(function (a, b) {
+    return (b.overall_score == null ? -1 : b.overall_score) - (a.overall_score == null ? -1 : a.overall_score);
+  }).map(function (m) {
+    var mk = Sel.kpisOf(m);
+    var ma = Sel.mean(mk.map(function (k) { return k.achievement; }));
+    return '<tr class="click" data-emp="' + esc(m.employee_id) + '">' +
+      '<td class="nm">' + esc(m.employee_name) + '<small>' + esc(m.designation || '') + '</small></td>' +
+      '<td class="quiet">' + esc(m.region || '—') + '</td>' +
+      '<td class="num quiet">' + mk.length + '</td>' +
+      '<td class="num strong">' + show(m.overall_score) + '</td>' +
+      '<td>' + Bar(null, m.overall_score) + '</td>' +
+      '<td class="num quiet">' + (ma == null ? '—' : show(ma) + '%') + '</td>' +
+      '<td>' + Pill(scoreStatus(m.overall_score)) + '</td></tr>';
+  }).join('');
+
+  var people = '<div class="sect">Individual performance<span class="r">score / 100</span></div>' +
     '<div class="panel"><div class="tw"><table><thead><tr>' +
-    '<th>KRA / KPI</th><th class="num">Weight</th><th class="num">Target</th>' +
-    '<th class="num">Actual</th><th class="num">Achievement</th><th></th><th class="num">Score</th>' +
+    '<th>Employee</th><th>Region</th><th class="num">KPIs</th><th class="num">Score</th>' +
+    '<th></th><th class="num">Achievement</th><th>Status</th>' +
     '</tr></thead><tbody>' +
-    (rows || '<tr><td colspan="7" class="empty">No KPIs assigned in the master.</td></tr>') +
+    (rows || '<tr><td colspan="7" class="empty">No employees match the current filters.</td></tr>') +
     '</tbody></table></div></div>';
 
+  var unmapped = Sel.members().filter(function (m) { return !m.kpis.length; });
+  var note = unmapped.length
+    ? '<div class="note">' + plural(unmapped.length, 'employee') + ' without a KPI assignment: ' +
+      unmapped.map(function (m) { return esc(m.employee_name); }).join(', ') +
+      ' — present in the roster, not yet mapped in the master.</div>' : '';
+
+  return head + stats + kraSection + kpiSection + people + note;
+}
+
+function EmployeeView() {
+  var m = Sel.members().filter(function (x) { return x.employee_id === S.employee; })[0];
+  if (!m) return State('Employee not found', 'That employee is not part of the selected team.');
+  var t = Sel.team();
+  m.kpis.forEach(function (k) { k.__ownerId = m.employee_id; });
+  var kpis = Sel.kpisOf(m);
+  var groups = Sel.rollup(kpis);
+  var pending = kpis.filter(function (k) { return k.achievement == null; }).length;
+
+  var crumb = '<div class="crumb"><button data-back="1">' + esc(t ? t.team_name : 'Team') +
+    '</button><span>›</span><span>' + esc(m.employee_name) + '</span></div>';
+  var head = '<h1>' + esc(m.employee_name) + '</h1><div class="sub">' +
+    esc([m.designation, t ? t.team_name : '', m.region].filter(Boolean).join(' · ')) + '</div>';
+
+  var stats = '<div class="stats" style="margin-top:var(--s5)">' +
+    Stat('Overall score', m.overall_score == null ? '—' : show(m.overall_score) + '<small> / 100</small>',
+      m.overall_score == null ? 'Awaiting target and actual data' : show(m.measured_weightage) + '% of weightage measured') +
+    Stat('KPI achievement', (function () { var a = Sel.mean(kpis.map(function (k) { return k.achievement; })); return a == null ? '—' : show(a) + '%'; })(),
+      'mean across assigned KPIs') +
+    Stat('Assigned KPIs', String(kpis.length), plural(groups.length, 'KRA')) +
+    Stat('Assigned weightage', show(m.assigned_weightage) + '%', 'of a possible 100%') +
+    '</div>';
+
+  var table = '<div class="sect">KRA / KPI performance<span class="r">this employee\'s assignment only</span></div>' +
+    KpiTable(kpis, 'emp');
+
   var note = pending
-    ? '<div class="note">' + pending + ' of ' + m.kpis.length +
-      ' KPIs have no target or actual for this period, so they are excluded from the score rather than counted as zero. ' +
-      'The score therefore covers ' + show(m.measured_weightage) + '% of assigned weightage.</div>' : '';
+    ? '<div class="note">Performance will appear once target and actual data are available. ' +
+      pending + ' of ' + kpis.length + ' KPIs are still awaiting data and are excluded from the score rather than counted as zero.</div>' : '';
 
   return crumb + head + stats + table + note;
 }
 
-/* ---------------------------------------------------------- COMPONENTS -- */
-function stat(label, value, sub) {
-  return '<div class="stat"><div class="l">' + esc(label) + '</div><div class="v">' + value + '</div>' +
-    (sub ? '<div class="s">' + esc(sub) + '</div>' : '') + '</div>';
+/* Detail panel: what the KPI is, what it is judged against, and where the
+   number comes from. No backend identifiers are shown. */
+function renderDetail() {
+  var side = $('#side'), scrim = $('#scrim');
+  if (!S.detail) { side.classList.remove('on'); scrim.classList.remove('on'); side.innerHTML = ''; return; }
+  var k = S.detail;
+  var lad = '';
+  if (k.thresholds && k.thresholds.length) {
+    lad = '<div class="lad"><div class="t">Performance bands</div><ol>' +
+      k.thresholds.map(function (t) {
+        var hit = k.performance_level === t.level;
+        return '<li class="' + (hit ? 'hit' : '') + '"><b>' + fmt(t.value, k.unit) + '</b>' + esc(t.label || ('Level ' + t.level)) + '</li>';
+      }).join('') + '</ol></div>';
+  }
+  side.innerHTML =
+    '<div class="side-h"><div><h2>' + esc(k.kpi) + '</h2>' +
+      '<div class="sub" style="font-size:var(--fs-xs)">' + esc(k.kra) + (k.perspective ? ' · ' + esc(k.perspective) : '') + '</div></div>' +
+      '<button class="x" data-close="1" aria-label="Close">✕</button></div>' +
+    '<div class="side-b">' +
+      (k.goal_description ? '<div class="goal">' + esc(k.goal_description) + '</div>' : '') +
+      '<dl class="kv">' +
+        row('Weightage', show(k.weightage) + '%') +
+        row('Measurement', k.unit ? esc(k.unit.toLowerCase()) : '—') +
+        row('Direction', k.direction === 'LOWER_IS_BETTER' ? 'Lower is better' : 'Higher is better') +
+        row('Target', k.target == null ? 'Target not defined' : fmt(k.target, k.unit)) +
+        row('Actual', k.actual == null ? 'Actual pending' : fmt(k.actual, k.unit)) +
+        row('Variance', k.variance == null ? '—' : (k.variance > 0 ? '+' : '') + fmt(k.variance, k.unit)) +
+        row('Achievement', k.achievement == null ? '—' : show(k.achievement) + '%') +
+        row('Performance level', k.performance_level == null ? '—' : 'Level ' + k.performance_level) +
+        row('Weighted score', k.weighted_score == null ? '—' : show(k.weighted_score) + ' / ' + show(k.weightage)) +
+        (k.source_of_tracking ? row('Source', esc(k.source_of_tracking)) : '') +
+      '</dl>' + lad +
+      (k.achievement == null
+        ? '<div class="note">Performance will appear once target and actual data are available.</div>' : '') +
+    '</div>';
+  side.classList.add('on'); scrim.classList.add('on');
 }
-function pill(s) { return '<span class="pill ' + statusClass(s) + '">' + esc(s || 'Awaiting data') + '</span>'; }
-function barFor(v) {
-  if (v == null) return '<div class="barwrap"><div class="bar"></div><span class="p">—</span></div>';
-  var w = Math.max(0, Math.min(100, v));
-  var cls = v >= 90 ? 'good' : v >= 75 ? 'warn' : 'bad';
-  return '<div class="barwrap"><div class="bar"><i class="' + cls + '" style="width:' + w + '%"></i></div>' +
-    '<span class="p">' + show(v) + '%</span></div>';
-}
-function distinctSets(members) {
-  var seen = {};
-  members.forEach(function (m) {
-    if (!m.kpis.length) return;
-    seen[m.kpis.map(function (k) { return k.kpi + ':' + k.weightage; }).sort().join('|')] = 1;
-  });
-  return Object.keys(seen).length;
-}
-function state(title, body) {
+function row(k, v) { return '<dt>' + esc(k) + '</dt><dd>' + v + '</dd>'; }
+
+function State(title, body) {
   return '<div class="state"><div><h2>' + esc(title) + '</h2><p>' + esc(body) + '</p>' +
     '<button class="btn" data-retry="1">Try again</button></div></div>';
 }
-function skeleton() {
-  return '<div class="skl" style="height:32px;width:200px"></div>' +
+function Skeleton() {
+  return '<div class="skl" style="height:30px;width:190px"></div>' +
     '<div class="stats" style="margin-top:var(--s5)">' +
-    '<div class="skl" style="height:92px"></div><div class="skl" style="height:92px"></div>' +
-    '<div class="skl" style="height:92px"></div><div class="skl" style="height:92px"></div></div>' +
-    '<div class="skl" style="height:260px;margin-top:var(--s6)"></div>';
+    Array(4).join().split(',').map(function () { return '<div class="skl" style="height:88px"></div>'; }).join('') +
+    '</div><div class="skl" style="height:220px;margin-top:var(--s6)"></div>' +
+    '<div class="skl" style="height:240px;margin-top:var(--s5)"></div>';
 }
-function render(h) { $('#view').innerHTML = h; }
 
-/* ---------------------------------------------------------------- WIRE -- */
+/* ============================== CHROME =================================== */
+function renderChrome() {
+  $('#teams').innerHTML = Sel.teams().map(function (t) {
+    var n = ((Sel.model() || {}).scorecards || []).filter(function (s) { return s.team_id === t.team_id; }).length;
+    return '<button class="tb' + (t.team_id === S.team ? ' on' : '') + '" data-team="' + esc(t.team_id) + '">' +
+      esc(t.team_name) + '<span class="n">' + n + '</span></button>';
+  }).join('');
+
+  var months = Sel.months();
+  var people = Sel.members();
+  var filters =
+    field('Month', 'f-month', months.length
+      ? months.map(function (m) { return opt(m, monthLabel(m), m === S.month); }).join('')
+      : '<option>No period loaded</option>', !months.length) +
+    field('Employee', 'f-emp',
+      opt('', 'All employees', !S.employee) +
+      people.map(function (p) { return opt(p.employee_id, p.employee_name, p.employee_id === S.employee); }).join('')) +
+    field('KRA', 'f-kra',
+      opt('', 'All KRAs', !S.kra) +
+      Sel.kraNames().map(function (k) { return opt(k, k, k === S.kra); }).join('')) +
+    field('KPI', 'f-kpi',
+      opt('', 'All KPIs', !S.kpi) +
+      Sel.kpiNames().map(function (k) { return opt(k, k, k === S.kpi); }).join('')) +
+    ((S.employee || S.kra || S.kpi) ? '<button class="clr" data-clear="1">Clear filters</button>' : '');
+  $('#filters').innerHTML = filters;
+
+  $('#demo').innerHTML = S.demo
+    ? '<div class="demo"><div class="in"><span>Showing placeholder performance values for demonstration. ' +
+      'Team, employee, KRA, KPI and weightage data is real; targets and actuals are not.</span>' +
+      '<button data-demo="off">Show real data</button></div></div>'
+    : (hasNoPerformance()
+      ? '<div class="demo"><div class="in"><span>No targets or actuals loaded yet, so performance is empty.</span>' +
+        '<button data-demo="on">Preview with sample values</button></div></div>' : '');
+}
+function field(label, id, options, disabled) {
+  return '<span class="fl">' + esc(label) +
+    '<select class="sel" id="' + id + '"' + (disabled ? ' disabled' : '') + '>' + options + '</select></span>';
+}
+function opt(v, label, sel) { return '<option value="' + esc(v) + '"' + (sel ? ' selected' : '') + '>' + esc(label) + '</option>'; }
+function hasNoPerformance() {
+  var m = S.model; if (!m) return false;
+  return !(m.scorecards || []).some(function (s) { return s.kpis.some(function (k) { return k.achievement != null; }); });
+}
+
+/* ============================== RENDER =================================== */
+function render() {
+  if (S.loading) { $('#view').innerHTML = Skeleton(); return; }
+  if (S.error) { $('#view').innerHTML = State('Could not load the dashboard', S.error); return; }
+  renderChrome();
+  $('#view').innerHTML = S.employee ? EmployeeView() : TeamView();
+  renderDetail();
+}
+
+/* ============================== ACTIONS ================================== */
+function load() {
+  S.loading = true; S.error = null; S._demo = null; render();
+  Api.fetchModel(S.month, function (m) {
+    S.loading = false;
+    if (!m || !m.ok) { S.error = (m && m.error) || 'The backend returned no data.'; return render(); }
+    S.model = m; S._demo = null;
+    if (!S.team && m.teams && m.teams.length) S.team = m.teams[0].team_id;
+    if (!S.month) S.month = (Sel.months() || [])[Sel.months().length - 1] || null;
+    render();
+  }, function (e) {
+    S.loading = false;
+    S.error = (e && e.message) || 'The backend could not be reached.';
+    render();
+  });
+}
+
 document.addEventListener('click', function (e) {
   var t = e.target.closest('[data-team]');
-  if (t) { APP.teamId = t.dataset.team; APP.empId = null; draw(); scrollTo(0, 0); return; }
+  if (t) { S.team = t.dataset.team; S.employee = null; S.kra = ''; S.kpi = ''; S.detail = null; render(); scrollTo(0, 0); return; }
   var emp = e.target.closest('[data-emp]');
-  if (emp) { APP.empId = emp.dataset.emp; draw(); scrollTo(0, 0); return; }
-  if (e.target.closest('[data-back]')) { APP.empId = null; draw(); scrollTo(0, 0); return; }
-  var kra = e.target.closest('[data-kra]');
-  if (kra) { var k = kra.dataset.kra; APP.open[k] = APP.open[k] === false; draw(); return; }
+  if (emp) { S.employee = emp.dataset.emp; S.detail = null; render(); scrollTo(0, 0); return; }
+  if (e.target.closest('[data-back]')) { S.employee = null; S.detail = null; render(); scrollTo(0, 0); return; }
+  var g = e.target.closest('[data-kra-toggle]');
+  if (g) { var id = g.dataset.kraToggle; S.openKra[id] = S.openKra[id] === false; render(); return; }
+  var k = e.target.closest('[data-kpi]');
+  if (k) {
+    var parts = k.dataset.kpi.split('::');
+    var owner = Sel.members().filter(function (m) { return m.employee_id === parts[0]; })[0];
+    S.detail = owner ? owner.kpis.filter(function (x) { return x.kra === parts[1] && x.kpi === parts[2]; })[0] : null;
+    renderDetail(); return;
+  }
+  if (e.target.closest('[data-close]') || e.target.id === 'scrim') { S.detail = null; renderDetail(); return; }
+  if (e.target.closest('[data-clear]')) { S.employee = null; S.kra = ''; S.kpi = ''; render(); return; }
+  var d = e.target.closest('[data-demo]');
+  if (d) { S.demo = d.dataset.demo === 'on'; S._demo = null; S.detail = null; render(); return; }
   if (e.target.closest('[data-retry]')) { load(); }
 });
 document.addEventListener('change', function (e) {
-  if (e.target.id === 'month') { APP.month = e.target.value; load(); }
+  var id = e.target.id;
+  if (id === 'f-month') { S.month = e.target.value; S.detail = null; load(); return; }
+  if (id === 'f-emp') { S.employee = e.target.value || null; S.detail = null; render(); return; }
+  if (id === 'f-kra') { S.kra = e.target.value; S.kpi = ''; S.detail = null; render(); return; }
+  if (id === 'f-kpi') { S.kpi = e.target.value; S.detail = null; render(); return; }
+});
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape' && S.detail) { S.detail = null; renderDetail(); }
 });
 
 load();

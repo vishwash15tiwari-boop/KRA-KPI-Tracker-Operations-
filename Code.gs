@@ -418,6 +418,19 @@ function apiMasterModel(teamId, month) {
   var kraById = {}; kras.forEach(function (k) { kraById[k.kra_id] = k; });
   var kpiById = {}; kpis.forEach(function (k) { kpiById[k.kpi_id] = k; });
   var tgt = mRead_(M_TAB.TGT), act = mRead_(M_TAB.ACT);
+  /* Thresholds travel with the KPI so the UI can draw a band ladder without
+   * knowing what any of the numbers mean. */
+  var thrAll = mRead_(M_TAB.THR), thrByKpi = {};
+  thrAll.forEach(function (t) {
+    if (String(t.threshold_not_defined).toUpperCase() === 'TRUE') return;
+    (thrByKpi[t.kpi_id] = thrByKpi[t.kpi_id] || []).push(
+      { level: Number(t.level), value: Number(t.threshold_value), label: t.label, op: t.comparison_operator });
+  });
+  Object.keys(thrByKpi).forEach(function (k) {
+    thrByKpi[k].sort(function (a, b) { return a.level - b.level; });
+  });
+  function thrOf(kpiId) { return thrByKpi[kpiId] || []; }
+
   function find(list, empId, kpiId) {
     var h = list.filter(function (r) { return r.employee_id === empId && r.kpi_id === kpiId && (!month || r.month === month); })[0];
     return h || null;
@@ -432,11 +445,18 @@ function apiMasterModel(teamId, month) {
           var tv = t ? Number(t.target_value) : null, av = a ? Number(a.actual_value) : null;
           var ach = (tv == null || av == null) ? null : achievementPct_(tv, av, kpi.direction);
           var ws = weightedScore_(m.weightage, ach);
-          return { kpi_id: m.kpi_id, perspective: kra.perspective || '', kra: kra.kra_name || '',
+          var lvl = ach == null ? null : (ach >= 100 ? 5 : ach >= 90 ? 4 : ach >= 75 ? 3 : ach >= 60 ? 2 : 1);
+          return { kpi_id: m.kpi_id, kra_id: kpi.kra_id || '',
+                   perspective: kra.perspective || '', kra: kra.kra_name || '',
                    kpi: kpi.kpi_name || '', weightage: Number(m.weightage),
+                   goal_description: kpi.goal_description || '',
+                   source_of_tracking: kpi.source_of_tracking || '',
                    unit: kpi.measurement_type || '', direction: kpi.direction || '',
-                   target: tv, actual: av, achievement: ach, weighted_score: ws,
-                   status: ach == null ? 'Awaiting data' : statusFor_(ach, ach >= 100 ? 5 : ach >= 90 ? 4 : ach >= 75 ? 3 : ach >= 60 ? 2 : 1) };
+                   thresholds: thrOf(m.kpi_id),
+                   target: tv, actual: av,
+                   variance: (tv == null || av == null) ? null : Math.round((av - tv) * 1000) / 1000,
+                   achievement: ach, weighted_score: ws, performance_level: lvl,
+                   status: ach == null ? 'Awaiting data' : statusFor_(ach, lvl) };
         });
       var earned = 0, measured = 0;
       rows.forEach(function (r) { if (r.weighted_score != null) { earned += r.weighted_score; measured += r.weightage; } });
