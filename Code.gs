@@ -496,7 +496,7 @@ function mRead_(name) {
  */
 function apiMasterModel(teamId, month) {
   try {
-    return buildModel_(teamId, month);
+    return jsonSafe_(buildModel_(teamId, month));
   } catch (e) {
     return { ok: false,
              error: String(e && e.message || e),
@@ -562,9 +562,10 @@ function buildModel_(teamId, month) {
         .map(function (m) {
           var kpi = kpiById[m.kpi_id] || {}, kra = kraById[kpi.kra_id] || {};
           var t = find(tgt, e.employee_id, m.kpi_id), a = find(act, e.employee_id, m.kpi_id);
-          var tv = t ? Number(t.target_value) : null, av = a ? Number(a.actual_value) : null;
+          var tv = t ? numOrNull_(t.target_value) : null, av = a ? numOrNull_(a.actual_value) : null;
           var ach = (tv == null || av == null) ? null : achievementPct_(tv, av, kpi.direction);
-          var ws = weightedScore_(m.weightage, ach);
+          var wt = numOrNull_(m.weightage);
+          var ws = wt == null ? null : weightedScore_(wt, ach);
           var lvl = ach == null ? null : (ach >= 100 ? 5 : ach >= 90 ? 4 : ach >= 75 ? 3 : ach >= 60 ? 2 : 1);
           /* Deliberately lean. Every field here is read by the UI; nothing is
            * sent "in case". Thresholds travel as bare numbers rather than
@@ -574,7 +575,7 @@ function buildModel_(teamId, month) {
                    perspective: String(kra.perspective || ''),
                    kra: String(kra.kra_name || ''),
                    kpi: String(kpi.kpi_name || ''),
-                   weightage: Number(m.weightage) || 0,
+                   weightage: wt == null ? 0 : wt,
                    goal: String(kpi.goal_description || ''),
                    unit: String(kpi.measurement_type || ''),
                    direction: String(kpi.direction || ''),
@@ -584,7 +585,10 @@ function buildModel_(teamId, month) {
                    status: ach == null ? 'Awaiting data' : statusFor_(ach, lvl) };
         });
       var earned = 0, measured = 0;
-      rows.forEach(function (r) { if (r.weighted_score != null) { earned += r.weighted_score; measured += r.weightage; } });
+      rows.forEach(function (r) {
+        if (r.weighted_score == null || !isFinite(r.weighted_score)) return;
+        earned += r.weighted_score; measured += Number(r.weightage) || 0;
+      });
       return { employee_id: e.employee_id, employee_name: e.employee_name, team_id: e.team_id,
                designation: e.designation, region: e.region, kpis: rows,
                assigned_weightage: rows.reduce(function (s, r) { return s + r.weightage; }, 0),
@@ -690,4 +694,43 @@ function statusFor_(achPct, level) {
   if (level >= 3) return 'Near';
   if (level >= 2) return 'At Risk';
   return 'Critical';
+}
+
+/* ---------------------------------------------------------------------------
+ * Why these two exist: google.script.run cannot serialize NaN or Infinity. A
+ * single one anywhere in the payload does not throw and does not arrive as
+ * null in that field - it makes the WHOLE return arrive as null, which the UI
+ * can only report as "the server function returned nothing". A sheet cell
+ * holding "-", "TBD" or "40%" was enough to blank the entire dashboard.
+ *
+ * numOrNull_  stops NaN at the point a cell is read.
+ * jsonSafe_   is the backstop: nothing leaves this file non-serializable,
+ *             whatever a future field does.
+ * ------------------------------------------------------------------------ */
+function numOrNull_(v) {
+  if (v === null || v === undefined || v === '') return null;
+  var n = typeof v === 'number' ? v : Number(String(v).replace(/[,\s%]/g, ''));
+  return isFinite(n) ? n : null;
+}
+
+function jsonSafe_(o) {
+  if (o === null || o === undefined) return null;
+  var t = typeof o;
+  if (t === 'number') return isFinite(o) ? o : null;
+  if (t === 'string' || t === 'boolean') return o;
+  if (o instanceof Date) return o.toISOString();
+  if (Object.prototype.toString.call(o) === '[object Array]') {
+    var a = [];
+    for (var i = 0; i < o.length; i++) a.push(jsonSafe_(o[i]));
+    return a;
+  }
+  if (t === 'object') {
+    var out = {};
+    for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) {
+      var v = jsonSafe_(o[k]);
+      if (v !== undefined) out[k] = v;
+    }
+    return out;
+  }
+  return null;                                  /* functions and the like */
 }

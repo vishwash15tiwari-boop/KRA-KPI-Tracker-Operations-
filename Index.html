@@ -233,6 +233,14 @@ var Api = {
   fetch: function (month, done, fail) {
     if (!Api.live()) return fail({ message: 'Open this page through the deployed Apps Script URL to load live data.' });
     google.script.run.withSuccessHandler(done).withFailureHandler(fail).apiMasterModel(null, month || null);
+  },
+  /* If the model comes back empty we need to know which failure it was, so the
+   * message can name a cause instead of guessing. apiPing carries almost no
+   * payload: if it answers, the deployment and permissions are fine and the
+   * problem was the model's data; if it does not, the deployment is stale. */
+  ping: function (done, fail) {
+    if (!Api.live()) return fail({ message: 'Not running inside the deployed web app.' });
+    google.script.run.withSuccessHandler(done).withFailureHandler(fail).apiPing();
   }
 };
 
@@ -579,7 +587,16 @@ function load() {
      * result cannot be serialised, and the two look identical from here - so
      * say which case this is rather than "no data". */
     if (!m) {
-      S.error = 'The server function returned nothing. This usually means the deployment is serving an older version of the code — in the Apps Script editor use Deploy → Manage deployments → edit → Version: New version, then reload.';
+      /* Ask the smallest possible question to tell the two cases apart. */
+      Api.ping(function (pong) {
+        S.error = (pong && pong.ok)
+          ? 'The dashboard data could not be sent back, although the connection is fine. This is usually one unreadable value in the sheet — a target or weight holding text such as "-" or "TBD". Open MONTHLY_TARGETS and ACTUAL_PERFORMANCE and clear any non-numeric target, actual or weight, then reload.'
+          : 'The deployment is serving an older version of the code. In the Apps Script editor use Deploy → Manage deployments → edit → Version: New version, then reload.';
+        render();
+      }, function () {
+        S.error = 'The deployment is serving an older version of the code, or this account cannot run it. In the Apps Script editor use Deploy → Manage deployments → edit → Version: New version, then reload.';
+        render();
+      });
       return render();
     }
     if (!m.ok) { S.error = (m.error || 'The backend reported a failure.') + (m.where ? ' (' + m.where + ')' : ''); return render(); }
