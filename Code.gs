@@ -34,7 +34,8 @@
  ******************************************************************************/
 
 /** ------------------------------------------------------------------ CONFIG */
-var SOURCE_SPREADSHEET_ID = BACKEND_SHEET_ID;  /* single source of truth — see KRA BACKEND section */
+var BACKEND_SHEET_ID = '16I2P3N9k2I0e4Xa0jWWdqWl0kpgHxw6tU-Y1sviwsTw';  /* single source of truth */
+var SOURCE_SPREADSHEET_ID = BACKEND_SHEET_ID;
 
 // Managed tabs (created on demand). ACTUALS is the "separate source" for
 // targets + actual performance; the rest carry the product layer that the
@@ -273,8 +274,20 @@ function buildModel_(period, settings) {
   period = period || settings.period || currentPeriod_();
 
   var ss;
+  /* The generic "cannot open" message cost a deploy cycle to diagnose: it hid
+   * both which id was tried and why it failed. Name the id and the likely
+   * cause, because this is the one error a user sees before any UI exists. */
   try { ss = SpreadsheetApp.openById(SOURCE_SPREADSHEET_ID); }
-  catch (e) { return { ok: false, connected: false, empty: true, error: 'Cannot open the master spreadsheet.', generatedAt: nowIso_() }; }
+  catch (e) {
+    var why = !SOURCE_SPREADSHEET_ID
+      ? 'No spreadsheet id is configured.'
+      : 'Spreadsheet ' + SOURCE_SPREADSHEET_ID + ' could not be opened. Check the id is correct and that ' +
+        (function(){ try { return Session.getEffectiveUser().getEmail() || 'this account'; } catch (x) { return 'this account'; } })() +
+        ' has at least view access.';
+    return { ok: false, connected: false, empty: true,
+             error: why, detail: String(e && e.message || e),
+             spreadsheetId: SOURCE_SPREADSHEET_ID || null, generatedAt: nowIso_() };
+  }
 
   var sheets = ss.getSheets();
 
@@ -2999,7 +3012,6 @@ function targetSelfTest() {
  *    target is over-achievement, not a 60% shortfall.
  *******************************************************************************/
 
-var BACKEND_SHEET_ID = '16I2P3N9k2I0e4Xa0jWWdqWl0kpgHxw6tU-Y1sviwsTw';
 
 var TAB = {
   EMPLOYEE:'Employee_Master', KPI:'KPI_Master', TARGETS:'Monthly_Targets',
