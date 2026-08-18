@@ -230,6 +230,9 @@ td.kpi{padding-left:var(--s5)}
   transition:background var(--d1) var(--ease),border-color var(--d1) var(--ease)}
 .btn:hover{background:var(--accent-ink);border-color:var(--accent-ink)}
 .btn:active{filter:brightness(.95)}
+.btn.ghost{background:var(--card);border-color:var(--line-2);color:var(--ink-2);margin-left:var(--s2)}
+.btn.ghost:hover{background:var(--surface);border-color:var(--accent);color:var(--accent)}
+.state .btn{margin-top:var(--s2)}
 .empty{padding:var(--s6);text-align:center;color:var(--muted)}
 .hint{font-size:var(--fs-xs);color:var(--muted);margin-top:var(--s3);line-height:1.65}
 .skl{background:linear-gradient(90deg,var(--surface),var(--well),var(--surface));
@@ -243,6 +246,59 @@ td.kpi{padding-left:var(--s5)}
   padding:3px 10px;border-radius:var(--r-pill);transition:background var(--d1) var(--ease)}
 .demo button:hover{background:var(--good-soft)}
 
+
+/* ---------------------------------------------------------------- CARDS --
+   The four figures a lead reads first. Each is one metric with its context and
+   nothing else, on its own plane, with a gradient mark lifted off the corner —
+   the same treatment as the score, so the row reads as one family. The mark's
+   colour is the only thing that varies, and it varies by meaning. */
+.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--s4);
+  margin:calc(var(--s7) + 6px) 0 var(--s7)}
+.card{position:relative;background:var(--card);border-radius:var(--r-lg);
+  box-shadow:var(--e2);padding:var(--s5) var(--s4) var(--s4);min-width:0}
+.card .ic{position:absolute;left:var(--s4);top:-20px;width:48px;height:48px;
+  border-radius:var(--r-card);background:var(--grad-blue);
+  box-shadow:0 12px 24px -10px rgba(13,78,166,.55);
+  background-repeat:no-repeat;background-position:center;background-size:22px 22px}
+.card.t-score .ic{background-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='9' r='5.2'/%3E%3Cpath d='M8.6 13.4 7.3 21l4.7-2.6 4.7 2.6-1.3-7.6'/%3E%3C/svg%3E"),var(--grad-blue)}
+.card.t-gmv .ic{background-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 17l5-5 4 3 7-8'/%3E%3Cpath d='M14 7h5v5'/%3E%3C/svg%3E"),var(--grad-navy);
+  box-shadow:0 12px 24px -10px rgba(10,42,94,.55)}
+.card.t-onb .ic{background-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='9' cy='8' r='3.2'/%3E%3Cpath d='M3.5 20a5.5 5.5 0 0 1 11 0'/%3E%3Cpath d='M17 8h4M19 6v4'/%3E%3C/svg%3E"),var(--grad-blue)}
+.card.t-ok .ic{background-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8.4'/%3E%3Cpath d='M8.4 12.3l2.5 2.5 4.7-4.9'/%3E%3C/svg%3E"),var(--grad-good);
+  box-shadow:0 12px 24px -10px rgba(14,130,86,.5)}
+.card.t-risk .ic{background-image:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 4.2 21 19.5H3z'/%3E%3Cpath d='M12 10.2v4M12 17.2h.01'/%3E%3C/svg%3E"),var(--grad-bad);
+  box-shadow:0 12px 24px -10px rgba(194,59,48,.5)}
+.card .cl{font-size:var(--fs-2xs);font-weight:var(--fw-b);color:var(--muted);
+  text-transform:uppercase;letter-spacing:.09em;padding-top:var(--s5)}
+.card .cv{font-size:var(--fs-xl);font-weight:var(--fw-x);letter-spacing:-.03em;
+  line-height:1.1;margin-top:var(--s2);font-variant-numeric:tabular-nums;color:var(--ink)}
+.card.t-score .cv{color:var(--accent)}
+.card.t-ok .cv{color:var(--good)}
+.card.t-risk .cv{color:var(--bad)}
+.card .cv em{font-style:normal;font-size:var(--fs-sm);color:var(--faint);
+  font-weight:var(--fw-m);margin-left:3px;letter-spacing:0}
+.card .cs{font-size:var(--fs-xs);color:var(--muted);margin-top:var(--s3);
+  padding-top:var(--s3);border-top:1px solid var(--line-soft);line-height:1.5}
+
+/* Two lines in one cell: the KPI and the KRA it belongs to. */
+td .sub{display:block;font-size:var(--fs-2xs);color:var(--muted);font-weight:var(--fw-n);
+  margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Variance is signed, so it gets an axis rather than a length: the centre line
+   is zero, ahead runs right, behind runs left. */
+.gap{display:block;position:relative;width:100%;height:8px;background:var(--well);
+  border-radius:var(--r-pill)}
+.gap::after{content:"";position:absolute;left:50%;top:-2px;width:1px;height:12px;
+  background:var(--line-2)}
+.gap i{position:absolute;top:0;height:100%;border-radius:var(--r-pill)}
+.gap i.pos{background:var(--good)}
+.gap i.neg{background:var(--bad)}
+.v-pos{color:var(--good)}
+.v-neg{color:var(--bad)}
+
+@media(max-width:980px){.cards{grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:var(--s5) var(--s4);margin-top:calc(var(--s6) + 6px)}}
+@media(max-width:520px){.cards{grid-template-columns:minmax(0,1fr)}}
 /* ------------------------------------------------------------ RESPONSE --
    The frame tightens; the hierarchy does not change. Wide tables scroll in
    their own well rather than truncate — a missing column is a wrong decision
@@ -304,7 +360,7 @@ var n1 = function (v) { return (v == null || v === '' || isNaN(v)) ? null : Math
 var show = function (v) { var n = n1(v); return n == null ? '—' : n; };
 
 var S = { model: null, loading: true, error: null,
-          team: null, employee: null, month: null, kra: '', kpi: '',
+          team: null, employee: null, month: null, kra: '', kpi: '', region: '',
           showFilters: false, closed: {}, detail: null, demo: false, _demo: null };
 
 /* ============================== API ====================================== */
@@ -360,6 +416,225 @@ var Demo = {
 };
 
 /* ============================== SELECTORS ================================ */
+/* ============================== SEED =====================================
+   The structural model the app falls back to when no backend is reachable, so
+   the whole interface can be seen and operated before a sheet is connected.
+   It carries STRUCTURE ONLY - teams, people, KRAs, KPIs, weightages, units and
+   directions. It holds no target, no actual and no score; Demo fills those and
+   labels them as sample values on screen.
+
+   The moment apiMasterModel answers, the real model replaces this wholesale.
+   Everything here is confined to this one object: delete it and the app still
+   works against the backend, it simply has nothing to show until data loads. */
+var Seed = {
+  KPIS: [
+    { perspective: 'Process',  kra: 'Retention',   kpi: 'Repeat Seller Transaction Rate',   weightage: 5,  unit: 'PERCENT', direction: 'HIGHER_IS_BETTER', goal: 'Share of existing sellers transacting again in the month.' },
+    { perspective: 'Customer', kra: 'Acquisition', kpi: 'New Buyer Acquisition',            weightage: 15, unit: 'COUNT',   direction: 'HIGHER_IS_BETTER', goal: 'New buyers onboarded against the monthly plan.' },
+    { perspective: 'Customer', kra: 'Acquisition', kpi: 'New Seller Acquisition',           weightage: 15, unit: 'COUNT',   direction: 'HIGHER_IS_BETTER', goal: 'New sellers onboarded against the monthly plan.' },
+    { perspective: 'Process',  kra: 'Activation',  kpi: 'New Buyer Same-Month Transaction', weightage: 5,  unit: 'PERCENT', direction: 'HIGHER_IS_BETTER', goal: 'New buyers who transact within their onboarding month.' },
+    { perspective: 'Sales',    kra: 'GMV',         kpi: 'Monthly GMV Target Achievement',   weightage: 40, unit: 'CR',      direction: 'HIGHER_IS_BETTER', goal: 'Delivered GMV against the monthly buyer-wise plan.' },
+    { perspective: 'Sales',    kra: 'Closure',     kpi: 'Successfully Closed Transactions', weightage: 10, unit: 'COUNT',   direction: 'HIGHER_IS_BETTER', goal: 'Transactions closed end to end, including POD.' },
+    { perspective: 'Process',  kra: 'Cash Flow',   kpi: 'Days Sales Outstanding',           weightage: 10, unit: 'DAYS',    direction: 'LOWER_IS_BETTER',  goal: 'Average days to collect. Lower is better.' }
+  ],
+  TEAMS: [
+    { team_id: 'MET', team_name: 'Metal', team_lead: 'Amit Jha', people: [
+      ['MET001', 'Amit Jha',           'Team Lead — Business Development',        'Central'],
+      ['MET002', 'Arijit Dutta',       'Senior Executive — Business Development', 'East'],
+      ['MET003', 'Arghyadeep Samanta', 'Senior Executive — Business Development', 'East'],
+      ['MET004', 'Abhisek Sanyal',     'Assistant Manager — Business Development','South'],
+      ['MET005', 'Adarsh Krishna',     'Assistant Manager — Business Development','South'],
+      ['MET006', 'Ayush Goyal',        'Assistant Manager — Business Development','East']
+    ]},
+    { team_id: 'PLA', team_name: 'Plastic', team_lead: 'Tabesh Mohsin', people: [
+      ['PLA001', 'Tabesh Mohsin', 'Team Lead — Business Development',         'West'],
+      ['PLA002', 'Rahul Sharma',  'Senior Executive — Business Development',  'West'],
+      ['PLA003', 'Nikhil Verma',  'Assistant Manager — Business Development', 'North'],
+      ['PLA004', 'Sneha Iyer',    'Assistant Manager — Business Development', 'South']
+    ]},
+    { team_id: 'ONB', team_name: 'Onboarding', team_lead: 'Ajay Nair', people: [
+      ['ONB001', 'Ajay Nair',     'Team Lead — Onboarding',       'Central'],
+      ['ONB002', 'Naveen Ranga',  'Executive — Onboarding',       'South'],
+      ['ONB003', 'Vishwash Tiwari','Executive — Onboarding',      'Central']
+    ]},
+    { team_id: 'COL', team_name: 'Collections', team_lead: 'Ravi Naik', people: [
+      ['COL001', 'Ravi Naik',   'Team Lead — Collections', 'West'],
+      ['COL002', 'Megaraj S',   'Executive — Collections', 'South']
+    ]}
+  ],
+  model: function () {
+    return {
+      ok: true,
+      placeholder: true,
+      months: ['2026-07', '2026-08'],
+      month: '2026-08',
+      teams: Seed.TEAMS.map(function (t) {
+        return { team_id: t.team_id, team_name: t.team_name, team_lead: t.team_lead };
+      }),
+      kpis: Seed.KPIS.map(function (k) { return JSON.parse(JSON.stringify(k)); }),
+      scorecards: Seed.TEAMS.reduce(function (acc, t) {
+        t.people.forEach(function (p) {
+          acc.push({
+            team_id: t.team_id, employee_id: p[0], employee_name: p[1],
+            designation: p[2], region: p[3],
+            kpis: Seed.KPIS.map(function (k) { return JSON.parse(JSON.stringify(k)); })
+          });
+        });
+        return acc;
+      }, [])
+    };
+  }
+};
+
+/* ============================== SUMMARY ==================================
+   The four figures a lead reads first, in the order the questions arrive:
+   how are we doing, is the revenue line landing, is onboarding landing, and
+   what is broken. Each is a rollup of backend weighted scores - none of them
+   originates a number. */
+function Cards(members) {
+  var kpisOf = function (name) {
+    var out = [];
+    members.forEach(function (m) {
+      m.kpis.forEach(function (k) { if (k.kra === name || k.kpi === name) out.push(k); });
+    });
+    return out;
+  };
+  var achOf = function (list) {
+    var e = 0, w = 0;
+    list.forEach(function (k) { if (k.weighted_score != null) { e += k.weighted_score; w += Number(k.weightage) || 0; } });
+    return w > 0 ? Math.round(e / w * 1000) / 10 : null;
+  };
+  var sumOf = function (list, field) {
+    var s = null;
+    list.forEach(function (k) { if (k[field] != null) s = (s || 0) + Number(k[field]); });
+    return s == null ? null : Math.round(s * 100) / 100;
+  };
+
+  var score = Sel.mean(members.map(function (m) { return m.overall_score; }));
+  var gmv = kpisOf('GMV'), onb = kpisOf('Acquisition');
+  var all = []; members.forEach(function (m) { all = all.concat(m.kpis); });
+  var rated = all.filter(function (k) { return k.achievement != null; });
+  var risk = rated.filter(function (k) { return k.achievement < 90; }).length;
+  var hit = rated.filter(function (k) { return k.achievement >= 100; }).length;
+
+  var card = function (tone, label, value, unit, sub) {
+    return '<div class="card ' + tone + '"><div class="ic"></div>' +
+      '<div class="cl">' + esc(label) + '</div>' +
+      '<div class="cv">' + (value == null ? '—' : value) +
+      (unit ? '<em>' + esc(unit) + '</em>' : '') + '</div>' +
+      '<div class="cs">' + sub + '</div></div>';
+  };
+
+  return '<div class="cards">' +
+    card('t-score', 'Team score', show(score), '/ 100',
+         members.filter(function (m) { return m.overall_score != null; }).length +
+         ' of ' + plural(members.length, 'member') + ' measured') +
+    card('t-gmv', 'GMV achievement', show(achOf(gmv)), achOf(gmv) == null ? '' : '%',
+         gmv.length ? esc(fmt(sumOf(gmv, 'actual'), 'CR')) + ' of ' + esc(fmt(sumOf(gmv, 'target'), 'CR')) : 'no GMV KPI assigned') +
+    card('t-onb', 'Onboarding', show(achOf(onb)), achOf(onb) == null ? '' : '%',
+         onb.length ? esc(show(sumOf(onb, 'actual'))) + ' of ' + esc(show(sumOf(onb, 'target'))) + ' onboarded' : 'no acquisition KPI assigned') +
+    card(risk ? 't-risk' : 't-ok', 'KPI status', rated.length ? String(risk) : '—', risk ? 'at risk' : '',
+         rated.length ? hit + ' on or above target · ' + rated.length + ' of ' + all.length + ' measured'
+                      : 'nothing measured this period') +
+    '</div>';
+}
+
+/* ============================== REGION ===================================
+   The team is split across regions, so the lead can see whether a shortfall is
+   one person or a whole geography before opening anybody's scorecard. */
+function RegionBlock(members) {
+  var by = {}, order = [];
+  members.forEach(function (m) {
+    var r = m.region || 'Unassigned';
+    if (!by[r]) { by[r] = { region: r, people: 0, earned: 0, measured: 0, scores: [] }; order.push(r); }
+    by[r].people++;
+    if (m.overall_score != null) by[r].scores.push(m.overall_score);
+    m.kpis.forEach(function (k) {
+      if (k.weighted_score != null) { by[r].earned += k.weighted_score; by[r].measured += Number(k.weightage) || 0; }
+    });
+  });
+  if (order.length < 2) return '';
+  var rows = order.map(function (n) { return by[n]; }).sort(function (a, b) {
+    return Sel.mean(b.scores) - Sel.mean(a.scores);
+  }).map(function (g) {
+    var s = Sel.mean(g.scores), st = scoreStatus(s);
+    var pct = s == null ? 0 : Math.max(0, Math.min(100, s));
+    return '<tr><td class="nm">' + esc(g.region) + '</td>' +
+      '<td class="num quiet">' + g.people + '</td>' +
+      '<td><span class="bar"><i class="' + st.c + '" style="width:' + pct + '%"></i></span></td>' +
+      '<td class="num strong">' + show(s) + '</td>' +
+      '<td><span class="st ' + st.c + '">' + esc(st.t) + '</span></td></tr>';
+  }).join('');
+  return '<div class="block"><div class="sect">Regional performance<span class="r">mean score / 100</span></div>' +
+    '<div class="panel"><div class="tw"><table>' +
+    '<colgroup><col style="width:24%"><col style="width:12%"><col style="width:34%"><col style="width:14%"><col style="width:16%"></colgroup>' +
+    '<thead><tr><th>Region</th><th class="num">People</th><th>Score</th><th class="num">Score</th><th>Status</th></tr></thead>' +
+    '<tbody>' + rows + '</tbody></table></div></div></div>';
+}
+
+/* ============================== GAP ======================================
+   Variance carries a sign, so it belongs on its own axis: who is ahead and who
+   is behind, ordered by how much. A ranked list answers "who is driving this"
+   faster than any chart of the same numbers. */
+function GapBlock(members) {
+  var name = S.kpi || 'Monthly GMV Target Achievement';
+  var rows = [];
+  members.forEach(function (m) {
+    m.kpis.forEach(function (k) {
+      if (k.kpi !== name || k.variance == null) return;
+      rows.push({ who: m.employee_name, id: m.employee_id, v: k.variance, unit: k.unit, ach: k.achievement });
+    });
+  });
+  if (!rows.length) return '';
+  rows.sort(function (a, b) { return b.v - a.v; });
+  var max = Math.max.apply(null, rows.map(function (r) { return Math.abs(r.v); })) || 1;
+  var body = rows.map(function (r) {
+    var w = Math.round(Math.abs(r.v) / max * 50);
+    var neg = r.v < 0;
+    return '<tr class="click" data-emp="' + esc(r.id) + '"><td class="nm">' + esc(r.who) + '</td>' +
+      '<td><span class="gap"><i class="' + (neg ? 'neg' : 'pos') + '" style="width:' + w + '%;' +
+      (neg ? 'right:50%' : 'left:50%') + '"></i></span></td>' +
+      '<td class="num strong ' + (neg ? 'v-neg' : 'v-pos') + '">' +
+      (neg ? '' : '+') + esc(fmt(r.v, r.unit)) + '</td>' +
+      '<td class="num quiet">' + show(r.ach) + '%</td></tr>';
+  }).join('');
+  return '<div class="block"><div class="sect">Gap analysis<span class="r">' + esc(name) + '</span></div>' +
+    '<div class="panel"><div class="tw"><table>' +
+    '<colgroup><col style="width:34%"><col style="width:36%"><col style="width:16%"><col style="width:14%"></colgroup>' +
+    '<thead><tr><th>Employee</th><th>Variance</th><th class="num">Gap</th><th class="num">Achievement</th></tr></thead>' +
+    '<tbody>' + body + '</tbody></table></div></div></div>';
+}
+
+/* ============================== AT RISK ==================================
+   Everything below target, worst first. This is the list a lead acts on. */
+function RiskBlock(members) {
+  var rows = [];
+  members.forEach(function (m) {
+    Sel.kpisOf(m).forEach(function (k) {
+      if (k.achievement == null || k.achievement >= 90) return;
+      rows.push({ who: m.employee_name, id: m.employee_id, k: k });
+    });
+  });
+  if (!rows.length) return '';
+  rows.sort(function (a, b) { return a.k.achievement - b.k.achievement; });
+  var body = rows.slice(0, 10).map(function (r) {
+    var st = statusOf(r.k);
+    return '<tr class="click" data-emp="' + esc(r.id) + '">' +
+      '<td class="nm">' + esc(r.k.kpi) + '<span class="sub">' + esc(r.k.kra) + '</span></td>' +
+      '<td class="quiet">' + esc(r.who) + '</td>' +
+      '<td class="num quiet">' + esc(fmt(r.k.target, r.k.unit)) + '</td>' +
+      '<td class="num">' + esc(fmt(r.k.actual, r.k.unit)) + '</td>' +
+      '<td>' + Ach(r.k) + '</td>' +
+      '<td><span class="st ' + st.c + '">' + esc(st.t) + '</span></td></tr>';
+  }).join('');
+  return '<div class="block"><div class="sect">Needs attention' +
+    '<span class="r">below 90% · worst first</span></div>' +
+    '<div class="panel"><div class="tw"><table>' +
+    '<colgroup><col style="width:28%"><col style="width:20%"><col style="width:12%">' +
+    '<col style="width:12%"><col style="width:16%"><col style="width:12%"></colgroup>' +
+    '<thead><tr><th>KPI</th><th>Employee</th><th class="num">Target</th><th class="num">Actual</th>' +
+    '<th class="num">Achievement</th><th>Status</th></tr></thead><tbody>' + body + '</tbody></table></div></div></div>';
+}
+
 var Sel = {
   model: function () { return S.demo && S.model ? (S._demo || (S._demo = Demo.apply(S.model))) : S.model; },
   teams: function () { var m = Sel.model(); return (m && m.teams) || []; },
@@ -371,7 +646,16 @@ var Sel = {
   },
   visible: function () {
     var l = Sel.members();
+    if (S.region) l = l.filter(function (m) { return (m.region || 'Unassigned') === S.region; });
     return S.employee ? l.filter(function (m) { return m.employee_id === S.employee; }) : l;
+  },
+  regions: function () {
+    var seen = {}, out = [];
+    Sel.members().forEach(function (m) {
+      var r = m.region || 'Unassigned';
+      if (!seen[r]) { seen[r] = 1; out.push(r); }
+    });
+    return out.sort();
   },
   kpisOf: function (m) {
     return m.kpis.filter(function (k) { return (!S.kra || k.kra === S.kra) && (!S.kpi || k.kpi === S.kpi); });
@@ -542,7 +826,8 @@ function TeamScreen() {
     ? '<div class="hint">' + plural(unmapped.length, 'member') + ' without a KPI assignment: ' +
       unmapped.map(function (m) { return esc(m.employee_name); }).join(', ') + '.</div>' : '';
 
-  return head + score1 + kpiBlock + people + hint;
+  return head + Cards(members) + kpiBlock + RegionBlock(members) +
+         people + GapBlock(members) + RiskBlock(members) + hint;
 }
 
 function EmployeeScreen() {
@@ -582,6 +867,14 @@ function Controls(hideEmployee) {
       return '<option value="' + esc(x) + '"' + (x === S.month ? ' selected' : '') + '>' + esc(monthLabel(x)) + '</option>';
     }).join('') : '<option>No period loaded</option>') + '</select></span>';
   if (!hideEmployee) {
+    var regions = Sel.regions();
+    if (regions.length > 1) {
+      c += '<span class="fl">Region<select class="sel" id="f-region">' +
+        '<option value=""' + (S.region ? '' : ' selected') + '>All</option>' +
+        regions.map(function (r) {
+          return '<option value="' + esc(r) + '"' + (r === S.region ? ' selected' : '') + '>' + esc(r) + '</option>';
+        }).join('') + '</select></span>';
+    }
     c += '<span class="fl">Employee<select class="sel" id="f-emp">' +
       '<option value=""' + (S.employee ? '' : ' selected') + '>All</option>' +
       Sel.members().map(function (p) {
@@ -642,7 +935,8 @@ function render() {
   if (S.loading) return void ($('#view').innerHTML = Skeleton());
   if (S.error) {
     $('#view').innerHTML = '<div class="state"><div><h2>Could not load</h2><p>' + esc(S.error) +
-      '</p><button class="btn" data-retry="1">Try again</button></div></div>';
+      '</p><button class="btn" data-retry="1">Try again</button>' +
+      '<button class="btn ghost" data-demo="on">Preview the interface</button></div></div>';
     return;
   }
   $('#teams').innerHTML = Sel.teams().map(function (t) {
@@ -685,8 +979,22 @@ function load() {
     if (!S.month) { var mo = Sel.months(); S.month = mo[mo.length - 1] || null; }
     render();
   }, function (e) {
-    S.loading = false; S.error = (e && e.message) || 'The backend could not be reached.'; render();
+    S.loading = false;
+    /* No backend reachable — fall back to the structural seed so the whole
+     * interface can still be seen and operated. The banner says plainly that
+     * the values are samples, and the real model replaces this the moment
+     * apiMasterModel answers. */
+    if (!Api.live()) return usePlaceholder();
+    S.error = (e && e.message) || 'The backend could not be reached.'; render();
   });
+}
+
+function usePlaceholder() {
+  var m = Seed.model();
+  S.model = m; S._demo = null; S.demo = true; S.loading = false; S.error = null;
+  if (!S.team) S.team = m.teams[0].team_id;
+  if (!S.month) S.month = m.month;
+  render();
 }
 
 /* ============================== EVENTS =================================== */
@@ -708,12 +1016,21 @@ document.addEventListener('click', function (e) {
   if (e.target.closest('[data-close]') || e.target.id === 'scrim') { S.detail = null; renderModal(); return; }
   if (e.target.closest('[data-more]')) { S.showFilters = !S.showFilters; if (!S.showFilters) { S.kra = ''; S.kpi = ''; } render(); return; }
   var d = e.target.closest('[data-demo]');
-  if (d) { S.demo = d.dataset.demo === 'on'; S._demo = null; S.detail = null; render(); return; }
+  if (d) {
+    var on = d.dataset.demo === 'on';
+    /* If the backend never answered there is no model to sample from, so the
+     * structural seed stands in — the interface is fully operable either way. */
+    if (on && !S.model) return usePlaceholder();
+    S.demo = on; S._demo = null; S.detail = null;
+    if (!on && S.model && S.model.placeholder) { S.model = null; S.error = 'No sheet connected yet.'; }
+    render(); return;
+  }
   if (e.target.closest('[data-retry]')) load();
 });
 document.addEventListener('change', function (e) {
   var id = e.target.id;
   if (id === 'f-month') { S.month = e.target.value; S.detail = null; load(); }
+  else if (id === 'f-region') { S.region = e.target.value; S.employee = null; S.detail = null; render(); }
   else if (id === 'f-emp') { S.employee = e.target.value || null; S.detail = null; render(); }
   else if (id === 'f-kra') { S.kra = e.target.value; S.kpi = ''; render(); }
   else if (id === 'f-kpi') { S.kpi = e.target.value; render(); }
