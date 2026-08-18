@@ -368,9 +368,9 @@ function Ach(k) {
   var w = Math.max(0, Math.min(100, k.achievement / 105 * 100));
   var cls = k.achievement >= 90 ? 'good' : k.achievement >= 75 ? 'warn' : 'bad';
   var ticks = '';
-  if (k.thresholds && k.thresholds.length && k.direction !== 'LOWER_IS_BETTER' && k.unit === 'PERCENT') {
-    k.thresholds.forEach(function (t) {
-      ticks += '<u style="left:' + Math.max(0, Math.min(100, t.value / 105 * 100)) + '%"></u>';
+  if (k.bands && k.bands.length && k.direction !== 'LOWER_IS_BETTER' && k.unit === 'PERCENT') {
+    k.bands.forEach(function (bv) {
+      ticks += '<u style="left:' + Math.max(0, Math.min(100, bv / 105 * 100)) + '%"></u>';
     });
   }
   return '<span class="ach"><span class="n">' + show(k.achievement) + '%</span>' +
@@ -535,8 +535,8 @@ function renderModal() {
       kv('Score', k.weighted_score == null ? '—' : show(k.weighted_score) + ' / ' + show(k.weightage)) +
       kv('Status', '<span class="st ' + st.c + '">' + esc(st.t) + '</span>') +
     '</dl>' +
-    (k.goal_description
-      ? '<div class="goal"><div class="t">Goal</div><p>' + esc(k.goal_description) + '</p></div>'
+    (k.goal
+      ? '<div class="goal"><div class="t">Goal</div><p>' + esc(k.goal) + '</p></div>'
       : '') +
     '</div>';
   mo.classList.add('on'); sc.classList.add('on');
@@ -575,7 +575,14 @@ function load() {
   S.loading = true; S.error = null; S._demo = null; render();
   Api.fetch(S.month, function (m) {
     S.loading = false;
-    if (!m || !m.ok) { S.error = (m && m.error) || 'The backend returned no data.'; return render(); }
+    /* google.script.run hands back null when a server function throws or its
+     * result cannot be serialised, and the two look identical from here - so
+     * say which case this is rather than "no data". */
+    if (!m) {
+      S.error = 'The server function returned nothing. This usually means the deployment is serving an older version of the code — in the Apps Script editor use Deploy → Manage deployments → edit → Version: New version, then reload.';
+      return render();
+    }
+    if (!m.ok) { S.error = (m.error || 'The backend reported a failure.') + (m.where ? ' (' + m.where + ')' : ''); return render(); }
     S.model = m; S._demo = null;
     if (!S.team && m.teams && m.teams.length) S.team = m.teams[0].team_id;
     if (!S.month) { var mo = Sel.months(); S.month = mo[mo.length - 1] || null; }

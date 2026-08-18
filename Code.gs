@@ -438,7 +438,33 @@ function mRead_(name) {
  * The record shape the frontend consumes. It carries no business logic: every
  * derived value is already computed here, so the UI only ever visualises.
  */
+/**
+ * Entry point the client calls. google.script.run hands the browser `null`
+ * when a server function throws OR when its return value cannot be serialised,
+ * and the client cannot tell those apart - which is exactly how a real failure
+ * arrived on screen as a useless "returned no data". So the whole body runs
+ * inside a guard that converts any throw into a plain, serialisable object the
+ * UI can actually show.
+ */
 function apiMasterModel(teamId, month) {
+  try {
+    return buildModel_(teamId, month);
+  } catch (e) {
+    return { ok: false,
+             error: String(e && e.message || e),
+             where: 'apiMasterModel',
+             stack: String(e && e.stack || '').split('\n').slice(0, 4).join(' | ') };
+  }
+}
+
+/** Smallest possible round trip. If this succeeds and apiMasterModel does not,
+ *  the problem is the payload, not the deployment or permissions. */
+function apiPing() {
+  return { ok: true, ping: 'ok', teams: TEAMS.length, people: PEOPLE.length,
+           assignments: ASSIGNMENTS.length, at: new Date().toISOString() };
+}
+
+function buildModel_(teamId, month) {
   /* Master comes from the sheet when it has been provisioned, and from the
    * frozen definitions in this file when it has not. Either way the structure
    * is identical, because provisionMaster() writes exactly what buildMaster_()
@@ -463,16 +489,17 @@ function apiMasterModel(teamId, month) {
   /* Targets and actuals only ever come from the sheet - they are period data,
    * never frozen in code. Absent means "not loaded yet", not zero. */
   var tgt = mRead_(M_TAB.TGT), act = mRead_(M_TAB.ACT);
-  /* Thresholds travel with the KPI so the UI can draw a band ladder without
-   * knowing what any of the numbers mean. */
+  /* Thresholds travel as a bare ascending array of numbers. The UI only needs
+   * positions for tick marks, and 178 KPI instances x 5 objects was ~900
+   * nested objects riding in one payload for no gain. */
   var thrByKpi = {};
   thrAll.forEach(function (t) {
     if (String(t.threshold_not_defined).toUpperCase() === 'TRUE') return;
-    (thrByKpi[t.kpi_id] = thrByKpi[t.kpi_id] || []).push(
-      { level: Number(t.level), value: Number(t.threshold_value), label: t.label, op: t.comparison_operator });
+    (thrByKpi[t.kpi_id] = thrByKpi[t.kpi_id] || []).push([Number(t.level), Number(t.threshold_value)]);
   });
   Object.keys(thrByKpi).forEach(function (k) {
-    thrByKpi[k].sort(function (a, b) { return a.level - b.level; });
+    thrByKpi[k] = thrByKpi[k].sort(function (a, b) { return a[0] - b[0]; })
+                             .map(function (p) { return p[1]; });
   });
   function thrOf(kpiId) { return thrByKpi[kpiId] || []; }
 
@@ -491,16 +518,21 @@ function apiMasterModel(teamId, month) {
           var ach = (tv == null || av == null) ? null : achievementPct_(tv, av, kpi.direction);
           var ws = weightedScore_(m.weightage, ach);
           var lvl = ach == null ? null : (ach >= 100 ? 5 : ach >= 90 ? 4 : ach >= 75 ? 3 : ach >= 60 ? 2 : 1);
-          return { kpi_id: m.kpi_id, kra_id: kpi.kra_id || '',
-                   perspective: kra.perspective || '', kra: kra.kra_name || '',
-                   kpi: kpi.kpi_name || '', weightage: Number(m.weightage),
-                   goal_description: kpi.goal_description || '',
-                   source_of_tracking: kpi.source_of_tracking || '',
-                   unit: kpi.measurement_type || '', direction: kpi.direction || '',
-                   thresholds: thrOf(m.kpi_id),
-                   target: tv, actual: av,
-                   variance: (tv == null || av == null) ? null : Math.round((av - tv) * 1000) / 1000,
-                   achievement: ach, weighted_score: ws, performance_level: lvl,
+          /* Deliberately lean. Every field here is read by the UI; nothing is
+           * sent "in case". Thresholds travel as bare numbers rather than
+           * objects - 178 KPI instances x 5 objects was ~900 nested objects in
+           * one payload, for a tick mark that only needs a position. */
+          return { kpi_id: String(m.kpi_id),
+                   perspective: String(kra.perspective || ''),
+                   kra: String(kra.kra_name || ''),
+                   kpi: String(kpi.kpi_name || ''),
+                   weightage: Number(m.weightage) || 0,
+                   goal: String(kpi.goal_description || ''),
+                   unit: String(kpi.measurement_type || ''),
+                   direction: String(kpi.direction || ''),
+                   bands: thrOf(m.kpi_id),
+                   target: tv, actual: av, achievement: ach,
+                   weighted_score: ws, level: lvl,
                    status: ach == null ? 'Awaiting data' : statusFor_(ach, lvl) };
         });
       var earned = 0, measured = 0;
