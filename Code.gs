@@ -600,12 +600,18 @@ function buildModel_(teamId, month) {
                measured_weightage: measured,
                overall_score: measured > 0 ? Math.round(earned * 10) / 10 : null };
     });
-  /* Periods are discovered from the data, never hard-coded: whatever months
-   * exist in targets or actuals are the months the UI can offer. */
+  /* Periods: data rows plus a rolling 6-month look-back so the selector
+   * stays populated even before targets/actuals are entered for a period. */
   var seen = {}, months = [];
   tgt.concat(act).forEach(function (r) {
     if (r.month && !seen[r.month]) { seen[r.month] = 1; months.push(r.month); }
   });
+  var now = new Date();
+  for (var i = 0; i < 6; i++) {
+    var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    var mk = Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM');
+    if (!seen[mk]) { seen[mk] = 1; months.push(mk); }
+  }
   months.sort();
   return { ok: true, month: month || months[months.length - 1] || null,
            months: months, teams: teams, scorecards: scorecards,
