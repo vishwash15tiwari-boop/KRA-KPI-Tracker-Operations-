@@ -496,26 +496,34 @@ button.pscore:hover .bdg{background:var(--accent);color:#fff}
 <body>
 <div class="app">
   <aside class="rail">
-    <!-- The Recykal mark: two crescents turning about a common centre, the
+    <!-- The Recykal mark: two blades turning about a common centre, the
          circularity motif the brand is built on.
 
-         Traced from the artwork rather than styled by eye. The blade was
-         measured off the logo row by row - constant thickness a shade under a
-         third of the mark, centreline sweeping out to a third of the width and
-         back - which is exactly a stroked arc with round caps, so that is how
-         it is drawn. The second blade is the first turned through 180 degrees,
-         and the pair are held 7 degrees apart to leave the thin seam the
-         artwork shows between them.
+         Traced off the artwork rather than drawn by eye. Reading the logo row
+         by row gives both edges of one blade: it is a comma, not a crescent -
+         a blunt rounded cap at the top, a full body sweeping out to the widest
+         point just past halfway, then a long taper to a point. Earlier passes
+         had it symmetric at both ends, which is what made them read as a ring
+         instead of the mark.
+
+         The rows also place the centre of rotation, at (17,69) in the source,
+         so the second blade is simply the first turned through 180 degrees.
+         The seam between them is the artwork's own - the rows where both
+         blades appear show a two-pixel gap widening as the lower blade's tip
+         rises, and that falls out of the geometry rather than being added.
 
          Drawn inline so it survives with no network and inside the Apps Script
-         iframe. currentColor, so it takes the rail's white without a second
-         copy for dark backgrounds. -->
+         iframe, and filled with currentColor so the rail's white needs no
+         second copy for dark backgrounds. -->
     <div class="rail-logo" title="Recykal">
-      <svg viewBox="-3 -3 106 106" role="img" aria-label="Recykal">
+      <svg viewBox="-4 -4 108 108" role="img" aria-label="Recykal">
         <title>Recykal</title>
-        <g fill="none" stroke="currentColor" stroke-width="30" stroke-linecap="round">
-          <path d="M66 16 A38.4 38.4 0 0 1 63.3 84" transform="rotate(-7 50 50)"/>
-          <path d="M66 16 A38.4 38.4 0 0 1 63.3 84" transform="rotate(173 50 50)"/>
+        <g fill="currentColor">
+          <path id="rk-blade" d="M37.9 2 C41 -2 50 -2 53 1 C64 8 76 20 85 33
+            C92 42 96 49 95.5 56 C95 66 90 76 82 84 C78 88 76 91 72.7 94
+            C74 86 73 79 71 73 C69 65 66 59 62 54.5 C57 46 50 33 44.5 22
+            C41 15 38 7 37.9 2 Z"/>
+          <use href="#rk-blade" transform="rotate(180 50 50)"/>
         </g>
       </svg>
     </div>
