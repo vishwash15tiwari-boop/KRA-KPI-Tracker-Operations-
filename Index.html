@@ -53,7 +53,7 @@ button,select,input{font-family:inherit;cursor:pointer}
 .rail{flex:0 0 var(--rail);width:var(--rail);background:var(--nav);position:sticky;top:0;height:100vh;
   display:flex;flex-direction:column;align-items:stretch;padding:var(--s4) 0;z-index:40}
 .rail-logo{display:flex;align-items:center;justify-content:center;height:40px;margin-bottom:var(--s5)}
-.rail-logo svg{width:26px;height:26px;display:block}
+.rail-logo svg{width:28px;height:28px;display:block}
 .rail-nav{display:flex;flex-direction:column;gap:2px;padding:0 8px}
 .rail-i{appearance:none;border:none;background:transparent;color:var(--nav-txt);
   display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 4px;border-radius:10px;
@@ -496,10 +496,19 @@ button.pscore:hover .bdg{background:var(--accent);color:#fff}
 <body>
 <div class="app">
   <aside class="rail">
-    <div class="rail-logo" title="Recykal">
-      <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
-        <rect x="1" y="1" width="30" height="30" rx="8" fill="#16253C"/>
-        <path d="M10 21V11l6 4 6-4v10" stroke="#4C8DF6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Recykal mark: four petals turning about a common centre, in the four
+         brand hues. Drawn rather than linked so it survives with no network,
+         which is the same reason the rest of the interface carries its own
+         assets. The rail is the only place it appears. -->
+    <div class="rail-logo">
+      <svg viewBox="0 0 40 40" role="img" aria-label="Recykal">
+        <title>Recykal</title>
+        <g transform="rotate(6 20 20)">
+          <path d="M20 3.4C27.4 8.2 26.2 15.8 20 20 14.6 15.6 14.2 8.6 20 3.4Z" fill="#005DFF"/>
+          <path d="M20 3.4C27.4 8.2 26.2 15.8 20 20 14.6 15.6 14.2 8.6 20 3.4Z" transform="rotate(90 20 20)" fill="#567DE8"/>
+          <path d="M20 3.4C27.4 8.2 26.2 15.8 20 20 14.6 15.6 14.2 8.6 20 3.4Z" transform="rotate(180 20 20)" fill="#1DC797"/>
+          <path d="M20 3.4C27.4 8.2 26.2 15.8 20 20 14.6 15.6 14.2 8.6 20 3.4Z" transform="rotate(270 20 20)" fill="#8460D4"/>
+        </g>
       </svg>
     </div>
     <nav class="rail-nav" id="rail"></nav>

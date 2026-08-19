@@ -22,6 +22,13 @@
 
 var BACKEND_SHEET_ID = '16I2P3N9k2I0e4Xa0jWWdqWl0kpgHxw6tU-Y1sviwsTw';
 
+/* How many periods the month selector offers, counting back from the current
+ * month. Three, so it reads June / July / August rather than a half-year of
+ * mostly empty periods. Raise it when more history is worth comparing - the
+ * trends on the profile draw from exactly this list, so widening the window
+ * lengthens them and nothing else has to change. */
+var MONTH_WINDOW = 3;
+
 function doGet() {
   return HtmlService.createHtmlOutputFromFile('Index')
     .setTitle('Recykal · KRA / KPI Tracker')
@@ -600,19 +607,26 @@ function buildModel_(teamId, month) {
                measured_weightage: measured,
                overall_score: measured > 0 ? Math.round(earned * 10) / 10 : null };
     });
-  /* Periods: data rows plus a rolling 6-month look-back so the selector
-   * stays populated even before targets/actuals are entered for a period. */
+  /* Periods: data rows plus a rolling look-back, so the selector stays
+   * populated even before targets or actuals are entered for a period.
+   *
+   * The window is the last MONTH_WINDOW periods and no more. Two sources feed
+   * the list and either could widen it - a sheet holding older rows, or a
+   * longer look-back - so the trim is applied after they are merged rather
+   * than to one of them. Nothing is pinned to a literal month: the window
+   * rolls forward on its own as the sheet grows. */
   var seen = {}, months = [];
   tgt.concat(act).forEach(function (r) {
     if (r.month && !seen[r.month]) { seen[r.month] = 1; months.push(r.month); }
   });
   var now = new Date();
-  for (var i = 0; i < 6; i++) {
+  for (var i = 0; i < MONTH_WINDOW; i++) {
     var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     var mk = Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM');
     if (!seen[mk]) { seen[mk] = 1; months.push(mk); }
   }
   months.sort();
+  if (months.length > MONTH_WINDOW) months = months.slice(months.length - MONTH_WINDOW);
   return { ok: true, month: month || months[months.length - 1] || null,
            months: months, teams: teams, scorecards: scorecards,
            masterSource: fromSheet ? 'sheet' : 'code',
