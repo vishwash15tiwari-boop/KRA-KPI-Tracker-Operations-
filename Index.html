@@ -52,7 +52,7 @@ button,select,input{font-family:inherit;cursor:pointer}
 /* Left rail — icon + small label, ~76px, never visually dominant. */
 .rail{flex:0 0 var(--rail);width:var(--rail);background:var(--nav);position:sticky;top:0;height:100vh;
   display:flex;flex-direction:column;align-items:stretch;padding:var(--s4) 0;z-index:40}
-.rail-logo{display:flex;align-items:center;justify-content:center;height:40px;margin-bottom:var(--s5)}
+.rail-logo{display:flex;align-items:center;justify-content:center;height:40px;margin-bottom:var(--s5);color:var(--nav-active)}
 .rail-logo svg{width:28px;height:28px;display:block}
 .rail-nav{display:flex;flex-direction:column;gap:2px;padding:0 8px}
 .rail-i{appearance:none;border:none;background:transparent;color:var(--nav-txt);
@@ -496,21 +496,27 @@ button.pscore:hover .bdg{background:var(--accent);color:#fff}
 <body>
 <div class="app">
   <aside class="rail">
-    <!-- PLACEHOLDER, not the Recykal mark.
-         The real logo is two tapered crescents turning about a common centre.
-         Reproducing it from the only copy available here - a raster cropped
-         through the left blade - meant guessing at its curvature, and an
-         approximated logo is worse than an obvious placeholder. Drop the
-         official SVG (or a full-bleed PNG) in the project and this becomes one
-         edit: swap the markup below for the asset. Everything around it -
-         28px box, centred in the rail, white on navy - already fits. -->
+    <!-- The Recykal mark: two crescents turning about a common centre, the
+         circularity motif the brand is built on.
+
+         Traced from the artwork rather than styled by eye. The blade was
+         measured off the logo row by row - constant thickness a shade under a
+         third of the mark, centreline sweeping out to a third of the width and
+         back - which is exactly a stroked arc with round caps, so that is how
+         it is drawn. The second blade is the first turned through 180 degrees,
+         and the pair are held 7 degrees apart to leave the thin seam the
+         artwork shows between them.
+
+         Drawn inline so it survives with no network and inside the Apps Script
+         iframe. currentColor, so it takes the rail's white without a second
+         copy for dark backgrounds. -->
     <div class="rail-logo" title="Recykal">
-      <svg viewBox="0 0 40 40" role="img" aria-label="Recykal">
+      <svg viewBox="-3 -3 106 106" role="img" aria-label="Recykal">
         <title>Recykal</title>
-        <circle cx="20" cy="20" r="18" fill="none" stroke="var(--nav-accent)" stroke-width="2.4"
-                stroke-dasharray="4 100" stroke-dashoffset="-8"/>
-        <text x="20" y="27" text-anchor="middle" font-family="Inter, sans-serif"
-              font-size="21" font-weight="700" fill="#FFFFFF">r</text>
+        <g fill="none" stroke="currentColor" stroke-width="30" stroke-linecap="round">
+          <path d="M66 16 A38.4 38.4 0 0 1 63.3 84" transform="rotate(-7 50 50)"/>
+          <path d="M66 16 A38.4 38.4 0 0 1 63.3 84" transform="rotate(173 50 50)"/>
+        </g>
       </svg>
     </div>
     <nav class="rail-nav" id="rail"></nav>
