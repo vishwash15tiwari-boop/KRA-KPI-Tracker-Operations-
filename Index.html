@@ -324,6 +324,173 @@ td.kpi{padding-left:var(--s6)}
   .back{padding:10px 8px}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* ============================== DEPTH LAYERS ============================
+   Seven additions, none of which is a new screen. They sit inside the profile
+   and the drawer that already exist, so the default view stays as sparse as it
+   was and the detail appears only where it is asked for. All of it is built
+   from the tokens already declared above.
+   ========================================================================= */
+
+/* --- Trend chart ---------------------------------------------------------
+   The plot stretches to whatever width it is given, which is what lets the same
+   chart serve a full-width panel and a 420px drawer. Only the SVG is allowed to
+   stretch: a circle drawn in a non-uniformly scaled viewBox comes out an
+   ellipse, and a label comes out many times too wide. So the SVG holds the area
+   and the line, and the dots and labels are ordinary elements positioned over
+   it in percentages — where a dot stays round and type stays its set size. */
+.trend{margin-top:var(--s2)}
+.tr-plot{position:relative;height:104px;margin-top:26px}
+.tr-plot svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.tr-plot .ln{fill:none;stroke:var(--accent);stroke-width:2;
+  vector-effect:non-scaling-stroke;stroke-linecap:round;stroke-linejoin:round}
+.tr-plot .ar{fill:var(--accent);opacity:.09;stroke:none}
+.tr-pt{position:absolute;width:9px;height:9px;border-radius:50%;background:var(--accent);
+  transform:translate(-50%,-50%);border:2px solid var(--card);box-sizing:border-box;
+  box-shadow:0 1px 3px rgba(20,32,52,.22)}
+.tr-pt.last{width:12px;height:12px}
+.tr-vl{position:absolute;transform:translate(-50%,-100%);margin-top:-9px;white-space:nowrap;
+  font-size:var(--fs-xs);font-weight:var(--fw-b);color:var(--ink);
+  font-variant-numeric:tabular-nums}
+.tr-vl.last{color:var(--accent)}
+/* The end labels are pulled inside the plot so neither can sit outside the card
+   it belongs to. */
+.tr-pt[style*="left:0.00%"]{transform:translate(-1px,-50%)}
+.tr-vl[style*="left:0.00%"]{transform:translate(0,-100%)}
+.tr-pt[style*="left:100.00%"]{transform:translate(-100%,-50%)}
+.tr-vl[style*="left:100.00%"]{transform:translate(-100%,-100%)}
+/* The month row doubles as the hit area: one full-height column per period, so
+   a month can be reached without having to hit a 9px dot. */
+.tr-hits{position:absolute;left:0;right:0;top:0;bottom:-24px;display:flex}
+.tr-h{flex:1 1 0;min-width:0;background:none;border:none;padding:0;font-family:var(--font);
+  display:flex;align-items:flex-end;justify-content:center;border-radius:var(--r-ctl);
+  transition:background var(--d1) var(--ease)}
+button.tr-h{cursor:pointer}
+button.tr-h:hover{background:var(--accent-soft)}
+.tr-h>span{font-size:var(--fs-2xs);color:var(--muted);font-weight:var(--fw-m);padding-bottom:2px}
+button.tr-h:hover>span{color:var(--accent)}
+.tr-empty{font-size:var(--fs-xs);color:var(--muted);background:var(--surface);
+  border-radius:var(--r-ctl);padding:var(--s3) var(--s4);line-height:1.55}
+.tr-top{display:flex;margin-bottom:var(--s1)}
+.tr-top.mt{margin-top:var(--s5)}
+.tr-note{font-size:var(--fs-2xs);color:var(--muted);margin:var(--s5) 0 0;line-height:1.55}
+.vh{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);
+  white-space:nowrap;border:0;padding:0}
+
+/* --- Change against the previous period ---------------------------------- */
+.delta{font-size:var(--fs-xs);font-weight:var(--fw-b);font-variant-numeric:tabular-nums;
+  display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:var(--r-pill)}
+.delta.up{color:var(--good);background:var(--good-soft)}
+.delta.down{color:var(--bad);background:var(--bad-soft)}
+.delta.flat{color:var(--muted);background:var(--surface)}
+
+/* --- Performance snapshot ------------------------------------------------ */
+.sn-g{display:grid;grid-template-columns:1fr 1fr;gap:var(--s4)}
+.sn{border-radius:var(--r-card);padding:var(--s4) var(--s5);border:1px solid transparent}
+.sn.good{background:var(--good-soft);border-color:#D3E7DB}
+.sn.warn{background:var(--warn-soft);border-color:var(--warn-line)}
+.sn-l{font-size:var(--fs-3xs);font-weight:var(--fw-b);letter-spacing:.09em;text-transform:uppercase}
+.sn.good .sn-l{color:var(--good)}
+.sn.warn .sn-l{color:var(--warn)}
+.sn-k{font-size:var(--fs-md);font-weight:var(--fw-b);color:var(--ink);margin-top:var(--s2);
+  line-height:1.35}
+.sn-v{font-size:30px;font-weight:var(--fw-h);letter-spacing:-.03em;margin-top:var(--s3);
+  line-height:1;font-variant-numeric:tabular-nums}
+.sn-v em{font-style:normal;font-size:16px;font-weight:var(--fw-b)}
+.sn.good .sn-v{color:var(--good)}
+.sn.warn .sn-v{color:var(--warn)}
+.sn-s{font-size:var(--fs-2xs);color:var(--muted);margin-top:var(--s1)}
+.sn-f{font-size:var(--fs-xs);color:var(--ink-2);margin-top:var(--s3);padding-top:var(--s3);
+  border-top:1px solid rgba(20,32,52,.08);font-variant-numeric:tabular-nums}
+
+/* --- Completeness --------------------------------------------------------
+   Amber and contained. Colouring the whole page would say the number is wrong.
+   It is not wrong, it is provisional — a smaller claim, and a quieter one. */
+.cmp{border-radius:var(--r-card);padding:var(--s3) var(--s4);margin:var(--s5) 0 var(--s6);
+  font-size:var(--fs-xs)}
+.cmp.ok{background:var(--card);border:1px solid var(--line);color:var(--muted);
+  display:flex;align-items:center;gap:var(--s2)}
+.cmp.warn{background:var(--warn-soft);border:1px solid var(--warn-line);color:#7A4C10}
+.cmp-h{display:flex;gap:var(--s3);align-items:flex-start}
+.cmp-i{flex:0 0 auto;width:20px;height:20px;border-radius:50%;background:var(--warn);
+  color:#fff;font-weight:var(--fw-h);font-size:var(--fs-xs);display:grid;place-items:center;
+  line-height:1}
+.cmp-h b{color:#7A4C10;font-size:var(--fs-sm);font-weight:var(--fw-b)}
+.cmp-s{margin-top:2px;color:var(--warn)}
+.cmp-l{margin:var(--s3) 0 0 32px;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:6px}
+.cmp-l li{background:rgba(255,255,255,.72);border:1px solid var(--warn-line-2);
+  border-radius:var(--r-pill);padding:3px 10px;font-size:var(--fs-2xs);color:#7A4C10}
+.cmp-f{margin:var(--s3) 0 0 32px;font-size:var(--fs-2xs);color:var(--warn);line-height:1.55}
+.cdot{width:7px;height:7px;border-radius:50%;flex:0 0 auto;display:inline-block;
+  background:var(--faint)}
+.cdot.good{background:var(--good)}
+.cdot.warn{background:var(--warn)}
+
+/* --- The score as a control ---------------------------------------------- */
+button.pscore{background:none;border:none;padding:0;text-align:right;cursor:pointer;
+  font-family:var(--font)}
+.pscore .bdg{display:inline-block;margin-left:var(--s2);font-size:var(--fs-3xs);
+  font-weight:var(--fw-b);letter-spacing:.07em;text-transform:uppercase;color:var(--accent);
+  background:var(--accent-soft);border-radius:var(--r-pill);padding:2px 8px;
+  transition:all var(--d1) var(--ease)}
+button.pscore:hover .bdg{background:var(--accent);color:#fff}
+
+/* --- Score breakdown ----------------------------------------------------- */
+.bd-top{background:var(--surface);border-radius:var(--r-ctl);padding:var(--s3) var(--s4);
+  margin-bottom:var(--s5)}
+.bd-top .k{font-size:var(--fs-3xs);font-weight:var(--fw-b);letter-spacing:.09em;
+  text-transform:uppercase;color:var(--muted)}
+.bd-top .v{font-size:30px;font-weight:var(--fw-h);letter-spacing:-.03em;color:var(--ink);
+  margin-top:2px;line-height:1;font-variant-numeric:tabular-nums}
+.bd-top em,.bd-t em,.bd-v em,.bd-kv em{font-style:normal;font-weight:var(--fw-m);
+  color:var(--faint);font-size:.62em}
+.bd-g{margin-bottom:var(--s5)}
+.bd-h{display:flex;align-items:baseline;gap:var(--s3)}
+.bd-n{font-size:var(--fs-sm);font-weight:var(--fw-b);color:var(--ink)}
+.bd-v{margin-left:auto;font-size:var(--fs-md);font-weight:var(--fw-b);color:var(--ink);
+  font-variant-numeric:tabular-nums}
+.bd-b{height:5px;border-radius:var(--r-pill);background:var(--well);overflow:hidden;
+  margin:var(--s2) 0 var(--s3)}
+.bd-b i{display:block;height:100%;border-radius:var(--r-pill);background:var(--accent)}
+.bd-k{display:grid;grid-template-columns:1fr 60px auto;align-items:center;gap:var(--s3);
+  padding:5px 0 5px var(--s3);border-left:2px solid var(--line)}
+.bd-kn{font-size:var(--fs-xs);color:var(--ink-2);min-width:0;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.bd-kb{height:4px;border-radius:var(--r-pill);background:var(--well);overflow:hidden}
+.bd-kb i{display:block;height:100%;border-radius:var(--r-pill);background:#93B0E6}
+.bd-kv{font-size:var(--fs-xs);font-weight:var(--fw-b);color:var(--ink);white-space:nowrap;
+  font-variant-numeric:tabular-nums}
+.bd-t{display:flex;justify-content:space-between;align-items:baseline;padding-top:var(--s3);
+  border-top:1.5px solid var(--ink);font-size:var(--fs-lg);font-weight:var(--fw-h);
+  color:var(--ink);font-variant-numeric:tabular-nums}
+
+/* --- The information control on a KPI ------------------------------------ */
+.info{width:19px;height:19px;border-radius:50%;border:1px solid var(--line-2);
+  background:var(--surface);color:var(--muted);font-size:var(--fs-2xs);
+  font-weight:var(--fw-h);font-style:italic;line-height:1;margin-left:var(--s2);
+  display:inline-grid;place-items:center;vertical-align:middle;padding:0;
+  transition:all var(--d1) var(--ease)}
+.info:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+.d-sect{font-size:var(--fs-3xs);font-weight:var(--fw-b);letter-spacing:.09em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:var(--s2)}
+.x.alt{margin-left:auto;margin-right:var(--s1);font-size:var(--fs-xl)}
+
+/* --- Data freshness chip ------------------------------------------------- */
+.fresh{display:inline-flex;align-items:center;gap:7px;background:var(--card);
+  border:1px solid var(--line);border-radius:var(--r-pill);padding:6px 12px;
+  font-size:var(--fs-xs);font-weight:var(--fw-m);color:var(--muted);min-height:32px;
+  font-family:var(--font);transition:all var(--d1) var(--ease);align-self:flex-end;
+  margin-bottom:1px}
+.fresh:hover{color:var(--ink);border-color:var(--line-2);box-shadow:var(--shadow-1)}
+.st.good{color:var(--good);background:var(--good-soft)}
+.st.warn{color:var(--warn);background:var(--warn-soft)}
+
+@media(max-width:860px){
+  .sn-g{grid-template-columns:1fr}
+  .bd-k{grid-template-columns:1fr auto;gap:var(--s2)}
+  .bd-kb{display:none}
+  .fresh{align-self:auto}
+}
 </style>
 </head>
 <body>
@@ -391,11 +558,16 @@ var Api = {
    using the same rules the backend applies, so the shape on screen matches. */
 var Demo = {
   seed: function (s) { var h = 0; for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) & 0x7fffffff; return h; },
-  apply: function (model) {
+  apply: function (model, period) {
     var c = JSON.parse(JSON.stringify(model));
+    /* The period is part of the seed. Without it every month derives identical
+       values, the month selector looks broken, and a performance history is a
+       flat line saying nothing. */
+    var p = period || S.month || c.month || '';
+    c.month = p || c.month;
     c.scorecards.forEach(function (sc) {
       sc.kpis.forEach(function (k) {
-        var seed = Demo.seed(sc.employee_id + k.kra + k.kpi), lower = k.direction === 'LOWER_IS_BETTER';
+        var seed = Demo.seed(p + sc.employee_id + k.kra + k.kpi), lower = k.direction === 'LOWER_IS_BETTER';
         var target = lower ? 5 : k.unit === 'CR' ? 1 + (seed % 900) / 100
                    : k.unit === 'PERCENT' ? 90 + (seed % 10) : 2 + (seed % 12);
         var ratio = 0.62 + ((seed >> 3) % 55) / 100;
@@ -479,6 +651,301 @@ var Sel = {
   }
 };
 
+/* ============================== HISTORY ================================
+   The added panels all ask one question the rest of the app does not: the same
+   person, or the same KPI, across several months rather than one. That is
+   answered once here and cached, so a profile does not re-derive six models per
+   panel.
+
+   Against a live model only the loaded period can be reported on, because the
+   backend answers one period at a time; the trends then render their empty
+   state rather than inventing a line. On sample data every period is
+   re-derived with the period in the seed, which is what makes a trend exist at
+   all before a sheet is connected. */
+var Hist = {
+  _c: {},
+  clear: function () { Hist._c = {}; },
+  modelFor: function (month) {
+    if (Object.prototype.hasOwnProperty.call(Hist._c, month)) return Hist._c[month];
+    var base = S.model, out = null;
+    if (!base) return null;
+    if (S.demo) out = Demo.apply(base, month);
+    else if (base.month === month) out = base;
+    Hist._c[month] = out;
+    return out;
+  },
+  card: function (month, empId) {
+    var m = Hist.modelFor(month);
+    if (!m) return null;
+    return (m.scorecards || []).filter(function (s) { return s.employee_id === empId; })[0] || null;
+  },
+  /* [{month, v}] for a person's overall score. Gaps are dropped rather than
+     drawn as zero, which would read as a collapse instead of a blank. */
+  employee: function (empId) {
+    return Sel.months().map(function (mo) {
+      var c = Hist.card(mo, empId);
+      return { month: mo, v: c ? c.overall_score : null };
+    }).filter(function (p) { return p.v != null; });
+  },
+  /* Achievement rather than the raw amount: the target itself moves month to
+     month, so a line of raw values would be measured against a shifting bar. */
+  kpi: function (empId, name) {
+    return Sel.months().map(function (mo) {
+      var c = Hist.card(mo, empId);
+      var k = c && (c.kpis || []).filter(function (x) { return x.kpi === name; })[0];
+      return { month: mo, v: k ? k.achievement : null };
+    }).filter(function (p) { return p.v != null; });
+  }
+};
+
+/* ============================== TREND ==================================
+   One chart, used by the profile history and the KPI drawer, so a line means
+   the same thing in both places.
+
+   The plot stretches to whatever width it is given, which is what lets it work
+   in a full-width panel and a 420px drawer. Only the SVG may stretch: a circle
+   drawn in a non-uniformly scaled viewBox comes out an ellipse and a label
+   comes out many times too wide. So the SVG carries the area and the line and
+   nothing else, and the dots and labels are ordinary elements positioned over
+   it in percentages, where a dot stays round and type stays the size it was
+   set. */
+function Trend(points, opts) {
+  opts = opts || {};
+  if (!points || points.length < 2) {
+    return '<div class="tr-empty">Not enough history yet. A trend appears once this ' +
+      'has been measured in more than one period.</div>';
+  }
+  var vals = points.map(function (p) { return p.v; });
+  var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+  var span = Math.max(hi - lo, 8);
+  var min = Math.max(0, Math.floor((lo - span * 0.45) / 5) * 5);
+  var max = Math.min(opts.max || 110, Math.ceil((hi + span * 0.55) / 5) * 5);
+  if (max <= min) max = min + 10;
+
+  var n = points.length;
+  var px = function (i) { return i * 100 / (n - 1); };
+  var py = function (v) { return (1 - (v - min) / (max - min)) * 100; };
+  var d = points.map(function (p, i) {
+    return (i ? 'L' : 'M') + px(i).toFixed(2) + ' ' + py(p.v).toFixed(2);
+  }).join(' ');
+
+  var marks = points.map(function (p, i) {
+    var last = i === n - 1;
+    var pos = 'left:' + px(i).toFixed(2) + '%;top:' + py(p.v).toFixed(2) + '%';
+    return '<i class="tr-pt' + (last ? ' last' : '') + '" style="' + pos + '"></i>' +
+      '<b class="tr-vl' + (last ? ' last' : '') + '" style="' + pos + '">' +
+      show(p.v) + (opts.suffix || '') + '</b>';
+  }).join('');
+
+  /* A full-height column per period, so a month can be reached without having
+     to hit the dot itself. */
+  var hits = points.map(function (p, i) {
+    var pick = opts.pick !== false;
+    var tag = pick ? 'button' : 'span';
+    return '<' + tag + ' class="tr-h"' + (pick ? ' data-month="' + esc(p.month) + '"' : '') +
+      ' title="' + esc(monthLabel(p.month)) + ' · ' + show(p.v) + (opts.suffix || '') + '">' +
+      '<span>' + esc(monthShort(p.month)) + '</span></' + tag + '>';
+  }).join('');
+
+  return '<div class="trend"><div class="tr-plot">' +
+    '<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">' +
+      '<path class="ar" d="' + d + ' L100 100 L0 100 Z"/>' +
+      '<path class="ln" d="' + d + '"/></svg>' + marks +
+    '<div class="tr-hits">' + hits + '</div></div>' +
+    '<p class="vh">' + esc(opts.label || 'Trend') + ': ' + points.map(function (p) {
+      return monthShort(p.month) + ' ' + show(p.v) + (opts.suffix || '');
+    }).join(', ') + '</p></div>';
+}
+function monthShort(p) {
+  var d = String(p).split('-');
+  return ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][Number(d[1])] || p;
+}
+/* The change against the period before, as a direction and a size. */
+function Delta(points, suffix) {
+  if (!points || points.length < 2) return '';
+  var a = points[points.length - 2], b = points[points.length - 1];
+  var d = Math.round((b.v - a.v) * 10) / 10;
+  if (!d) return '<span class="delta flat">No change vs ' + esc(monthShort(a.month)) + '</span>';
+  return '<span class="delta ' + (d > 0 ? 'up' : 'down') + '">' + (d > 0 ? '↑' : '↓') + ' ' +
+    Math.abs(d).toFixed(1) + (suffix || '') + ' vs ' + esc(monthShort(a.month)) + '</span>';
+}
+
+/* ============================== PROFILE PANELS =========================
+   None of these is a screen. They sit inside the profile that already existed,
+   so the default view stays as simple as it was and the depth appears only
+   where the question is asked. */
+
+/* Performance history: the score by period and nothing else. The per-KPI
+   version of this question is answered one level down, inside the KPI. */
+function HistoryPanel(m) {
+  var pts = Hist.employee(m.employee_id);
+  return '<div class="block"><div class="sect">Performance history' +
+    '<span class="r">' + (pts.length > 1 ? 'overall score by month' : 'overall score') + '</span></div>' +
+    '<div class="pcard">' +
+      (pts.length > 1 ? '<div class="tr-top">' + Delta(pts) + '</div>' : '') +
+      Trend(pts, { label: 'Overall score', max: 100 }) +
+      (pts.length > 1 ? '<p class="tr-note">Select a period to open it.</p>' : '') +
+    '</div></div>';
+}
+
+/* Strongest and weakest, computed rather than assigned. Achievement is already
+   direction-aware upstream - a lower DSO raises it - so a plain comparison
+   holds for inverted KPIs too. */
+function SnapshotPanel(m) {
+  var rated = (m.kpis || []).filter(function (k) { return k.achievement != null; });
+  if (rated.length < 2) return '';
+  var sorted = rated.slice().sort(function (a, b) { return b.achievement - a.achievement; });
+  var best = sorted[0], worst = sorted[sorted.length - 1];
+  if (best === worst) return '';
+  function card(cls, label, k) {
+    var pair = (k.actual == null || k.target == null) ? ''
+      : '<div class="sn-f">' + fmt(k.actual, k.unit) + ' actual · ' + fmt(k.target, k.unit) + ' target</div>';
+    return '<div class="sn ' + cls + '"><div class="sn-l">' + label + '</div>' +
+      '<div class="sn-k">' + esc(k.kpi) + '</div>' +
+      '<div class="sn-v">' + show(k.achievement) + '<em>%</em></div>' +
+      '<div class="sn-s">Achievement · ' + esc(k.kra || '') + '</div>' + pair + '</div>';
+  }
+  return '<div class="block"><div class="sect">Performance snapshot<span class="r">this period</span></div>' +
+    '<div class="sn-g">' + card('good', 'Strongest KPI', best) +
+    card('warn', 'Needs attention', worst) + '</div></div>';
+}
+
+/* A trust mechanism. A score built from four of six KPIs is not wrong, but
+   showing it at the same confidence as a complete one would be. Amber and
+   contained: the page stays calm, the caveat is one click away, and the number
+   is never quietly overstated. */
+function CompletenessPanel(m) {
+  var kpis = m.kpis || [];
+  if (!kpis.length) return '';
+  var pending = kpis.filter(function (k) { return k.achievement == null; });
+  if (!pending.length) {
+    return '<div class="cmp ok"><i class="cdot good"></i>Performance complete · all ' +
+      plural(kpis.length, 'KPI') + ' have actuals for this period.</div>';
+  }
+  return '<div class="cmp warn"><div class="cmp-h"><span class="cmp-i" aria-hidden="true">!</span>' +
+    '<div><b>Performance incomplete</b><div class="cmp-s">' +
+    (kpis.length - pending.length) + ' of ' + kpis.length + ' KPIs have actual data · ' +
+    plural(pending.length, 'KPI') + ' pending</div></div></div>' +
+    '<ul class="cmp-l">' + pending.map(function (k) { return '<li>' + esc(k.kpi) + '</li>'; }).join('') +
+    '</ul><p class="cmp-f">The score may change once the remaining actuals are updated. ' +
+    'Pending KPIs are excluded from it rather than counted as zero.</p></div>';
+}
+
+/* ============================== DRAWER BODIES ==========================
+   The drawer answers four kinds of question now. They are all the same gesture
+   - ask for more about the thing in front of you - so they share one surface
+   rather than each getting its own. */
+
+/* The overall score, explained. The chain is overall -> KRA -> KPI
+   contribution, every line a share of 100, so the parts visibly sum to the
+   whole. Raw achievement is deliberately not the headline: 105% on a 5% KPI
+   moves the total less than 70% on a 40% one, and only the weighted figure
+   shows that. */
+function ScoreBody(m) {
+  var kpis = (m.kpis || []).filter(function (k) { return k.weighted_score != null; });
+  var groups = Sel.byKra(kpis);
+  var earned = 0, weight = 0;
+  groups.forEach(function (g) { earned += g.earned; weight += g.measured; });
+
+  var body = groups.map(function (g) {
+    return '<div class="bd-g"><div class="bd-h"><span class="bd-n">' + esc(g.kra) + '</span>' +
+      '<span class="bd-v">' + show(g.earned) + '<em> / ' + show(g.measured) + '</em></span></div>' +
+      '<div class="bd-b"><i style="width:' +
+        (g.measured ? Math.min(100, g.earned / g.measured * 100).toFixed(1) : 0) + '%"></i></div>' +
+      g.kpis.map(function (k) {
+        var share = k.weightage ? (k.weighted_score / k.weightage * 100) : 0;
+        return '<div class="bd-k"><span class="bd-kn">' + esc(k.kpi) + '</span>' +
+          '<span class="bd-kb"><i style="width:' + Math.max(0, Math.min(100, share)).toFixed(1) + '%"></i></span>' +
+          '<span class="bd-kv">' + show(k.weighted_score) + '<em> / ' + show(k.weightage) + '</em></span></div>';
+      }).join('') + '</div>';
+  }).join('');
+
+  return '<div class="d-h"><div><div class="eyebrow">' + esc(m.employee_name) + '</div>' +
+    '<h2>Score breakdown</h2></div>' +
+    '<button class="x" data-close="1" aria-label="Close">×</button></div>' +
+    '<div class="d-b"><div class="bd-top"><div class="k">Overall score</div>' +
+    '<div class="v">' + show(m.overall_score) + '<em> / 100</em></div></div>' +
+    (groups.length ? body : '<div class="empty">No scored KPIs for this period.</div>') +
+    '<div class="bd-t"><span>Total</span><span>' + show(earned) + '<em> / ' + show(weight) + '</em></span></div>' +
+    (weight && Math.abs(weight - 100) > 0.5
+      ? '<p class="tr-note">Measured weightage is ' + show(weight) + ' of 100. KPIs without ' +
+        'actuals are excluded, so the total is out of what could be measured.</p>' : '') +
+    '</div>';
+}
+
+/* A KPI's own history, inside the KPI it belongs to. */
+function KpiTrendBlock(k, owner) {
+  var pts = owner ? Hist.kpi(owner.employee_id, k.kpi) : [];
+  return '<div class="d-rule"></div><div class="d-sect">Achievement by month</div>' +
+    Trend(pts, { label: 'Achievement', suffix: '%', max: 110, pick: false }) +
+    (pts.length > 1 ? '<div class="tr-top mt">' + Delta(pts, '%') + '</div>' : '');
+}
+
+/* Reference material, on demand. It is the same every month, so leaving it on
+   the KPI itself would crowd out the figures that are not. */
+function DefBody(k) {
+  return '<div class="d-h"><div><div class="eyebrow">KPI definition</div><h2>' + esc(k.kpi) + '</h2></div>' +
+    '<button class="x alt" data-dback="1" aria-label="Back to KPI detail">‹</button>' +
+    '<button class="x" data-close="1" aria-label="Close">×</button></div>' +
+    '<div class="d-b">' +
+      pair('KRA', esc(k.kra || '—')) +
+      pair('Perspective', esc(k.perspective || '—')) +
+      pair('Measurement', k.unit ? measureLabel(k.unit) : '—') +
+      pair('Direction', k.direction === 'LOWER_IS_BETTER' ? 'Lower is better' : 'Higher is better') +
+      pair('Weightage', show(k.weightage) + '% of the scorecard') +
+      pair('Frequency', 'Monthly') +
+      pair('Source of tracking', esc(k.source || 'Monthly MIS')) +
+      (k.goal ? '<div class="d-rule"></div><div class="d-goal pair"><div class="k">Goal / description</div>' +
+        '<p>' + esc(k.goal) + '</p></div>' : '') +
+      '<p class="tr-note">Definitions come from the KPI master and are the same every ' +
+      'month. Only the target and actual change.</p></div>';
+}
+
+/* Metadata, so it is a note behind an indicator rather than anything with a
+   place in the navigation. It reports only what the model actually carries. */
+function FreshBody() {
+  var m = Sel.model() || {};
+  return '<div class="d-h"><div><div class="eyebrow">Where these numbers came from</div>' +
+    '<h2>Data freshness</h2></div>' +
+    '<button class="x" data-close="1" aria-label="Close">×</button></div>' +
+    '<div class="d-b">' +
+      (m.generated_at ? pair('Last updated', esc(stamp(m.generated_at))) : '') +
+      pair('Source', esc(m.source || (S.demo ? 'Sample values' : 'Google Sheet'))) +
+      (m.records != null ? pair('Records', String(m.records)) : '') +
+      pair('Period', esc(S.month ? monthLabel(S.month) : '—')) +
+      pair('Periods available', String(Sel.months().length)) +
+      pair('Status', S.demo ? '<span class="st warn">Sample values — not live</span>'
+                            : '<span class="st good">Up to date</span>') +
+      (S.demo ? '<p class="tr-note">No sheet is connected, so every target and actual on ' +
+        'screen is generated for demonstration. Teams, employees, KRAs and weightages are ' +
+        'real.</p>' : '') + '</div>';
+}
+function stamp(v) {
+  var d = new Date(v);
+  if (isNaN(d)) return String(v);
+  var mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
+  var h = d.getHours(), ap = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return d.getDate() + ' ' + mo + ' ' + d.getFullYear() + ' · ' + h + ':' +
+    ('0' + d.getMinutes()).slice(-2) + ' ' + ap;
+}
+/* The indicator itself: a dot, a relative time, and a way in. */
+function FreshChip() {
+  var m = Sel.model() || {};
+  var label;
+  if (S.demo) label = 'Sample data';
+  else if (m.generated_at) {
+    var mins = Math.max(0, Math.round((Date.now() - new Date(m.generated_at)) / 60000));
+    label = mins < 1 ? 'Updated just now'
+      : mins < 60 ? 'Updated ' + mins + ' min ago'
+      : mins < 1440 ? 'Updated ' + Math.round(mins / 60) + ' h ago'
+      : 'Updated ' + Math.round(mins / 1440) + ' d ago';
+  } else label = 'Data status';
+  return '<button class="fresh" data-fresh="1" aria-label="' + esc(label) +
+    '. Show where this data came from"><i class="cdot ' + (S.demo ? 'warn' : 'good') + '"></i>' +
+    esc(label) + '</button>';
+}
 /* ============================== FORMAT ================================== */
 function fmt(v, unit) {
   var n = n1(v); if (n == null) return '—';
@@ -662,7 +1129,11 @@ function EmployeeScreen() {
   var head = '<div class="phead">' + Avatar(m.employee_name, 'lg') +
     '<div class="id"><h1>' + esc(m.employee_name) + '</h1>' +
     '<div class="meta">' + esc(m.designation || '—') + (m.region ? '<span class="dot">·</span>' + esc(m.region) : '') + '</div></div>' +
-    '<div class="pscore"><div class="v">' + show(m.overall_score) + '</div><div class="l">Overall score</div></div></div>';
+    /* The score is the one figure on the page that is derived rather than
+       reported, so it is a control: it has to be able to explain itself. */
+    '<button class="pscore" data-score="1" aria-label="Overall score ' + show(m.overall_score) +
+    '. Show how it was calculated"><div class="v">' + show(m.overall_score) + '</div>' +
+    '<div class="l">Overall score<span class="bdg">Breakdown</span></div></button></div>';
 
   var mini = '<div class="mini">' +
     MiniStat('KPI achievement', kpiAch == null ? '—' : show(kpiAch) + '<em>%</em>') +
@@ -677,11 +1148,11 @@ function EmployeeScreen() {
   var table = '<div class="block"><div class="sect">Assigned KRA / KPI<span class="r">click a KPI for detail</span></div>' +
     KpiTable(kpis, 'emp', false) + '</div>';
 
-  var pending = kpis.length - scored.length;
-  var hint = pending ? '<div class="hint">' + pending + ' of ' + kpis.length +
-    ' KPIs have no target or actual for this period, so they are excluded from the score rather than counted as zero.</div>' : '';
-
-  return back + head + mini + kraBlock + table + hint;
+  /* Order follows the questions a reader actually asks, in order: how much of
+     this can I trust, how did it get here, what is carrying it and what is
+     dragging on it - and only then, the KPI list that explains the parts. */
+  return back + head + mini + CompletenessPanel(m) + HistoryPanel(m) +
+    SnapshotPanel(m) + kraBlock + table;
 }
 function MiniStat(l, v) { return '<div class="mstat"><div class="l">' + esc(l) + '</div><div class="v">' + v + '</div></div>'; }
 
@@ -714,10 +1185,19 @@ function renderDrawer() {
     }
     return;
   }
-  var k = S.detail;
+  var det = S.detail;
+  /* Four kinds of answer share this one surface. They are the same gesture -
+     ask for more about the thing in front of you - so a second drawer, or a
+     page, would only add somewhere else to look. */
+  if (det.kind === 'score') { dr.innerHTML = ScoreBody(det.owner); openDrawer(dr, sc, app); return; }
+  if (det.kind === 'fresh') { dr.innerHTML = FreshBody(); openDrawer(dr, sc, app); return; }
+  if (det.kind === 'def')   { dr.innerHTML = DefBody(det.kpi); openDrawer(dr, sc, app); return; }
+
+  var k = det.kpi;
   var achW = k.achievement == null ? 0 : Math.max(0, Math.min(100, k.achievement / 105 * 100));
   dr.innerHTML =
-    '<div class="d-h"><div><div class="eyebrow">' + esc(k.kra || 'KPI') + '</div><h2>' + esc(k.kpi) + '</h2></div>' +
+    '<div class="d-h"><div><div class="eyebrow">' + esc(k.kra || 'KPI') + '</div>' +
+    '<h2>' + esc(k.kpi) + '<button class="info" data-def="1" aria-label="What this KPI means">i</button></h2></div>' +
     '<button class="x" data-close="1" aria-label="Close">×</button></div>' +
     '<div class="d-b">' +
       '<div class="d-meas">' +
@@ -736,8 +1216,16 @@ function renderDrawer() {
       (k.goal ? '<div class="d-goal pair"><div class="k">Goal / description</div><p>' + esc(k.goal) + '</p></div>' : '') +
       (k.unit ? pair('Measurement', measureLabel(k.unit)) : '') +
       (k.source ? pair('Source of tracking', esc(k.source)) : '') +
+      KpiTrendBlock(k, det.owner) +
     '</div>';
-  if (!S._drawerOpen) { S._trigger = document.activeElement; S._drawerOpen = true; }
+  openDrawer(dr, sc, app);
+}
+
+/* Opening is identical whichever body was built, so it is done in one place:
+   the drawer takes focus, the shell behind it goes inert, and the element that
+   opened it is remembered so focus can be handed back on close. */
+function openDrawer(dr, sc, app) {
+  if (!S._drawerOpen) { S._trigger = S._trigger || document.activeElement; S._drawerOpen = true; }
   dr.classList.add('on'); sc.classList.add('on');
   dr.removeAttribute('aria-hidden'); dr.removeAttribute('inert');
   app.setAttribute('inert', ''); app.setAttribute('aria-hidden', 'true');
@@ -786,7 +1274,10 @@ function buildTopbar() {
   }
   var greet = lead ? '<div class="greet"><div class="who"><b>' + esc(lead.employee_name) + '</b>' +
     '<span>' + esc((lead.designation || '').split(' - ')[0] || 'Recykal') + '</span></div>' + Avatar(lead.employee_name) + '</div>' : '';
-  $('#tbar').innerHTML = teamSel + monthSel + empSel + '<span class="grow"></span>' + greet;
+  /* Freshness sits with the filters, not in the content: it describes the data
+     the filters selected, and it is metadata, so it stays quiet. */
+  $('#tbar').innerHTML = teamSel + monthSel + empSel + FreshChip() +
+    '<span class="grow"></span>' + greet;
 }
 
 /* ============================== RENDER ================================= */
@@ -817,7 +1308,7 @@ function render() {
 }
 
 function load() {
-  S.loading = true; S.error = null; S._demo = null; render();
+  S.loading = true; S.error = null; S._demo = null; Hist.clear(); render();
   Api.fetch(S.month, function (m) {
     S.loading = false;
     if (!m) {
@@ -857,21 +1348,43 @@ document.addEventListener('click', function (e) {
   if (e.target.closest('[data-back]')) { S.employee = null; S.detail = null; render(); $('.canvas').scrollTop = 0; return; }
   var g = e.target.closest('[data-kra]');
   if (g) { var id = g.dataset.kra; S.closed[id] = !S.closed[id]; render(); return; }
+  /* A point on the history line is a way into that period, so the same profile
+     can be read in the month it belongs to. */
+  var mo = e.target.closest('[data-month]');
+  if (mo) { S.month = mo.dataset.month; S.detail = null; S._demo = null; Hist.clear(); load(); return; }
+  var sb = e.target.closest('[data-score]');
+  if (sb) {
+    var who = Sel.member(S.employee);
+    if (who) { S._trigger = sb; S.detail = { kind: 'score', owner: who }; renderDrawer(); }
+    return;
+  }
+  var fr = e.target.closest('[data-fresh]');
+  if (fr) { S._trigger = fr; S.detail = { kind: 'fresh' }; renderDrawer(); return; }
+  /* Both of these live inside the open drawer, so they are tested before the
+     KPI row that would otherwise swallow them. */
+  if (e.target.closest('[data-def]') && S.detail && S.detail.kpi) {
+    S.detail = { kind: 'def', kpi: S.detail.kpi, owner: S.detail.owner }; renderDrawer(); return;
+  }
+  if (e.target.closest('[data-dback]') && S.detail && S.detail.kpi) {
+    S.detail = { kind: 'kpi', kpi: S.detail.kpi, owner: S.detail.owner }; renderDrawer(); return;
+  }
   var k = e.target.closest('[data-kpi]');
   if (k) {
     var p = k.dataset.kpi.split('::'), owner = Sel.member(p[0]);
-    S.detail = owner ? owner.kpis.filter(function (x) { return x.kra === p[1] && x.kpi === p[2]; })[0] : null;
+    var picked = owner ? owner.kpis.filter(function (x) { return x.kra === p[1] && x.kpi === p[2]; })[0] : null;
+    S._trigger = k;
+    S.detail = picked ? { kind: 'kpi', kpi: picked, owner: owner } : null;
     renderDrawer(); return;
   }
   if (e.target.closest('[data-close]') || e.target.id === 'scrim') { S.detail = null; renderDrawer(); return; }
   var d = e.target.closest('[data-demo]');
-  if (d) { S.demo = d.dataset.demo === 'on'; S._demo = null; S.detail = null; render(); return; }
+  if (d) { S.demo = d.dataset.demo === 'on'; S._demo = null; S.detail = null; Hist.clear(); render(); return; }
   if (e.target.closest('[data-retry]')) load();
 });
 document.addEventListener('change', function (e) {
   var id = e.target.id;
   if (id === 'f-team') { S.team = e.target.value; S.employee = null; S.detail = null; render(); $('.canvas').scrollTop = 0; }
-  else if (id === 'f-month') { S.month = e.target.value; S.detail = null; load(); }
+  else if (id === 'f-month') { S.month = e.target.value; S.detail = null; S._demo = null; Hist.clear(); load(); }
   else if (id === 'f-emp') { S.employee = e.target.value || null; S.detail = null; render(); }
 });
 document.addEventListener('keydown', function (e) {
