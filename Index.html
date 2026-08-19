@@ -243,7 +243,10 @@ td.kpi{padding-left:var(--s6)}
 .scrim{position:fixed;inset:0;background:rgba(15,26,46,.34);opacity:0;pointer-events:none;
   transition:opacity var(--d2) var(--ease);z-index:50}
 .scrim.on{opacity:1;pointer-events:auto}
-.drawer{position:fixed;top:0;right:0;height:100vh;width:412px;max-width:92vw;background:var(--card);
+/* --sbw is the width of the scrollbar the lock removed, published only while
+   the drawer is open. Holding the drawer that far off the right edge keeps it
+   exactly where it was drawn as the viewport widens underneath it. */
+.drawer{position:fixed;top:0;right:var(--sbw,0px);height:100vh;width:412px;max-width:92vw;background:var(--card);
   box-shadow:var(--shadow-3);transform:translateX(100%);transition:transform var(--d2) var(--ease);
   z-index:51;display:flex;flex-direction:column}
 .drawer.on{transform:none}
@@ -253,7 +256,11 @@ td.kpi{padding-left:var(--s6)}
 .d-h .x{margin-left:auto;border:1px solid var(--line-2);background:var(--card);color:var(--muted);width:30px;height:30px;
   border-radius:var(--r-ctl);font-size:16px;line-height:1;flex:0 0 auto;display:grid;place-items:center}
 .d-h .x:hover{color:var(--ink);border-color:var(--ink)}
-.d-b{padding:var(--s5);overflow-y:auto;flex:1}
+/* The drawer scrolls on its own. overscroll-behavior stops that scroll handing
+   off to the page when it reaches either end, which is the other way the
+   background moves while the drawer is open. */
+.d-b{padding:var(--s5);overflow-y:auto;flex:1;overscroll-behavior:contain}
+.scrim{overscroll-behavior:contain}
 /* Stacked field pairs: label, 4px, value, 24px between pairs. */
 .pair{margin-bottom:var(--s5)}
 .pair:last-child{margin-bottom:0}
@@ -1168,6 +1175,69 @@ function PageHead(title, kind) {
 /* Modal detail drawer. On open it takes focus and makes the shell inert; on
    close it returns focus to whatever opened it. The Status shown is the
    backend's own k.status, coloured by k.level — never re-classified here. */
+/* Holding the page still behind the drawer.
+   ---------------------------------------------------------------------------
+   The page does not scroll on <body>: .canvas is the scroller, so that is what
+   has to be pinned. Three things would otherwise move it.
+
+   Wheeling over the scrim chains through to whatever is scrollable underneath,
+   so the background drifts while the drawer is open. Hiding the overflow stops
+   that - but it also takes the scrollbar away, and the content widens into the
+   space it vacated, which is a visible jolt of the full scrollbar width. So the
+   exact width removed is added back as padding, and every line stays put.
+
+   The scroll position is read once, on the first lock, and written back on
+   release, so reopening and closing the drawer repeatedly cannot drift. */
+var Lock = {
+  el: null, target: null, top: 0, pad: '',
+
+  /* Which element actually scrolls has to be asked, not assumed. .canvas owns
+     the overflow, but .app is min-height rather than height, so on a long page
+     .canvas grows to fit its content and the document scrolls instead. Pinning
+     .canvas in that case pins nothing. */
+  scroller: function () {
+    var c = $('.canvas');
+    if (c && c.scrollHeight > c.clientHeight + 1) return c;
+    return document.scrollingElement || document.documentElement;
+  },
+
+  on: function () {
+    if (Lock.el) return;
+    var s = Lock.scroller();
+    var isDoc = (s === document.scrollingElement || s === document.documentElement || s === document.body);
+    var t = isDoc ? document.documentElement : s;
+    var bar = isDoc ? (window.innerWidth - document.documentElement.clientWidth)
+                    : (s.offsetWidth - s.clientWidth);
+    Lock.el = s; Lock.target = t; Lock.top = s.scrollTop;
+    Lock.pad = t.style.paddingRight;
+    t.style.overflow = 'hidden';
+    if (bar > 0) {
+      t.style.paddingRight = (parseFloat(getComputedStyle(t).paddingRight || 0) + bar) + 'px';
+      /* Losing the scrollbar widens the viewport, and anything positioned
+         against its right edge - the drawer - would slide out with it. The
+         width is published so the drawer can hold its ground. */
+      t.style.setProperty('--sbw', bar + 'px');
+    }
+  },
+
+  off: function () {
+    if (!Lock.el) return;
+    Lock.target.style.overflow = '';
+    Lock.target.style.paddingRight = Lock.pad;
+    Lock.target.style.removeProperty('--sbw');
+    Lock.el.scrollTop = Lock.top;
+    Lock.el = null; Lock.target = null;
+  }
+};
+
+/* Moving focus is the third thing that scrolls the page: the browser brings the
+   target into view, which yanks the background to wherever the row happens to
+   be. preventScroll asks for the focus without the scroll. */
+function focusQuiet(el) {
+  if (!el) return;
+  try { el.focus({ preventScroll: true }); } catch (e) { try { el.focus(); } catch (e2) {} }
+}
+
 function renderDrawer() {
   var dr = $('#drawer'), sc = $('#scrim'), app = $('.app');
   if (!S.detail) {
@@ -1175,7 +1245,10 @@ function renderDrawer() {
     dr.setAttribute('aria-hidden', 'true'); dr.setAttribute('inert', '');
     if (S._drawerOpen) {
       app.removeAttribute('inert'); app.removeAttribute('aria-hidden');
-      if (S._trigger && document.contains(S._trigger)) { try { S._trigger.focus(); } catch (e) {} }
+      /* Release before focus: the scroller has to be scrollable again for its
+         position to be written back, and the focus must not move it after. */
+      Lock.off();
+      if (S._trigger && document.contains(S._trigger)) focusQuiet(S._trigger);
       S._trigger = null; S._drawerOpen = false;
     }
     return;
@@ -1221,10 +1294,14 @@ function renderDrawer() {
    opened it is remembered so focus can be handed back on close. */
 function openDrawer(dr, sc, app) {
   if (!S._drawerOpen) { S._trigger = S._trigger || document.activeElement; S._drawerOpen = true; }
+  /* Pin the background first, so nothing that follows can move it. Lock.on is
+     idempotent: switching between the KPI, its definition and the breakdown
+     re-enters here without re-reading the position. */
+  Lock.on();
   dr.classList.add('on'); sc.classList.add('on');
   dr.removeAttribute('aria-hidden'); dr.removeAttribute('inert');
   app.setAttribute('inert', ''); app.setAttribute('aria-hidden', 'true');
-  var x = dr.querySelector('[data-close]'); if (x) x.focus();
+  focusQuiet(dr.querySelector('[data-close]'));
 }
 function pair(k, v) { return '<div class="pair"><div class="k">' + esc(k) + '</div><div class="v">' + v + '</div></div>'; }
 function measureLabel(u) {
