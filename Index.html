@@ -561,7 +561,7 @@ var initials = function (s) {
 };
 
 var S = { model: null, loading: true, error: null,
-          view: 'overview', team: null, employee: null, month: null,
+          view: 'team', team: null, employee: null, month: null,
           closed: {}, detail: null, demo: false, _demo: null,
           _trigger: null, _drawerOpen: false };
 
@@ -1073,10 +1073,23 @@ function KpiTable(kpis, prefix, showOwner) {
 }
 
 /* ============================== SCREENS ================================ */
-function DashboardScreen() {
-  var t = Sel.team();
-  if (!t) return PageHead('No team selected', '') + '<div class="empty">No teams are available to show for this period.</div>';
-  var members = Sel.members(), kpis = Sel.allKpis();
+function Card(label, value, sub, hl) {
+  return '<div class="card' + (hl ? ' hl' : '') + '"><div class="l">' + esc(label) + '</div>' +
+    '<div class="v">' + value + '</div>' + (sub ? '<div class="s">' + esc(sub) + '</div>' : '') + '</div>';
+}
+
+/* The team screen, and now the landing one. It absorbed the summary cards and
+   the KRA bars when Overview was removed from the rail: those are the team's
+   headline numbers and its strengths and gaps, and they belong to the team
+   whether or not there is a separate screen to put them on. The order is the
+   team as a whole, then its structure, then its parts. */
+function FlowchartScreen() {
+  var t = Sel.team(), members = Sel.members();
+  if (!members.length) return PageHead(t ? t.team_name : 'Team', '') + '<div class="empty">No members mapped for this team.</div>';
+  var lead = Sel.lead();
+  var reports = members.filter(function (m) { return !lead || m.employee_id !== lead.employee_id; });
+
+  var kpis = Sel.allKpis();
   var score = Sel.mean(members.map(function (m) { return m.overall_score; }));
   var measured = members.filter(function (m) { return m.overall_score != null; }).length;
   var scored = kpis.filter(function (k) { return k.achievement != null; });
@@ -1085,7 +1098,6 @@ function DashboardScreen() {
     return w > 0 ? Math.round(e / w * 1000) / 10 : null;
   })();
   var onTrack = scored.filter(function (k) { return k.achievement >= 90; }).length;
-  var kraGroups = Sel.byKra(kpis);
 
   var cards = '<div class="cards">' +
     Card('Team score', score == null ? '—' : String(show(score)), measured + ' of ' + plural(members.length, 'member') + ' measured', true) +
@@ -1095,24 +1107,7 @@ function DashboardScreen() {
     '</div>';
 
   var kra = '<div class="block"><div class="sect">KRA performance<span class="r">achievement %</span></div>' +
-    '<div class="pcard">' + KraBars(kraGroups) + '</div></div>';
-
-  var rank = '<div class="block"><div class="sect">Team ranking<span class="r">by overall score</span></div>' +
-    '<div class="pcard" style="padding-top:var(--s2);padding-bottom:var(--s2)">' + RankList(members, true) + '</div></div>';
-
-  return PageHead(t.team_name, 'Team performance · ' + esc(monthLabel(S.month))) + cards +
-    '<div class="two">' + kra + rank + '</div>';
-}
-function Card(label, value, sub, hl) {
-  return '<div class="card' + (hl ? ' hl' : '') + '"><div class="l">' + esc(label) + '</div>' +
-    '<div class="v">' + value + '</div>' + (sub ? '<div class="s">' + esc(sub) + '</div>' : '') + '</div>';
-}
-
-function FlowchartScreen() {
-  var t = Sel.team(), members = Sel.members();
-  if (!members.length) return PageHead(t ? t.team_name : 'Team', '') + '<div class="empty">No members mapped for this team.</div>';
-  var lead = Sel.lead();
-  var reports = members.filter(function (m) { return !lead || m.employee_id !== lead.employee_id; });
+    '<div class="pcard">' + KraBars(Sel.byKra(kpis)) + '</div></div>';
 
   var node = function (m, isLead, idx) {
     return '<div class="node' + (isLead ? ' lead' : '') + '" data-emp="' + esc(m.employee_id) + '"' +
@@ -1129,11 +1124,12 @@ function FlowchartScreen() {
     (lead ? node(lead, true, 0) + '<div class="flow-stem"></div><div class="flow-bus"></div>' : '') +
     '<div class="flow-kids">' + reports.map(function (m, i) { return node(m, false, i); }).join('') + '</div></div>';
 
-  var rank = '<div class="block" style="margin-top:var(--s7)"><div class="sect">Ranking<span class="r">by overall score</span></div>' +
+  var rank = '<div class="block"><div class="sect">Ranking<span class="r">by overall score</span></div>' +
     '<div class="pcard" style="padding-top:var(--s2);padding-bottom:var(--s2)">' + RankList(members, true) + '</div></div>';
 
-  return PageHead(t.team_name, 'Team structure · ' + esc(monthLabel(S.month))) +
-    '<div class="block">' + chart + '</div>' + rank;
+  return PageHead(t.team_name, 'Team performance · ' + esc(monthLabel(S.month))) + cards +
+    '<div class="block" style="margin-top:var(--s6)">' + chart + '</div>' +
+    '<div class="two">' + kra + rank + '</div>';
 }
 
 function EmployeeScreen() {
@@ -1270,7 +1266,6 @@ function Skeleton() {
 
 /* ============================== CHROME ================================= */
 var NAV = [
-  { id: 'overview', label: 'Overview', icon: '<path d="M4 13h6V4H4zM14 20h6v-9h-6zM14 8h6V4h-6zM4 20h6v-4H4z"/>' },
   { id: 'team', label: 'Team', icon: '<circle cx="9" cy="8" r="3"/><path d="M4 20a5 5 0 0 1 10 0"/><circle cx="17.5" cy="9" r="2.4"/><path d="M15 20a4.5 4.5 0 0 1 6.5-4"/>' },
   { id: 'kpi', label: 'KRA / KPI', icon: '<path d="M4 6h16M4 12h16M4 18h10"/><circle cx="19" cy="18" r="2"/>' },
   { id: 'profile', label: 'Profile', icon: '<circle cx="12" cy="8" r="3.4"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/>' }
@@ -1321,10 +1316,11 @@ function render() {
     ? '<div class="demo"><div class="in"><span>Showing sample values. Teams, employees, KRAs, KPIs and weightages are real; targets and actuals are not.</span><button data-demo="off">Show real data</button></div></div>'
     : (noPerf ? '<div class="demo"><div class="in"><span>No targets or actuals loaded for this period yet.</span><button data-demo="on">Preview with sample values</button></div></div>' : '');
 
+  /* Two team-level screens and the profile. Team is the landing view, so an
+     unknown or stale view key falls back to it rather than to nothing. */
   var body = S.employee ? EmployeeScreen()
-    : S.view === 'team' ? FlowchartScreen()
     : S.view === 'kpi' ? KpiScreen()
-    : DashboardScreen();
+    : FlowchartScreen();
   $('#view').innerHTML = body;
   // demo banner rides above the canvas content
   var host = $('#view');
