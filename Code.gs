@@ -537,6 +537,8 @@ function buildModel_(teamId, month) {
   /* Targets and actuals only ever come from the sheet - they are period data,
    * never frozen in code. Absent means "not loaded yet", not zero. */
   var tgt = mRead_(M_TAB.TGT), act = mRead_(M_TAB.ACT);
+  tgt.forEach(function (r) { r.month = monthKey_(r.month); });
+  act.forEach(function (r) { r.month = monthKey_(r.month); });
   /* Thresholds travel as a bare ascending array of numbers. The UI only needs
    * positions for tick marks, and 178 KPI instances x 5 objects was ~900
    * nested objects riding in one payload for no gain. */
@@ -714,6 +716,29 @@ function numOrNull_(v) {
   if (v === null || v === undefined || v === '') return null;
   var n = typeof v === 'number' ? v : Number(String(v).replace(/[,\s%]/g, ''));
   return isFinite(n) ? n : null;
+}
+
+/**
+ * A "month" cell in MONTHLY_TARGETS / ACTUAL_PERFORMANCE arrives as a real
+ * Date whenever Sheets auto-detects the typed value as a date (which it does
+ * for "07/2026", "Jul 2026", etc) - getValues() then hands back a JS Date,
+ * not text. Left alone, that Date rides all the way to the client, where
+ * jsonSafe_ stringifies it to a full ISO timestamp: the month selector shows
+ * "2026-07-01T00:00:00.000Z" instead of "July 2026", sort() orders months by
+ * weekday name instead of chronologically, and - the real damage - equality
+ * filtering in find() (Date !== the string the client echoes back) silently
+ * stops matching targets/actuals to any explicitly-selected month.
+ * Normalized once here, at the only place a month value enters the system,
+ * so everything downstream can assume a plain 'YYYY-MM' string.
+ */
+function monthKey_(v) {
+  if (v instanceof Date) return Utilities.formatDate(v, Session.getScriptTimeZone(), 'yyyy-MM');
+  var s = String(v == null ? '' : v).trim();
+  var iso = /^(\d{4})-(\d{1,2})/.exec(s);
+  if (iso) return iso[1] + '-' + ('0' + iso[2]).slice(-2);
+  var mdy = /^(\d{1,2})[\/\-](\d{4})$/.exec(s);
+  if (mdy) return mdy[2] + '-' + ('0' + mdy[1]).slice(-2);
+  return s;
 }
 
 function jsonSafe_(o) {
