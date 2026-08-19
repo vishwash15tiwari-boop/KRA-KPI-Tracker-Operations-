@@ -113,18 +113,6 @@ button,select,input{font-family:inherit;cursor:pointer}
 .sect .r{margin-left:auto;font-weight:var(--fw-n);letter-spacing:0;text-transform:none;font-size:var(--fs-xs)}
 .block{margin-bottom:var(--s7)}
 
-/* Summary cards — small label, large number, quiet context. No big icons. */
-.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--s4);margin-bottom:var(--s7)}
-.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);
-  padding:var(--s4) var(--s5);box-shadow:var(--shadow-1)}
-.card .l{font-size:var(--fs-2xs);font-weight:var(--fw-m);color:var(--muted);text-transform:uppercase;
-  letter-spacing:.06em}
-.card .v{font-size:var(--fs-xxl);font-weight:var(--fw-b);letter-spacing:-.03em;line-height:1.05;
-  margin-top:var(--s2);font-variant-numeric:tabular-nums}
-.card .v em{font-style:normal;font-size:var(--fs-lg);color:var(--faint);font-weight:var(--fw-m);letter-spacing:-.01em}
-.card .s{font-size:var(--fs-xs);color:var(--muted);margin-top:6px}
-.card.hl{background:var(--nav);border-color:var(--nav)}
-.card.hl .l{color:var(--nav-txt-2)}.card.hl .v{color:var(--nav-active)}.card.hl .v em{color:var(--nav-faint)}.card.hl .s{color:var(--nav-muted)}
 
 /* KRA-wise bars — name left, bar centre, score right; one rhythm. */
 .kbars{display:flex;flex-direction:column}
@@ -306,7 +294,7 @@ td.kpi{padding-left:var(--s6)}
 .demo button:hover{border-color:var(--warn)}
 
 /* ============================== RESPONSIVE ============================== */
-@media(max-width:1080px){.cards,.mini{grid-template-columns:repeat(2,1fr)}.two{grid-template-columns:1fr}}
+@media(max-width:1080px){.mini{grid-template-columns:repeat(2,1fr)}.two{grid-template-columns:1fr}}
 @media(max-width:860px){
   .app{flex-direction:column}
   .rail{width:100%;height:auto;flex-direction:row;position:sticky;top:0;padding:6px var(--s3);align-items:center;
@@ -318,7 +306,7 @@ td.kpi{padding-left:var(--s6)}
   .wrap{padding:var(--s5) var(--s4) var(--s7)}.tbar{padding:0 var(--s4);height:auto;flex-wrap:wrap;gap:8px;padding-top:8px;padding-bottom:8px}
 }
 @media(max-width:560px){
-  .cards,.mini{grid-template-columns:1fr}
+  .mini{grid-template-columns:1fr}
   .page-h .r{margin-left:0;width:100%}
   .greet .who{display:none}
   .card .v{font-size:var(--fs-xl)}
@@ -1080,10 +1068,6 @@ function KpiTable(kpis, prefix, showOwner) {
 }
 
 /* ============================== SCREENS ================================ */
-function Card(label, value, sub, hl) {
-  return '<div class="card' + (hl ? ' hl' : '') + '"><div class="l">' + esc(label) + '</div>' +
-    '<div class="v">' + value + '</div>' + (sub ? '<div class="s">' + esc(sub) + '</div>' : '') + '</div>';
-}
 
 /* The team screen, and now the landing one. It absorbed the summary cards and
    the KRA bars when Overview was removed from the rail: those are the team's
@@ -1096,25 +1080,8 @@ function FlowchartScreen() {
   var lead = Sel.lead();
   var reports = members.filter(function (m) { return !lead || m.employee_id !== lead.employee_id; });
 
-  var kpis = Sel.allKpis();
-  var score = Sel.mean(members.map(function (m) { return m.overall_score; }));
-  var measured = members.filter(function (m) { return m.overall_score != null; }).length;
-  var scored = kpis.filter(function (k) { return k.achievement != null; });
-  var kpiAch = (function () {
-    var e = 0, w = 0; scored.forEach(function (k) { e += k.weighted_score; w += k.weightage; });
-    return w > 0 ? Math.round(e / w * 1000) / 10 : null;
-  })();
-  var onTrack = scored.filter(function (k) { return k.achievement >= 90; }).length;
-
-  var cards = '<div class="cards">' +
-    Card('Team score', score == null ? '—' : String(show(score)), measured + ' of ' + plural(members.length, 'member') + ' measured', true) +
-    Card('KPI achievement', kpiAch == null ? '—' : show(kpiAch) + '<em>%</em>', scored.length + ' of ' + kpis.length + ' KPIs with results') +
-    Card('KPIs on track', String(onTrack), (scored.length - onTrack) + ' below target · ' + scored.length + ' measured') +
-    Card('KPIs assigned', String(kpis.length), plural(members.length, 'employee')) +
-    '</div>';
-
   var kra = '<div class="block"><div class="sect">KRA performance<span class="r">achievement %</span></div>' +
-    '<div class="pcard">' + KraBars(Sel.byKra(kpis)) + '</div></div>';
+    '<div class="pcard">' + KraBars(Sel.byKra(Sel.allKpis())) + '</div></div>';
 
   var node = function (m, isLead, idx) {
     return '<div class="node' + (isLead ? ' lead' : '') + '" data-emp="' + esc(m.employee_id) + '"' +
@@ -1134,8 +1101,8 @@ function FlowchartScreen() {
   var rank = '<div class="block"><div class="sect">Ranking<span class="r">by overall score</span></div>' +
     '<div class="pcard" style="padding-top:var(--s2);padding-bottom:var(--s2)">' + RankList(members, true) + '</div></div>';
 
-  return PageHead(t.team_name, 'Team performance · ' + esc(monthLabel(S.month))) + cards +
-    '<div class="block" style="margin-top:var(--s6)">' + chart + '</div>' +
+  return PageHead(t.team_name, 'Team performance · ' + esc(monthLabel(S.month))) +
+    '<div class="block">' + chart + '</div>' +
     '<div class="two">' + kra + rank + '</div>';
 }
 
@@ -1265,10 +1232,13 @@ function measureLabel(u) {
 }
 
 function Skeleton() {
+  /* The skeleton mirrors what actually loads: a heading, the flowchart, then
+     the two lower panels. It used to reserve four summary cards that no longer
+     exist, which made the page jump as it settled. */
   return '<div class="skl" style="height:26px;width:180px"></div>' +
-    '<div class="cards" style="margin-top:var(--s6)"><div class="skl" style="height:96px"></div>' +
-    '<div class="skl" style="height:96px"></div><div class="skl" style="height:96px"></div>' +
-    '<div class="skl" style="height:96px"></div></div><div class="skl" style="height:300px"></div>';
+    '<div class="skl" style="height:14px;width:260px;margin-top:var(--s2)"></div>' +
+    '<div class="skl" style="height:230px;margin-top:var(--s6)"></div>' +
+    '<div class="skl" style="height:220px;margin-top:var(--s5)"></div>';
 }
 
 /* ============================== CHROME ================================= */
