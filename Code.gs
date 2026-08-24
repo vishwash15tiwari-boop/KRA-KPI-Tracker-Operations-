@@ -526,7 +526,6 @@ function buildModel_(teamId, month) {
    * returns. This is why the app needs no setup step to render. */
   var teams = mRead_(M_TAB.TEAM), emps = mRead_(M_TAB.EMP);
   var kras = mRead_(M_TAB.KRA), kpis = mRead_(M_TAB.KPI), maps = mRead_(M_TAB.MAP);
-  var thrAll = mRead_(M_TAB.THR);
   var fromSheet = emps.length > 0 && maps.length > 0;
   if (!fromSheet) {
     var M = buildMaster_(), asObj = function (rows, schema) {
@@ -537,7 +536,6 @@ function buildModel_(teamId, month) {
     kras   = asObj(M.kras,  M_SCHEMA[M_TAB.KRA]);
     kpis   = asObj(M.kpis,  M_SCHEMA[M_TAB.KPI]);
     maps   = asObj(M.maps,  M_SCHEMA[M_TAB.MAP]);
-    thrAll = asObj(M.thr,   M_SCHEMA[M_TAB.THR]);
   }
   var kraById = {}; kras.forEach(function (k) { kraById[k.kra_id] = k; });
   var kpiById = {}; kpis.forEach(function (k) { kpiById[k.kpi_id] = k; });
@@ -546,22 +544,27 @@ function buildModel_(teamId, month) {
   var tgt = mRead_(M_TAB.TGT), act = mRead_(M_TAB.ACT);
   tgt.forEach(function (r) { r.month = monthKey_(r.month); });
   act.forEach(function (r) { r.month = monthKey_(r.month); });
-  /* Thresholds travel as a bare ascending array of numbers. The UI only needs
-   * positions for tick marks, and 178 KPI instances x 5 objects was ~900
-   * nested objects riding in one payload for no gain. */
-  var thrByKpi = {};
-  thrAll.forEach(function (t) {
-    if (String(t.threshold_not_defined).toUpperCase() === 'TRUE') return;
-    (thrByKpi[t.kpi_id] = thrByKpi[t.kpi_id] || []).push([Number(t.level), Number(t.threshold_value)]);
+
+  /* The month this model is built for is resolved ONCE, here, before anything
+   * reads it - so the data and the header can never disagree. An explicit
+   * selection wins; absent that the anchor is the newest month that actually
+   * HAS data, never the server's wall clock. (An earlier version left month
+   * null on first load: find() then dropped its filter and matched the first
+   * row of ANY month - target and actual independently, so a card could even
+   * mix two periods - while the header was labelled the latest month. And a
+   * clock-based default made the landing period a synthetic, empty month
+   * whenever the newest data lagged the server date.) */
+  var dataSeen = {}, dataMonths = [];
+  tgt.concat(act).forEach(function (r) {
+    if (r.month && !dataSeen[r.month]) { dataSeen[r.month] = 1; dataMonths.push(r.month); }
   });
-  Object.keys(thrByKpi).forEach(function (k) {
-    thrByKpi[k] = thrByKpi[k].sort(function (a, b) { return a[0] - b[0]; })
-                             .map(function (p) { return p[1]; });
-  });
-  function thrOf(kpiId) { return thrByKpi[kpiId] || []; }
+  dataMonths.sort();
+  var anchor = dataMonths.length ? dataMonths[dataMonths.length - 1]
+                                 : Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM');
+  var effMonth = month || anchor;
 
   function find(list, empId, kpiId) {
-    var h = list.filter(function (r) { return r.employee_id === empId && r.kpi_id === kpiId && (!month || r.month === month); })[0];
+    var h = list.filter(function (r) { return r.employee_id === empId && r.kpi_id === kpiId && r.month === effMonth; })[0];
     return h || null;
   }
   var scorecards = emps
@@ -572,14 +575,12 @@ function buildModel_(teamId, month) {
           var kpi = kpiById[m.kpi_id] || {}, kra = kraById[kpi.kra_id] || {};
           var t = find(tgt, e.employee_id, m.kpi_id), a = find(act, e.employee_id, m.kpi_id);
           var tv = t ? numOrNull_(t.target_value) : null, av = a ? numOrNull_(a.actual_value) : null;
-          var ach = (tv == null || av == null) ? null : achievementPct_(tv, av, kpi.direction);
+          var ach = (tv == null || av == null) ? null : achievementPct_(tv, av, kpi.direction, kpi.measurement_type);
           var wt = numOrNull_(m.weightage);
           var ws = wt == null ? null : weightedScore_(wt, ach);
           var lvl = ach == null ? null : (ach >= 100 ? 5 : ach >= 90 ? 4 : ach >= 75 ? 3 : ach >= 60 ? 2 : 1);
-          /* Deliberately lean. Every field here is read by the UI; nothing is
-           * sent "in case". Thresholds travel as bare numbers rather than
-           * objects - 178 KPI instances x 5 objects was ~900 nested objects in
-           * one payload, for a tick mark that only needs a position. */
+          /* Deliberately lean: every field here is read by the UI, nothing is
+           * sent "in case". */
           return { kpi_id: String(m.kpi_id),
                    perspective: String(kra.perspective || ''),
                    kra: String(kra.kra_name || ''),
@@ -589,7 +590,6 @@ function buildModel_(teamId, month) {
                    source: String(kpi.source_of_tracking || ''),
                    unit: String(kpi.measurement_type || ''),
                    direction: String(kpi.direction || ''),
-                   bands: thrOf(m.kpi_id),
                    target: tv, actual: av, achievement: ach,
                    weighted_score: ws, level: lvl,
                    status: ach == null ? 'Awaiting data' : statusFor_(ach, lvl) };
@@ -603,34 +603,39 @@ function buildModel_(teamId, month) {
                designation: e.designation, region: e.region,
                reporting_manager: String(e.reporting_manager || ''),
                kpis: rows,
-               assigned_weightage: rows.reduce(function (s, r) { return s + r.weightage; }, 0),
                measured_weightage: measured,
                overall_score: measured > 0 ? Math.round(earned * 10) / 10 : null };
     });
-  /* Periods: data rows plus a rolling look-back, so the selector stays
-   * populated even before targets or actuals are entered for a period.
+  /* Periods: the data months plus a look-back, trimmed to the last MONTH_WINDOW.
    *
-   * The window is the last MONTH_WINDOW periods and no more. Two sources feed
-   * the list and either could widen it - a sheet holding older rows, or a
-   * longer look-back - so the trim is applied after they are merged rather
-   * than to one of them. Nothing is pinned to a literal month: the window
-   * rolls forward on its own as the sheet grows. */
+   * The look-back is anchored to the newest month that HAS data - not the wall
+   * clock - so the selector stays correct even when the newest data lags the
+   * server date. The window is the last MONTH_WINDOW periods and no more; two
+   * sources feed the list (sheet rows and the look-back) and either could widen
+   * it, so the trim is applied after they are merged rather than to one of them.
+   * Nothing is pinned to a literal month: the window rolls forward on its own as
+   * the sheet grows. */
   var seen = {}, months = [];
-  tgt.concat(act).forEach(function (r) {
-    if (r.month && !seen[r.month]) { seen[r.month] = 1; months.push(r.month); }
-  });
-  var now = new Date();
+  dataMonths.forEach(function (mk) { if (!seen[mk]) { seen[mk] = 1; months.push(mk); } });
+  var ay = Number(anchor.slice(0, 4)), am = Number(anchor.slice(5, 7));
   for (var i = 0; i < MONTH_WINDOW; i++) {
-    var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    var mk = Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM');
-    if (!seen[mk]) { seen[mk] = 1; months.push(mk); }
+    var back = Utilities.formatDate(new Date(ay, am - 1 - i, 1), Session.getScriptTimeZone(), 'yyyy-MM');
+    if (!seen[back]) { seen[back] = 1; months.push(back); }
   }
   months.sort();
   if (months.length > MONTH_WINDOW) months = months.slice(months.length - MONTH_WINDOW);
-  return { ok: true, month: month || months[months.length - 1] || null,
-           months: months, teams: teams, scorecards: scorecards,
-           masterSource: fromSheet ? 'sheet' : 'code',
-           generatedAt: new Date().toISOString() };
+  /* Freshness metadata, named exactly as the client reads it (generated_at,
+   * source, records) so the data-freshness panel is wired, not guessing.
+   * records is the count of KPI instances that actually have a result this
+   * period - the honest measure of how much data backs the numbers on screen. */
+  var records = scorecards.reduce(function (s, sc) {
+    return s + sc.kpis.filter(function (k) { return k.achievement != null; }).length;
+  }, 0);
+  return { ok: true, month: effMonth, months: months,
+           teams: teams, scorecards: scorecards,
+           source: fromSheet ? 'Google Sheet' : 'Master data (in code)',
+           records: records,
+           generated_at: new Date().toISOString() };
 }
 
 /** Proves the master is internally consistent before any target is loaded. */
@@ -690,12 +695,16 @@ function capAch_(pct) { return round1_(Math.min(Number(pct), ACHIEVEMENT_CAP_PCT
  * Returning null makes it N/A and excludes it from the weighted denominator, so
  * nobody is rewarded or punished for a target that was never set.
  */
-function achievementPct_(target, actual, direction) {
+function achievementPct_(target, actual, direction, unit) {
   var t = Number(target), a = Number(actual);
   if (!isFinite(t) || !isFinite(a)) return null;
   if (t === 0) return null;
   if (direction === 'LOWER_IS_BETTER') {
-    if (a === 0) return null;          /* zero days is not a real measurement */
+    /* Zero is not a real measurement for a DAYS KPI (a DSO of 0 days means "not
+     * recorded"), but for a rate that is lower-is-better - a debit-note rate of
+     * exactly 0% - it is the best possible outcome and must score full marks,
+     * not drop out. t/0 -> Infinity -> capped at 105. */
+    if (a === 0 && unit === 'DAYS') return null;
     return capAch_(t / a * 100);
   }
   return capAch_(a / t * 100);

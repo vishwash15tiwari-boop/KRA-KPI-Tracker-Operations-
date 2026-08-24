@@ -23,7 +23,7 @@
   /* On-navy text tiers (rail hover + navy summary card). */
   --nav-hi:#C6D2E4;--nav-txt-2:#9FB0C8;--nav-muted:#8A9AB2;--nav-faint:#6E829E;
   --bg:#F5F7FB;--card:#FFFFFF;--surface:#EEF2F8;--well:#E3E9F2;
-  --ink:#15202F;--ink-2:#3E4C63;--muted:#66738B;--faint:#98A3B6;
+  --ink:#15202F;--ink-2:#3E4C63;--muted:#5E6A82;--faint:#98A3B6;
   --line:#E7EBF2;--line-2:#D6DDE8;--line-soft:#F0F3F8;
   --accent:#2C63D6;--accent-2:#2453BE;--accent-soft:#E9F0FD;
   --good:#2C7D55;--good-soft:#E7F3EC;--warn:#B06A17;--warn-soft:#FAF1E1;--bad:#C13E31;--bad-soft:#FBECE9;
@@ -131,11 +131,11 @@ button,select,input{font-family:inherit;cursor:pointer}
 
 /* Ranking — derived from overall score, subtle top marker. */
 .rank{display:flex;flex-direction:column}
-.rrow{display:flex;align-items:center;gap:var(--s3);padding:10px var(--s2);border-radius:10px;
+.rrow{display:flex;align-items:center;gap:var(--s3);padding:10px var(--s2);border-radius:var(--r-ctl);
   border-bottom:1px solid var(--line-soft);transition:background var(--d1) var(--ease)}
 .rrow:last-child{border-bottom:none}
 .rrow.click{cursor:pointer}.rrow.click:hover{background:var(--surface)}
-.rrow .pos{flex:0 0 22px;text-align:center;font-size:var(--fs-xs);font-weight:var(--fw-b);color:var(--faint);
+.rrow .pos{flex:0 0 22px;text-align:center;font-size:var(--fs-xs);font-weight:var(--fw-b);color:var(--muted);
   font-variant-numeric:tabular-nums}
 .rrow.top .pos{color:var(--accent)}
 .rrow .nm{flex:1;min-width:0}
@@ -199,6 +199,13 @@ tr.kra .rs{float:right;text-transform:none;letter-spacing:0;color:var(--muted);f
   font-variant-numeric:tabular-nums}
 tr.kra .rs b{color:var(--ink);font-weight:var(--fw-b)}
 td.kpi{padding-left:var(--s6)}
+/* The click/keyboard affordance lives in a real <button> inside the cell, not
+   on the <tr>, so rows keep their table semantics (cells still map to their
+   column headers for assistive tech). The buttons inherit the cell's type. */
+.kra-btn{all:unset;display:block;width:100%;box-sizing:border-box;cursor:pointer}
+.kra-btn:focus-visible{outline-offset:-2px}
+.cellbtn{all:unset;display:block;cursor:pointer;max-width:100%;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
 
 /* Achievement: the % over a fine bar. Bar 60–100px, tick at target. */
 .ach{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:5px;height:30px;
@@ -210,10 +217,11 @@ td.kpi{padding-left:var(--s6)}
 .bar i.good{background:var(--good)}.bar i.warn{background:var(--warn)}.bar i.bad{background:var(--bad)}
 .bar u{position:absolute;top:-2px;width:1px;height:8px;background:var(--line-2)}
 
-.st{font-size:var(--fs-xs);font-weight:var(--fw-m);white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.st{font-size:var(--fs-xs);font-weight:var(--fw-m);white-space:nowrap;display:inline-flex;align-items:center;gap:6px;
+  padding:3px 10px;border-radius:var(--r-pill);background:var(--surface)}
 .st::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;flex:0 0 auto}
 .st.good{color:var(--good)}.st.warn{color:var(--warn)}.st.bad{color:var(--bad)}
-.st.none{color:var(--faint);font-weight:var(--fw-n)}
+.st.none{color:var(--muted);font-weight:var(--fw-n)}
 
 .mini{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--s4);margin-bottom:var(--s7)}
 .mstat{background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);padding:var(--s4);box-shadow:var(--shadow-1)}
@@ -275,7 +283,8 @@ td.kpi{padding-left:var(--s6)}
 .d-goal .k{font-size:var(--fs-2xs);font-weight:var(--fw-m);color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
 .d-goal p{margin:6px 0 0;color:var(--ink-2);line-height:1.65;font-size:var(--fs-sm)}
 .d-ach{position:relative;height:4px;background:var(--well);border-radius:var(--r-pill);margin-top:8px}
-.d-ach i{position:absolute;left:0;top:0;height:100%;border-radius:var(--r-pill)}
+.d-ach i{position:absolute;left:0;top:0;height:100%;border-radius:var(--r-pill);
+  transform-origin:left;animation:grow .5s var(--ease) backwards}
 .d-ach i.good{background:var(--good)}.d-ach i.warn{background:var(--warn)}.d-ach i.bad{background:var(--bad)}
 .d-ach u{position:absolute;top:-2px;width:1px;height:8px;background:var(--line-2)}
 
@@ -308,7 +317,7 @@ td.kpi{padding-left:var(--s6)}
     gap:var(--s2);overflow-x:auto}
   .rail-logo{margin:0 var(--s2) 0 0;height:auto}
   .rail-nav{flex-direction:row;padding:0;gap:2px;flex:1}
-  .rail-i{flex-direction:row;gap:7px;padding:8px 12px;font-size:var(--fs-xs)}
+  .rail-i{flex-direction:row;gap:7px;padding:8px 12px;font-size:var(--fs-xs);min-height:44px;justify-content:center}
   .rail-i.on::before{display:none}.rail-sp{display:none}
   .wrap{padding:var(--s5) var(--s4) var(--s7)}.tbar{padding:0 var(--s4);height:auto;flex-wrap:wrap;gap:8px;padding-top:8px;padding-bottom:8px}
 }
@@ -484,6 +493,7 @@ button.pscore:hover .bdg{background:var(--accent);color:#fff}
 .fresh:hover{color:var(--ink);border-color:var(--line-2);box-shadow:var(--shadow-1)}
 .st.good{color:var(--good);background:var(--good-soft)}
 .st.warn{color:var(--warn);background:var(--warn-soft)}
+.st.bad{color:var(--bad);background:var(--bad-soft)}
 
 @media(max-width:860px){
   .sn-g{grid-template-columns:1fr}
@@ -534,7 +544,7 @@ button.pscore:hover .bdg{background:var(--accent);color:#fff}
   </aside>
   <div class="main">
     <header class="tbar" id="tbar"></header>
-    <div class="canvas"><main class="wrap" id="view"></main></div>
+    <div class="canvas"><div id="banner"></div><main class="wrap" id="view"></main></div>
   </div>
 </div>
 <div class="scrim" id="scrim"></div>
@@ -661,9 +671,8 @@ var Sel = {
   rankOf: function (id) {
     var me = Sel.member(id);
     if (!me || me.overall_score == null) return null;   // no score, no rank — never a fabricated position
-    var r = Sel.ranked().filter(function (x) { return x.overall_score != null; });
-    for (var i = 0; i < r.length; i++) if (r[i].employee_id === id) return i + 1;
-    return null;
+    var measured = Sel.ranked().filter(function (x) { return x.overall_score != null; });
+    return 1 + measured.filter(function (x) { return x.overall_score > me.overall_score; }).length;  // competition ranking; ties share a rank
   },
   /* The person the greeting names and "My profile" opens: the org root of the
      team (empty reporting manager), else the named team lead / category head. */
@@ -937,9 +946,9 @@ function FreshBody() {
     '<h2>Data freshness</h2></div>' +
     '<button class="x" data-close="1" aria-label="Close">×</button></div>' +
     '<div class="d-b">' +
-      (m.generated_at ? pair('Last updated', esc(stamp(m.generated_at))) : '') +
-      pair('Source', esc(m.source || (S.demo ? 'Sample values' : 'Google Sheet'))) +
-      (m.records != null ? pair('Records', String(m.records)) : '') +
+      (!S.demo && m.generated_at ? pair('Last updated', esc(stamp(m.generated_at))) : '') +
+      pair('Source', esc(S.demo ? 'Sample values' : (m.source || 'Google Sheet'))) +
+      (!S.demo && m.records != null ? pair('Records', String(m.records)) : '') +
       pair('Period', esc(S.month ? monthLabel(S.month) : '—')) +
       pair('Periods available', String(Sel.months().length)) +
       pair('Status', S.demo ? '<span class="st warn">Sample values — not live</span>'
@@ -1028,20 +1037,24 @@ function RankList(members, clickable) {
   var rk = members.slice().sort(function (a, b) {
     return (b.overall_score == null ? -1 : b.overall_score) - (a.overall_score == null ? -1 : a.overall_score);
   });
-  var max = rk.reduce(function (m, x) { return Math.max(m, x.overall_score == null ? 0 : x.overall_score); }, 0) || 100;
-  var pos = 0;
+  var measured = rk.filter(function (x) { return x.overall_score != null; });
+  var maxScore = measured.length ? measured[0].overall_score : null;
+  var max = maxScore || 100;
   return '<div class="rank">' + rk.map(function (m) {
     var meas = m.overall_score != null;
-    var rank = meas ? ++pos : null;
-    var top = meas && rank === 1;
+    /* Competition ranking: position is 1 + how many people beat you, so tied
+       scores share a rank and every co-leader is starred — array order is never
+       dressed up as 1st-vs-2nd over identical performance. */
+    var rank = meas ? 1 + measured.filter(function (x) { return x.overall_score > m.overall_score; }).length : null;
+    var top = meas && m.overall_score === maxScore;
     var w = meas ? Math.max(4, m.overall_score / max * 100) : 0;
     return '<div class="rrow' + (top ? ' top' : '') + (clickable ? ' click' : '') + '"' +
       (clickable ? ' data-emp="' + esc(m.employee_id) + '" tabindex="0" role="button"' : '') + '>' +
-      '<span class="pos">' + (top ? '★' : (rank == null ? '—' : rank)) + '</span>' +
+      '<span class="pos">' + (top ? '<span aria-hidden="true">★</span><span class="vh">Rank 1</span>' : (rank == null ? '—' : rank)) + '</span>' +
       '<div class="nm"><b>' + esc(m.employee_name) + '</b><span>' + esc(m.designation || '—') + '</span></div>' +
       '<div class="mt">' + (meas ? '<div class="microbar"><i style="width:' + w + '%"></i></div>' : '') + '</div>' +
       '<div class="sc">' + show(m.overall_score) + '</div>' +
-      (clickable ? '<span class="chev">›</span>' : '') + '</div>';
+      (clickable ? '<span class="chev" aria-hidden="true">›</span>' : '') + '</div>';
   }).join('') + '</div>';
 }
 
@@ -1053,14 +1066,15 @@ function KpiTable(kpis, prefix, showOwner) {
   var groups = Sel.byKra(kpis);
   var body = groups.length ? groups.map(function (g) {
     var id = prefix + '|' + g.kra, open = !S.closed[id];
-    var head = '<tr class="kra" data-kra="' + esc(id) + '" tabindex="0" role="button" aria-expanded="' + (open ? 'true' : 'false') + '"><td colspan="6">' +
-      '<span class="cv">' + (open ? '▾' : '▸') + '</span>' + esc(g.kra) +
+    var head = '<tr class="kra" data-kra="' + esc(id) + '"><td colspan="6">' +
+      '<button type="button" class="kra-btn" aria-expanded="' + (open ? 'true' : 'false') + '">' +
+      '<span class="cv" aria-hidden="true">' + (open ? '▾' : '▸') + '</span>' + esc(g.kra) +
       '<span class="rs">' + (g.perspective ? esc(g.perspective) + ' · ' : '') + plural(g.kpis.length, 'KPI') +
-      (g.achievement == null ? '' : ' · <b>' + show(g.achievement) + '%</b>') + '</span></td></tr>';
+      (g.achievement == null ? '' : ' · <b>' + show(g.achievement) + '%</b>') + '</span></button></td></tr>';
     if (!open) return head;
     return head + g.kpis.map(function (k) {
-      return '<tr class="click" data-kpi="' + esc((k.__owner || '') + '::' + k.kra + '::' + k.kpi) + '" tabindex="0" role="button">' +
-        '<td class="kpi nm">' + esc(k.kpi) +
+      return '<tr class="click" data-kpi="' + esc((k.__owner || '') + '::' + k.kpi_id) + '">' +
+        '<td class="kpi nm"><button type="button" class="cellbtn">' + esc(k.kpi) + '</button>' +
           (showOwner ? '<small>' + esc(k.__ownerName || '') + '</small>' : '') + '</td>' +
         '<td class="num quiet">' + show(k.weightage) + '%</td>' +
         '<td class="num quiet">' + (k.target == null ? 'Not set' : fmt(k.target, k.unit)) + '</td>' +
@@ -1148,7 +1162,7 @@ function EmployeeScreen() {
     '<div class="pcard">' + KraBars(kraGroups) + '</div></div>';
 
   var table = '<div class="block"><div class="sect">Assigned KRA / KPI<span class="r">click a KPI for detail</span></div>' +
-    KpiTable(kpis, 'emp', false) + '</div>';
+    KpiTable(kpis, 'emp|' + m.employee_id, false) + '</div>';
 
   /* Order follows the questions a reader actually asks, in order: how much of
      this can I trust, how did it get here, what is carrying it and what is
@@ -1334,15 +1348,15 @@ function buildRail() {
 }
 function buildTopbar() {
   var teams = Sel.teams(), months = Sel.months(), lead = Sel.lead();
-  var teamSel = '<span class="fld">Team<select class="sel" id="f-team">' +
+  var teamSel = '<span class="fld">Team<select class="sel" id="f-team" aria-label="Team">' +
     teams.map(function (t) { return '<option value="' + esc(t.team_id) + '"' + (t.team_id === S.team ? ' selected' : '') + '>' + esc(t.team_name) + '</option>'; }).join('') +
     '</select></span>';
-  var monthSel = '<span class="fld">Month<select class="sel" id="f-month"' + (months.length ? '' : ' disabled') + '>' +
+  var monthSel = '<span class="fld">Month<select class="sel" id="f-month" aria-label="Month"' + (months.length ? '' : ' disabled') + '>' +
     (months.length ? months.map(function (x) { return '<option value="' + esc(x) + '"' + (x === S.month ? ' selected' : '') + '>' + esc(monthLabel(x)) + '</option>'; }).join('')
                    : '<option>No period loaded</option>') + '</select></span>';
   var empSel = '';
   if (S.employee) {
-    empSel = '<span class="fld">Employee<select class="sel" id="f-emp">' +
+    empSel = '<span class="fld">Employee<select class="sel" id="f-emp" aria-label="Employee">' +
       Sel.members().map(function (p) { return '<option value="' + esc(p.employee_id) + '"' + (p.employee_id === S.employee ? ' selected' : '') + '>' + esc(p.employee_name) + '</option>'; }).join('') +
       '</select></span>';
   }
@@ -1356,14 +1370,16 @@ function buildTopbar() {
 
 /* ============================== RENDER ================================= */
 function render() {
-  if (S.loading) { $('#view').innerHTML = Skeleton(); return; }
+  if (S.loading) { $('#banner').innerHTML = ''; $('#view').innerHTML = Skeleton(); return; }
   if (S.error) {
+    $('#banner').innerHTML = '';
     $('#view').innerHTML = '<div class="state"><div><h2>Could not load</h2><p>' + esc(S.error) +
       '</p><button class="btn" data-retry="1">Try again</button></div></div>';
     $('#tbar').innerHTML = ''; $('#rail').innerHTML = ''; return;
   }
   buildRail(); buildTopbar();
-  var noPerf = !(Sel.model().scorecards || []).some(function (s) {
+  var mm = Sel.model();
+  var noPerf = !((mm && mm.scorecards) || []).some(function (s) {
     return s.kpis.some(function (k) { return k.achievement != null; });
   });
   var demo = S.demo
@@ -1376,9 +1392,7 @@ function render() {
     : S.view === 'kpi' ? KpiScreen()
     : FlowchartScreen();
   $('#view').innerHTML = body;
-  // demo banner rides above the canvas content
-  var host = $('#view');
-  if (demo) host.insertAdjacentHTML('afterbegin', demo);
+  $('#banner').innerHTML = demo || '';   // full-bleed sibling above .wrap, so .demo spans edge to edge
   renderDrawer();
 }
 
@@ -1401,7 +1415,7 @@ function load() {
     if (!m.ok) { S.error = (m.error || 'The backend reported a failure.') + (m.where ? ' (' + m.where + ')' : ''); return render(); }
     S.model = m; S._demo = null;
     if (!S.team && m.teams && m.teams.length) S.team = m.teams[0].team_id;
-    if (!S.month) { var mo = Sel.months(); S.month = mo[mo.length - 1] || null; }
+    if (!S.month) { S.month = m.month || (Sel.months().slice(-1)[0] || null); }
     render();
   }, function (e) {
     S.loading = false; S.error = (e && e.message) || 'The backend could not be reached.'; render();
@@ -1422,7 +1436,15 @@ document.addEventListener('click', function (e) {
   if (emp) { S.employee = emp.dataset.emp; S.detail = null; render(); $('.canvas').scrollTop = 0; return; }
   if (e.target.closest('[data-back]')) { S.employee = null; S.detail = null; render(); $('.canvas').scrollTop = 0; return; }
   var g = e.target.closest('[data-kra]');
-  if (g) { var id = g.dataset.kra; S.closed[id] = !S.closed[id]; render(); return; }
+  if (g) {
+    var id = g.dataset.kra; S.closed[id] = !S.closed[id]; render();
+    // Rebuilding #view drops focus; put it back on the band the user toggled.
+    var bands = document.querySelectorAll('tr.kra[data-kra]');
+    for (var bi = 0; bi < bands.length; bi++) {
+      if (bands[bi].getAttribute('data-kra') === id) { var bb = bands[bi].querySelector('.kra-btn'); if (bb) bb.focus(); break; }
+    }
+    return;
+  }
   /* A point on the history line is a way into that period, so the same profile
      can be read in the month it belongs to. */
   var mo = e.target.closest('[data-month]');
@@ -1446,7 +1468,7 @@ document.addEventListener('click', function (e) {
   var k = e.target.closest('[data-kpi]');
   if (k) {
     var p = k.dataset.kpi.split('::'), owner = Sel.member(p[0]);
-    var picked = owner ? owner.kpis.filter(function (x) { return x.kra === p[1] && x.kpi === p[2]; })[0] : null;
+    var picked = owner ? owner.kpis.filter(function (x) { return x.kpi_id === p[1]; })[0] : null;
     S._trigger = k;
     S.detail = picked ? { kind: 'kpi', kpi: picked, owner: owner } : null;
     renderDrawer(); return;
@@ -1478,10 +1500,11 @@ document.addEventListener('keydown', function (e) {
       return;
     }
   }
-  // Enter / Space activate the focusable-but-not-button drill targets (rows,
-  // flow nodes, KRA bands), routing through the same delegated click handler.
+  // Rank rows and flow nodes are div[role=button]; table rows and KRA bands now
+  // carry native <button>s that handle their own keys, so only the [data-emp]
+  // drill targets still need synthetic Enter/Space activation.
   if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
-    var act = e.target.closest ? e.target.closest('[data-emp],[data-kpi],[data-kra]') : null;
+    var act = e.target.closest ? e.target.closest('[data-emp]') : null;
     if (act && act.getAttribute('role') === 'button') { e.preventDefault(); act.click(); }
   }
 });
