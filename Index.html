@@ -412,24 +412,33 @@ button.tr-h:hover>span{color:var(--accent)}
 .sn-f{font-size:var(--fs-xs);color:var(--ink-2);margin-top:var(--s3);padding-top:var(--s3);
   border-top:1px solid rgba(20,32,52,.08);font-variant-numeric:tabular-nums}
 
-/* --- Completeness --------------------------------------------------------
-   Amber and contained. Colouring the whole page would say the number is wrong.
-   It is not wrong, it is provisional — a smaller claim, and a quieter one. */
-.cmp{border-radius:var(--r-card);padding:var(--s3) var(--s4);margin:var(--s5) 0 var(--s6);
-  font-size:var(--fs-xs)}
-.cmp.ok{background:var(--card);border:1px solid var(--line);color:var(--muted);
-  display:flex;align-items:center;gap:var(--s2)}
-.cmp.warn{background:var(--warn-soft);border:1px solid var(--warn-line);color:#7A4C10}
-.cmp-h{display:flex;gap:var(--s3);align-items:flex-start}
-.cmp-i{flex:0 0 auto;width:20px;height:20px;border-radius:50%;background:var(--warn);
-  color:#fff;font-weight:var(--fw-h);font-size:var(--fs-xs);display:grid;place-items:center;
-  line-height:1}
-.cmp-h b{color:#7A4C10;font-size:var(--fs-sm);font-weight:var(--fw-b)}
-.cmp-s{margin-top:2px;color:var(--warn)}
-.cmp-l{margin:var(--s3) 0 0 32px;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:6px}
-.cmp-l li{background:rgba(255,255,255,.72);border:1px solid var(--warn-line-2);
-  border-radius:var(--r-pill);padding:3px 10px;font-size:var(--fs-2xs);color:#7A4C10}
-.cmp-f{margin:var(--s3) 0 0 32px;font-size:var(--fs-2xs);color:var(--warn);line-height:1.55}
+/* --- Performance-by-KPI chart -------------------------------------------
+   The profile's centrepiece: one interactive bar per KPI, grouped by KRA, on
+   the same 0-105 achievement scale as everywhere else with the target tick at
+   100%. Each bar is a real button - hover for the figures, click through to the
+   KPI's own detail and month-by-month trend. A KPI still awaiting its actual is
+   drawn as a hollow "pending" track rather than listed in prose, so one chart
+   carries both the performance and what is still missing from it. */
+.pf{display:flex;flex-direction:column;gap:var(--s5)}
+.pf-gh{display:flex;align-items:baseline;gap:var(--s2);margin-bottom:6px;padding:0 var(--s2)}
+.pf-gn{font-size:var(--fs-2xs);font-weight:var(--fw-b);color:var(--ink-2);text-transform:uppercase;letter-spacing:.07em}
+.pf-gp{font-size:var(--fs-2xs);color:var(--muted)}
+.pf-ga{margin-left:auto;font-size:var(--fs-xs);font-weight:var(--fw-b);color:var(--ink);font-variant-numeric:tabular-nums}
+.pf-r{display:grid;grid-template-columns:minmax(96px,1.25fr) 2fr auto;align-items:center;gap:var(--s4);
+  width:100%;border:none;background:none;font:inherit;color:inherit;text-align:left;cursor:pointer;
+  padding:8px var(--s2);border-radius:var(--r-ctl);transition:background var(--d1) var(--ease)}
+.pf-r:hover{background:var(--surface)}
+.pf-r:focus-visible{outline-offset:-2px}
+.pf-n{min-width:0;font-weight:var(--fw-m);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pf-n em{font-style:normal;color:var(--faint);font-weight:var(--fw-n);margin-left:6px;font-size:var(--fs-2xs)}
+.pf-t{position:relative;height:8px;background:var(--well);border-radius:var(--r-pill)}
+.pf-t i{position:absolute;left:0;top:0;height:100%;border-radius:var(--r-pill);background:var(--accent);
+  transform-origin:left;animation:grow .5s var(--ease) backwards}
+.pf-t i.good{background:var(--good)}.pf-t i.warn{background:var(--warn)}.pf-t i.bad{background:var(--bad)}
+.pf-t u{position:absolute;top:-2px;height:12px;width:1px;background:var(--line-2)}
+.pf-t.pending{background:transparent;box-shadow:inset 0 0 0 1px var(--line-2)}
+.pf-v{font-weight:var(--fw-b);text-align:right;min-width:56px;font-variant-numeric:tabular-nums}
+.pf-v.pending{color:var(--muted);font-weight:var(--fw-n);font-size:var(--fs-xs)}
 .cdot{width:7px;height:7px;border-radius:50%;flex:0 0 auto;display:inline-block;
   background:var(--faint)}
 .cdot.good{background:var(--good)}
@@ -847,25 +856,44 @@ function SnapshotPanel(m) {
     card('warn', 'Needs attention', worst) + '</div></div>';
 }
 
-/* A trust mechanism. A score built from four of six KPIs is not wrong, but
-   showing it at the same confidence as a complete one would be. Amber and
-   contained: the page stays calm, the caveat is one click away, and the number
-   is never quietly overstated. */
-function CompletenessPanel(m) {
-  var kpis = m.kpis || [];
-  if (!kpis.length) return '';
-  var pending = kpis.filter(function (k) { return k.achievement == null; });
-  if (!pending.length) {
-    return '<div class="cmp ok"><i class="cdot good"></i>Performance complete · all ' +
-      plural(kpis.length, 'KPI') + ' have actuals for this period.</div>';
-  }
-  return '<div class="cmp warn"><div class="cmp-h"><span class="cmp-i" aria-hidden="true">!</span>' +
-    '<div><b>Performance incomplete</b><div class="cmp-s">' +
-    (kpis.length - pending.length) + ' of ' + kpis.length + ' KPIs have actual data · ' +
-    plural(pending.length, 'KPI') + ' pending</div></div></div>' +
-    '<ul class="cmp-l">' + pending.map(function (k) { return '<li>' + esc(k.kpi) + '</li>'; }).join('') +
-    '</ul><p class="cmp-f">The score may change once the remaining actuals are updated. ' +
-    'Pending KPIs are excluded from it rather than counted as zero.</p></div>';
+/* Performance by KPI — the profile's main chart, and what replaced the prose
+   "incomplete" panel. One interactive bar per KPI, grouped by KRA, on the shared
+   0-105 achievement scale with the target tick at 100%. Every row is a real
+   button: hover for the figures, click through to the KPI's own detail and its
+   month-by-month trend. A KPI still awaiting its actual is drawn as a hollow
+   pending track rather than named in a list, so one chart carries both the
+   performance and what is still missing from it. */
+function PerfChart(m) {
+  var groups = Sel.byKra(m.kpis || []);
+  if (!groups.length) return '';
+  var total = (m.kpis || []).length;
+  var measured = (m.kpis || []).filter(function (k) { return k.achievement != null; }).length;
+  var chart = groups.map(function (g) {
+    var rows = g.kpis.map(function (k) {
+      var pending = k.achievement == null;
+      var w = pending ? 0 : Math.max(2, Math.min(100, k.achievement / 105 * 100));
+      var tip = pending
+        ? k.kpi + ' — awaiting this period’s actual'
+        : k.kpi + ' — ' + show(k.achievement) + '% · target ' + fmt(k.target, k.unit) +
+          ' · actual ' + fmt(k.actual, k.unit) + ' · score ' + show(k.weighted_score) + ' of ' + show(k.weightage);
+      return '<button type="button" class="pf-r" data-kpi="' + esc((k.__owner || '') + '::' + k.kpi_id) +
+        '" title="' + esc(tip) + '" aria-label="' + esc(tip) + '">' +
+        '<span class="pf-n">' + esc(k.kpi) + '<em>' + show(k.weightage) + '%</em></span>' +
+        '<span class="pf-t' + (pending ? ' pending' : '') + '">' + (pending ? '' : TARGET_TICK) +
+          '<i class="' + tone(k.achievement) + '" style="width:' + w + '%"></i></span>' +
+        '<span class="pf-v' + (pending ? ' pending' : '') + '">' + (pending ? 'Pending' : show(k.achievement) + '%') + '</span>' +
+      '</button>';
+    }).join('');
+    return '<div class="pf-g"><div class="pf-gh"><span class="pf-gn">' + esc(g.kra) + '</span>' +
+      (g.perspective ? '<span class="pf-gp">' + esc(g.perspective) + '</span>' : '') +
+      '<span class="pf-ga">' + (g.achievement == null ? 'Awaiting data' : show(g.achievement) + '%') + '</span></div>' +
+      rows + '</div>';
+  }).join('');
+  return '<div class="block"><div class="sect">Performance by KPI' +
+    '<span class="r">' + measured + ' of ' + total + ' measured · click a bar for detail</span></div>' +
+    '<div class="pcard">' +
+      (measured === 0 ? '<p class="tr-note" style="margin:0 0 var(--s4)">No actuals entered for this period yet — each KPI below is awaiting its number, and the bars fill in as data arrives.</p>' : '') +
+      '<div class="pf">' + chart + '</div></div></div>';
 }
 
 /* ============================== DRAWER BODIES ==========================
@@ -1139,7 +1167,6 @@ function EmployeeScreen() {
     return w > 0 ? Math.round(e / w * 1000) / 10 : null;
   })();
   var rank = Sel.rankOf(m.employee_id), total = Sel.members().filter(function (x) { return x.overall_score != null; }).length;
-  var kraGroups = Sel.byKra(kpis);
 
   var back = '<button class="back" data-back="1">‹ ' + esc(t ? t.team_name : 'Team') + '</button>';
   var head = '<div class="phead">' + Avatar(m.employee_name, 'lg') +
@@ -1158,17 +1185,15 @@ function EmployeeScreen() {
     MiniStat('Team rank', rank == null ? '—' : rank + '<em> / ' + total + '</em>') +
     '</div>';
 
-  var kraBlock = '<div class="block"><div class="sect">KRA performance<span class="r">strengths &amp; gaps</span></div>' +
-    '<div class="pcard">' + KraBars(kraGroups) + '</div></div>';
-
-  var table = '<div class="block"><div class="sect">Assigned KRA / KPI<span class="r">click a KPI for detail</span></div>' +
+  var table = '<div class="block"><div class="sect">Assigned KRA / KPI<span class="r">the exact figures behind the chart</span></div>' +
     KpiTable(kpis, 'emp|' + m.employee_id, false) + '</div>';
 
-  /* Order follows the questions a reader actually asks, in order: how much of
-     this can I trust, how did it get here, what is carrying it and what is
-     dragging on it - and only then, the KPI list that explains the parts. */
-  return back + head + mini + CompletenessPanel(m) + HistoryPanel(m) +
-    SnapshotPanel(m) + kraBlock + table;
+  /* The interactive performance chart leads - what is carrying the score and
+     what is dragging on it, with any pending KPIs drawn as hollow bars rather
+     than named in prose - then the score's history over the loaded periods, a
+     strongest / needs-attention callout, and finally the exact figures. */
+  return back + head + mini + PerfChart(m) + HistoryPanel(m) +
+    SnapshotPanel(m) + table;
 }
 function MiniStat(l, v) { return '<div class="mstat"><div class="l">' + esc(l) + '</div><div class="v">' + v + '</div></div>'; }
 
