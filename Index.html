@@ -1337,7 +1337,9 @@ function ActionBody(a) {
   return '<div class="d-h"><div><div class="eyebrow">' + (isNew ? 'New action' : 'Action') + '</div>' +
     '<h2>' + (isNew ? 'Corrective action' : esc(a.title)) + '</h2></div>' +
     '<button class="x" data-close="1" aria-label="Close">×</button></div>' +
-    '<div class="d-b"><div class="form">' + ownerField + kpiField +
+    '<div class="d-b"><div class="form">' +
+      (!isNew ? '<div class="cmt-empty" style="margin:calc(var(--s2)*-1) 0 0">Raised by ' + esc(a.created_by || '—') + ' · ' + esc(String(a.created_at || '').slice(0, 10)) + (a.updated_at ? ' · updated ' + esc(String(a.updated_at).slice(0, 10)) : '') + '</div>' : '') +
+      ownerField + kpiField +
       '<div class="field"><span class="lb">Title</span><input class="inp" id="a-title" value="' + esc(a.title || '') + '" placeholder="What will be done"></div>' +
       '<div class="field"><span class="lb">Root cause</span><textarea class="ta" id="a-cause" placeholder="Why is the KPI off track?">' + esc(a.root_cause || '') + '</textarea></div>' +
       '<div class="frow"><div class="field"><span class="lb">Priority</span><select class="inp" id="a-pri">' +
@@ -1381,6 +1383,10 @@ function DrawerWrite(k, owner) {
    Teams comparison, Analytics). These read across every team, so they never
    depend on the team selector. */
 function orgScorecards() { var m = Sel.model(); return (m && m.scorecards) || []; }
+/* Owner lookup across every team (Sel.member is scoped to the selected team, so
+   a drawer opened from an org-wide list - Executive Overview attention, Teams -
+   must resolve the owner org-wide or it silently fails to open). */
+function scById(id) { return orgScorecards().filter(function (s) { return s.employee_id === id; })[0] || null; }
 function orgKpis() {
   var out = [];
   orgScorecards().forEach(function (sc) { (sc.kpis || []).forEach(function (k) { k.__owner = sc.employee_id; k.__ownerName = sc.employee_name; k.__team = sc.team_id; out.push(k); }); });
@@ -1526,6 +1532,7 @@ function ReviewBody(emp) {
     '<button class="x" data-close="1" aria-label="Close">×</button></div>' +
     '<div class="d-b">' +
       pair('Review status', '<span class="st ' + reviewTone(r.status) + '">' + esc(r.status) + '</span>' + (locked ? ' <span class="quiet" style="font-size:var(--fs-xs)">· locked</span>' : '')) +
+      (r.finalized_at ? pair('Finalized', esc(r.reviewer || '') + (r.reviewer ? ' · ' : '') + esc(String(r.finalized_at).slice(0, 10))) : (r.submitted_at ? pair('Self submitted', esc(String(r.submitted_at).slice(0, 10))) : '')) +
       '<div class="d-sect" style="margin-top:var(--s3)">Performance evidence</div>' + evid +
       '<div class="form">' +
         '<div class="d-sect">Self-assessment</div>' +
@@ -2018,7 +2025,7 @@ document.addEventListener('click', function (e) {
   if (opA) { var act = allActions().filter(function (x) { return x.action_id === opA.dataset.openaction; })[0];
     if (act) { S._trigger = opA; S.detail = { kind: 'action', action: act }; renderDrawer(); } return; }
   var opR = e.target.closest('[data-openreview]');
-  if (opR) { var em = Sel.member(opR.dataset.openreview); if (em) { S._trigger = opR; S.detail = { kind: 'review', emp: em }; renderDrawer(); } return; }
+  if (opR) { var em = scById(opR.dataset.openreview); if (em) { S._trigger = opR; S.detail = { kind: 'review', emp: em }; renderDrawer(); } return; }
   var svR = e.target.closest('[data-savereview]');
   if (svR) {
     var emp = S.detail && S.detail.emp; if (!emp) return;
@@ -2074,7 +2081,7 @@ document.addEventListener('click', function (e) {
   }
   var k = e.target.closest('[data-kpi]');
   if (k) {
-    var p = k.dataset.kpi.split('::'), owner = Sel.member(p[0]);
+    var p = k.dataset.kpi.split('::'), owner = scById(p[0]);
     var picked = owner ? owner.kpis.filter(function (x) { return x.kpi_id === p[1]; })[0] : null;
     S._trigger = k;
     S.detail = picked ? { kind: 'kpi', kpi: picked, owner: owner } : null;
