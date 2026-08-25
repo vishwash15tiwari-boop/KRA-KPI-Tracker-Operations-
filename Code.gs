@@ -290,7 +290,10 @@ var UNMAPPED_NOTE = {
 var M_TAB = {
   TEAM:'TEAM_MASTER', EMP:'EMPLOYEE_MASTER', KRA:'KRA_MASTER', KPI:'KPI_MASTER',
   MAP:'EMPLOYEE_KPI_MAPPING', THR:'KPI_THRESHOLDS',
-  TGT:'MONTHLY_TARGETS', ACT:'ACTUAL_PERFORMANCE', PERF:'KPI_PERFORMANCE'
+  TGT:'MONTHLY_TARGETS', ACT:'ACTUAL_PERFORMANCE', PERF:'KPI_PERFORMANCE',
+  /* Transactional tabs written by the closed-loop layer (actions, comments,
+   * reviews, audit). Created on first write; never rewritten wholesale. */
+  ACTION:'ACTIONS', COMMENT:'KPI_COMMENTS', REVIEW:'REVIEWS', AUDIT:'AUDIT_LOG'
 };
 
 var M_SCHEMA = {};
@@ -303,6 +306,10 @@ M_SCHEMA[M_TAB.THR]  = ['threshold_id','kpi_id','level','threshold_value','thres
 M_SCHEMA[M_TAB.TGT]  = ['target_id','month','team_id','employee_id','kpi_id','target_value','target_unit','target_source','approved'];
 M_SCHEMA[M_TAB.ACT]  = ['actual_id','month','team_id','employee_id','kpi_id','actual_value','actual_unit','source','updated_at'];
 M_SCHEMA[M_TAB.PERF] = ['performance_id','month','team_id','employee_id','kpi_id','target','actual','achievement_percentage','variance','weighted_score','performance_level','status'];
+M_SCHEMA[M_TAB.ACTION]  = ['action_id','created_at','updated_at','month','team_id','employee_id','kpi_id','title','root_cause','priority','status','due_date','resolution','created_by'];
+M_SCHEMA[M_TAB.COMMENT] = ['comment_id','created_at','month','team_id','employee_id','kpi_id','author','kind','text'];
+M_SCHEMA[M_TAB.REVIEW]  = ['review_id','cycle','month','team_id','employee_id','self_rating','self_comment','mgr_rating','mgr_comment','final_rating','status','reviewer','submitted_at','finalized_at','updated_at'];
+M_SCHEMA[M_TAB.AUDIT]   = ['audit_id','at','actor','object_type','object_id','action','detail'];
 
 /* --------------------------------------------------------- PROVISIONING -- */
 
@@ -544,6 +551,11 @@ function buildModel_(teamId, month) {
   var tgt = mRead_(M_TAB.TGT), act = mRead_(M_TAB.ACT);
   tgt.forEach(function (r) { r.month = monthKey_(r.month); });
   act.forEach(function (r) { r.month = monthKey_(r.month); });
+  /* Closed-loop data: corrective actions and KPI comments/evidence. Flat lists
+   * the client filters by employee / KPI; kept whole so cross-cutting views
+   * (Action Tracker, overdue counts) need no extra round trip. */
+  var actions = mRead_(M_TAB.ACTION); actions.forEach(function (r) { r.month = monthKey_(r.month); });
+  var comments = mRead_(M_TAB.COMMENT); comments.forEach(function (r) { r.month = monthKey_(r.month); });
 
   /* The month this model is built for is resolved ONCE, here, before anything
    * reads it - so the data and the header can never disagree. An explicit
@@ -640,6 +652,7 @@ function buildModel_(teamId, month) {
   }, 0);
   return { ok: true, month: effMonth, months: months,
            teams: teams, scorecards: scorecards,
+           actions: actions, comments: comments,
            source: fromSheet ? 'Google Sheet' : 'Master data (in code)',
            records: records,
            generated_at: new Date().toISOString() };
@@ -802,4 +815,165 @@ function jsonSafe_(o) {
     return out;
   }
   return null;                                  /* functions and the like */
+}
+
+/* ============================================================================
+ * CLOSED-LOOP WRITE LAYER
+ * ----------------------------------------------------------------------------
+ * Capture actuals, raise and track corrective actions, add comments/evidence -
+ * each persisted to a sheet tab, permission-checked against the caller's
+ * resolved session, and appended to an immutable audit log. Every write returns
+ * the freshly recomputed model so the client updates in one round trip. Reads
+ * stay non-fatal; writes need edit access to the backend sheet and say so
+ * plainly if they do not have it.
+ * ==========================================================================*/
+
+/* Emails with HR/Admin rights. Empty on a fresh deployment, which (with no
+ * per-user email map yet) makes every caller an admin who can view as any role
+ * so the app is usable immediately. Lock down by listing real admin emails and
+ * populating an email->employee map in Admin (a later phase). */
+var ADMIN_EMAILS = [];
+
+function currentUserEmail_() {
+  try { return (Session.getActiveUser().getEmail() || Session.getEffectiveUser().getEmail() || '').toLowerCase(); }
+  catch (e) { return ''; }
+}
+function nowIso_() { return new Date().toISOString(); }
+
+/* Who is calling, and what they may do. Role is derived from the caller's
+ * position when their email maps to an employee; otherwise they fall back to an
+ * admin who may "view as" any role (documented first-run behaviour). */
+function resolveSession_() {
+  var emps = mRead_(M_TAB.EMP);
+  if (!emps.length) {
+    var M = buildMaster_();
+    emps = M.emps.map(function (r) { var o = {}; M_SCHEMA[M_TAB.EMP].forEach(function (k, i) { o[k] = r[i]; }); return o; });
+  }
+  var byId = {}, hasReports = {};
+  emps.forEach(function (e) { byId[e.employee_id] = e; });
+  emps.forEach(function (e) { if (e.reporting_manager) hasReports[e.reporting_manager] = true; });
+  var email = currentUserEmail_();
+  var me = null;
+  emps.forEach(function (e) { if (email && String(e.email || '').toLowerCase() === email) me = e; });
+  var isAdmin = !email || ADMIN_EMAILS.indexOf(email) >= 0 || !me;
+  var role;
+  if (isAdmin) role = 'HR';
+  else if (!me.reporting_manager && hasReports[me.employee_id]) role = 'Management';
+  else if (hasReports[me.employee_id]) role = 'Manager';
+  else role = 'Employee';
+  return { email: email || '(unknown)', employee_id: me ? me.employee_id : null,
+           name: me ? me.employee_name : (email || 'Administrator'), role: role,
+           admin: isAdmin, canSwitch: isAdmin || role === 'Management' || role === 'Manager',
+           _byId: byId };
+}
+
+function apiSession() {
+  try {
+    var s = resolveSession_();
+    return { ok: true, email: s.email, employee_id: s.employee_id, name: s.name,
+             role: s.role, admin: s.admin, canSwitch: s.canSwitch };
+  } catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiSession' }; }
+}
+
+/* mgrId is at or above empId in the reporting chain. */
+function isManagerChain_(mgrId, empId, byId) {
+  var e = byId[empId], guard = 0;
+  while (e && guard++ < 50) { if (e.reporting_manager === mgrId) return true; e = byId[e.reporting_manager]; }
+  return false;
+}
+function canWriteFor_(s, empId) {
+  if (s.admin || s.role === 'HR' || s.role === 'Management') return true;
+  if (s.employee_id && s.employee_id === empId) return true;
+  if (s.employee_id && isManagerChain_(s.employee_id, empId, s._byId)) return true;
+  return false;
+}
+function requireWrite_(s, empId, what) {
+  if (!canWriteFor_(s, empId)) throw new Error('You do not have permission to ' + (what || 'make this change') + '.');
+}
+
+/* append / upsert for transactional tabs (mWrite_ rewrites wholesale; these do not) */
+function mAppendRow_(name, obj) {
+  var sh = mTab_(name), h = M_SCHEMA[name];
+  sh.appendRow(h.map(function (k) { var v = obj[k]; return v == null ? '' : v; }));
+  return obj;
+}
+function mUpsertRow_(name, obj) {
+  var sh = mTab_(name), h = M_SCHEMA[name], id = obj[h[0]], at = -1, last = sh.getLastRow();
+  if (id && last >= 2) {
+    var ids = sh.getRange(2, 1, last - 1, 1).getValues();
+    for (var i = 0; i < ids.length; i++) if (String(ids[i][0]) === String(id)) { at = i + 2; break; }
+  }
+  var row = h.map(function (k) { var v = obj[k]; return v == null ? '' : v; });
+  if (at > 0) sh.getRange(at, 1, 1, h.length).setValues([row]); else sh.appendRow(row);
+  return obj;
+}
+function audit_(actor, objType, objId, action, detail) {
+  try {
+    mAppendRow_(M_TAB.AUDIT, { audit_id: Utilities.getUuid(), at: nowIso_(), actor: actor,
+      object_type: objType, object_id: objId, action: action, detail: detail || '' });
+  } catch (e) { /* the audit trail must never break the write it records */ }
+}
+
+/* --- Capture an actual (Core Loop step 3) --- */
+function apiSaveActual(p) {
+  try {
+    p = p || {};
+    var s = resolveSession_();
+    requireWrite_(s, p.employee_id, 'update this actual');
+    var emp = s._byId[p.employee_id]; if (!emp) throw new Error('Unknown employee.');
+    var month = monthKey_(p.month); if (!month) throw new Error('Choose a period first.');
+    var val = numOrNull_(p.value); if (val == null) throw new Error('Enter a numeric actual value.');
+    var id = 'ACT-' + month + '-' + p.employee_id + '-' + p.kpi_id;   /* one actual per emp+kpi+month */
+    mUpsertRow_(M_TAB.ACT, { actual_id: id, month: month, team_id: emp.team_id, employee_id: p.employee_id,
+      kpi_id: p.kpi_id, actual_value: val, actual_unit: p.unit || '', source: p.source || 'Manual entry',
+      updated_at: nowIso_() });
+    if (String(p.note || '').trim())
+      mAppendRow_(M_TAB.COMMENT, { comment_id: Utilities.getUuid(), created_at: nowIso_(), month: month,
+        team_id: emp.team_id, employee_id: p.employee_id, kpi_id: p.kpi_id, author: s.name, kind: 'note', text: p.note });
+    audit_(s.name, 'actual', id, 'save', p.kpi_id + ' = ' + val + ' (' + month + ')');
+    return jsonSafe_({ ok: true, id: id, model: buildModel_(null, month) });
+  } catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiSaveActual' }; }
+}
+
+/* --- Corrective action: create / update / close (Core Loop step 6) --- */
+var ACTION_STATUSES = ['Open', 'In Progress', 'Blocked', 'Completed', 'Cancelled'];
+function apiSaveAction(p) {
+  try {
+    p = p || {};
+    var s = resolveSession_();
+    requireWrite_(s, p.employee_id, 'manage this action');
+    var emp = s._byId[p.employee_id]; if (!emp) throw new Error('Unknown employee.');
+    if (!String(p.title || '').trim()) throw new Error('Give the action a title.');
+    var status = ACTION_STATUSES.indexOf(p.status) >= 0 ? p.status : 'Open';
+    if ((status === 'Cancelled' || status === 'Blocked') && !String(p.resolution || '').trim())
+      throw new Error('A ' + status.toLowerCase() + ' action needs a short reason.');
+    var id = p.action_id || ('ACN-' + Utilities.getUuid().slice(0, 8));
+    var existing = null;
+    if (p.action_id) mRead_(M_TAB.ACTION).forEach(function (a) { if (a.action_id === p.action_id) existing = a; });
+    mUpsertRow_(M_TAB.ACTION, { action_id: id, created_at: existing ? existing.created_at : nowIso_(),
+      updated_at: nowIso_(), month: monthKey_(p.month || ''), team_id: emp.team_id, employee_id: p.employee_id,
+      kpi_id: p.kpi_id || '', title: p.title, root_cause: p.root_cause || '',
+      priority: (['High', 'Medium', 'Low'].indexOf(p.priority) >= 0 ? p.priority : 'Medium'),
+      status: status, due_date: p.due_date || '', resolution: p.resolution || '',
+      created_by: existing ? existing.created_by : s.name });
+    audit_(s.name, 'action', id, p.action_id ? 'update' : 'create', p.title + ' [' + status + ']');
+    return jsonSafe_({ ok: true, id: id, model: buildModel_(null, p.month || null) });
+  } catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiSaveAction' }; }
+}
+
+/* --- Comment / evidence / root cause on a KPI --- */
+function apiSaveComment(p) {
+  try {
+    p = p || {};
+    var s = resolveSession_();
+    requireWrite_(s, p.employee_id, 'comment here');
+    if (!String(p.text || '').trim()) throw new Error('Nothing to save.');
+    var emp = s._byId[p.employee_id]; if (!emp) throw new Error('Unknown employee.');
+    var id = Utilities.getUuid();
+    mAppendRow_(M_TAB.COMMENT, { comment_id: id, created_at: nowIso_(), month: monthKey_(p.month || ''),
+      team_id: emp.team_id, employee_id: p.employee_id, kpi_id: p.kpi_id || '', author: s.name,
+      kind: (['comment', 'evidence', 'root_cause'].indexOf(p.kind) >= 0 ? p.kind : 'comment'), text: p.text });
+    audit_(s.name, 'comment', id, 'add', (p.kind || 'comment') + ' on ' + (p.kpi_id || ''));
+    return jsonSafe_({ ok: true, id: id, model: buildModel_(null, p.month || null) });
+  } catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiSaveComment' }; }
 }

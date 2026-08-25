@@ -467,6 +467,56 @@ button.tr-h:hover>span{color:var(--accent)}
 .tab-c{font-variant-numeric:tabular-nums;font-weight:var(--fw-b);font-size:var(--fs-3xs);
   background:var(--surface);color:var(--muted);border-radius:var(--r-pill);padding:1px 7px;min-width:20px;text-align:center}
 .tab.on .tab-c{background:rgba(255,255,255,.22);color:#fff}
+
+/* --- Closed-loop write UI: forms, actions, comments, toast --------------- */
+.d-write{border-top:1px solid var(--line);margin-top:var(--s5);padding-top:var(--s5)}
+.d-write .d-sect{margin-bottom:var(--s3)}
+.form{display:flex;flex-direction:column;gap:var(--s3)}
+.field{display:flex;flex-direction:column;gap:5px}
+.field>span.lb{font-size:var(--fs-2xs);font-weight:var(--fw-b);color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.inp,.ta{font:inherit;font-size:var(--fs-sm);color:var(--ink);background:var(--card);border:1px solid var(--line-2);
+  border-radius:var(--r-ctl);padding:9px 11px;width:100%;transition:border-color var(--d1) var(--ease)}
+.inp:focus,.ta:focus{border-color:var(--accent)}
+.ta{min-height:64px;resize:vertical;line-height:1.5}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:var(--s3)}
+.fbtns{display:flex;gap:var(--s2);align-items:center;flex-wrap:wrap;margin-top:var(--s1)}
+.btn.sm{padding:8px 14px;font-size:var(--fs-xs)}
+.btn.sub{background:var(--card);border-color:var(--line-2);color:var(--ink-2)}
+.btn.sub:hover{border-color:var(--ink);color:var(--ink)}
+.cmt{display:flex;flex-direction:column;gap:var(--s2);margin:0 0 var(--s3)}
+.cmt-i{background:var(--surface);border-radius:var(--r-ctl);padding:9px 11px}
+.cmt-i .h{font-size:var(--fs-2xs);color:var(--muted);margin-bottom:3px}
+.cmt-i .h b{color:var(--ink-2);font-weight:var(--fw-b)}
+.cmt-i .kd{font-size:var(--fs-3xs);font-weight:var(--fw-b);text-transform:uppercase;letter-spacing:.06em;color:var(--accent-2);margin-right:6px}
+.cmt-i p{margin:0;font-size:var(--fs-sm);color:var(--ink-2);line-height:1.5;overflow-wrap:anywhere}
+.cmt-empty{font-size:var(--fs-xs);color:var(--muted);padding:0 0 var(--s3)}
+.acard{border:1px solid var(--line);border-radius:var(--r-ctl);padding:var(--s3) var(--s4);margin-bottom:var(--s2);background:var(--card);
+  display:block;width:100%;text-align:left;font:inherit;color:inherit;cursor:pointer;transition:border-color var(--d1) var(--ease),box-shadow var(--d1) var(--ease)}
+.acard:hover{border-color:var(--line-2);box-shadow:var(--shadow-1)}
+.acard .at{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap}
+.acard .at b{font-weight:var(--fw-b);font-size:var(--fs-sm)}
+.acard .meta{font-size:var(--fs-2xs);color:var(--muted);margin-top:4px}
+.pri{font-size:var(--fs-3xs);font-weight:var(--fw-b);text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:var(--r-pill);white-space:nowrap}
+.pri.High{color:var(--bad);background:var(--bad-soft)}.pri.Medium{color:var(--warn);background:var(--warn-soft)}.pri.Low{color:var(--muted);background:var(--surface)}
+.ast{font-size:var(--fs-3xs);font-weight:var(--fw-b);text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:var(--r-pill);white-space:nowrap;background:var(--surface);color:var(--ink-2)}
+.ast.Completed{color:var(--good);background:var(--good-soft)}
+.ast.Blocked,.ast.Cancelled{color:var(--bad);background:var(--bad-soft)}
+.act-r{display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:var(--s3);width:100%;border:none;background:none;
+  font:inherit;color:inherit;text-align:left;cursor:pointer;padding:11px var(--s3);border-bottom:1px solid var(--line-soft);transition:background var(--d1) var(--ease)}
+.act-r:last-child{border-bottom:none}
+.act-r:hover{background:var(--surface)}
+.act-r .an{min-width:0;font-weight:var(--fw-m);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.act-r .an small{display:block;font-size:var(--fs-2xs);color:var(--muted);font-weight:var(--fw-n)}
+.act-due{font-size:var(--fs-xs);color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.act-due.over{color:var(--bad);font-weight:var(--fw-b)}
+.toast-wrap{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:60;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.toast{background:var(--ink);color:#fff;border-radius:var(--r-ctl);padding:10px 16px;font-size:var(--fs-sm);font-weight:var(--fw-m);
+  box-shadow:var(--shadow-3);max-width:90vw;animation:tin .2s var(--ease)}
+.toast.bad{background:var(--bad)}.toast.good{background:var(--good)}
+@keyframes tin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.role-chip{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-2xs);font-weight:var(--fw-m);color:var(--muted);
+  border:1px solid var(--line-2);background:var(--card);border-radius:var(--r-pill);padding:4px 6px 4px 10px;white-space:nowrap}
+.role-chip select{border:none;background:none;font:inherit;color:var(--ink);font-weight:var(--fw-b);cursor:pointer;padding:2px}
 .cdot{width:7px;height:7px;border-radius:50%;flex:0 0 auto;display:inline-block;
   background:var(--faint)}
 .cdot.good{background:var(--good)}
@@ -612,7 +662,8 @@ var initials = function (s) {
 var S = { model: null, loading: true, error: null,
           view: 'team', team: null, employee: null, month: null,
           closed: {}, detail: null, demo: false, _demo: null,
-          kpiFilter: 'all', _trigger: null, _drawerOpen: false };
+          kpiFilter: 'all', actionFilter: 'open', session: null, saving: false,
+          _trigger: null, _drawerOpen: false };
 
 /* ============================== API ===================================== */
 var Api = {
@@ -1151,6 +1202,166 @@ function KpiTable(kpis, prefix, showOwner) {
 
 /* ============================== SCREENS ================================ */
 
+/* ============================== CLOSED LOOP ============================
+   Write plumbing, selectors over the actions/comments the model now carries,
+   the Action Tracker screen and the action editor. Every write goes through
+   doWrite(): call the server, adopt the freshly recomputed model it returns,
+   re-render, and confirm with a toast — the measure→act→re-measure loop. */
+function toast(msg, kind) {
+  var w = $('#toasts');
+  if (!w) { w = document.createElement('div'); w.className = 'toast-wrap'; w.id = 'toasts'; document.body.appendChild(w); }
+  var t = document.createElement('div'); t.className = 'toast' + (kind ? ' ' + kind : ''); t.textContent = msg;
+  w.appendChild(t);
+  setTimeout(function () { t.style.transition = 'opacity .3s'; t.style.opacity = '0';
+    setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 300); }, 2600);
+}
+var Write = {
+  call: function (fn, payload, done, fail) {
+    if (!Api.live()) return fail({ message: 'Open the deployed Apps Script URL to save changes.' });
+    google.script.run.withSuccessHandler(done).withFailureHandler(fail)[fn](payload);
+  }
+};
+/* re-resolve the open drawer against a freshly swapped-in model, so an edit that
+   keeps the drawer open shows the recomputed numbers, not the stale ones. */
+function refreshDetail() {
+  var d = S.detail, m = Sel.model(); if (!d || !m) return;
+  var sc = m.scorecards || [];
+  if (d.kind === 'kpi' && d.owner) {
+    var o = sc.filter(function (x) { return x.employee_id === d.owner.employee_id; })[0];
+    if (o) { d.owner = o; var k = (o.kpis || []).filter(function (x) { return x.kpi_id === d.kpi.kpi_id; })[0];
+      if (k) { k.__owner = o.employee_id; d.kpi = k; } }
+  } else if ((d.kind === 'score') && d.owner) {
+    var o2 = sc.filter(function (x) { return x.employee_id === d.owner.employee_id; })[0]; if (o2) d.owner = o2;
+  } else if (d.kind === 'action' && d.action && d.action.action_id) {
+    var a = allActions().filter(function (x) { return x.action_id === d.action.action_id; })[0]; if (a) d.action = a;
+  }
+}
+function doWrite(fn, payload, opts) {
+  opts = opts || {};
+  if (S.saving) return; S.saving = true;
+  Write.call(fn, payload, function (resp) {
+    S.saving = false;
+    if (!resp || !resp.ok) { toast((resp && resp.error) || 'Could not save.', 'bad'); return; }
+    if (resp.model) { S.model = resp.model; S._demo = null; Hist.clear(); }
+    if (opts.close) S.detail = null; else refreshDetail();
+    render();
+    toast(opts.success || 'Saved', 'good');
+  }, function (e) { S.saving = false; toast((e && e.message) || 'Could not save.', 'bad'); });
+}
+/* permission-aware UI (the server enforces the same rules authoritatively). */
+function canWrite(ownerId) {
+  var s = S.session; if (!s) return false;
+  if (s.admin || s.role === 'HR' || s.role === 'Management') return true;
+  if (s.employee_id && s.employee_id === ownerId) return true;
+  return s.canSwitch === true;
+}
+function allActions() { var m = Sel.model(); return (m && m.actions) || []; }
+function allComments() { var m = Sel.model(); return (m && m.comments) || []; }
+function actionsFor(ownerId, kpiId) { return allActions().filter(function (a) { return a.employee_id === ownerId && (!kpiId || a.kpi_id === kpiId); }); }
+function commentsFor(ownerId, kpiId) {
+  return allComments().filter(function (c) { return c.employee_id === ownerId && (!kpiId || c.kpi_id === kpiId); })
+    .sort(function (a, b) { return String(b.created_at).localeCompare(String(a.created_at)); });
+}
+function isOpenAct(a) { return a.status !== 'Completed' && a.status !== 'Cancelled'; }
+function todayKey() { var n = new Date(); return n.getFullYear() + '-' + ('0' + (n.getMonth() + 1)).slice(-2) + '-' + ('0' + n.getDate()).slice(-2); }
+function isOverdue(a) { return isOpenAct(a) && a.due_date && String(a.due_date).slice(0, 10) < todayKey(); }
+function ownerName(id) { var e = ((Sel.model() && Sel.model().scorecards) || []).filter(function (x) { return x.employee_id === id; })[0]; return e ? e.employee_name : id; }
+function kpiNameOf(ownerId, kpiId) {
+  var e = ((Sel.model() && Sel.model().scorecards) || []).filter(function (x) { return x.employee_id === ownerId; })[0];
+  var k = e && (e.kpis || []).filter(function (x) { return x.kpi_id === kpiId; })[0];
+  return k ? k.kpi : '';
+}
+function ActionCard(a) {
+  var over = isOverdue(a);
+  return '<button type="button" class="acard" data-openaction="' + esc(a.action_id) + '">' +
+    '<div class="at"><b>' + esc(a.title) + '</b>' +
+      '<span class="pri ' + esc(a.priority || 'Medium') + '">' + esc(a.priority || 'Medium') + '</span>' +
+      '<span class="ast ' + (over ? 'Blocked' : esc(a.status)) + '">' + (over ? 'Overdue' : esc(a.status)) + '</span></div>' +
+    '<div class="meta">' + (a.kpi_id ? esc(kpiNameOf(a.employee_id, a.kpi_id)) + ' · ' : '') + esc(ownerName(a.employee_id)) +
+      (a.due_date ? ' · due ' + esc(String(a.due_date).slice(0, 10)) : '') + '</div></button>';
+}
+var ACTION_TABS = [['open', 'Open'], ['mine', 'Mine'], ['overdue', 'Overdue'], ['completed', 'Completed'], ['all', 'All']];
+function ActionsScreen() {
+  var acts = allActions(), me = S.session && S.session.employee_id, filt = S.actionFilter || 'open';
+  var counts = { open: acts.filter(isOpenAct).length, mine: acts.filter(function (a) { return me && a.employee_id === me; }).length,
+    overdue: acts.filter(isOverdue).length, completed: acts.filter(function (a) { return a.status === 'Completed'; }).length, all: acts.length };
+  var shown = acts.filter(function (a) {
+    return filt === 'all' ? true : filt === 'open' ? isOpenAct(a) : filt === 'mine' ? (me && a.employee_id === me)
+      : filt === 'overdue' ? isOverdue(a) : a.status === 'Completed';
+  }).sort(function (a, b) {
+    var ao = isOverdue(a) ? 0 : isOpenAct(a) ? 1 : 2, bo = isOverdue(b) ? 0 : isOpenAct(b) ? 1 : 2;
+    return ao !== bo ? ao - bo : String(a.due_date || '~').localeCompare(String(b.due_date || '~'));
+  });
+  var tabs = '<div class="tabs" role="tablist" aria-label="Filter actions">' + ACTION_TABS.map(function (t) {
+    return '<button type="button" class="tab' + (filt === t[0] ? ' on' : '') + '" role="tab" aria-selected="' + (filt === t[0] ? 'true' : 'false') +
+      '" data-afilter="' + t[0] + '">' + esc(t[1]) + '<span class="tab-c">' + counts[t[0]] + '</span></button>';
+  }).join('') + '</div>';
+  var rows = shown.length ? shown.map(function (a) {
+    var over = isOverdue(a);
+    return '<button type="button" class="act-r" data-openaction="' + esc(a.action_id) + '">' +
+      '<span class="pri ' + esc(a.priority || 'Medium') + '">' + esc((a.priority || 'M').slice(0, 1)) + '</span>' +
+      '<span class="an">' + esc(a.title) + '<small>' + (a.kpi_id ? esc(kpiNameOf(a.employee_id, a.kpi_id)) + ' · ' : '') + esc(ownerName(a.employee_id)) + '</small></span>' +
+      '<span class="act-due' + (over ? ' over' : '') + '">' + (a.due_date ? esc(String(a.due_date).slice(0, 10)) : '—') + '</span>' +
+      '<span class="ast ' + (over ? 'Blocked' : esc(a.status)) + '">' + (over ? 'Overdue' : esc(a.status)) + '</span></button>';
+  }).join('') : '<div class="empty">No ' + (filt === 'all' ? '' : esc(filt) + ' ') + 'actions ' + (acts.length ? 'in this view.' : 'yet — raise one from any at-risk KPI.') + '</div>';
+  return PageHead('Action Tracker', 'Corrective actions · ' + esc(monthLabel(S.month))) +
+    '<div class="block"><div class="sect">Actions<span class="r"><button class="btn sm" data-newaction="team">+ New action</button></span></div>' +
+    tabs + '<div class="panel" style="padding:0 var(--s3)">' + rows + '</div></div>';
+}
+var HINT = '<span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--faint)">';
+function ActionBody(a) {
+  a = a || {};
+  var members = (Sel.model() && Sel.model().scorecards) || [];
+  var isNew = !a.action_id, lockOwner = !isNew || a._lockOwner;
+  var ownerId = a.employee_id || (S.session && S.session.employee_id) || (members[0] && members[0].employee_id);
+  var kpis = (members.filter(function (m) { return m.employee_id === ownerId; })[0] || {}).kpis || [];
+  var ownerField = lockOwner ? pair('Owner', esc(ownerName(ownerId)))
+    : '<div class="field"><span class="lb">Owner</span><select class="inp" id="a-owner">' +
+      members.map(function (m) { return '<option value="' + esc(m.employee_id) + '"' + (m.employee_id === ownerId ? ' selected' : '') + '>' + esc(m.employee_name) + '</option>'; }).join('') + '</select></div>';
+  var kpiField = '<div class="field"><span class="lb">Linked KPI ' + HINT + '(optional)</span></span><select class="inp" id="a-kpi"><option value="">— none —</option>' +
+    kpis.map(function (k) { return '<option value="' + esc(k.kpi_id) + '"' + (k.kpi_id === a.kpi_id ? ' selected' : '') + '>' + esc(k.kpi) + '</option>'; }).join('') + '</select></div>';
+  return '<div class="d-h"><div><div class="eyebrow">' + (isNew ? 'New action' : 'Action') + '</div>' +
+    '<h2>' + (isNew ? 'Corrective action' : esc(a.title)) + '</h2></div>' +
+    '<button class="x" data-close="1" aria-label="Close">×</button></div>' +
+    '<div class="d-b"><div class="form">' + ownerField + kpiField +
+      '<div class="field"><span class="lb">Title</span><input class="inp" id="a-title" value="' + esc(a.title || '') + '" placeholder="What will be done"></div>' +
+      '<div class="field"><span class="lb">Root cause</span><textarea class="ta" id="a-cause" placeholder="Why is the KPI off track?">' + esc(a.root_cause || '') + '</textarea></div>' +
+      '<div class="frow"><div class="field"><span class="lb">Priority</span><select class="inp" id="a-pri">' +
+        ['High', 'Medium', 'Low'].map(function (p) { return '<option' + ((a.priority || 'Medium') === p ? ' selected' : '') + '>' + p + '</option>'; }).join('') + '</select></div>' +
+      '<div class="field"><span class="lb">Due date</span><input class="inp" id="a-due" type="date" value="' + esc(String(a.due_date || '').slice(0, 10)) + '"></div></div>' +
+      '<div class="field"><span class="lb">Status</span><select class="inp" id="a-status">' +
+        ['Open', 'In Progress', 'Blocked', 'Completed', 'Cancelled'].map(function (st) { return '<option' + ((a.status || 'Open') === st ? ' selected' : '') + '>' + st + '</option>'; }).join('') + '</select></div>' +
+      '<div class="field"><span class="lb">Resolution / reason ' + HINT + '(required to block, complete or cancel)</span></span><textarea class="ta" id="a-res" placeholder="Outcome, blocker or reason">' + esc(a.resolution || '') + '</textarea></div>' +
+      '<div class="fbtns"><button class="btn sm" data-saveaction="' + esc(a.action_id || '') + '">' + (isNew ? 'Create action' : 'Save changes') + '</button>' +
+        '<button class="btn sm sub" data-close="1">Cancel</button></div></div></div>';
+}
+/* The write block appended to a KPI drawer: capture an actual, discuss the root
+   cause, and raise/track corrective actions — all in the KPI's own context. */
+function DrawerWrite(k, owner) {
+  if (!owner) return '';
+  var oid = owner.employee_id, allowed = canWrite(oid);
+  var cmts = commentsFor(oid, k.kpi_id), acts = actionsFor(oid, k.kpi_id);
+  var out = '<div class="d-write">';
+  if (allowed) out += '<div class="d-sect">Update actual · ' + esc(monthLabel(S.month)) + '</div>' +
+    '<div class="form"><div class="frow">' +
+      '<div class="field"><span class="lb">Actual</span><input class="inp" id="ac-val" inputmode="decimal" value="' + (k.actual == null ? '' : esc(k.actual)) + '" placeholder="' + (k.target == null ? 'value' : 'target ' + esc(fmt(k.target, k.unit))) + '"></div>' +
+      '<div class="field"><span class="lb">Source</span><input class="inp" id="ac-src" value="' + esc(k.source || '') + '" placeholder="e.g. Monthly MIS"></div></div>' +
+      '<div class="field"><span class="lb">Note ' + HINT + '(optional)</span></span><input class="inp" id="ac-note" placeholder="context for this number"></div>' +
+      '<div class="fbtns"><button class="btn sm" data-saveactual="' + esc(oid + '::' + k.kpi_id) + '">Save actual</button></div></div>';
+  out += '<div class="d-sect" style="margin-top:var(--s5)">Root cause &amp; comments</div>' +
+    (cmts.length ? '<div class="cmt">' + cmts.map(function (c) {
+      return '<div class="cmt-i"><div class="h">' + (c.kind && c.kind !== 'comment' && c.kind !== 'note' ? '<span class="kd">' + esc(String(c.kind).replace('_', ' ')) + '</span>' : '') +
+        '<b>' + esc(c.author || '') + '</b> · ' + esc(String(c.created_at || '').slice(0, 10)) + '</div><p>' + esc(c.text) + '</p></div>';
+    }).join('') + '</div>' : '<div class="cmt-empty">No comments yet.</div>');
+  if (allowed) out += '<div class="form"><div class="field"><textarea class="ta" id="cm-text" placeholder="Add a root cause, comment or evidence note"></textarea></div>' +
+    '<div class="fbtns"><button class="btn sm sub" data-addcomment="' + esc(oid + '::' + k.kpi_id + '::root_cause') + '">Add root cause</button>' +
+    '<button class="btn sm sub" data-addcomment="' + esc(oid + '::' + k.kpi_id + '::comment') + '">Add comment</button></div></div>';
+  out += '<div class="d-sect" style="margin-top:var(--s5)">Corrective actions</div>' +
+    (acts.length ? acts.map(ActionCard).join('') : '<div class="cmt-empty">No actions linked to this KPI.</div>');
+  if (allowed) out += '<div class="fbtns"><button class="btn sm" data-newaction="' + esc(oid + '::' + k.kpi_id) + '">+ New action</button></div>';
+  return out + '</div>';
+}
+
 /* The team screen and the landing one. Per the UI/UX spec the flowchart is the
    canonical navigation surface, carried by a compact summary strip above it and
    an exception-first "needs attention" list, with the KRA breakdown and ranking
@@ -1391,6 +1602,7 @@ function renderDrawer() {
   if (det.kind === 'score') { dr.innerHTML = ScoreBody(det.owner); openDrawer(dr, sc, app); return; }
   if (det.kind === 'fresh') { dr.innerHTML = FreshBody(); openDrawer(dr, sc, app); return; }
   if (det.kind === 'def')   { dr.innerHTML = DefBody(det.kpi); openDrawer(dr, sc, app); return; }
+  if (det.kind === 'action'){ dr.innerHTML = ActionBody(det.action); openDrawer(dr, sc, app); return; }
 
   var k = det.kpi;
   var achW = k.achievement == null ? 0 : Math.max(0, Math.min(100, k.achievement / 105 * 100));
@@ -1423,6 +1635,7 @@ function renderDrawer() {
       (k.unit ? pair('Measurement', measureLabel(k.unit)) : '') +
       (k.source ? pair('Source of tracking', esc(k.source)) : '') +
       KpiTrendBlock(k, det.owner) +
+      DrawerWrite(k, det.owner) +
     '</div>';
   openDrawer(dr, sc, app);
 }
@@ -1460,6 +1673,7 @@ function Skeleton() {
 var NAV = [
   { id: 'team', label: 'Team', icon: '<circle cx="9" cy="8" r="3"/><path d="M4 20a5 5 0 0 1 10 0"/><circle cx="17.5" cy="9" r="2.4"/><path d="M15 20a4.5 4.5 0 0 1 6.5-4"/>' },
   { id: 'kpi', label: 'KRA / KPI', icon: '<path d="M4 6h16M4 12h16M4 18h10"/><circle cx="19" cy="18" r="2"/>' },
+  { id: 'actions', label: 'Actions', icon: '<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/>' },
   { id: 'profile', label: 'Profile', icon: '<circle cx="12" cy="8" r="3.4"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/>' }
 ];
 function buildRail() {
@@ -1489,7 +1703,12 @@ function buildTopbar() {
   /* Freshness sits with the filters, not in the content: it describes the data
      the filters selected, and it is metadata, so it stays quiet. */
   $('#tbar').innerHTML = teamSel + monthSel + empSel + FreshChip() +
-    '<span class="grow"></span>' + greet;
+    '<span class="grow"></span>' + roleChip() + greet;
+}
+function roleChip() {
+  var s = S.session; if (!s) return '';
+  var who = s.name && s.name !== 'Administrator' ? ' · ' + esc(String(s.name).split(' ')[0]) : '';
+  return '<span class="role-chip" title="Signed in as ' + esc(s.email || 'this account') + '">' + esc(s.role) + who + '</span>';
 }
 
 /* ============================== RENDER ================================= */
@@ -1514,6 +1733,7 @@ function render() {
      unknown or stale view key falls back to it rather than to nothing. */
   var body = S.employee ? EmployeeScreen()
     : S.view === 'kpi' ? KpiScreen()
+    : S.view === 'actions' ? ActionsScreen()
     : FlowchartScreen();
   $('#view').innerHTML = body;
   $('#banner').innerHTML = demo || '';   // full-bleed sibling above .wrap, so .demo spans edge to edge
@@ -1522,6 +1742,11 @@ function render() {
 
 function load() {
   S.loading = true; S.error = null; S._demo = null; Hist.clear(); render();
+  // Resolve who is signed in (role + permissions) once; drives write controls.
+  if (!S.session && Api.live()) {
+    google.script.run.withSuccessHandler(function (se) { if (se && se.ok) { S.session = se; if (!S.loading) render(); } })
+      .withFailureHandler(function () {}).apiSession();
+  }
   Api.fetch(S.month, function (m) {
     S.loading = false;
     if (!m) {
@@ -1558,6 +1783,32 @@ document.addEventListener('click', function (e) {
   if (nv) { toView(nv.dataset.view); return; }
   var kf = e.target.closest('[data-kfilter]');
   if (kf) { S.kpiFilter = kf.dataset.kfilter; render(); return; }
+  var af = e.target.closest('[data-afilter]');
+  if (af) { S.actionFilter = af.dataset.afilter; render(); return; }
+  var svAct = e.target.closest('[data-saveactual]');
+  if (svAct) { var pa = svAct.dataset.saveactual.split('::');
+    doWrite('apiSaveActual', { month: S.month, employee_id: pa[0], kpi_id: pa[1],
+      value: (($('#ac-val') || {}).value || ''), source: (($('#ac-src') || {}).value || ''), note: (($('#ac-note') || {}).value || '') },
+      { success: 'Actual saved · score recomputed' }); return; }
+  var addC = e.target.closest('[data-addcomment]');
+  if (addC) { var pc = addC.dataset.addcomment.split('::'), txt = ($('#cm-text') || {}).value || '';
+    if (!txt.trim()) { toast('Nothing to add', 'bad'); return; }
+    doWrite('apiSaveComment', { month: S.month, employee_id: pc[0], kpi_id: pc[1], kind: pc[2], text: txt }, { success: 'Comment added' }); return; }
+  var newA = e.target.closest('[data-newaction]');
+  if (newA) { var ctx = newA.dataset.newaction, tpl = { title: '', priority: 'Medium', status: 'Open' };
+    if (ctx && ctx.indexOf('::') >= 0) { var pp = ctx.split('::'); tpl.employee_id = pp[0]; tpl.kpi_id = pp[1]; tpl._lockOwner = true; }
+    S._trigger = newA; S.detail = { kind: 'action', action: tpl }; renderDrawer(); return; }
+  var opA = e.target.closest('[data-openaction]');
+  if (opA) { var act = allActions().filter(function (x) { return x.action_id === opA.dataset.openaction; })[0];
+    if (act) { S._trigger = opA; S.detail = { kind: 'action', action: act }; renderDrawer(); } return; }
+  var svA = e.target.closest('[data-saveaction]');
+  if (svA) {
+    var ownerSel = $('#a-owner'), ownerId = ownerSel ? ownerSel.value : (S.detail && S.detail.action && S.detail.action.employee_id);
+    doWrite('apiSaveAction', { action_id: svA.dataset.saveaction || '', month: S.month, employee_id: ownerId,
+      kpi_id: ($('#a-kpi') || {}).value || '', title: ($('#a-title') || {}).value || '', root_cause: ($('#a-cause') || {}).value || '',
+      priority: ($('#a-pri') || {}).value || 'Medium', status: ($('#a-status') || {}).value || 'Open',
+      due_date: ($('#a-due') || {}).value || '', resolution: ($('#a-res') || {}).value || '' },
+      { close: true, success: 'Action saved' }); return; }
   var emp = e.target.closest('[data-emp]');
   if (emp) { S.employee = emp.dataset.emp; S.detail = null; render(); $('.canvas').scrollTop = 0; return; }
   if (e.target.closest('[data-back]')) { S.employee = null; S.detail = null; render(); $('.canvas').scrollTop = 0; return; }
