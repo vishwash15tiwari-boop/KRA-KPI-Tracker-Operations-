@@ -6,7 +6,7 @@
 <title>KRA / KPI Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=swap" rel="stylesheet">
 <style>
 /* ============================================================================
    KRA / KPI Tracker — premium enterprise scorecard.
@@ -28,10 +28,11 @@
   --accent:#005DFF;--accent-2:#0047CC;--accent-soft:#E9F0FF;--accent-glow:rgba(0,93,255,.16);
   --good:#0F8A5C;--good-soft:#E6F4EC;--warn:#B27411;--warn-soft:#FBF0DB;--bad:#D93A31;--bad-soft:#FCEBE9;
   --warn-line:#EAD8B4;--warn-line-2:#DFC48E;
-  --fs-xxl:37px;--fs-xl:23px;--fs-lg:16px;--fs-md:14px;--fs-sm:13px;--fs-xs:12px;--fs-2xs:11px;--fs-3xs:10px;
-  --fw-n:400;--fw-m:500;--fw-b:600;--fw-h:700;
-  --r-ctl:9px;--r-card:14px;--r-pill:999px;
-  --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:24px;--s6:32px;--s7:40px;--s8:56px;
+  --fs-xxl:27px;--fs-xl:19px;--fs-lg:15px;--fs-md:14px;--fs-sm:13px;--fs-xs:12px;--fs-2xs:11px;--fs-3xs:10px;
+  /* Bolder baseline across the board: normal text is medium, everything steps up. */
+  --fw-n:500;--fw-m:600;--fw-b:700;--fw-h:800;
+  --r-ctl:8px;--r-card:12px;--r-pill:999px;
+  --s1:4px;--s2:7px;--s3:11px;--s4:14px;--s5:18px;--s6:24px;--s7:26px;--s8:34px;
   --ease:cubic-bezier(.2,.6,.35,1);--ease-out:cubic-bezier(.16,1,.3,1);--d1:150ms;--d2:240ms;--rail:78px;--maxw:1180px;
   --shadow-1:0 1px 2px rgba(15,24,40,.05),0 1px 1px rgba(15,24,40,.03);
   --shadow-2:0 2px 5px -1px rgba(15,24,40,.07),0 14px 30px -10px rgba(15,24,40,.16);
@@ -42,7 +43,7 @@
 *{box-sizing:border-box}html,body{margin:0;padding:0}
 body{font-family:var(--font);background:var(--bg);
   background-image:linear-gradient(180deg,var(--bg-2),var(--bg) 380px);background-attachment:fixed;
-  color:var(--ink);font-size:var(--fs-sm);line-height:1.5;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  color:var(--ink);font-size:var(--fs-sm);font-weight:var(--fw-n);line-height:1.45;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
   font-feature-settings:'tnum' 1,'cv05' 1,'cv11' 1,'ss03' 1;font-optical-sizing:auto;letter-spacing:-.011em}
 button,select,input{font-family:inherit;cursor:pointer}
 *:focus{outline:none}
@@ -102,7 +103,7 @@ button,select,input{font-family:inherit;cursor:pointer}
 
 /* Top context bar — team, month, then who you are. Compact. */
 .tbar{position:sticky;top:0;z-index:30;background:rgba(240,243,249,.78);backdrop-filter:saturate(180%) blur(14px);
-  border-bottom:1px solid var(--line);padding:0 var(--s6);height:60px;display:flex;align-items:center;gap:var(--s3)}
+  border-bottom:1px solid var(--line);padding:0 var(--s6);height:52px;display:flex;align-items:center;gap:var(--s3)}
 .tbar .grow{flex:1}
 .fld{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-2xs);color:var(--muted);
   text-transform:uppercase;letter-spacing:.06em;font-weight:var(--fw-m)}
@@ -123,9 +124,9 @@ button,select,input{font-family:inherit;cursor:pointer}
 .avatar{flex:0 0 auto;border-radius:var(--r-pill);background:linear-gradient(140deg,#EAF1FF,#D9E7FF);color:var(--accent-2);
   box-shadow:inset 0 0 0 1px rgba(0,93,255,.1),0 1px 2px rgba(0,93,255,.08);
   display:grid;place-items:center;font-weight:var(--fw-h);letter-spacing:-.02em;
-  width:34px;height:34px;font-size:var(--fs-xs)}
-.avatar.lg{width:56px;height:56px;font-size:var(--fs-lg)}
-.avatar.xl{width:48px;height:48px;font-size:var(--fs-md)}
+  width:30px;height:30px;font-size:var(--fs-2xs)}
+.avatar.lg{width:48px;height:48px;font-size:var(--fs-md)}
+.avatar.xl{width:42px;height:42px;font-size:var(--fs-sm)}
 
 .page-h{display:flex;align-items:flex-start;gap:var(--s4);flex-wrap:wrap;margin-bottom:var(--s6)}
 .page-h h1{font-size:var(--fs-xl);font-weight:var(--fw-b);letter-spacing:-.02em;margin:0;line-height:1.2}
@@ -206,7 +207,7 @@ table{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;mi
 th{text-align:left;font-size:var(--fs-2xs);font-weight:var(--fw-b);color:var(--muted);text-transform:uppercase;
   letter-spacing:.06em;padding:12px var(--s3);border-bottom:1px solid var(--line-2);white-space:nowrap;
   background:linear-gradient(180deg,#fff,var(--surface))}
-td{padding:var(--s2) var(--s3);border-bottom:1px solid var(--line-soft);vertical-align:middle;height:52px;overflow:hidden}
+td{padding:var(--s2) var(--s3);border-bottom:1px solid var(--line-soft);vertical-align:middle;height:44px;overflow:hidden}
 tbody tr:last-child td{border-bottom:none}
 .quiet{color:var(--muted);font-weight:var(--fw-n)}
 .strong{font-weight:var(--fw-b)}
@@ -488,6 +489,7 @@ button.tr-h:hover>span{color:var(--accent)}
 .att-v{font-weight:var(--fw-b);font-variant-numeric:tabular-nums;min-width:48px;text-align:right}
 .att-r .chev{color:var(--faint);flex:0 0 12px;text-align:center}
 .att-ok{display:flex;align-items:center;gap:var(--s2);padding:var(--s3) var(--s2);color:var(--muted);font-size:var(--fs-sm)}
+.att-more{font-size:var(--fs-xs);color:var(--muted);font-weight:var(--fw-b);padding:var(--s3) var(--s2) var(--s1)}
 
 /* --- KPI dashboard status-filter tabs (spec §05) ----------------------- */
 .tabs{display:flex;flex-wrap:wrap;gap:var(--s2);margin-bottom:var(--s4)}
@@ -651,13 +653,13 @@ button.pscore:hover .bdg{background:var(--accent);color:#fff}
 .inp:focus,.ta:focus{box-shadow:var(--ring)}
 .sel:focus-visible{box-shadow:var(--ring)}
 /* Confident page and drawer titles. */
-.page-h h1{font-size:26px;font-weight:var(--fw-h);letter-spacing:-.035em}
-.page-h .kind{font-size:var(--fs-sm);color:var(--muted);margin-top:5px;font-weight:var(--fw-m)}
+.page-h h1{font-size:20px;font-weight:var(--fw-h);letter-spacing:-.03em}
+.page-h .kind{font-size:var(--fs-xs);color:var(--muted);margin-top:3px;font-weight:var(--fw-b)}
 .d-h h2{letter-spacing:-.025em;font-weight:var(--fw-h)}
 .sect{color:var(--ink-2)}
 /* Rank/list rows: rounded hover fills, tabular scores. */
 .rrow,.att-r,.acard,.cmp-row,.act-r{border-radius:var(--r-ctl)}
-@media(max-width:560px){.page-h h1{font-size:22px}}
+@media(max-width:560px){.page-h h1{font-size:18px}}
 </style>
 </head>
 <body>
@@ -1380,7 +1382,7 @@ function ActionsScreen() {
     '<div class="block"><div class="sect">Actions<span class="r"><button class="btn sm" data-newaction="team">+ New action</button></span></div>' +
     tabs + '<div class="panel" style="padding:0 var(--s3)">' + rows + '</div></div>';
 }
-var HINT = '<span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--faint)">';
+var HINT = '<span style="font-weight:500;text-transform:none;letter-spacing:0;color:var(--faint)">';
 function ActionBody(a) {
   a = a || {};
   var members = (Sel.model() && Sel.model().scorecards) || [];
@@ -1534,12 +1536,11 @@ function AdminScreen() {
       : '<div class="att-ok" style="padding:var(--s3)"><span class="cdot good"></span>Every mapped person’s weightages total 100%.</div>') + '</div></div>';
   var audit = (Sel.model() && Sel.model().audit) || [];
   var auditBlock = '<div class="block"><div class="sect">Audit log<span class="r">most recent writes</span></div><div class="pcard" style="padding:var(--s3)">' +
-    (audit.length ? '<div class="cmt">' + audit.slice(0, 40).map(function (a) {
+    (audit.length ? '<div class="cmt">' + audit.slice(0, 12).map(function (a) {
       return '<div class="cmt-i"><div class="h"><span class="kd">' + esc(a.object_type) + ' · ' + esc(a.action) + '</span><b>' + esc(a.actor || '') + '</b> · ' + esc(String(a.at || '').slice(0, 16).replace('T', ' ')) + '</div><p>' + esc(a.detail || '') + '</p></div>';
     }).join('') + '</div>' : '<div class="cmt-empty">No changes recorded yet — writes will appear here.</div>') + '</div></div>';
   return PageHead('Admin & Configuration', 'Governance · framework, validation and audit') + summary +
-    '<div class="two">' + healthBlock + auditBlock + '</div>' +
-    '<div class="hint">KPI definitions, thresholds, scoring and role / admin-email mapping live in the master tabs of the backing Google Sheet and are provisioned by <b>provisionMaster()</b>. Actuals, actions, reviews and this audit trail are written back by the app and recomputed on save.</div>';
+    '<div class="two">' + healthBlock + auditBlock + '</div>';
 }
 
 /* ============================== REVIEWS ===============================
@@ -1558,10 +1559,10 @@ function ReviewsScreen() {
   var c = { 'Not Started': 0, done: 0, 'Finalized': 0 };
   members.forEach(function (m) { var st = reviewStatus(m.employee_id); if (st === 'Finalized') c.Finalized++; else if (st === 'Not Started') c['Not Started']++; else c.done++; });
   var cards = '<div class="mini">' +
+    MiniStat('Participants', String(members.length)) +
     MiniStat('Not started', String(c['Not Started'])) +
     MiniStat('In progress', String(c.done)) +
-    MiniStat('Finalized', String(c.Finalized)) +
-    MiniStat('Cycle', esc(monthLabel(S.month))) + '</div>';
+    MiniStat('Finalized', String(c.Finalized)) + '</div>';
   var rows = members.map(function (m) {
     var st = reviewStatus(m.employee_id), r = reviewFor(m.employee_id);
     return '<button type="button" class="act-r" data-openreview="' + esc(m.employee_id) + '">' +
@@ -1669,16 +1670,17 @@ function FlowchartScreen() {
 function AttentionBlock(kpis) {
   var ex = kpis.filter(function (k) { return k.achievement != null && k.achievement < 90; })
     .sort(function (a, b) { return a.achievement - b.achievement; });
+  var CAP = 8, top = ex.slice(0, CAP);
   var body = ex.length
-    ? ex.map(function (k) {
+    ? top.map(function (k) {
         return '<button type="button" class="att-r" data-kpi="' + esc((k.__owner || '') + '::' + k.kpi_id) + '">' +
           '<span class="st ' + tone(k.achievement) + '">' + esc(k.status) + '</span>' +
           '<span class="att-n">' + esc(k.kpi) + '<em>' + esc(k.__ownerName || '') + '</em></span>' +
           '<span class="att-v">' + show(k.achievement) + '%</span>' +
           '<span class="chev" aria-hidden="true">›</span></button>';
-      }).join('')
+      }).join('') + (ex.length > CAP ? '<div class="att-more">+ ' + (ex.length - CAP) + ' more at risk — see the KRA / KPI dashboard</div>' : '')
     : '<div class="att-ok"><span class="cdot good"></span>All measured KPIs are on track this period.</div>';
-  return '<div class="block"><div class="sect">Needs attention<span class="r">at risk &amp; off track · click to inspect</span></div>' +
+  return '<div class="block"><div class="sect">Needs attention<span class="r">worst first · ' + ex.length + ' total</span></div>' +
     '<div class="pcard" style="padding:var(--s2) var(--s3)">' + body + '</div></div>';
 }
 
@@ -1719,8 +1721,7 @@ function EmployeeScreen() {
      what is dragging on it, with any pending KPIs drawn as hollow bars rather
      than named in prose - then the score's history over the loaded periods, a
      strongest / needs-attention callout, and finally the exact figures. */
-  return back + head + mini + PerfChart(m) + HistoryPanel(m) +
-    SnapshotPanel(m) + table;
+  return back + head + mini + PerfChart(m) + HistoryPanel(m) + table;
 }
 function MiniStat(l, v) { return '<div class="mstat"><div class="l">' + esc(l) + '</div><div class="v">' + v + '</div></div>'; }
 
@@ -1948,7 +1949,7 @@ function buildRail() {
   }).join('');
 }
 function buildTopbar() {
-  var teams = Sel.teams(), months = Sel.months(), lead = Sel.lead();
+  var teams = Sel.teams(), months = Sel.months();
   var teamSel = '<span class="fld">Team<select class="sel" id="f-team" aria-label="Team">' +
     teams.map(function (t) { return '<option value="' + esc(t.team_id) + '"' + (t.team_id === S.team ? ' selected' : '') + '>' + esc(t.team_name) + '</option>'; }).join('') +
     '</select></span>';
@@ -1961,12 +1962,9 @@ function buildTopbar() {
       Sel.members().map(function (p) { return '<option value="' + esc(p.employee_id) + '"' + (p.employee_id === S.employee ? ' selected' : '') + '>' + esc(p.employee_name) + '</option>'; }).join('') +
       '</select></span>';
   }
-  var greet = lead ? '<div class="greet"><div class="who"><b>' + esc(lead.employee_name) + '</b>' +
-    '<span>' + esc((lead.designation || '').split(' - ')[0] || 'Recykal') + '</span></div>' + Avatar(lead.employee_name) + '</div>' : '';
-  /* Freshness sits with the filters, not in the content: it describes the data
-     the filters selected, and it is metadata, so it stays quiet. */
+  /* Filters left, identity right; the freshness chip stays quiet metadata. */
   $('#tbar').innerHTML = teamSel + monthSel + empSel + FreshChip() +
-    '<span class="grow"></span>' + roleChip() + greet;
+    '<span class="grow"></span>' + roleChip();
 }
 function roleChip() {
   var s = S.session; if (!s) return '';
