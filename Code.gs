@@ -556,6 +556,7 @@ function buildModel_(teamId, month) {
    * (Action Tracker, overdue counts) need no extra round trip. */
   var actions = mRead_(M_TAB.ACTION); actions.forEach(function (r) { r.month = monthKey_(r.month); });
   var comments = mRead_(M_TAB.COMMENT); comments.forEach(function (r) { r.month = monthKey_(r.month); });
+  var reviews = mRead_(M_TAB.REVIEW); reviews.forEach(function (r) { r.month = monthKey_(r.month); });
 
   /* The month this model is built for is resolved ONCE, here, before anything
    * reads it - so the data and the header can never disagree. An explicit
@@ -652,7 +653,7 @@ function buildModel_(teamId, month) {
   }, 0);
   return { ok: true, month: effMonth, months: months,
            teams: teams, scorecards: scorecards,
-           actions: actions, comments: comments,
+           actions: actions, comments: comments, reviews: reviews,
            source: fromSheet ? 'Google Sheet' : 'Master data (in code)',
            records: records,
            generated_at: new Date().toISOString() };
@@ -976,4 +977,60 @@ function apiSaveComment(p) {
     audit_(s.name, 'comment', id, 'add', (p.kind || 'comment') + ' on ' + (p.kpi_id || ''));
     return jsonSafe_({ ok: true, id: id, model: buildModel_(null, p.month || null) });
   } catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiSaveComment' }; }
+}
+
+/* --- Performance review: self + manager assessment, finalize, lock (Core Loop
+ * step 7). One review per employee per cycle; a cycle defaults to the period.
+ * Sections are permission-scoped (employee writes self, manager/HR write the
+ * manager side and finalize) and a Finalized review is immutable until an HR
+ * reopen - the audit trail records every transition. `action` drives the state
+ * machine: save | submit_self | submit_mgr | finalize | reopen. --- */
+function apiSaveReview(p) {
+  try {
+    p = p || {};
+    var s = resolveSession_();
+    var empId = p.employee_id, emp = s._byId[empId]; if (!emp) throw new Error('Unknown employee.');
+    var cycle = String(p.cycle || monthKey_(p.month) || 'current');
+    var id = 'RVW-' + cycle + '-' + empId;
+    var existing = null; mRead_(M_TAB.REVIEW).forEach(function (r) { if (r.review_id === id) existing = r; });
+    var action = p.action || 'save';
+    if (existing && String(existing.status) === 'Finalized' && action !== 'reopen')
+      throw new Error('This review is finalized and locked. HR can reopen it to make changes.');
+    var rec = existing || { review_id: id, cycle: cycle, month: monthKey_(p.month) || '', team_id: emp.team_id,
+      employee_id: empId, self_rating: '', self_comment: '', mgr_rating: '', mgr_comment: '', final_rating: '',
+      status: 'Not Started', reviewer: '', submitted_at: '', finalized_at: '' };
+    var isSelf = s.employee_id && s.employee_id === empId;
+    var isMgr = s.admin || s.role === 'HR' || s.role === 'Management' || (s.employee_id && isManagerChain_(s.employee_id, empId, s._byId));
+    if (p.self_rating !== undefined || p.self_comment !== undefined) {
+      if (!(isSelf || s.admin || s.role === 'HR')) throw new Error('Only the employee can write the self-assessment.');
+      if (p.self_rating !== undefined) rec.self_rating = p.self_rating;
+      if (p.self_comment !== undefined) rec.self_comment = p.self_comment;
+    }
+    if (p.mgr_rating !== undefined || p.mgr_comment !== undefined) {
+      if (!isMgr) throw new Error('Only the manager or HR can write the manager assessment.');
+      if (p.mgr_rating !== undefined) rec.mgr_rating = p.mgr_rating;
+      if (p.mgr_comment !== undefined) rec.mgr_comment = p.mgr_comment;
+    }
+    if (action === 'submit_self') {
+      if (!(isSelf || s.admin || s.role === 'HR')) throw new Error('Not permitted.');
+      if (!String(rec.self_rating).trim()) throw new Error('Add your self rating first.');
+      rec.status = 'Self Submitted'; rec.submitted_at = nowIso_();
+    } else if (action === 'submit_mgr') {
+      if (!isMgr) throw new Error('Not permitted.');
+      if (!String(rec.mgr_rating).trim()) throw new Error('Add a manager rating first.');
+      rec.status = 'Manager Submitted';
+    } else if (action === 'finalize') {
+      if (!isMgr) throw new Error('Only a manager or HR can finalize a review.');
+      var fr = String(p.final_rating || rec.mgr_rating || '').trim();
+      if (!fr) throw new Error('Set the final rating before finalizing.');
+      rec.final_rating = fr; rec.status = 'Finalized'; rec.finalized_at = nowIso_(); rec.reviewer = s.name;
+    } else if (action === 'reopen') {
+      if (!(s.admin || s.role === 'HR')) throw new Error('Only HR can reopen a finalized review.');
+      rec.status = rec.mgr_rating ? 'Manager Submitted' : (rec.self_rating ? 'Self Submitted' : 'Draft'); rec.finalized_at = '';
+    } else if (rec.status === 'Not Started') { rec.status = 'Draft'; }
+    rec.updated_at = nowIso_();
+    mUpsertRow_(M_TAB.REVIEW, rec);
+    audit_(s.name, 'review', id, action, 'status ' + rec.status + (rec.final_rating ? ' final ' + rec.final_rating : ''));
+    return jsonSafe_({ ok: true, id: id, model: buildModel_(null, p.month || null) });
+  } catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiSaveReview' }; }
 }
