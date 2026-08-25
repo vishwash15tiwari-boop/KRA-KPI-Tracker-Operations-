@@ -439,6 +439,34 @@ button.tr-h:hover>span{color:var(--accent)}
 .pf-t.pending{background:transparent;box-shadow:inset 0 0 0 1px var(--line-2)}
 .pf-v{font-weight:var(--fw-b);text-align:right;min-width:56px;font-variant-numeric:tabular-nums}
 .pf-v.pending{color:var(--muted);font-weight:var(--fw-n);font-size:var(--fs-xs)}
+
+/* --- Flowchart node: status label + exception count (spec §03) --------- */
+.node .nst{margin-top:8px}
+.node .nex{margin-top:6px;font-size:var(--fs-2xs);font-weight:var(--fw-b);color:var(--warn)}
+
+/* --- Needs-attention exception list (spec §01 / D1) -------------------- */
+.att-r{display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:var(--s3);
+  width:100%;border:none;background:none;font:inherit;color:inherit;text-align:left;cursor:pointer;
+  padding:9px var(--s2);border-bottom:1px solid var(--line-soft);border-radius:var(--r-ctl);
+  transition:background var(--d1) var(--ease)}
+.att-r:last-child{border-bottom:none}
+.att-r:hover{background:var(--surface)}
+.att-n{min-width:0;font-weight:var(--fw-m);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.att-n em{font-style:normal;color:var(--muted);font-weight:var(--fw-n);margin-left:8px;font-size:var(--fs-xs)}
+.att-v{font-weight:var(--fw-b);font-variant-numeric:tabular-nums;min-width:48px;text-align:right}
+.att-r .chev{color:var(--faint);flex:0 0 12px;text-align:center}
+.att-ok{display:flex;align-items:center;gap:var(--s2);padding:var(--s3) var(--s2);color:var(--muted);font-size:var(--fs-sm)}
+
+/* --- KPI dashboard status-filter tabs (spec §05) ----------------------- */
+.tabs{display:flex;flex-wrap:wrap;gap:var(--s2);margin-bottom:var(--s4)}
+.tab{border:1px solid var(--line-2);background:var(--card);color:var(--ink-2);font-weight:var(--fw-m);
+  font-size:var(--fs-xs);padding:7px 12px;border-radius:var(--r-pill);display:inline-flex;align-items:center;gap:6px;
+  transition:border-color var(--d1) var(--ease),background var(--d1) var(--ease),color var(--d1) var(--ease)}
+.tab:hover{border-color:var(--muted);color:var(--ink)}
+.tab.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.tab-c{font-variant-numeric:tabular-nums;font-weight:var(--fw-b);font-size:var(--fs-3xs);
+  background:var(--surface);color:var(--muted);border-radius:var(--r-pill);padding:1px 7px;min-width:20px;text-align:center}
+.tab.on .tab-c{background:rgba(255,255,255,.22);color:#fff}
 .cdot{width:7px;height:7px;border-radius:50%;flex:0 0 auto;display:inline-block;
   background:var(--faint)}
 .cdot.good{background:var(--good)}
@@ -584,7 +612,7 @@ var initials = function (s) {
 var S = { model: null, loading: true, error: null,
           view: 'team', team: null, employee: null, month: null,
           closed: {}, detail: null, demo: false, _demo: null,
-          _trigger: null, _drawerOpen: false };
+          kpiFilter: 'all', _trigger: null, _drawerOpen: false };
 
 /* ============================== API ===================================== */
 var Api = {
@@ -619,15 +647,20 @@ var Demo = {
         var ratio = 0.62 + ((seed >> 3) % 55) / 100;
         k.target = Math.round(target * 100) / 100;
         k.actual = lower ? Math.max(1, Math.round(target / ratio)) : Math.round(target * ratio * 100) / 100;
+        k.variance = Math.round((k.actual - k.target) * 10) / 10;
         var ach = lower ? k.target / k.actual * 100 : k.actual / k.target * 100;
         k.achievement = Math.round(Math.min(ach, 105) * 10) / 10;
         k.weighted_score = Math.round(k.weightage * (k.achievement / 100) * 1000) / 1000;
         k.level = k.achievement >= 100 ? 5 : k.achievement >= 90 ? 4 : k.achievement >= 75 ? 3 : k.achievement >= 60 ? 2 : 1;
-        k.status = ['', 'Critical', 'At Risk', 'Near', 'Above Expectation', 'Exceeded'][k.level];
+        // Same status contract as the backend: Exceeded / On Track / At Risk / Off Track.
+        k.status = k.achievement >= 100 ? 'Exceeded' : k.achievement >= 90 ? 'On Track' : k.achievement >= 75 ? 'At Risk' : 'Off Track';
       });
       var e = 0, m = 0;
       sc.kpis.forEach(function (k) { e += k.weighted_score; m += k.weightage; });
       sc.measured_weightage = m; sc.overall_score = m ? Math.round(e * 10) / 10 : null;
+      var ma = m ? Math.round(e / m * 1000) / 10 : null;
+      sc.kpi_achievement = ma;
+      sc.status = ma == null ? 'Pending Data' : ma >= 100 ? 'Exceeded' : ma >= 90 ? 'On Track' : ma >= 75 ? 'At Risk' : 'Off Track';
     });
     c.months = (c.months && c.months.length) ? c.months : ['2026-08'];
     c.month = c.month || c.months[c.months.length - 1];
@@ -886,7 +919,7 @@ function PerfChart(m) {
     }).join('');
     return '<div class="pf-g"><div class="pf-gh"><span class="pf-gn">' + esc(g.kra) + '</span>' +
       (g.perspective ? '<span class="pf-gp">' + esc(g.perspective) + '</span>' : '') +
-      '<span class="pf-ga">' + (g.achievement == null ? 'Awaiting data' : show(g.achievement) + '%') + '</span></div>' +
+      '<span class="pf-ga">' + (g.achievement == null ? 'Pending Data' : show(g.achievement) + '%') + '</span></div>' +
       rows + '</div>';
   }).join('');
   return '<div class="block"><div class="sect">Performance by KPI' +
@@ -1118,21 +1151,33 @@ function KpiTable(kpis, prefix, showOwner) {
 
 /* ============================== SCREENS ================================ */
 
-/* The team screen, and now the landing one. It absorbed the summary cards and
-   the KRA bars when Overview was removed from the rail: those are the team's
-   headline numbers and its strengths and gaps, and they belong to the team
-   whether or not there is a separate screen to put them on. The order is the
-   team as a whole, then its structure, then its parts. */
+/* The team screen and the landing one. Per the UI/UX spec the flowchart is the
+   canonical navigation surface, carried by a compact summary strip above it and
+   an exception-first "needs attention" list, with the KRA breakdown and ranking
+   as secondary analytics below. */
+function exceptionsOf(m) { return (m.kpis || []).filter(function (k) { return k.achievement != null && k.achievement < 90; }); }
+
 function FlowchartScreen() {
   var t = Sel.team(), members = Sel.members();
   if (!members.length) return PageHead(t ? t.team_name : 'Team', '') + '<div class="empty">No members mapped for this team.</div>';
   var lead = Sel.lead();
   var reports = members.filter(function (m) { return !lead || m.employee_id !== lead.employee_id; });
+  var allK = Sel.allKpis(), scored = allK.filter(function (k) { return k.achievement != null; });
 
-  var kra = '<div class="block"><div class="sect">KRA performance<span class="r">achievement %</span></div>' +
-    '<div class="pcard">' + KraBars(Sel.byKra(Sel.allKpis())) + '</div></div>';
+  // Compact summary strip (spec §03): team score, KPI achievement, on-track, needs-attention.
+  var teamScore = Sel.mean(members.map(function (m) { return m.overall_score; }));
+  var kpiAch = (function () { var e = 0, w = 0; scored.forEach(function (k) { e += k.weighted_score; w += k.weightage; }); return w > 0 ? Math.round(e / w * 1000) / 10 : null; })();
+  var onTrack = scored.filter(function (k) { return k.achievement >= 90; }).length;
+  var attention = scored.length - onTrack;
+  var strip = '<div class="mini">' +
+    MiniStat('Team score', teamScore == null ? '—' : String(show(teamScore))) +
+    MiniStat('KPI achievement', kpiAch == null ? '—' : show(kpiAch) + '<em>%</em>') +
+    MiniStat('On track', onTrack + '<em> / ' + scored.length + '</em>') +
+    MiniStat('Needs attention', String(attention)) +
+    '</div>';
 
   var node = function (m, isLead, idx) {
+    var ex = exceptionsOf(m).length;
     return '<div class="node' + (isLead ? ' lead' : '') + '" data-emp="' + esc(m.employee_id) + '"' +
       ' tabindex="0" role="button"' +
       ' style="animation-delay:' + (isLead ? 0 : Math.min(idx * 45, 400)) + 'ms">' +
@@ -1140,6 +1185,8 @@ function FlowchartScreen() {
       '<div class="nn">' + esc(m.employee_name) + '</div>' +
       '<div class="nd">' + esc(m.designation || '—') + '</div>' +
       '<div class="ns">' + show(m.overall_score) + '</div>' +
+      '<span class="st ' + tone(m.kpi_achievement) + ' nst">' + esc(m.status || 'Pending Data') + '</span>' +
+      (ex ? '<div class="nex">' + ex + ' KPI' + (ex === 1 ? '' : 's') + ' need attention</div>' : '') +
       (isLead ? '<div class="tag">Team lead</div>' : '') + '</div>';
   };
 
@@ -1147,12 +1194,35 @@ function FlowchartScreen() {
     (lead ? node(lead, true, 0) + '<div class="flow-stem"></div><div class="flow-bus"></div>' : '') +
     '<div class="flow-kids">' + reports.map(function (m, i) { return node(m, false, i); }).join('') + '</div></div>';
 
+  var kra = '<div class="block"><div class="sect">KRA performance<span class="r">achievement %</span></div>' +
+    '<div class="pcard">' + KraBars(Sel.byKra(allK)) + '</div></div>';
   var rank = '<div class="block"><div class="sect">Ranking<span class="r">by overall score</span></div>' +
     '<div class="pcard" style="padding-top:var(--s2);padding-bottom:var(--s2)">' + RankList(members, true) + '</div></div>';
 
   return PageHead(t.team_name, 'Team performance · ' + esc(monthLabel(S.month))) +
+    strip +
     '<div class="block">' + chart + '</div>' +
+    AttentionBlock(allK) +
     '<div class="two">' + kra + rank + '</div>';
+}
+
+/* Exception-first (spec D1 / UX-009 / §01): the team's At Risk and Off Track
+   KPIs, worst first, each a button into the KPI's own detail. Healthy teams see
+   a quiet all-clear rather than an empty box. */
+function AttentionBlock(kpis) {
+  var ex = kpis.filter(function (k) { return k.achievement != null && k.achievement < 90; })
+    .sort(function (a, b) { return a.achievement - b.achievement; });
+  var body = ex.length
+    ? ex.map(function (k) {
+        return '<button type="button" class="att-r" data-kpi="' + esc((k.__owner || '') + '::' + k.kpi_id) + '">' +
+          '<span class="st ' + tone(k.achievement) + '">' + esc(k.status) + '</span>' +
+          '<span class="att-n">' + esc(k.kpi) + '<em>' + esc(k.__ownerName || '') + '</em></span>' +
+          '<span class="att-v">' + show(k.achievement) + '%</span>' +
+          '<span class="chev" aria-hidden="true">›</span></button>';
+      }).join('')
+    : '<div class="att-ok"><span class="cdot good"></span>All measured KPIs are on track this period.</div>';
+  return '<div class="block"><div class="sect">Needs attention<span class="r">at risk &amp; off track · click to inspect</span></div>' +
+    '<div class="pcard" style="padding:var(--s2) var(--s3)">' + body + '</div></div>';
 }
 
 function EmployeeScreen() {
@@ -1197,12 +1267,34 @@ function EmployeeScreen() {
 }
 function MiniStat(l, v) { return '<div class="mstat"><div class="l">' + esc(l) + '</div><div class="v">' + v + '</div></div>'; }
 
+/* One status bucket per KPI, from the same thresholds as the backend contract,
+   so the dashboard filter agrees with every pill and node. */
+function kpiBucket(k) {
+  if (k.achievement == null) return 'pending';
+  if (k.achievement >= 90) return 'ontrack';
+  if (k.achievement >= 75) return 'atrisk';
+  return 'offtrack';
+}
+var KPI_TABS = [['all', 'All'], ['ontrack', 'On Track'], ['atrisk', 'At Risk'], ['offtrack', 'Off Track'], ['pending', 'Pending Data']];
 function KpiScreen() {
   var t = Sel.team(), kpis = Sel.allKpis();
   if (!t) return PageHead('No team selected', '') + '<div class="empty">No teams are available to show for this period.</div>';
+  var filt = S.kpiFilter || 'all';
+  var counts = { all: kpis.length, ontrack: 0, atrisk: 0, offtrack: 0, pending: 0 };
+  kpis.forEach(function (k) { counts[kpiBucket(k)]++; });
+  // Saved views (spec §05): All / On Track / At Risk / Off Track / Pending Data.
+  var tabs = '<div class="tabs" role="tablist" aria-label="Filter KPIs by status">' + KPI_TABS.map(function (tb) {
+    return '<button type="button" class="tab' + (filt === tb[0] ? ' on' : '') + '" role="tab" aria-selected="' +
+      (filt === tb[0] ? 'true' : 'false') + '" data-kfilter="' + tb[0] + '">' + esc(tb[1]) +
+      '<span class="tab-c">' + counts[tb[0]] + '</span></button>';
+  }).join('') + '</div>';
+  var shown = filt === 'all' ? kpis : kpis.filter(function (k) { return kpiBucket(k) === filt; });
+  var label = KPI_TABS.filter(function (x) { return x[0] === filt; })[0][1];
+  var table = shown.length ? KpiTable(shown, 'team', true)
+    : '<div class="panel"><div class="empty">No KPIs are ' + esc(label) + ' for this period.</div></div>';
   return PageHead(t.team_name + ' — KRA / KPI', 'Every assigned KPI · ' + esc(monthLabel(S.month))) +
-    '<div class="block"><div class="sect">Performance<span class="r">click a KPI for detail</span></div>' +
-    KpiTable(kpis, 'team', true) + '</div>';
+    '<div class="block"><div class="sect">Performance<span class="r">filter by status · click a KPI for detail</span></div>' +
+    tabs + table + '</div>';
 }
 
 function PageHead(title, kind) {
@@ -1302,15 +1394,22 @@ function renderDrawer() {
 
   var k = det.kpi;
   var achW = k.achievement == null ? 0 : Math.max(0, Math.min(100, k.achievement / 105 * 100));
+  // Variance vs target (spec §06, fifth metric), coloured by whether the gap is
+  // favourable for the KPI's direction — a lower DSO is a good variance.
+  var vv = k.variance;
+  var vFav = vv == null ? null : (k.direction === 'LOWER_IS_BETTER' ? vv <= 0 : vv >= 0);
+  var vTxt = vv == null ? '—' : (vv > 0 ? '+' : '') + fmt(vv, k.unit);
+  var vCls = vv == null ? '' : (vFav ? 'good' : 'bad');
   dr.innerHTML =
     '<div class="d-h"><div><div class="eyebrow">' + esc(k.kra || 'KPI') + '</div>' +
     '<h2>' + esc(k.kpi) + '<button class="info" data-def="1" aria-label="What this KPI means">i</button></h2></div>' +
     '<button class="x" data-close="1" aria-label="Close">×</button></div>' +
     '<div class="d-b">' +
-      '<div class="d-meas">' +
+      '<div class="d-meas" style="grid-template-columns:1fr 1fr">' +
         '<div><div class="k">Target</div><div class="v">' + (k.target == null ? '—' : fmt(k.target, k.unit)) + '</div></div>' +
         '<div><div class="k">Actual</div><div class="v">' + (k.actual == null ? '—' : fmt(k.actual, k.unit)) + '</div></div>' +
         '<div><div class="k">Achievement</div><div class="v">' + (k.achievement == null ? '—' : show(k.achievement) + '%') + '</div></div>' +
+        '<div><div class="k">Variance vs target</div><div class="v"' + (vCls ? ' style="color:var(--' + vCls + ')"' : '') + '>' + vTxt + '</div></div>' +
       '</div>' +
       (k.achievement == null ? '' : '<div class="pair" style="margin-top:calc(var(--s4)*-1)"><div class="d-ach">' + TARGET_TICK + '<i class="' + tone(k.achievement) + '" style="width:' + achW + '%"></i></div></div>') +
       '<div class="d-meas" style="grid-template-columns:1fr 1fr">' +
@@ -1457,6 +1556,8 @@ function toView(v) {
 document.addEventListener('click', function (e) {
   var nv = e.target.closest('[data-view]');
   if (nv) { toView(nv.dataset.view); return; }
+  var kf = e.target.closest('[data-kfilter]');
+  if (kf) { S.kpiFilter = kf.dataset.kfilter; render(); return; }
   var emp = e.target.closest('[data-emp]');
   if (emp) { S.employee = emp.dataset.emp; S.detail = null; render(); $('.canvas').scrollTop = 0; return; }
   if (e.target.closest('[data-back]')) { S.employee = null; S.detail = null; render(); $('.canvas').scrollTop = 0; return; }

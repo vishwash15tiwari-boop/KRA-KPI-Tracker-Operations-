@@ -591,20 +591,27 @@ function buildModel_(teamId, month) {
                    unit: String(kpi.measurement_type || ''),
                    direction: String(kpi.direction || ''),
                    target: tv, actual: av, achievement: ach,
+                   variance: (tv == null || av == null) ? null : round1_(av - tv),
                    weighted_score: ws, level: lvl,
-                   status: ach == null ? 'Awaiting data' : statusFor_(ach, lvl) };
+                   status: statusFor_(ach, lvl) };
         });
       var earned = 0, measured = 0;
       rows.forEach(function (r) {
         if (r.weighted_score == null || !isFinite(r.weighted_score)) return;
         earned += r.weighted_score; measured += Number(r.weightage) || 0;
       });
+      /* A person's own achievement is the weighted score restated over the
+       * weightage actually measured, so it sits on the same 0-105 scale as a
+       * KPI and can carry the same status label on the flowchart node. */
+      var memberAch = measured > 0 ? Math.round(earned / measured * 1000) / 10 : null;
       return { employee_id: e.employee_id, employee_name: e.employee_name, team_id: e.team_id,
                designation: e.designation, region: e.region,
                reporting_manager: String(e.reporting_manager || ''),
                kpis: rows,
                measured_weightage: measured,
-               overall_score: measured > 0 ? Math.round(earned * 10) / 10 : null };
+               overall_score: measured > 0 ? Math.round(earned * 10) / 10 : null,
+               kpi_achievement: memberAch,
+               status: statusFor_(memberAch, null) };
     });
   /* Periods: the data months plus a look-back, trimmed to the last MONTH_WINDOW.
    *
@@ -721,13 +728,18 @@ function weightedScore_(weightPct, achPct) {
   return Math.round(Number(weightPct) * (Number(achPct) / 100) * 1000) / 1000;
 }
 
+/* The single status contract for the whole product (UI/UX spec §12): a KPI or a
+ * person is Exceeded / On Track / At Risk / Off Track, or Pending Data when no
+ * actual has arrived. The thresholds live here and nowhere else, so every
+ * surface - flowchart node, performance chart, drawer pill, dashboard filter -
+ * labels the same number the same way. `level` is retained for the colour tone
+ * the client already derives; the label is driven by achievement directly. */
 function statusFor_(achPct, level) {
-  if (achPct == null) return 'Awaiting data';
-  if (level >= 5) return 'Exceeded';
-  if (level >= 4) return 'Above Expectation';
-  if (level >= 3) return 'Near';
-  if (level >= 2) return 'At Risk';
-  return 'Critical';
+  if (achPct == null) return 'Pending Data';
+  if (achPct >= 100) return 'Exceeded';
+  if (achPct >= 90) return 'On Track';
+  if (achPct >= 75) return 'At Risk';
+  return 'Off Track';
 }
 
 /* ---------------------------------------------------------------------------
