@@ -477,19 +477,8 @@ button.tr-h:hover>span{color:var(--accent)}
 .node .nst{margin-top:8px}
 .node .nex{margin-top:6px;font-size:var(--fs-2xs);font-weight:var(--fw-b);color:var(--warn)}
 
-/* --- Needs-attention exception list (spec §01 / D1) -------------------- */
-.att-r{display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:var(--s3);
-  width:100%;border:none;background:none;font:inherit;color:inherit;text-align:left;cursor:pointer;
-  padding:9px var(--s2);border-bottom:1px solid var(--line-soft);border-radius:var(--r-ctl);
-  transition:background var(--d1) var(--ease)}
-.att-r:last-child{border-bottom:none}
-.att-r:hover{background:var(--surface)}
-.att-n{min-width:0;font-weight:var(--fw-m);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.att-n em{font-style:normal;color:var(--muted);font-weight:var(--fw-n);margin-left:8px;font-size:var(--fs-xs)}
-.att-v{font-weight:var(--fw-b);font-variant-numeric:tabular-nums;min-width:48px;text-align:right}
-.att-r .chev{color:var(--faint);flex:0 0 12px;text-align:center}
+/* --- All-clear line (admin weightage check) --------------------------- */
 .att-ok{display:flex;align-items:center;gap:var(--s2);padding:var(--s3) var(--s2);color:var(--muted);font-size:var(--fs-sm)}
-.att-more{font-size:var(--fs-xs);color:var(--muted);font-weight:var(--fw-b);padding:var(--s3) var(--s2) var(--s1)}
 
 /* --- KPI dashboard status-filter tabs (spec §05) ----------------------- */
 .tabs{display:flex;flex-wrap:wrap;gap:var(--s2);margin-bottom:var(--s4)}
@@ -658,7 +647,7 @@ button.pscore:hover .bdg{background:var(--accent);color:#fff}
 .d-h h2{letter-spacing:-.025em;font-weight:var(--fw-h)}
 .sect{color:var(--ink-2)}
 /* Rank/list rows: rounded hover fills, tabular scores. */
-.rrow,.att-r,.acard,.cmp-row,.act-r{border-radius:var(--r-ctl)}
+.rrow,.acard,.cmp-row,.act-r{border-radius:var(--r-ctl)}
 @media(max-width:560px){.page-h h1{font-size:18px}}
 </style>
 </head>
@@ -1501,7 +1490,7 @@ function ExecutiveOverview() {
     Card('Overdue actions', String(overdue), openA + ' open in total') + '</div>';
   var persp = '<div class="block"><div class="sect">Performance by perspective<span class="r">achievement %</span></div><div class="pcard">' + KraBars(perspGroups(kpis)) + '</div></div>';
   return PageHead('Executive Overview', 'Organisation performance · ' + esc(monthLabel(S.month))) + cards +
-    '<div class="two">' + persp + TeamsTable() + '</div>' + AttentionBlock(kpis);
+    '<div class="two">' + persp + TeamsTable() + '</div>';
 }
 function AnalyticsScreen() {
   var kpis = orgKpis(), scored = kpis.filter(function (k) { return k.achievement != null; });
@@ -1610,9 +1599,8 @@ function ReviewBody(emp) {
 }
 
 /* The team screen and the landing one. Per the UI/UX spec the flowchart is the
-   canonical navigation surface, carried by a compact summary strip above it and
-   an exception-first "needs attention" list, with the KRA breakdown and ranking
-   as secondary analytics below. */
+   canonical navigation surface, carried by a compact summary strip above it,
+   with the KRA breakdown and ranking as secondary analytics below. */
 function exceptionsOf(m) { return (m.kpis || []).filter(function (k) { return k.achievement != null && k.achievement < 90; }); }
 
 function FlowchartScreen() {
@@ -1660,28 +1648,7 @@ function FlowchartScreen() {
   return PageHead(t.team_name, 'Team performance · ' + esc(monthLabel(S.month))) +
     strip +
     '<div class="block">' + chart + '</div>' +
-    AttentionBlock(allK) +
     '<div class="two">' + kra + rank + '</div>';
-}
-
-/* Exception-first (spec D1 / UX-009 / §01): the team's At Risk and Off Track
-   KPIs, worst first, each a button into the KPI's own detail. Healthy teams see
-   a quiet all-clear rather than an empty box. */
-function AttentionBlock(kpis) {
-  var ex = kpis.filter(function (k) { return k.achievement != null && k.achievement < 90; })
-    .sort(function (a, b) { return a.achievement - b.achievement; });
-  var CAP = 8, top = ex.slice(0, CAP);
-  var body = ex.length
-    ? top.map(function (k) {
-        return '<button type="button" class="att-r" data-kpi="' + esc((k.__owner || '') + '::' + k.kpi_id) + '">' +
-          '<span class="st ' + tone(k.achievement) + '">' + esc(k.status) + '</span>' +
-          '<span class="att-n">' + esc(k.kpi) + '<em>' + esc(k.__ownerName || '') + '</em></span>' +
-          '<span class="att-v">' + show(k.achievement) + '%</span>' +
-          '<span class="chev" aria-hidden="true">›</span></button>';
-      }).join('') + (ex.length > CAP ? '<div class="att-more">+ ' + (ex.length - CAP) + ' more at risk — see the KRA / KPI dashboard</div>' : '')
-    : '<div class="att-ok"><span class="cdot good"></span>All measured KPIs are on track this period.</div>';
-  return '<div class="block"><div class="sect">Needs attention<span class="r">worst first · ' + ex.length + ' total</span></div>' +
-    '<div class="pcard" style="padding:var(--s2) var(--s3)">' + body + '</div></div>';
 }
 
 function EmployeeScreen() {
@@ -1996,7 +1963,7 @@ function render() {
      unknown or stale view key falls back to it rather than to nothing. */
   var body = S.employee ? EmployeeScreen()
     : S.view === 'overview' ? ExecutiveOverview()
-    : S.view === 'teams' ? (PageHead('Teams', 'Compare teams · ' + esc(monthLabel(S.month))) + TeamsTable() + AttentionBlock(orgKpis()))
+    : S.view === 'teams' ? (PageHead('Teams', 'Compare teams · ' + esc(monthLabel(S.month))) + TeamsTable())
     : S.view === 'analytics' ? AnalyticsScreen()
     : S.view === 'admin' ? AdminScreen()
     : S.view === 'kpi' ? KpiScreen()
