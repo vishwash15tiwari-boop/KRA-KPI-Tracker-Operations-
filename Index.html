@@ -517,6 +517,18 @@ button.tr-h:hover>span{color:var(--accent)}
 .role-chip{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-2xs);font-weight:var(--fw-m);color:var(--muted);
   border:1px solid var(--line-2);background:var(--card);border-radius:var(--r-pill);padding:4px 6px 4px 10px;white-space:nowrap}
 .role-chip select{border:none;background:none;font:inherit;color:var(--ink);font-weight:var(--fw-b);cursor:pointer;padding:2px}
+/* --- comparison rows (Executive Overview / Teams / Analytics) ----------- */
+.cmp-hd,.cmp-row{display:grid;grid-template-columns:1fr 64px 72px 84px;gap:var(--s3);align-items:center}
+.cmp-hd{padding:0 var(--s3) 6px;font-size:var(--fs-2xs);font-weight:var(--fw-b);color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.cmp-hd span:not(:first-child),.cmp-row .cv{text-align:right}
+.cmp-row{width:100%;border:none;background:none;font:inherit;color:inherit;text-align:left;cursor:pointer;
+  padding:11px var(--s3);border-bottom:1px solid var(--line-soft);transition:background var(--d1) var(--ease)}
+.cmp-row:last-child{border-bottom:none}
+.cmp-row:hover{background:var(--surface)}
+.cmp-row .cn{font-weight:var(--fw-m);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cmp-row .cn small{display:block;font-size:var(--fs-2xs);color:var(--muted);font-weight:var(--fw-n)}
+.cmp-row .cv{font-weight:var(--fw-b);font-variant-numeric:tabular-nums}
+.cmp-row .cv.q{font-weight:var(--fw-n);color:var(--muted)}
 .cdot{width:7px;height:7px;border-radius:50%;flex:0 0 auto;display:inline-block;
   background:var(--faint)}
 .cdot.good{background:var(--good)}
@@ -1364,6 +1376,108 @@ function DrawerWrite(k, owner) {
   return out + '</div>';
 }
 
+/* ============================== ORG / MANAGEMENT ======================
+   Organisation-wide selectors and the management screens (Executive Overview,
+   Teams comparison, Analytics). These read across every team, so they never
+   depend on the team selector. */
+function orgScorecards() { var m = Sel.model(); return (m && m.scorecards) || []; }
+function orgKpis() {
+  var out = [];
+  orgScorecards().forEach(function (sc) { (sc.kpis || []).forEach(function (k) { k.__owner = sc.employee_id; k.__ownerName = sc.employee_name; k.__team = sc.team_id; out.push(k); }); });
+  return out;
+}
+function poolAch(kpis) { var e = 0, w = 0; kpis.forEach(function (k) { if (k.achievement != null) { e += k.weighted_score; w += k.weightage; } }); return w > 0 ? Math.round(e / w * 1000) / 10 : null; }
+function Card(label, value, sub, hl) {
+  return '<div class="card' + (hl ? ' hl' : '') + '"><div class="l">' + esc(label) + '</div><div class="v">' + value + '</div>' + (sub ? '<div class="s">' + esc(sub) + '</div>' : '') + '</div>';
+}
+function orgTrend() {
+  return Sel.months().map(function (mo) {
+    var m = Hist.modelFor(mo); if (!m) return { month: mo, v: null };
+    var vals = (m.scorecards || []).map(function (s) { return s.overall_score; }).filter(function (x) { return x != null; });
+    return { month: mo, v: vals.length ? Math.round(vals.reduce(function (a, b) { return a + b; }, 0) / vals.length * 10) / 10 : null };
+  }).filter(function (p) { return p.v != null; });
+}
+function TeamsTable() {
+  var head = '<div class="cmp-hd"><span>Team</span><span>Score</span><span>KPI&nbsp;ach.</span><span>At risk</span></div>';
+  var rows = Sel.teams().map(function (t) {
+    var scs = orgScorecards().filter(function (s) { return s.team_id === t.team_id; });
+    var kpis = []; scs.forEach(function (s) { (s.kpis || []).forEach(function (k) { kpis.push(k); }); });
+    var score = Sel.mean(scs.map(function (s) { return s.overall_score; })), ach = poolAch(kpis);
+    var atrisk = kpis.filter(function (k) { return k.achievement != null && k.achievement < 90; }).length;
+    return '<button type="button" class="cmp-row" data-team="' + esc(t.team_id) + '">' +
+      '<span class="cn">' + esc(t.team_name) + '<small>' + plural(scs.length, 'member') + '</small></span>' +
+      '<span class="cv">' + (score == null ? '—' : show(score)) + '</span>' +
+      '<span class="cv q">' + (ach == null ? '—' : show(ach) + '%') + '</span>' +
+      '<span class="cv"><span class="ast ' + (atrisk ? 'Blocked' : 'Completed') + '">' + atrisk + '</span></span></button>';
+  }).join('');
+  return '<div class="block"><div class="sect">Teams<span class="r">click to open a team</span></div>' +
+    '<div class="pcard" style="padding:var(--s3) var(--s2)">' + head + rows + '</div></div>';
+}
+function perspGroups(kpis) {
+  var by = {}, order = [];
+  kpis.filter(function (k) { return k.achievement != null; }).forEach(function (k) {
+    var p = k.perspective || 'Other'; if (!by[p]) { by[p] = { kra: p, perspective: '', kpis: [], e: 0, w: 0 }; order.push(p); }
+    by[p].kpis.push(k); by[p].e += k.weighted_score; by[p].w += k.weightage;
+  });
+  return order.map(function (p) { var g = by[p]; g.achievement = g.w > 0 ? Math.round(g.e / g.w * 1000) / 10 : null; return g; });
+}
+function ExecutiveOverview() {
+  var scs = orgScorecards(), kpis = orgKpis(), scored = kpis.filter(function (k) { return k.achievement != null; });
+  var orgScore = Sel.mean(scs.map(function (s) { return s.overall_score; })), kpiAch = poolAch(kpis);
+  var critical = scored.filter(function (k) { return k.achievement < 75; }).length;
+  var atrisk = scored.filter(function (k) { return k.achievement < 90; }).length;
+  var overdue = allActions().filter(isOverdue).length, openA = allActions().filter(isOpenAct).length;
+  var measured = scs.filter(function (s) { return s.overall_score != null; }).length;
+  var cards = '<div class="cards">' +
+    Card('Org performance', orgScore == null ? '—' : String(show(orgScore)), measured + ' of ' + plural(scs.length, 'person') + ' measured', true) +
+    Card('KPI achievement', kpiAch == null ? '—' : show(kpiAch) + '<em>%</em>', scored.length + ' of ' + kpis.length + ' KPIs with results') +
+    Card('Critical · off track', String(critical), atrisk + ' at risk or worse') +
+    Card('Overdue actions', String(overdue), openA + ' open in total') + '</div>';
+  var persp = '<div class="block"><div class="sect">Performance by perspective<span class="r">achievement %</span></div><div class="pcard">' + KraBars(perspGroups(kpis)) + '</div></div>';
+  return PageHead('Executive Overview', 'Organisation performance · ' + esc(monthLabel(S.month))) + cards +
+    '<div class="two">' + persp + TeamsTable() + '</div>' + AttentionBlock(kpis);
+}
+function AnalyticsScreen() {
+  var kpis = orgKpis(), scored = kpis.filter(function (k) { return k.achievement != null; });
+  var dist = { 'Exceeded': 0, 'On Track': 0, 'At Risk': 0, 'Off Track': 0 };
+  scored.forEach(function (k) { if (dist[k.status] != null) dist[k.status]++; });
+  var maxD = Math.max(1, dist.Exceeded, dist['On Track'], dist['At Risk'], dist['Off Track']);
+  var distBars = ['Exceeded', 'On Track', 'At Risk', 'Off Track'].map(function (st) {
+    var n = dist[st], w = n / maxD * 100, tn = (st === 'Exceeded' || st === 'On Track') ? 'good' : (st === 'At Risk' ? 'warn' : 'bad');
+    return '<div class="kbar"><div class="kn">' + esc(st) + '</div><div class="tr"><i class="' + tn + '" style="width:' + w + '%"></i></div><div class="kv">' + n + '</div></div>';
+  }).join('');
+  var pts = orgTrend();
+  var trend = pts.length > 1 ? Trend(pts, { label: 'Org score', max: 100 }) : '<div class="tr-empty">A trend appears once more than one period carries data.</div>';
+  return PageHead('Analytics', 'Trends & distribution · ' + esc(monthLabel(S.month))) +
+    '<div class="two">' +
+      '<div class="block"><div class="sect">KPI status distribution<span class="r">' + scored.length + ' measured</span></div><div class="pcard"><div class="kbars">' + distBars + '</div></div></div>' +
+      '<div class="block"><div class="sect">Organisation score trend<span class="r">by month</span></div><div class="pcard">' + trend + '</div></div>' +
+    '</div>' + TeamsTable();
+}
+/* HR / Admin governance surface: the framework at a glance, weightage
+   validation, and the audit trail of every write. KPI definitions and role
+   mapping live in the master tabs of the backing sheet (provisionMaster). */
+function AdminScreen() {
+  var scs = orgScorecards(), teams = Sel.teams();
+  var kpiCount = 0, kras = {};
+  scs.forEach(function (s) { (s.kpis || []).forEach(function (k) { kpiCount++; if (k.kra) kras[k.kra] = 1; }); });
+  var health = scs.map(function (s) { return { name: s.employee_name, w: Math.round((s.kpis || []).reduce(function (a, k) { return a + (Number(k.weightage) || 0); }, 0)) }; })
+    .filter(function (h) { return h.w !== 100 && h.w !== 0; });
+  var summary = '<div class="mini">' + MiniStat('Teams', String(teams.length)) + MiniStat('People', String(scs.length)) +
+    MiniStat('KRAs', String(Object.keys(kras).length)) + MiniStat('KPI instances', String(kpiCount)) + '</div>';
+  var healthBlock = '<div class="block"><div class="sect">Weightage validation<span class="r">must total 100% per person</span></div><div class="pcard" style="padding:var(--s3) var(--s2)">' +
+    (health.length ? health.map(function (h) { return '<div class="cmp-row" style="cursor:default;grid-template-columns:1fr auto"><span class="cn">' + esc(h.name) + '</span><span class="cv"><span class="ast Blocked">' + h.w + '%</span></span></div>'; }).join('')
+      : '<div class="att-ok" style="padding:var(--s3)"><span class="cdot good"></span>Every mapped person’s weightages total 100%.</div>') + '</div></div>';
+  var audit = (Sel.model() && Sel.model().audit) || [];
+  var auditBlock = '<div class="block"><div class="sect">Audit log<span class="r">most recent writes</span></div><div class="pcard" style="padding:var(--s3)">' +
+    (audit.length ? '<div class="cmt">' + audit.slice(0, 40).map(function (a) {
+      return '<div class="cmt-i"><div class="h"><span class="kd">' + esc(a.object_type) + ' · ' + esc(a.action) + '</span><b>' + esc(a.actor || '') + '</b> · ' + esc(String(a.at || '').slice(0, 16).replace('T', ' ')) + '</div><p>' + esc(a.detail || '') + '</p></div>';
+    }).join('') + '</div>' : '<div class="cmt-empty">No changes recorded yet — writes will appear here.</div>') + '</div></div>';
+  return PageHead('Admin & Configuration', 'Governance · framework, validation and audit') + summary +
+    '<div class="two">' + healthBlock + auditBlock + '</div>' +
+    '<div class="hint">KPI definitions, thresholds, scoring and role / admin-email mapping live in the master tabs of the backing Google Sheet and are provisioned by <b>provisionMaster()</b>. Actuals, actions, reviews and this audit trail are written back by the app and recomputed on save.</div>';
+}
+
 /* ============================== REVIEWS ===============================
    A structured review per person per cycle (the cycle is the period), built on
    the measured performance as evidence. Sections are permission-scoped and a
@@ -1739,15 +1853,30 @@ function Skeleton() {
 
 /* ============================== CHROME ================================= */
 var NAV = [
+  { id: 'overview', label: 'Overview', icon: '<path d="M4 13h6V4H4zM14 20h6v-9h-6zM14 8h6V4h-6zM4 20h6v-4H4z"/>' },
+  { id: 'teams', label: 'Teams', icon: '<circle cx="7" cy="8" r="2.3"/><circle cx="17" cy="8" r="2.3"/><path d="M3 19a4 4 0 0 1 8 0"/><path d="M13 19a4 4 0 0 1 8 0"/>' },
   { id: 'team', label: 'Team', icon: '<circle cx="9" cy="8" r="3"/><path d="M4 20a5 5 0 0 1 10 0"/><circle cx="17.5" cy="9" r="2.4"/><path d="M15 20a4.5 4.5 0 0 1 6.5-4"/>' },
   { id: 'kpi', label: 'KRA / KPI', icon: '<path d="M4 6h16M4 12h16M4 18h10"/><circle cx="19" cy="18" r="2"/>' },
   { id: 'actions', label: 'Actions', icon: '<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/>' },
   { id: 'reviews', label: 'Reviews', icon: '<path d="M4 5a2 2 0 0 1 2-2h9l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M9 12l2 2 4-4"/>' },
+  { id: 'analytics', label: 'Analytics', icon: '<path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 15l3-4 3 2 4-6"/>' },
+  { id: 'admin', label: 'Admin', icon: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/>' },
   { id: 'profile', label: 'Profile', icon: '<circle cx="12" cy="8" r="3.4"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/>' }
 ];
+/* Same data model, four jobs-to-be-done: the rail shows only the modules a role
+   needs, and each role lands where its work starts (spec §2). */
+var NAV_BY_ROLE = {
+  Management: ['overview', 'teams', 'kpi', 'actions', 'reviews', 'analytics'],
+  HR:         ['overview', 'teams', 'kpi', 'actions', 'reviews', 'analytics', 'admin'],
+  Manager:    ['team', 'kpi', 'actions', 'reviews', 'profile'],
+  Employee:   ['profile', 'actions', 'reviews']
+};
+var LANDING = { Management: 'overview', HR: 'overview', Manager: 'team', Employee: 'profile' };
+function effRole() { return S.viewRole || (S.session && S.session.role) || 'Management'; }
+function navIds() { return NAV_BY_ROLE[effRole()] || NAV_BY_ROLE.Management; }
 function buildRail() {
-  var active = S.employee ? 'profile' : S.view;
-  $('#rail').innerHTML = NAV.map(function (n) {
+  var active = S.employee ? 'profile' : S.view, ids = navIds();
+  $('#rail').innerHTML = ids.map(function (id) { return NAV.filter(function (n) { return n.id === id; })[0]; }).filter(Boolean).map(function (n) {
     return '<button class="rail-i' + (n.id === active ? ' on' : '') + '" data-view="' + n.id + '" title="' + esc(n.label) + '">' +
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">' + n.icon + '</svg>' +
       '<span>' + esc(n.label) + '</span></button>';
@@ -1776,8 +1905,10 @@ function buildTopbar() {
 }
 function roleChip() {
   var s = S.session; if (!s) return '';
-  var who = s.name && s.name !== 'Administrator' ? ' · ' + esc(String(s.name).split(' ')[0]) : '';
-  return '<span class="role-chip" title="Signed in as ' + esc(s.email || 'this account') + '">' + esc(s.role) + who + '</span>';
+  if (!s.canSwitch) return '<span class="role-chip" title="Signed in as ' + esc(s.email || 'this account') + '">' + esc(s.role) + '</span>';
+  var cur = effRole();
+  return '<span class="role-chip" title="Preview the product as a different role">View as <select id="f-role" aria-label="View as role">' +
+    ['Management', 'Manager', 'Employee', 'HR'].map(function (r) { return '<option' + (r === cur ? ' selected' : '') + '>' + r + '</option>'; }).join('') + '</select></span>';
 }
 
 /* ============================== RENDER ================================= */
@@ -1801,6 +1932,10 @@ function render() {
   /* Two team-level screens and the profile. Team is the landing view, so an
      unknown or stale view key falls back to it rather than to nothing. */
   var body = S.employee ? EmployeeScreen()
+    : S.view === 'overview' ? ExecutiveOverview()
+    : S.view === 'teams' ? (PageHead('Teams', 'Compare teams · ' + esc(monthLabel(S.month))) + TeamsTable() + AttentionBlock(orgKpis()))
+    : S.view === 'analytics' ? AnalyticsScreen()
+    : S.view === 'admin' ? AdminScreen()
     : S.view === 'kpi' ? KpiScreen()
     : S.view === 'actions' ? ActionsScreen()
     : S.view === 'reviews' ? ReviewsScreen()
@@ -1810,11 +1945,19 @@ function render() {
   renderDrawer();
 }
 
+/* Land each role where its work starts, once, after both the session and the
+   model are in (spec §2: default landing per role). */
+function applyLanding() {
+  if (S._landed || !S.session || !S.model) return;
+  S._landed = true;
+  S.view = LANDING[effRole()] || 'team';
+  if (S.view === 'profile') { var l = Sel.lead(); S.employee = l ? l.employee_id : null; }
+}
 function load() {
   S.loading = true; S.error = null; S._demo = null; Hist.clear(); render();
-  // Resolve who is signed in (role + permissions) once; drives write controls.
+  // Resolve who is signed in (role + permissions) once; drives landing + write controls.
   if (!S.session && Api.live()) {
-    google.script.run.withSuccessHandler(function (se) { if (se && se.ok) { S.session = se; if (!S.loading) render(); } })
+    google.script.run.withSuccessHandler(function (se) { if (se && se.ok) { S.session = se; applyLanding(); render(); } })
       .withFailureHandler(function () {}).apiSession();
   }
   Api.fetch(S.month, function (m) {
@@ -1835,6 +1978,7 @@ function load() {
     S.model = m; S._demo = null;
     if (!S.team && m.teams && m.teams.length) S.team = m.teams[0].team_id;
     if (!S.month) { S.month = m.month || (Sel.months().slice(-1)[0] || null); }
+    applyLanding();
     render();
   }, function (e) {
     S.loading = false; S.error = (e && e.message) || 'The backend could not be reached.'; render();
@@ -1855,6 +1999,8 @@ document.addEventListener('click', function (e) {
   if (kf) { S.kpiFilter = kf.dataset.kfilter; render(); return; }
   var af = e.target.closest('[data-afilter]');
   if (af) { S.actionFilter = af.dataset.afilter; render(); return; }
+  var goteam = e.target.closest('[data-team]');
+  if (goteam) { S.team = goteam.dataset.team; S.view = 'team'; S.employee = null; S.detail = null; render(); $('.canvas').scrollTop = 0; return; }
   var svAct = e.target.closest('[data-saveactual]');
   if (svAct) { var pa = svAct.dataset.saveactual.split('::');
     doWrite('apiSaveActual', { month: S.month, employee_id: pa[0], kpi_id: pa[1],
@@ -1944,6 +2090,12 @@ document.addEventListener('change', function (e) {
   if (id === 'f-team') { S.team = e.target.value; S.employee = null; S.detail = null; render(); $('.canvas').scrollTop = 0; }
   else if (id === 'f-month') { S.month = e.target.value; S.detail = null; S._demo = null; Hist.clear(); load(); }
   else if (id === 'f-emp') { S.employee = e.target.value || null; S.detail = null; render(); }
+  else if (id === 'f-role') {
+    S.viewRole = e.target.value; S.employee = null; S.detail = null;
+    S.view = LANDING[S.viewRole] || 'team';
+    if (S.view === 'profile') { var l = Sel.lead(); S.employee = l ? l.employee_id : null; }
+    render(); $('.canvas').scrollTop = 0;
+  }
 });
 document.addEventListener('keydown', function (e) {
   // While the drawer is open: Escape closes it, Tab stays trapped inside it.

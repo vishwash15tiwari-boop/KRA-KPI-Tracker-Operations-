@@ -557,6 +557,7 @@ function buildModel_(teamId, month) {
   var actions = mRead_(M_TAB.ACTION); actions.forEach(function (r) { r.month = monthKey_(r.month); });
   var comments = mRead_(M_TAB.COMMENT); comments.forEach(function (r) { r.month = monthKey_(r.month); });
   var reviews = mRead_(M_TAB.REVIEW); reviews.forEach(function (r) { r.month = monthKey_(r.month); });
+  var auditAll = mRead_(M_TAB.AUDIT); var audit = auditAll.slice(Math.max(0, auditAll.length - 80)).reverse();
 
   /* The month this model is built for is resolved ONCE, here, before anything
    * reads it - so the data and the header can never disagree. An explicit
@@ -653,7 +654,7 @@ function buildModel_(teamId, month) {
   }, 0);
   return { ok: true, month: effMonth, months: months,
            teams: teams, scorecards: scorecards,
-           actions: actions, comments: comments, reviews: reviews,
+           actions: actions, comments: comments, reviews: reviews, audit: audit,
            source: fromSheet ? 'Google Sheet' : 'Master data (in code)',
            records: records,
            generated_at: new Date().toISOString() };
