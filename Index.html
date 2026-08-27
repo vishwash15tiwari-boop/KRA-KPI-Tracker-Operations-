@@ -379,50 +379,37 @@ td.kpi{padding-left:var(--s6)}
    on :hover of a per-point column, so nothing has to be re-bound after the app
    rewrites the view. The line tints green when the visible range closed up, red
    when it closed down — the same read as a stock line. */
-.lc{color:var(--accent)}
-.lc.up{color:var(--good)}.lc.down{color:var(--bad)}.lc.flat{color:var(--ink-2)}
-.lc-head{display:flex;align-items:center;gap:var(--s3);margin-bottom:var(--s4)}
-.lc-val{font-size:var(--fs-xxl);font-weight:var(--fw-h);letter-spacing:-.03em;line-height:1;
+/* --- Column trend — one labelled bar per period, latest emphasised --------
+   The clear read for a short monthly series: solid, comparable bars each
+   carrying its exact value, past months paler, the current month tinted by the
+   trend direction (green up / red down). Each column is a button that opens its
+   month. Static markup — no listeners to rebind after a re-render. */
+.bt{--c:var(--accent)}
+.bt.up{--c:var(--good)}.bt.down{--c:var(--bad)}.bt.flat{--c:var(--accent)}
+.bt-head{display:flex;align-items:center;gap:var(--s3);margin-bottom:var(--s4)}
+.bt-val{font-size:var(--fs-xxl);font-weight:var(--fw-h);letter-spacing:-.03em;line-height:1;
   color:var(--ink);font-variant-numeric:tabular-nums}
-.lc-val em{font-style:normal;font-size:var(--fs-lg);font-weight:var(--fw-b);color:var(--faint);margin-left:1px}
-.lc-plot{position:relative;height:132px}
-.lc-plot svg{position:absolute;inset:0;width:100%;height:100%;display:block;overflow:visible}
-.lc-grid{stroke:var(--line);stroke-width:1;vector-effect:non-scaling-stroke;stroke-dasharray:3 5}
-.lc-area{stroke:none}
-.lc-line{fill:none;stroke:currentColor;stroke-width:2.5;vector-effect:non-scaling-stroke;
-  stroke-linecap:round;stroke-linejoin:round}
-.lc-now{position:absolute;width:11px;height:11px;border-radius:50%;background:currentColor;
-  border:2.5px solid var(--card);box-sizing:border-box;transform:translate(-100%,-50%);
-  box-shadow:0 1px 4px rgba(20,32,52,.28);transition:opacity var(--d1) var(--ease);pointer-events:none}
-.lc-plot:hover .lc-now{opacity:0}
-.lc-hits{position:absolute;inset:0}
-.lc-hit{position:absolute;top:0;bottom:0;transform:translateX(-50%);background:none;border:0;padding:0;
-  font-family:var(--font)}
-button.lc-hit{cursor:pointer}
-.lc-cx{position:absolute;left:50%;top:0;bottom:0;width:1px;transform:translateX(-50%);
-  background:currentColor;opacity:0;transition:opacity var(--d1) var(--ease)}
-.lc-hd{position:absolute;left:50%;top:var(--y);width:11px;height:11px;border-radius:50%;background:currentColor;
-  border:2.5px solid var(--card);box-sizing:border-box;transform:translate(-50%,-50%);opacity:0;
-  box-shadow:0 1px 4px rgba(20,32,52,.28);transition:opacity var(--d1) var(--ease)}
-.lc-hit.is-first .lc-hd{transform:translate(0,-50%)}
-.lc-hit.is-last .lc-hd{transform:translate(-100%,-50%)}
-.lc-tip{position:absolute;left:50%;top:var(--y);transform:translate(-50%,calc(-100% - 14px));
-  display:flex;flex-direction:column;align-items:center;gap:1px;white-space:nowrap;background:var(--nav);
-  color:var(--nav-hi);font-size:var(--fs-3xs);text-transform:uppercase;letter-spacing:.05em;
-  padding:5px 9px;border-radius:var(--r-ctl);box-shadow:var(--shadow-2);opacity:0;pointer-events:none;
-  transition:opacity var(--d1) var(--ease);z-index:3}
-.lc-tip b{font-size:var(--fs-sm);font-weight:var(--fw-b);color:#fff;text-transform:none;letter-spacing:0;
-  font-variant-numeric:tabular-nums}
-.lc-tip::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);
-  border:5px solid transparent;border-top-color:var(--nav)}
-.lc-hit.is-first .lc-tip{left:50%;transform:translate(0,calc(-100% - 14px))}
-.lc-hit.is-first .lc-tip::after{left:11px}
-.lc-hit.is-last .lc-tip{left:50%;transform:translate(-100%,calc(-100% - 14px))}
-.lc-hit.is-last .lc-tip::after{left:auto;right:11px;transform:none}
-.lc-hit:hover .lc-cx,.lc-hit:hover .lc-hd,.lc-hit:hover .lc-tip{opacity:1}
-.lc-x{display:flex;margin-top:var(--s3)}
-.lc-x span{flex:1 1 0;text-align:center;font-size:var(--fs-2xs);color:var(--muted);font-weight:var(--fw-m)}
-.lc-x span:first-child{text-align:left}.lc-x span:last-child{text-align:right}
+.bt-val em{font-style:normal;font-size:var(--fs-lg);font-weight:var(--fw-b);color:var(--faint);margin-left:1px}
+.bt-plot{display:flex;align-items:flex-end;gap:var(--s5);height:172px}
+.bt-col{flex:1 1 0;min-width:0;height:100%;display:flex;flex-direction:column;align-items:center;
+  background:none;border:0;padding:0;font:inherit;color:inherit}
+button.bt-col{cursor:pointer}
+button.bt-col:focus-visible{outline-offset:3px}
+.bt-track{flex:1;width:100%;min-width:0;display:flex;flex-direction:column;justify-content:flex-end;
+  align-items:center;gap:6px}
+.bt-cv{font-size:var(--fs-sm);font-weight:var(--fw-b);color:var(--muted);font-variant-numeric:tabular-nums;
+  line-height:1;transition:color var(--d1) var(--ease)}
+.bt-bar{width:100%;max-width:58px;background:var(--c);opacity:.26;border-radius:7px 7px 2px 2px;
+  transition:opacity var(--d1) var(--ease),filter var(--d1) var(--ease);animation:growY .55s var(--ease-out) backwards}
+.bt-col.is-now .bt-bar{opacity:1}
+.bt-col.is-now .bt-cv{color:var(--c);font-weight:var(--fw-h);font-size:var(--fs-md)}
+button.bt-col:hover:not(.is-now) .bt-bar{opacity:.5}
+button.bt-col:hover .bt-bar{filter:brightness(1.05) saturate(1.05)}
+button.bt-col:hover .bt-cv{color:var(--ink-2)}
+button.bt-col:hover.is-now .bt-cv{color:var(--c)}
+.bt-cl{font-size:var(--fs-2xs);color:var(--muted);font-weight:var(--fw-m);margin-top:var(--s3);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.bt-col.is-now .bt-cl{color:var(--ink-2);font-weight:var(--fw-b)}
 .tr-empty{font-size:var(--fs-xs);color:var(--muted);background:var(--surface);
   border-radius:var(--r-ctl);padding:var(--s4);line-height:1.55}
 .tr-note{font-size:var(--fs-2xs);color:var(--muted);margin:var(--s5) 0 0;line-height:1.55}
@@ -919,94 +906,49 @@ var Hist = {
 };
 
 /* ============================== CHARTS =================================
-   One small chart toolkit, deliberately styled after clean consumer-finance
-   apps: a single tinted line over a soft gradient, a persistent marker on the
-   latest point, and a crosshair + value pill that follow the hover. It is all
-   CSS-driven, so it survives the app's full-innerHTML re-renders with no
-   per-chart listeners. Three primitives — LineChart, Donut, VBars — carry every
-   trend, distribution and comparison, so a shape reads the same on every screen.
+   One small chart toolkit for the whole app, so a shape reads the same on every
+   screen. Three primitives — BarTrend, Donut, VBars — cover the trend, the
+   distribution and the comparison. All are static markup, so they survive the
+   app's full-innerHTML re-renders with no per-chart listeners; every bar or
+   column is a real button that drills where it points. */
 
-   The SVG stretches to whatever width the card gives it; only the area and the
-   line live inside it (a non-scaling stroke keeps them crisp), while the dots,
-   crosshair and labels are ordinary elements positioned over it in percentages,
-   where a dot stays round and type stays the size it was set. */
-
-/* A smooth path through the points via quadratic midpoints. It never overshoots
-   the data — no stray loop above the max or below the baseline — which a
-   Catmull-Rom spline can once the plot is stretched wide and short. */
-function smoothD(xs, ys) {
-  if (xs.length < 2) return '';
-  var d = 'M' + xs[0] + ' ' + ys[0];
-  if (xs.length === 2) return d + ' L' + xs[1] + ' ' + ys[1];
-  for (var i = 1; i < xs.length - 1; i++) {
-    var mx = (xs[i] + xs[i + 1]) / 2, my = (ys[i] + ys[i + 1]) / 2;
-    d += ' Q' + xs[i] + ' ' + ys[i] + ' ' + mx.toFixed(2) + ' ' + my.toFixed(2);
-  }
-  return d + ' L' + xs[xs.length - 1] + ' ' + ys[xs.length - 1];
-}
-
-var _lcId = 0;
-/* points: [{month, v}]. opts: {suffix, max, headline, pick, label, empty}. */
-function LineChart(points, opts) {
+var _btId = 0;
+/* points:[{month,v}]. opts:{suffix,max,headline,pick,label,empty}.
+   A column per period — the sharp, unambiguous read for a short monthly series:
+   solid comparable bars, each labelled with its exact value, the latest one
+   emphasised and tinted by the trend's direction (green up, red down). Past
+   months sit back in a paler tint so the eye lands on "now". Fully static
+   markup, so it survives the app's innerHTML re-renders with no listeners; each
+   column is a button that opens its month. */
+function BarTrend(points, opts) {
   opts = opts || {};
-  if (!points || points.length < 2) {
+  if (!points || !points.length) {
     return '<div class="tr-empty">' + esc(opts.empty ||
       'A trend appears once this has been measured in more than one period.') + '</div>';
   }
+  var n = points.length;
   var vals = points.map(function (p) { return p.v; });
-  var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
-  var span = Math.max(hi - lo, 8);
-  var min = Math.max(0, Math.floor((lo - span * 0.5) / 5) * 5);
-  var max = Math.min(opts.max || 110, Math.ceil((hi + span * 0.5) / 5) * 5);
-  if (max <= min) max = min + 10;
+  var max = opts.max || Math.max(10, Math.ceil(Math.max.apply(null, vals) / 10) * 10);
+  var dir = n < 2 ? 'flat' : points[n - 1].v > points[0].v ? 'up' : points[n - 1].v < points[0].v ? 'down' : 'flat';
 
-  var n = points.length, W = 600, H = 128;
-  var xs = points.map(function (p, i) { return +(i / (n - 1) * W).toFixed(2); });
-  var ys = points.map(function (p) { return +((1 - (p.v - min) / (max - min)) * H).toFixed(2); });
-  var xPct = points.map(function (p, i) { return +(i / (n - 1) * 100).toFixed(3); });
-  var yPct = points.map(function (p) { return +((1 - (p.v - min) / (max - min)) * 100).toFixed(3); });
-
-  var line = smoothD(xs, ys);
-  var area = line + ' L' + W + ' ' + H + ' L0 ' + H + ' Z';
-  var gid = 'lcg' + (++_lcId);
-  var grid = [0.5, 1].map(function (f) {
-    return '<line class="lc-grid" x1="0" y1="' + (f * H).toFixed(1) + '" x2="' + W + '" y2="' + (f * H).toFixed(1) + '"/>';
-  }).join('');
-
-  var colW = (100 / (n - 1)).toFixed(3);
-  var hits = points.map(function (p, i) {
-    var cls = 'lc-hit' + (i === 0 ? ' is-first' : '') + (i === n - 1 ? ' is-last' : '');
-    var pick = opts.pick !== false, tag = pick ? 'button' : 'span';
-    return '<' + tag + (pick ? ' type="button"' : '') + ' class="' + cls + '"' +
-      ' style="left:' + xPct[i] + '%;width:' + colW + '%;--y:' + yPct[i] + '%"' +
-      (pick ? ' data-month="' + esc(p.month) + '"' : '') +
-      ' aria-label="' + esc(monthLabel(p.month) + ': ' + show(p.v) + (opts.suffix || '')) + '">' +
-      '<i class="lc-cx"></i><i class="lc-hd"></i>' +
-      '<span class="lc-tip"><b>' + show(p.v) + (opts.suffix || '') + '</b>' + esc(monthShort(p.month)) + '</span>' +
-      '</' + tag + '>';
-  }).join('');
-  var xlab = points.map(function (p) { return '<span>' + esc(monthShort(p.month)) + '</span>'; }).join('');
-
-  var dir = points[n - 1].v > points[0].v ? 'up' : points[n - 1].v < points[0].v ? 'down' : 'flat';
   var head = '';
   if (opts.headline !== false) {
-    head = '<div class="lc-head"><div class="lc-val">' + show(points[n - 1].v) +
+    head = '<div class="bt-head"><div class="bt-val">' + show(points[n - 1].v) +
       (opts.suffix ? '<em>' + opts.suffix + '</em>' : '') + '</div>' + Delta(points, opts.suffix) + '</div>';
   }
-  return '<div class="lc ' + dir + '">' + head +
-    '<div class="lc-plot">' +
-      '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" aria-hidden="true">' +
-        '<defs><linearGradient id="' + gid + '" x1="0" y1="0" x2="0" y2="1">' +
-          '<stop offset="0" stop-color="currentColor" stop-opacity="0.22"/>' +
-          '<stop offset="0.85" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs>' +
-        grid +
-        '<path class="lc-area" d="' + area + '" fill="url(#' + gid + ')"/>' +
-        '<path class="lc-line" d="' + line + '"/>' +
-      '</svg>' +
-      '<i class="lc-now" style="left:' + xPct[n - 1] + '%;top:' + yPct[n - 1] + '%"></i>' +
-      '<div class="lc-hits">' + hits + '</div>' +
-    '</div>' +
-    '<div class="lc-x">' + xlab + '</div>' +
+  var cols = points.map(function (p, i) {
+    // Bars top out at 84% of the track so a value label always clears the bar.
+    var h = p.v == null ? 0 : Math.max(3, p.v / max * 84), now = i === n - 1;
+    var pick = opts.pick !== false, tag = pick ? 'button' : 'div';
+    return '<' + tag + (pick ? ' type="button" data-month="' + esc(p.month) + '"' : '') +
+      ' class="bt-col' + (now ? ' is-now' : '') + '"' +
+      ' aria-label="' + esc(monthLabel(p.month) + ': ' + show(p.v) + (opts.suffix || '')) + '">' +
+      '<span class="bt-track"><span class="bt-cv">' + show(p.v) + (opts.suffix || '') + '</span>' +
+        '<span class="bt-bar" style="height:' + h.toFixed(1) + '%"></span></span>' +
+      '<span class="bt-cl">' + esc(monthShort(p.month)) + '</span></' + tag + '>';
+  }).join('');
+  return '<div class="bt ' + dir + '">' + head +
+    '<div class="bt-plot">' + cols + '</div>' +
     '<p class="vh">' + esc(opts.label || 'Trend') + ': ' + points.map(function (p) {
       return monthShort(p.month) + ' ' + show(p.v) + (opts.suffix || ''); }).join(', ') + '</p>' +
     '</div>';
@@ -1081,7 +1023,7 @@ function HistoryPanel(m) {
   return '<div class="block"><div class="sect">Performance history' +
     '<span class="r">overall score by month</span></div>' +
     '<div class="pcard">' +
-      LineChart(pts, { label: 'Overall score', max: 100 }) +
+      BarTrend(pts, { label: 'Overall score', max: 100 }) +
       (pts.length > 1 ? '<p class="tr-note">Hover the line for any month · click to open it.</p>' : '') +
     '</div></div>';
 }
@@ -1172,7 +1114,7 @@ function ScoreBody(m) {
 function KpiTrendBlock(k, owner) {
   var pts = owner ? Hist.kpi(owner.employee_id, k.kpi) : [];
   return '<div class="d-rule"></div><div class="d-sect">Achievement by month</div>' +
-    LineChart(pts, { label: 'Achievement', suffix: '%', max: 110, pick: false, headline: false });
+    BarTrend(pts, { label: 'Achievement', suffix: '%', max: 110, pick: false, headline: false });
 }
 
 /* Reference material, on demand. It is the same every month, so leaving it on
@@ -1608,7 +1550,7 @@ function ExecutiveOverview() {
     Card('Critical · off track', String(critical), atrisk + ' at risk or worse') +
     Card('Overdue actions', String(overdue), openA + ' open in total') + '</div>';
   var trend = '<div class="block"><div class="sect">Organisation score trend<span class="r">overall score by month</span></div>' +
-    '<div class="pcard">' + LineChart(orgTrend(), { label: 'Org score', max: 100, empty: 'A trend appears once more than one period carries data.' }) + '</div></div>';
+    '<div class="pcard">' + BarTrend(orgTrend(), { label: 'Org score', max: 100, empty: 'A trend appears once more than one period carries data.' }) + '</div></div>';
   var persp = '<div class="block"><div class="sect">Performance by perspective<span class="r">achievement %</span></div><div class="pcard">' + KraBars(perspGroups(kpis)) + '</div></div>';
   return PageHead('Executive Overview', 'Organisation performance · ' + esc(monthLabel(S.month))) + cards +
     '<div class="two">' + trend + persp + '</div>' +
@@ -1617,7 +1559,7 @@ function ExecutiveOverview() {
 function AnalyticsScreen() {
   var kpis = orgKpis(), dist = statusDist(kpis);
   var trend = '<div class="block"><div class="sect">Organisation score trend<span class="r">overall score by month</span></div>' +
-    '<div class="pcard">' + LineChart(orgTrend(), { label: 'Org score', max: 100, empty: 'A trend appears once more than one period carries data.' }) + '</div></div>';
+    '<div class="pcard">' + BarTrend(orgTrend(), { label: 'Org score', max: 100, empty: 'A trend appears once more than one period carries data.' }) + '</div></div>';
   var teams = '<div class="block"><div class="sect">Team score comparison<span class="r">overall score · click a bar</span></div>' +
     '<div class="pcard">' + VBars(teamScoreItems()) + '</div></div>';
   var donut = '<div class="block"><div class="sect">KPI status distribution<span class="r">' + dist.scored + ' measured · click to filter</span></div>' +
@@ -1759,7 +1701,7 @@ function FlowchartScreen() {
     '<div class="flow-kids">' + reports.map(function (m, i) { return node(m, false, i); }).join('') + '</div></div>';
 
   var trend = '<div class="block"><div class="sect">Team score trend<span class="r">mean overall score by month</span></div>' +
-    '<div class="pcard">' + LineChart(teamTrend(t.team_id), { label: 'Team score', max: 100, empty: 'A trend appears once this team carries more than one measured period.' }) + '</div></div>';
+    '<div class="pcard">' + BarTrend(teamTrend(t.team_id), { label: 'Team score', max: 100, empty: 'A trend appears once this team carries more than one measured period.' }) + '</div></div>';
   var kra = '<div class="block"><div class="sect">KRA performance<span class="r">achievement %</span></div>' +
     '<div class="pcard">' + KraBars(Sel.byKra(allK)) + '</div></div>';
   var rank = '<div class="block"><div class="sect">Ranking<span class="r">by overall score</span></div>' +
