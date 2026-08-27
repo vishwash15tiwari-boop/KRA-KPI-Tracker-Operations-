@@ -733,6 +733,86 @@ textarea.cfg-in{resize:vertical;min-height:44px;line-height:1.5}
 .cfg-h-body b{color:var(--ink);font-weight:var(--fw-b);font-variant-numeric:tabular-nums}
 .cfg-h-arrow{color:var(--faint)}
 @media(max-width:560px){.cfg-h-when{margin-left:0;width:100%}.cfg-actions{width:100%}.cfg-actions .btn{flex:1}}
+
+/* ---- Targets & Achievement ------------------------------------------- */
+.st.none{color:var(--muted);background:var(--well)}
+.avatar.sm{width:30px;height:30px;font-size:var(--fs-2xs)}
+.avatar.xs{width:24px;height:24px;font-size:10px}
+.ms-bar{display:flex;align-items:center;gap:var(--s4);flex-wrap:wrap;justify-content:space-between;
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);padding:var(--s4) var(--s5);box-shadow:var(--shadow-1);margin-bottom:var(--s5)}
+.ms-l{display:flex;align-items:center;gap:var(--s4);flex-wrap:wrap}
+.ms-k{font-size:var(--fs-3xs);font-weight:var(--fw-b);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.ms-steps{display:flex;align-items:center}
+.ms-step{font-size:var(--fs-xs);font-weight:var(--fw-b);color:var(--muted);padding:5px 12px;border:1px solid var(--line);border-radius:var(--r-pill);background:var(--bg-2)}
+.ms-step.done{color:var(--good);border-color:transparent;background:var(--good-soft)}
+.ms-step.on{color:#fff;background:var(--accent);border-color:transparent}
+.ms-step.on.warn{background:var(--warn)}
+.ms-sep{width:14px;height:2px;background:var(--line-2);margin:0 3px}
+.ms-meta{font-size:var(--fs-3xs);color:var(--muted);width:100%}
+.ms-r{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap}
+.ms-note{width:150px}
+.ms-view{font-size:var(--fs-xs);font-weight:var(--fw-b);color:var(--muted)}
+.tg-toolbar{display:flex;align-items:center;justify-content:flex-end;gap:var(--s3);margin-bottom:var(--s4)}
+.tg-modes{display:inline-flex;background:var(--well);border-radius:var(--r-pill);padding:3px}
+.tg-mode{border:none;background:none;font:inherit;font-size:var(--fs-xs);font-weight:var(--fw-b);color:var(--muted);padding:6px 16px;border-radius:var(--r-pill);cursor:pointer}
+.tg-mode.on{background:var(--card);color:var(--ink);box-shadow:var(--shadow-1)}
+.tgt-wrap{display:grid;grid-template-columns:minmax(0,248px) minmax(0,1fr);gap:var(--s5);align-items:start}
+.tg-rail{display:flex;flex-direction:column;gap:4px;max-height:74vh;overflow:auto}
+.tg-mrow{display:flex;align-items:center;gap:var(--s3);width:100%;text-align:left;border:1px solid transparent;background:none;font:inherit;cursor:pointer;padding:8px 10px;border-radius:var(--r-ctl)}
+.tg-mrow:hover{background:var(--surface)}
+.tg-mrow.on{background:var(--card);border-color:var(--line);box-shadow:var(--shadow-1)}
+.tg-mn{min-width:0;flex:1}
+.tg-mn b{display:block;font-size:var(--fs-sm);font-weight:var(--fw-b);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tg-mn span{display:block;font-size:var(--fs-3xs);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tg-mo{font-weight:var(--fw-b);font-variant-numeric:tabular-nums;font-size:var(--fs-sm)}
+.tg-main{min-width:0}
+.tg-mhead{display:flex;align-items:center;gap:var(--s3);margin-bottom:var(--s3)}
+.tg-mid{flex:1;min-width:0}
+.tg-mid h3{margin:0;font-size:var(--fs-lg);font-weight:var(--fw-h)}
+.tg-mid span{font-size:var(--fs-xs);color:var(--muted)}
+.tg-mstat{text-align:right}
+.tg-mstat-v{display:block;font-size:var(--fs-xl);font-weight:var(--fw-h);font-variant-numeric:tabular-nums}
+.tg-mstat-l{font-size:var(--fs-3xs);color:var(--muted)}
+.tg-hint{font-size:var(--fs-3xs);color:var(--muted);margin-bottom:var(--s3)}
+.tgt-tbl table{width:100%;border-collapse:collapse;font-size:var(--fs-sm)}
+.tgt-tbl th{font-size:var(--fs-3xs);font-weight:var(--fw-b);text-transform:uppercase;letter-spacing:.04em;color:var(--muted);text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);background:var(--bg-2);white-space:nowrap}
+.tgt-tbl th.num,.tgt-tbl td.num{text-align:right;font-variant-numeric:tabular-nums}
+.tgt-tbl td{padding:9px 12px;border-bottom:1px solid var(--line-soft);vertical-align:middle}
+.tgt-tbl tbody tr:last-child td{border-bottom:none}
+.tg-row{cursor:pointer}
+.tg-row:hover td{background:var(--surface)}
+.tg-kra td{background:var(--bg-2);padding:7px 12px}
+.tg-kra-n{font-weight:var(--fw-b);font-size:var(--fs-xs)}
+.tg-kra-p{font-size:var(--fs-3xs);color:var(--muted);margin-left:8px}
+.tg-kra-a{float:right;font-weight:var(--fw-b);font-variant-numeric:tabular-nums}
+.tg-nm b{font-weight:var(--fw-m)}
+.tg-st{display:inline-block;font-size:10px;font-weight:var(--fw-b);padding:2px 7px;border-radius:5px;background:var(--well);color:var(--muted);margin-left:6px;vertical-align:middle}
+.tg-st.ok{background:var(--good-soft);color:var(--good)}
+.tg-st.none{background:transparent;border:1px dashed var(--line-2);color:var(--faint)}
+.tg-flag{display:inline-block;font-size:10px;font-weight:var(--fw-b);padding:2px 6px;border-radius:5px;background:var(--warn-soft);color:var(--warn);margin-left:6px}
+.tg-flag.bad{background:var(--bad-soft);color:var(--bad)}
+.tg-foot td{border-top:2px solid var(--line);font-weight:var(--fw-b);background:var(--bg-2)}
+.tgt-tbl .good{color:var(--good)}.tgt-tbl .warn{color:var(--warn)}.tgt-tbl .bad{color:var(--bad)}
+.tg-kra-a.good,.tg-mo.good{color:var(--good)}.tg-kra-a.warn,.tg-mo.warn{color:var(--warn)}.tg-kra-a.bad,.tg-mo.bad{color:var(--bad)}
+.tg-kra-a.none,.tg-mo.none{color:var(--muted)}
+.tgt-empty{padding:var(--s6);text-align:center;color:var(--muted)}
+.tg-note{font-size:var(--fs-3xs);color:var(--warn);margin-top:6px}
+.tg-note.bad{color:var(--bad)}
+.bulk-bar{display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap;font-size:var(--fs-xs);color:var(--muted);background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);padding:var(--s3) var(--s4);margin-bottom:var(--s4);box-shadow:var(--shadow-1)}
+.bulk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:var(--s4)}
+.bg-block{background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);padding:var(--s4);box-shadow:var(--shadow-1)}
+.bg-h{display:flex;align-items:center;gap:var(--s2);margin-bottom:var(--s3);padding-bottom:var(--s2);border-bottom:1px solid var(--line-soft)}
+.bg-hn b{display:block;font-size:var(--fs-sm);font-weight:var(--fw-b)}
+.bg-hn span{font-size:var(--fs-3xs);color:var(--muted)}
+.bg-row{display:grid;grid-template-columns:minmax(0,1fr) auto 92px auto;align-items:center;gap:var(--s2);padding:5px 0}
+.bg-kpi{min-width:0}
+.bg-kpi b{display:block;font-size:var(--fs-xs);font-weight:var(--fw-m);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bg-kpi em{font-style:normal;font-size:10px;color:var(--muted)}
+.bg-cur{font-size:var(--fs-3xs);color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.bg-row .inp{padding:5px 8px;font-size:var(--fs-xs)}
+.bg-wt{font-size:var(--fs-3xs);color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.tgt-cmp{margin-top:var(--s6)}
+@media(max-width:900px){.tgt-wrap{grid-template-columns:1fr}.tg-rail{flex-direction:row;overflow-x:auto;max-height:none}.tg-mrow{flex:0 0 210px}}
 </style>
 </head>
 <body>
@@ -808,6 +888,7 @@ var S = { model: null, loading: true, error: null,
           view: 'team', team: null, employee: null, month: null,
           closed: {}, detail: null, demo: false, _demo: null,
           kpiFilter: 'all', actionFilter: 'open', session: null, saving: false,
+          targetEmp: null, bulk: false,
           _trigger: null, _drawerOpen: false };
 
 /* ============================== API ===================================== */
@@ -1412,6 +1493,20 @@ function canWrite(ownerId) {
   if (s.employee_id && s.employee_id === ownerId) return true;
   return s.canSwitch === true;
 }
+/* Setting a target is a manager/management act — never self-service — so a
+   previewed Employee never sees the target controls. The server enforces the
+   manager-chain check authoritatively. */
+function canSetTarget(ownerId) {
+  var s = S.session; if (!s) return false;
+  var r = (typeof effRole === 'function') ? effRole() : (s.role || 'Management');
+  if (r === 'Employee') return false;
+  return !!(s.admin || r === 'HR' || r === 'Management' || r === 'Manager');
+}
+function canManageMonth() {
+  var s = S.session; if (!s) return false;
+  var r = (typeof effRole === 'function') ? effRole() : (s.role || 'Management');
+  return !!(s.admin || r === 'HR' || r === 'Management' || r === 'Manager');
+}
 function allActions() { var m = Sel.model(); return (m && m.actions) || []; }
 function allComments() { var m = Sel.model(); return (m && m.comments) || []; }
 function actionsFor(ownerId, kpiId) { return allActions().filter(function (a) { return a.employee_id === ownerId && (!kpiId || a.kpi_id === kpiId); }); }
@@ -1498,10 +1593,25 @@ function ActionBody(a) {
    cause, and raise/track corrective actions — all in the KPI's own context. */
 function DrawerWrite(k, owner) {
   if (!owner) return '';
-  var oid = owner.employee_id, allowed = canWrite(oid);
+  var oid = owner.employee_id, allowed = canWrite(oid), canT = canSetTarget(oid);
   var cmts = commentsFor(oid, k.kpi_id), acts = actionsFor(oid, k.kpi_id);
   var out = '<div class="d-write">';
-  if (allowed) out += '<div class="d-sect">Update actual · ' + esc(monthLabel(S.month)) + '</div>' +
+  /* Set / revise the month's target — a manager/management act. Editing an
+     already-approved target is a revision (the server bumps the version). */
+  if (canT) {
+    var ts = k.target_status || (k.target == null ? '' : 'Draft');
+    out += '<div class="d-sect">Set target · ' + esc(monthLabel(S.month)) +
+      (ts ? ' <span class="tg-st ' + (ts === 'Approved' ? 'ok' : '') + '">' + esc(ts) + (k.target_version ? ' · v' + esc(k.target_version) : '') + '</span>' : '') + '</div>' +
+      '<div class="form"><div class="frow">' +
+        '<div class="field"><span class="lb">Target' + (k.unit ? ' (' + esc(measureLabel(k.unit)) + ')' : '') + '</span><input class="inp" id="tg-val" inputmode="decimal" value="' + (k.target == null ? '' : esc(k.target)) + '" placeholder="target value"></div>' +
+        '<div class="field"><span class="lb">Measurement</span><input class="inp" id="tg-crit" value="' + esc(k.criteria || '') + '" placeholder="how it is measured"></div></div>' +
+        '<div class="fbtns"><button class="btn sm sub" data-savetarget="' + esc(oid + '::' + k.kpi_id + '::save') + '">Save draft</button>' +
+        '<button class="btn sm" data-savetarget="' + esc(oid + '::' + k.kpi_id + '::approve') + '">Approve target</button></div>' +
+        (k.suppressed ? '<div class="tg-note">Target is under one whole unit — not scored; its weight rebases onto measurable KPIs.</div>' : '') +
+        (k.missed_at_close ? '<div class="tg-note bad">Month closed with no actual — scored 0%. Reopen the month to enter it.</div>' : '') +
+      '</div>';
+  }
+  if (allowed) out += '<div class="d-sect"' + (canT ? ' style="margin-top:var(--s5)"' : '') + '>Update actual · ' + esc(monthLabel(S.month)) + '</div>' +
     '<div class="form"><div class="frow">' +
       '<div class="field"><span class="lb">Actual</span><input class="inp" id="ac-val" inputmode="decimal" value="' + (k.actual == null ? '' : esc(k.actual)) + '" placeholder="' + (k.target == null ? 'value' : 'target ' + esc(fmt(k.target, k.unit))) + '"></div>' +
       '<div class="field"><span class="lb">Source</span><input class="inp" id="ac-src" value="' + esc(k.source || '') + '" placeholder="e.g. Monthly MIS"></div></div>' +
@@ -1724,6 +1834,141 @@ function ReviewBody(emp) {
         (isMgr && !locked ? '<div class="fbtns"><button class="btn sm" data-savereview="finalize">Finalize &amp; lock</button></div>' : '') +
         (locked && (s.admin || s.role === 'HR') ? '<div class="fbtns"><button class="btn sm sub" data-savereview="reopen">Reopen (HR)</button></div>' : '') +
       '</div></div>';
+}
+
+/* ============================== TARGETS & ACHIEVEMENT =================
+   The Team -> Individual -> Month spine (brief §Required Experience): define and
+   approve month targets, enter actuals, and read Target / Actual / Achievement /
+   Variance / overall — with the month lifecycle (Planning -> Open -> Closed ->
+   Reopened), roll-forward seeding, a bulk team grid, and individual / team / KPI
+   comparison. Target editing itself happens in the shared KPI drawer, so one
+   editor serves every surface. */
+function stTone(s) { return (s === 'Exceeded' || s === 'On Track') ? 'good' : s === 'At Risk' ? 'warn' : s === 'Off Track' ? 'bad' : 'none'; }
+function stBadge(s) { return '<span class="st ' + stTone(s) + '">' + esc(s || '—') + '</span>'; }
+function tgtMonthState(teamId) { var m = Sel.model(); var st = (m && m.month_states) || {}; return st[teamId] || st.ALL || null; }
+function tgtStateName(teamId) { var r = tgtMonthState(teamId); return r ? r.state : 'Open'; }
+
+function MonthStateBar() {
+  var state = tgtStateName(S.team), can = canManageMonth(), reopened = state === 'Reopened';
+  var steps = ['Planning', 'Open', 'Closed'];
+  var idx = reopened ? 2 : steps.indexOf(state); if (idx < 0) idx = 1;
+  var chips = steps.map(function (s, i) {
+    return '<span class="ms-step ' + (i < idx ? 'done' : i === idx && !reopened ? 'on' : '') + '">' + esc(s) + '</span>';
+  }).join('<span class="ms-sep"></span>');
+  if (reopened) chips += '<span class="ms-sep"></span><span class="ms-step on warn">Reopened</span>';
+  var acts = '';
+  if (can) {
+    if (state === 'Planning') acts += '<button class="btn sm" data-monthstate="Open">Open for actuals</button>';
+    else if (state === 'Open' || state === 'Reopened') acts += '<button class="btn sm" data-monthstate="Closed">Close &amp; score</button>';
+    else if (state === 'Closed') acts += '<input class="inp ms-note" id="ms-note" placeholder="reason to reopen" aria-label="Reason to reopen"><button class="btn sm sub" data-monthstate="Reopened">Reopen</button>';
+    acts += '<button class="btn sm ghost" data-rollfwd="1" title="Copy last month’s targets in as drafts">Seed from previous month</button>';
+  }
+  var r = tgtMonthState(S.team);
+  var meta = r && r.changed_by ? '<div class="ms-meta">' + esc(r.state) + ' by ' + esc(r.changed_by) + (r.note ? ' · ' + esc(r.note) : '') + '</div>' : '';
+  return '<div class="ms-bar"><div class="ms-l"><span class="ms-k">Month status</span><div class="ms-steps">' + chips + '</div>' + meta + '</div>' +
+    '<div class="ms-r">' + (acts || '<span class="ms-view">' + esc(state) + '</span>') + '</div></div>';
+}
+
+function tgtSelected() {
+  var ms = Sel.members();
+  if (!ms.length) return null;
+  var pick = ms.filter(function (m) { return m.employee_id === S.targetEmp; })[0];
+  if (pick) return pick;
+  var lead = Sel.lead();
+  return (lead && ms.filter(function (m) { return m.employee_id === lead.employee_id; })[0]) || ms[0];
+}
+function MemberRail(sel) {
+  var rows = Sel.ranked().map(function (m) {
+    return '<button type="button" class="tg-mrow' + (sel && m.employee_id === sel.employee_id ? ' on' : '') + '" data-targetemp="' + esc(m.employee_id) + '">' +
+      Avatar(m.employee_name, 'xs') +
+      '<span class="tg-mn"><b>' + esc(m.employee_name) + '</b><span>' + esc(m.designation || '') + '</span></span>' +
+      '<span class="tg-mo ' + tone(m.kpi_achievement) + '">' + (m.overall_score == null ? '—' : show(m.overall_score)) + '</span></button>';
+  }).join('');
+  return '<div class="tg-rail">' + rows + '</div>';
+}
+function tgtCounts(sc) {
+  var withT = 0, ap = 0;
+  sc.kpis.forEach(function (k) { if (k.target != null) { withT++; if (k.target_status === 'Approved') ap++; } });
+  return { withT: withT, ap: ap, all: sc.kpis.length };
+}
+function MemberTargets(sc) {
+  if (!sc) return '<div class="tgt-empty">No members in this team for the selected period.</div>';
+  var c = tgtCounts(sc), can = canSetTarget(sc.employee_id);
+  var groups = Sel.byKra(sc.kpis);
+  var body = groups.map(function (g) {
+    var head = '<tr class="tg-kra"><td colspan="8"><span class="tg-kra-n">' + esc(g.kra) + '</span>' +
+      (g.perspective ? '<span class="tg-kra-p">' + esc(g.perspective) + '</span>' : '') +
+      '<span class="tg-kra-a ' + tone(g.achievement) + '">' + (g.achievement == null ? '—' : show(g.achievement) + '%') + '</span></td></tr>';
+    return head + g.kpis.map(function (k) {
+      var tst = k.target_status ? '<span class="tg-st ' + (k.target_status === 'Approved' ? 'ok' : '') + '">' + esc(k.target_status) + (k.target_version ? ' v' + esc(k.target_version) : '') + '</span>'
+              : (k.target == null ? '<span class="tg-st none">no target</span>' : '');
+      var flags = (k.suppressed ? '<span class="tg-flag">not scored</span>' : '') + (k.missed_at_close ? '<span class="tg-flag bad">missed</span>' : '') + (k.waived ? '<span class="tg-flag">waived</span>' : '');
+      var vv = k.variance == null ? '—' : (k.variance > 0 ? '+' : '') + show(k.variance);
+      return '<tr class="tg-row click" data-kpi="' + esc(sc.employee_id + '::' + k.kpi_id) + '" tabindex="0" role="button">' +
+        '<td class="tg-nm"><b>' + esc(k.kpi) + '</b> ' + tst + flags + '</td>' +
+        '<td class="num">' + (k.target == null ? '<span class="quiet">Not set</span>' : esc(fmt(k.target, k.unit))) + '</td>' +
+        '<td class="num">' + (k.actual == null ? '<span class="quiet">Pending</span>' : esc(fmt(k.actual, k.unit))) + '</td>' +
+        '<td class="num">' + Ach(k) + '</td>' +
+        '<td class="num ' + (k.variance == null ? '' : k.variance < 0 ? 'bad' : 'good') + '">' + esc(vv) + '</td>' +
+        '<td class="num quiet">' + show(k.weightage) + '%</td>' +
+        '<td class="num strong">' + show(k.weighted_score) + '</td>' +
+        '<td>' + stBadge(k.status) + '</td></tr>';
+    }).join('');
+  }).join('');
+  var foot = '<tr class="tg-foot"><td>Overall</td><td class="num"></td><td class="num"></td>' +
+    '<td class="num"><b class="' + tone(sc.kpi_achievement) + '">' + (sc.kpi_achievement == null ? '—' : show(sc.kpi_achievement) + '%') + '</b></td>' +
+    '<td class="num"></td><td class="num quiet">' + (sc.measured_weightage || 0) + '%</td>' +
+    '<td class="num strong">' + (sc.overall_score == null ? '—' : show(sc.overall_score)) + '</td><td>' + stBadge(sc.status) + '</td></tr>';
+  var hdr = '<div class="tg-mhead">' + Avatar(sc.employee_name) +
+    '<div class="tg-mid"><h3>' + esc(sc.employee_name) + '</h3><span>' + esc(sc.designation || '') + (sc.region ? ' · ' + esc(sc.region) : '') + '</span></div>' +
+    '<div class="tg-mstat"><span class="tg-mstat-v ' + tone(sc.kpi_achievement) + '">' + (sc.kpi_achievement == null ? '—' : show(sc.kpi_achievement) + '%') + '</span><span class="tg-mstat-l">' + c.ap + '/' + c.withT + ' approved · ' + c.all + ' KPIs</span></div></div>';
+  var hint = can ? '<div class="tg-hint">Click any KPI to set its target or enter the actual.</div>' : '<div class="tg-hint">You can view targets and achievement here; only a manager can set targets.</div>';
+  return '<div class="tg-main">' + hdr + hint +
+    '<div class="tbl-wrap tgt-tbl"><table><thead><tr>' +
+    '<th>KPI</th><th class="num">Target</th><th class="num">Actual</th><th class="num">Achievement</th><th class="num">Variance</th><th class="num">Wt</th><th class="num">Contrib</th><th>Status</th>' +
+    '</tr></thead><tbody>' + body + foot + '</tbody></table></div></div>';
+}
+
+function BulkGrid(members) {
+  if (!members.length) return '<div class="tgt-empty">No members in this team.</div>';
+  var can = canSetTarget((members[0] || {}).employee_id);
+  var blocks = members.map(function (sc) {
+    var rows = sc.kpis.map(function (k) {
+      return '<div class="bg-row"><span class="bg-kpi"><b>' + esc(k.kpi) + '</b><em>' + esc(k.kra) + '</em></span>' +
+        '<span class="bg-cur">' + (k.target == null ? '<span class="quiet">no target</span>' : esc(fmt(k.target, k.unit))) + '</span>' +
+        '<input class="inp bulk-inp" data-bemp="' + esc(sc.employee_id) + '" data-bkpi="' + esc(k.kpi_id) + '" data-bunit="' + esc(k.unit || '') + '" inputmode="decimal" placeholder="new target"' + (can ? '' : ' disabled') + '>' +
+        '<span class="bg-wt">' + show(k.weightage) + '%</span></div>';
+    }).join('');
+    return '<div class="bg-block"><div class="bg-h">' + Avatar(sc.employee_name, 'sm') + '<div class="bg-hn"><b>' + esc(sc.employee_name) + '</b><span>' + esc(sc.designation || '') + '</span></div></div>' + rows + '</div>';
+  }).join('');
+  var bar = can ? '<span class="grow"></span><button class="btn sm sub" data-bulksave="save">Save all as draft</button><button class="btn sm" data-bulksave="approve">Save &amp; approve all</button>'
+                : '<span class="grow"></span><span class="quiet">View only — a manager can edit targets.</span>';
+  return '<div class="bulk"><div class="bulk-bar"><span>Enter targets for the whole team, then save once. Blank fields are left unchanged.</span>' + bar + '</div>' +
+    '<div class="bulk-grid">' + blocks + '</div></div>';
+}
+
+function CompareStrip() {
+  var tName = (Sel.team() || {}).team_name || 'This team';
+  return '<div class="two tgt-cmp">' +
+    '<div class="block"><div class="sect">Team comparison<span class="r">achievement · ' + esc(monthLabel(S.month)) + '</span></div><div class="pcard tg-cmp-c">' + VBars(teamScoreItems()) + '</div></div>' +
+    '<div class="block"><div class="sect">' + esc(tName) + ' leaderboard<span class="r">click to open</span></div><div class="pcard">' + RankList(Sel.members(), true) + '</div></div></div>';
+}
+
+function TargetsScreen() {
+  var sub = 'Team → individual → month · ' + monthLabel(S.month);
+  var head = PageHead('Targets & Achievement', sub);
+  var members = Sel.members();
+  var toolbar = '<div class="tg-toolbar">' +
+    '<div class="tg-modes"><button type="button" class="tg-mode' + (S.bulk ? '' : ' on') + '" data-bulktoggle="ind">Individual</button>' +
+    '<button type="button" class="tg-mode' + (S.bulk ? ' on' : '') + '" data-bulktoggle="bulk">Bulk grid</button></div></div>';
+  var main;
+  if (S.bulk) { main = BulkGrid(members); }
+  else {
+    var sel = tgtSelected();
+    if (sel && (!S.targetEmp || !members.filter(function (m) { return m.employee_id === S.targetEmp; })[0])) S.targetEmp = sel.employee_id;
+    main = '<div class="tgt-wrap">' + MemberRail(sel) + MemberTargets(sel) + '</div>';
+  }
+  return head + MonthStateBar() + toolbar + main + CompareStrip();
 }
 
 /* The team screen and the landing one. Per the UI/UX spec the flowchart is the
@@ -2137,6 +2382,7 @@ var NAV = [
   { id: 'overview', label: 'Overview', icon: '<path d="M4 13h6V4H4zM14 20h6v-9h-6zM14 8h6V4h-6zM4 20h6v-4H4z"/>' },
   { id: 'teams', label: 'Teams', icon: '<circle cx="7" cy="8" r="2.3"/><circle cx="17" cy="8" r="2.3"/><path d="M3 19a4 4 0 0 1 8 0"/><path d="M13 19a4 4 0 0 1 8 0"/>' },
   { id: 'team', label: 'Team', icon: '<circle cx="9" cy="8" r="3"/><path d="M4 20a5 5 0 0 1 10 0"/><circle cx="17.5" cy="9" r="2.4"/><path d="M15 20a4.5 4.5 0 0 1 6.5-4"/>' },
+  { id: 'targets', label: 'Targets', icon: '<circle cx="12" cy="12" r="8.2"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.8" fill="currentColor" stroke="none"/>' },
   { id: 'kpi', label: 'KRA / KPI', icon: '<path d="M4 6h16M4 12h16M4 18h10"/><circle cx="19" cy="18" r="2"/>' },
   { id: 'actions', label: 'Actions', icon: '<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/>' },
   { id: 'reviews', label: 'Reviews', icon: '<path d="M4 5a2 2 0 0 1 2-2h9l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M9 12l2 2 4-4"/>' },
@@ -2147,9 +2393,9 @@ var NAV = [
 /* Same data model, four jobs-to-be-done: the rail shows only the modules a role
    needs, and each role lands where its work starts (spec §2). */
 var NAV_BY_ROLE = {
-  Management: ['overview', 'teams', 'kpi', 'actions', 'reviews', 'analytics'],
-  HR:         ['overview', 'teams', 'kpi', 'actions', 'reviews', 'analytics', 'admin'],
-  Manager:    ['team', 'kpi', 'actions', 'reviews', 'profile'],
+  Management: ['overview', 'teams', 'targets', 'kpi', 'actions', 'reviews', 'analytics'],
+  HR:         ['overview', 'teams', 'targets', 'kpi', 'actions', 'reviews', 'analytics', 'admin'],
+  Manager:    ['team', 'targets', 'kpi', 'actions', 'reviews', 'profile'],
   Employee:   ['profile', 'actions', 'reviews']
 };
 var LANDING = { Management: 'overview', HR: 'overview', Manager: 'team', Employee: 'profile' };
@@ -2213,6 +2459,7 @@ function render() {
     : S.employee ? EmployeeScreen()
     : S.view === 'overview' ? ExecutiveOverview()
     : S.view === 'teams' ? (PageHead('Teams', 'Compare teams · ' + esc(monthLabel(S.month))) + TeamsTable())
+    : S.view === 'targets' ? TargetsScreen()
     : S.view === 'analytics' ? AnalyticsScreen()
     : S.view === 'admin' ? AdminScreen()
     : S.view === 'kpi' ? KpiScreen()
@@ -2312,6 +2559,30 @@ document.addEventListener('click', function (e) {
     doWrite('apiSaveActual', { month: S.month, employee_id: pa[0], kpi_id: pa[1],
       value: (($('#ac-val') || {}).value || ''), source: (($('#ac-src') || {}).value || ''), note: (($('#ac-note') || {}).value || '') },
       { success: 'Actual saved · score recomputed' }); return; }
+  /* --- Monthly target & lifecycle writes --- */
+  var svT = e.target.closest('[data-savetarget]');
+  if (svT) { var pt = svT.dataset.savetarget.split('::');
+    doWrite('apiSaveTarget', { month: S.month, employee_id: pt[0], kpi_id: pt[1], action: pt[2],
+      value: (($('#tg-val') || {}).value || ''), criteria: (($('#tg-crit') || {}).value || '') },
+      { success: pt[2] === 'approve' ? 'Target approved · baseline set' : 'Target saved' }); return; }
+  var msB = e.target.closest('[data-monthstate]');
+  if (msB) { var nx = msB.dataset.monthstate;
+    doWrite('apiSetMonthState', { month: S.month, team_id: S.team, state: nx, note: (($('#ms-note') || {}).value || '') },
+      { success: 'Month ' + esc(monthLabel(S.month)) + ' → ' + nx }); return; }
+  var rfB = e.target.closest('[data-rollfwd]');
+  if (rfB) { doWrite('apiRollForwardTargets', { to_month: S.month, team_id: S.team },
+      { success: 'Previous month’s targets seeded as drafts' }); return; }
+  var btg = e.target.closest('[data-bulktoggle]');
+  if (btg) { S.bulk = btg.dataset.bulktoggle === 'bulk'; S.detail = null; render(); $('.canvas').scrollTop = 0; return; }
+  var bsv = e.target.closest('[data-bulksave]');
+  if (bsv) { var bact = bsv.dataset.bulksave, bitems = [], inps = document.querySelectorAll('.bulk-inp');
+    for (var bi = 0; bi < inps.length; bi++) { var bv = String(inps[bi].value || '').trim(); if (!bv) continue;
+      bitems.push({ employee_id: inps[bi].dataset.bemp, kpi_id: inps[bi].dataset.bkpi, value: bv, unit: inps[bi].dataset.bunit }); }
+    if (!bitems.length) { toast('Enter at least one target value.', 'bad'); return; }
+    doWrite('apiSaveTargetsBulk', { month: S.month, team_id: S.team, items: bitems, action: bact },
+      { success: bitems.length + ' targets ' + (bact === 'approve' ? 'approved' : 'saved as draft') }); return; }
+  var teB = e.target.closest('[data-targetemp]');
+  if (teB) { S.targetEmp = teB.dataset.targetemp; S.detail = null; render(); return; }
   var addC = e.target.closest('[data-addcomment]');
   if (addC) { var pc = addC.dataset.addcomment.split('::'), txt = ($('#cm-text') || {}).value || '';
     if (!txt.trim()) { toast('Nothing to add', 'bad'); return; }

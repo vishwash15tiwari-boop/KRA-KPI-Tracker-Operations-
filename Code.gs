@@ -293,7 +293,10 @@ var M_TAB = {
   TGT:'MONTHLY_TARGETS', ACT:'ACTUAL_PERFORMANCE', PERF:'KPI_PERFORMANCE',
   /* Transactional tabs written by the closed-loop layer (actions, comments,
    * reviews, audit). Created on first write; never rewritten wholesale. */
-  ACTION:'ACTIONS', COMMENT:'KPI_COMMENTS', REVIEW:'REVIEWS', AUDIT:'AUDIT_LOG'
+  ACTION:'ACTIONS', COMMENT:'KPI_COMMENTS', REVIEW:'REVIEWS', AUDIT:'AUDIT_LOG',
+  /* Per (team, month) planning state for the monthly target lifecycle
+   * (Planning -> Open -> Closed -> Reopened). Created on first state change. */
+  MONTHSTATE:'MONTH_STATE'
 };
 
 var M_SCHEMA = {};
@@ -303,13 +306,17 @@ M_SCHEMA[M_TAB.KRA]  = ['kra_id','team_id','perspective','kra_name','goal_descri
 M_SCHEMA[M_TAB.KPI]  = ['kpi_id','kra_id','kpi_name','goal_description','weightage','source_of_tracking','measurement_type','direction','target_type','threshold_set','active'];
 M_SCHEMA[M_TAB.MAP]  = ['mapping_id','employee_id','kpi_id','weightage','effective_from','effective_to','applicable'];
 M_SCHEMA[M_TAB.THR]  = ['threshold_id','kpi_id','level','threshold_value','threshold_unit','label','comparison_operator','threshold_not_defined'];
-M_SCHEMA[M_TAB.TGT]  = ['target_id','month','team_id','employee_id','kpi_id','target_value','target_unit','target_source','approved'];
+/* Lifecycle columns are APPENDED (never reordered): mRead_ maps by position, so
+ * an older sheet that only has the first nine columns still reads correctly and
+ * the new fields simply come back blank until a target is (re)saved. */
+M_SCHEMA[M_TAB.TGT]  = ['target_id','month','team_id','employee_id','kpi_id','target_value','target_unit','target_source','approved','status','version','measurement_criteria','set_by','set_at','waived'];
 M_SCHEMA[M_TAB.ACT]  = ['actual_id','month','team_id','employee_id','kpi_id','actual_value','actual_unit','source','updated_at'];
 M_SCHEMA[M_TAB.PERF] = ['performance_id','month','team_id','employee_id','kpi_id','target','actual','achievement_percentage','variance','weighted_score','performance_level','status'];
 M_SCHEMA[M_TAB.ACTION]  = ['action_id','created_at','updated_at','month','team_id','employee_id','kpi_id','title','root_cause','priority','status','due_date','resolution','created_by'];
 M_SCHEMA[M_TAB.COMMENT] = ['comment_id','created_at','month','team_id','employee_id','kpi_id','author','kind','text'];
 M_SCHEMA[M_TAB.REVIEW]  = ['review_id','cycle','month','team_id','employee_id','self_rating','self_comment','mgr_rating','mgr_comment','final_rating','status','reviewer','submitted_at','finalized_at','updated_at'];
 M_SCHEMA[M_TAB.AUDIT]   = ['audit_id','at','actor','object_type','object_id','action','detail'];
+M_SCHEMA[M_TAB.MONTHSTATE] = ['state_id','month','team_id','state','note','changed_by','changed_at'];
 
 /* --------------------------------------------------------- PROVISIONING -- */
 
@@ -589,12 +596,15 @@ function buildModel_(teamId, month) {
           var kpi = kpiById[m.kpi_id] || {}, kra = kraById[kpi.kra_id] || {};
           var t = find(tgt, e.employee_id, m.kpi_id), a = find(act, e.employee_id, m.kpi_id);
           var tv = t ? numOrNull_(t.target_value) : null, av = a ? numOrNull_(a.actual_value) : null;
-          var ach = (tv == null || av == null) ? null : achievementPct_(tv, av, kpi.direction, kpi.measurement_type);
+          var unit = String(kpi.measurement_type || '');
+          var sup = suppressTarget_(unit, tv);
+          var ach = (sup || tv == null || av == null) ? null : achievementPct_(tv, av, kpi.direction, unit, kpi.target_type);
           var wt = numOrNull_(m.weightage);
           var ws = wt == null ? null : weightedScore_(wt, ach);
           var lvl = ach == null ? null : (ach >= 100 ? 5 : ach >= 90 ? 4 : ach >= 75 ? 3 : ach >= 60 ? 2 : 1);
           /* Deliberately lean: every field here is read by the UI, nothing is
-           * sent "in case". */
+           * sent "in case". target_* carry the lifecycle so the Targets screen
+           * can show whether a month's target is a draft or an approved baseline. */
           return { kpi_id: String(m.kpi_id),
                    perspective: String(kra.perspective || ''),
                    kra: String(kra.kra_name || ''),
@@ -602,12 +612,17 @@ function buildModel_(teamId, month) {
                    weightage: wt == null ? 0 : wt,
                    goal: String(kpi.goal_description || ''),
                    source: String(kpi.source_of_tracking || ''),
-                   unit: String(kpi.measurement_type || ''),
+                   unit: unit,
                    direction: String(kpi.direction || ''),
                    target: tv, actual: av, achievement: ach,
                    variance: (tv == null || av == null) ? null : round1_(av - tv),
                    weighted_score: ws, level: lvl,
-                   status: statusFor_(ach, lvl) };
+                   status: statusFor_(ach, lvl),
+                   target_status: targetStatus_(t),
+                   target_version: t ? (numOrNull_(t.version) || '') : '',
+                   criteria: t ? String(t.measurement_criteria || '') : '',
+                   waived: t ? (String(t.waived).toUpperCase() === 'TRUE') : false,
+                   suppressed: sup };
         });
       var earned = 0, measured = 0;
       rows.forEach(function (r) {
@@ -662,6 +677,12 @@ function buildModel_(teamId, month) {
    * config sheet. Defensive: if that sheet is missing, unshared or empty, the
    * base model passes through untouched. */
   try { applyIndividualConfig_(model, effMonth); } catch (e) { model.config_note = String(e && e.message || e); }
+  /* Monthly-target lifecycle: attach each team's planning state for this month,
+   * then apply the close policy (a missing actual becomes a 0% miss once a month
+   * is Closed, unless the target was explicitly waived). Both are no-ops until a
+   * month is actually advanced, so untouched data behaves exactly as before. */
+  try { model.month_states = readMonthStates_(effMonth); applyMonthClosePolicy_(model, effMonth); }
+  catch (e) { model.month_state_note = String(e && e.message || e); }
   return model;
 }
 
@@ -722,9 +743,14 @@ function capAch_(pct) { return round1_(Math.min(Number(pct), ACHIEVEMENT_CAP_PCT
  * Returning null makes it N/A and excludes it from the weighted denominator, so
  * nobody is rewarded or punished for a target that was never set.
  */
-function achievementPct_(target, actual, direction, unit) {
+function achievementPct_(target, actual, direction, unit, calcType) {
   var t = Number(target), a = Number(actual);
   if (!isFinite(t) || !isFinite(a)) return null;
+  /* Zero-defect / must-be-zero KPIs (e.g. "safety incidents = 0"): a zero target
+   * is a real, different kind of goal, not "not asked this period". Nothing hits
+   * this branch unless a KPI explicitly declares target_type ZERO, so no existing
+   * score moves - it only opens the path the design calls for. */
+  if (calcType === 'ZERO') return a <= 0 ? 100 : 0;
   if (t === 0) return null;
   if (direction === 'LOWER_IS_BETTER') {
     /* Zero is not a real measurement for a DAYS KPI (a DSO of 0 days means "not
@@ -735,6 +761,16 @@ function achievementPct_(target, actual, direction, unit) {
     return capAch_(t / a * 100);
   }
   return capAch_(a / t * 100);
+}
+
+/* A COUNT target of less than one whole unit (the real "0.2 sellers = 20% of 1"
+ * case) cannot be measured honestly: a single event reads as 500% and, capped,
+ * hands over a full weighting on noise. Such a KPI is SUPPRESSED - excluded from
+ * the weighted denominator and shown as not-scored - and its weight rebases onto
+ * the KPIs that can be measured. Only COUNT KPIs with a fractional sub-1 target
+ * hit this, so nothing else is affected. */
+function suppressTarget_(unit, target) {
+  return unit === 'COUNT' && target != null && isFinite(target) && target > 0 && target < 1;
 }
 
 /* Weighted score = weightage x capped achievement. This is what the published
@@ -1219,14 +1255,24 @@ function applyIndividualConfig_(model, month) {
     if (String(r.active).toUpperCase() === 'FALSE') return;
     (byEmp[r.employee_id] = byEmp[r.employee_id] || []).push(r);
   });
+  /* Month-scoped target values live in MONTHLY_TARGETS, not the config sheet: the
+   * config carries the DEFAULT target for the assignment, but a specific month's
+   * target (and its Draft/Approved lifecycle) is period data. Prefer the month's
+   * target when one has been set, so a configured person's targets vary by month
+   * exactly like everyone else's. */
+  var tgtBy = {};
+  try { mRead_(M_TAB.TGT).forEach(function (r) { if (monthKey_(r.month) === month) tgtBy[r.employee_id + '|' + r.kpi_id] = r; }); } catch (e) {}
   model.scorecards.forEach(function (sc) {
     var rows = byEmp[sc.employee_id]; if (!rows || !rows.length) return;
     var actualBy = {}; sc.kpis.forEach(function (k) { actualBy[k.kpi_id] = k; });   // actuals stay on the primary backend
     var kpis = rows.map(function (r) {
       var base = actualBy[r.kpi_id] || {};
-      var tv = numOrNull_(r.target_value), av = base.actual != null ? base.actual : null;
+      var mt = tgtBy[sc.employee_id + '|' + r.kpi_id];
+      var tv = mt ? numOrNull_(mt.target_value) : numOrNull_(r.target_value);
+      var av = base.actual != null ? base.actual : null;
       var dir = r.direction || base.direction || 'HIGHER_IS_BETTER', unit = r.measurement_type || r.target_unit || base.unit || '';
-      var ach = (tv == null || av == null) ? null : achievementPct_(tv, av, dir, unit);
+      var sup = suppressTarget_(unit, tv);
+      var ach = (sup || tv == null || av == null) ? null : achievementPct_(tv, av, dir, unit);
       var wt = numOrNull_(r.weightage) || 0;
       var ws = ach == null ? null : weightedScore_(wt, ach);
       var lvl = ach == null ? null : (ach >= 100 ? 5 : ach >= 90 ? 4 : ach >= 75 ? 3 : ach >= 60 ? 2 : 1);
@@ -1234,7 +1280,10 @@ function applyIndividualConfig_(model, month) {
         kra: String(r.kra_name || ''), kpi: String(r.kpi_name || ''), weightage: wt, goal: String(r.goal_description || ''),
         source: String(r.source_of_tracking || ''), unit: unit, direction: dir, target: tv, actual: av,
         achievement: ach, variance: (tv == null || av == null) ? null : round1_(av - tv),
-        weighted_score: ws, level: lvl, status: statusFor_(ach, lvl), configured: true };
+        weighted_score: ws, level: lvl, status: statusFor_(ach, lvl), configured: true,
+        target_status: targetStatus_(mt), target_version: mt ? (numOrNull_(mt.version) || '') : '',
+        criteria: mt ? String(mt.measurement_criteria || '') : '', waived: mt ? (String(mt.waived).toUpperCase() === 'TRUE') : false,
+        suppressed: sup };
     });
     var earned = 0, measured = 0;
     kpis.forEach(function (r) { if (r.weighted_score != null && isFinite(r.weighted_score)) { earned += r.weighted_score; measured += Number(r.weightage) || 0; } });
@@ -1370,4 +1419,211 @@ function ensureMaster_(kpiId, d, empId, actor, now) {
     owner_scope: (existing && existing.owner_scope === 'shared') ? 'shared' : empId, active: 'TRUE',
     created_at: existing ? existing.created_at : now, created_by: existing ? existing.created_by : actor,
     updated_at: now, updated_by: actor, version: version });
+}
+
+/* ==========================================================================
+ * MONTHLY TARGET & ACHIEVEMENT — target lifecycle + month planning state
+ * --------------------------------------------------------------------------
+ * Targets are month-scoped and versioned: an authorised user sets a Draft, the
+ * team approves it as the month's baseline, and any later change to an approved
+ * target writes a new version while the audit trail keeps the original. A month
+ * moves Planning -> Open -> Closed -> Reopened; closing freezes the numbers and
+ * turns a still-missing actual into a 0% miss (unless the target was waived).
+ * Every write is permission-checked, audited, and returns the recomputed model
+ * so the client adopts the new scores in one round trip.
+ * ======================================================================== */
+
+/* Draft until approved. An older sheet carried only the boolean `approved`
+ * column, so fall back to it when `status` has not been written yet. */
+function targetStatus_(t) {
+  if (!t) return '';
+  var s = String(t.status || '').trim();
+  if (s) return s;
+  return String(t.approved).toUpperCase() === 'TRUE' ? 'Approved' : 'Draft';
+}
+
+var MONTH_STATES = ['Planning', 'Open', 'Closed', 'Reopened'];
+function stateId_(month, teamId) { return 'MS-' + month + '-' + (teamId || 'ALL'); }
+function prevMonth_(mk) {
+  var y = Number(String(mk).slice(0, 4)), m = Number(String(mk).slice(5, 7));
+  return Utilities.formatDate(new Date(y, m - 2, 1), Session.getScriptTimeZone(), 'yyyy-MM');
+}
+
+/* Every team's planning state for one month as { team_id: {state,...} }. A team
+ * with no row is Open, so nothing that has not been explicitly planned or closed
+ * changes behaviour. */
+function readMonthStates_(month) {
+  var out = {};
+  try {
+    mRead_(M_TAB.MONTHSTATE).forEach(function (r) {
+      if (monthKey_(r.month) !== month) return;
+      out[String(r.team_id || 'ALL')] = { state: String(r.state || 'Open'), note: String(r.note || ''),
+        changed_by: String(r.changed_by || ''), changed_at: String(r.changed_at || '') };
+    });
+  } catch (e) {}
+  return out;
+}
+function monthStateFor_(states, teamId) {
+  var r = states && (states[teamId] || states.ALL);
+  return r ? r.state : 'Open';
+}
+
+/* Close policy: once a team's month is Closed, a KPI that has a target but still
+ * no actual is scored 0% (a miss), not left Pending - so a bad number cannot be
+ * dodged by never entering it. A target explicitly waived is excluded and its
+ * weight rebased. Runs last, over the final (base or config-overlaid) kpis, and
+ * recomputes the person's rollup. A no-op for Planning / Open / Reopened. */
+function applyMonthClosePolicy_(model, month) {
+  var states = model.month_states || {};
+  (model.scorecards || []).forEach(function (sc) {
+    if (monthStateFor_(states, sc.team_id) !== 'Closed') return;
+    sc.kpis.forEach(function (k) {
+      if (k.suppressed) return;
+      if (k.target != null && k.actual == null && !k.waived) {
+        k.achievement = 0; k.level = 1; k.status = 'Off Track';
+        k.weighted_score = weightedScore_(Number(k.weightage) || 0, 0);
+        k.missed_at_close = true;
+      }
+    });
+    var earned = 0, measured = 0;
+    sc.kpis.forEach(function (k) {
+      if (k.weighted_score == null || !isFinite(k.weighted_score)) return;
+      earned += k.weighted_score; measured += Number(k.weightage) || 0;
+    });
+    sc.measured_weightage = measured;
+    sc.overall_score = measured > 0 ? Math.round(earned * 10) / 10 : null;
+    sc.kpi_achievement = measured > 0 ? Math.round(earned / measured * 1000) / 10 : null;
+    sc.status = statusFor_(sc.kpi_achievement, null);
+    sc.month_closed = true;
+  });
+  model.records = (model.scorecards || []).reduce(function (s, sc) {
+    return s + sc.kpis.filter(function (k) { return k.achievement != null; }).length; }, 0);
+  return model;
+}
+
+/* --- permissions -----------------------------------------------------------
+ * Setting a target is a manager / management act, never self-service: a person
+ * does not set the bar they are judged against. */
+function canSetTarget_(s, empId) {
+  if (s.admin || s.role === 'HR' || s.role === 'Management') return true;
+  if (s.employee_id && isManagerChain_(s.employee_id, empId, s._byId)) return true;
+  return false;
+}
+function requireSetTarget_(s, empId) {
+  if (!canSetTarget_(s, empId)) throw new Error('Only a manager or management can set this person’s target.');
+}
+function canManageMonth_(s) { return !!(s.admin || s.role === 'HR' || s.role === 'Management' || s.role === 'Manager'); }
+function requireManageMonth_(s) {
+  if (!canManageMonth_(s)) throw new Error('Only a manager or management can change the month’s state.');
+}
+
+/* --- set / edit / approve one month's target for one KPI -------------------- */
+function apiSaveTarget(p) {
+  try {
+    p = p || {};
+    var s = resolveSession_();
+    requireSetTarget_(s, p.employee_id);
+    var emp = s._byId[p.employee_id]; if (!emp) throw new Error('Unknown employee.');
+    var month = monthKey_(p.month); if (!month) throw new Error('Choose a period first.');
+    if (!p.kpi_id) throw new Error('Which KPI is this target for?');
+    var val = numOrNull_(p.value); if (val == null) throw new Error('Enter a numeric target value.');
+    if (val < 0) throw new Error('A target cannot be negative.');
+    var action = ['save', 'approve', 'revise'].indexOf(p.action) >= 0 ? p.action : 'save';
+    var id = 'TGT-' + month + '-' + p.employee_id + '-' + p.kpi_id;   /* one target per emp+kpi+month */
+    var prior = mRead_(M_TAB.TGT).filter(function (r) { return String(r.target_id) === id; })[0] || null;
+    var priorStatus = targetStatus_(prior), priorVal = prior ? numOrNull_(prior.target_value) : null;
+    var version = prior ? (numOrNull_(prior.version) || 1) : 1;
+    /* Changing an already-approved baseline is a revision: bump the version so
+     * the audit keeps the original rather than overwriting it silently. */
+    if (prior && priorStatus === 'Approved' && priorVal !== val) version += 1;
+    var status = action === 'approve' ? 'Approved' : (action === 'revise' ? 'Draft' : (prior ? priorStatus : 'Draft'));
+    mUpsertRow_(M_TAB.TGT, { target_id: id, month: month, team_id: emp.team_id, employee_id: p.employee_id,
+      kpi_id: p.kpi_id, target_value: val, target_unit: p.unit || '', target_source: p.source || 'Manual entry',
+      approved: status === 'Approved' ? 'TRUE' : 'FALSE', status: status, version: version,
+      measurement_criteria: (p.criteria != null && p.criteria !== '') ? p.criteria : (prior ? prior.measurement_criteria : '') || '',
+      set_by: s.name, set_at: nowIso_(), waived: p.waived ? 'TRUE' : ((prior ? prior.waived : '') || '') });
+    audit_(s.name, 'target', id, action, p.kpi_id + ' target ' + (priorVal == null ? '' : priorVal + ' → ') + val +
+      ' (' + month + ', ' + status + ' v' + version + ')');
+    return jsonSafe_({ ok: true, id: id, status: status, model: buildModel_(null, month) });
+  } catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiSaveTarget' }; }
+}
+
+/* --- set many targets at once (the team-month bulk grid) -------------------- */
+function apiSaveTargetsBulk(p) {
+  try {
+    p = p || {};
+    var s = resolveSession_();
+    var month = monthKey_(p.month); if (!month) throw new Error('Choose a period first.');
+    var items = (p.items || []).filter(function (it) { return it && it.employee_id && it.kpi_id && numOrNull_(it.value) != null; });
+    if (!items.length) throw new Error('Nothing to save — enter at least one target value.');
+    var action = p.action === 'approve' ? 'approve' : 'save';
+    var priorBy = {}; mRead_(M_TAB.TGT).forEach(function (r) { priorBy[String(r.target_id)] = r; });
+    var wrote = 0;
+    items.forEach(function (it) {
+      if (!canSetTarget_(s, it.employee_id)) return;   /* skip silently what this user may not set */
+      var emp = s._byId[it.employee_id]; if (!emp) return;
+      var val = numOrNull_(it.value); if (val == null || val < 0) return;
+      var id = 'TGT-' + month + '-' + it.employee_id + '-' + it.kpi_id;
+      var prior = priorBy[id] || null, priorStatus = targetStatus_(prior);
+      var version = prior ? (numOrNull_(prior.version) || 1) : 1;
+      if (prior && priorStatus === 'Approved' && numOrNull_(prior.target_value) !== val) version += 1;
+      var status = action === 'approve' ? 'Approved' : (prior ? priorStatus : 'Draft');
+      mUpsertRow_(M_TAB.TGT, { target_id: id, month: month, team_id: emp.team_id, employee_id: it.employee_id,
+        kpi_id: it.kpi_id, target_value: val, target_unit: it.unit || '', target_source: 'Bulk entry',
+        approved: status === 'Approved' ? 'TRUE' : 'FALSE', status: status, version: version,
+        measurement_criteria: (prior ? prior.measurement_criteria : '') || '', set_by: s.name, set_at: nowIso_(),
+        waived: (prior ? prior.waived : '') || '' });
+      wrote++;
+    });
+    audit_(s.name, 'target', 'bulk-' + month, action, wrote + ' targets ' + (action === 'approve' ? 'approved' : 'saved') + ' (' + month + ')');
+    return jsonSafe_({ ok: true, wrote: wrote, model: buildModel_(null, month) });
+  } catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiSaveTargetsBulk' }; }
+}
+
+/* --- advance a team's month through the planning lifecycle ------------------ */
+function apiSetMonthState(p) {
+  try {
+    p = p || {};
+    var s = resolveSession_();
+    requireManageMonth_(s);
+    var month = monthKey_(p.month); if (!month) throw new Error('Choose a period first.');
+    var state = MONTH_STATES.indexOf(p.state) >= 0 ? p.state : null;
+    if (!state) throw new Error('Unknown month state.');
+    if (state === 'Reopened' && !String(p.note || '').trim()) throw new Error('Reopening a closed month needs a reason.');
+    var teamId = p.team_id || 'ALL';
+    var id = stateId_(month, teamId);
+    mUpsertRow_(M_TAB.MONTHSTATE, { state_id: id, month: month, team_id: teamId, state: state,
+      note: p.note || '', changed_by: s.name, changed_at: nowIso_() });
+    audit_(s.name, 'month', id, 'state', teamId + ' ' + month + ' → ' + state + (p.note ? ' (' + p.note + ')' : ''));
+    return jsonSafe_({ ok: true, id: id, state: state, model: buildModel_(null, month) });
+  } catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiSetMonthState' }; }
+}
+
+/* --- seed a new month from the previous one (roll-forward) ------------------ */
+function apiRollForwardTargets(p) {
+  try {
+    p = p || {};
+    var s = resolveSession_();
+    requireManageMonth_(s);
+    var to = monthKey_(p.to_month); if (!to) throw new Error('Choose the month to seed.');
+    var from = monthKey_(p.from_month) || prevMonth_(to);
+    var teamId = p.team_id || null;
+    var all = mRead_(M_TAB.TGT), existing = {};
+    all.forEach(function (r) { if (monthKey_(r.month) === to) existing[r.employee_id + '|' + r.kpi_id] = true; });
+    var seeded = 0;
+    all.filter(function (r) { return monthKey_(r.month) === from && (!teamId || String(r.team_id) === teamId); })
+      .forEach(function (r) {
+        var key = r.employee_id + '|' + r.kpi_id;
+        if (existing[key]) return;                     /* never overwrite a target already set for the new month */
+        if (!canSetTarget_(s, r.employee_id)) return;
+        var id = 'TGT-' + to + '-' + r.employee_id + '-' + r.kpi_id;
+        mUpsertRow_(M_TAB.TGT, { target_id: id, month: to, team_id: r.team_id, employee_id: r.employee_id,
+          kpi_id: r.kpi_id, target_value: numOrNull_(r.target_value), target_unit: r.target_unit || '',
+          target_source: 'Rolled forward from ' + from, approved: 'FALSE', status: 'Draft', version: 1,
+          measurement_criteria: r.measurement_criteria || '', set_by: s.name, set_at: nowIso_(), waived: '' });
+        existing[key] = true; seeded++;
+      });
+    audit_(s.name, 'target', 'roll-' + to, 'roll_forward', seeded + ' targets seeded into ' + to + ' from ' + from);
+    return jsonSafe_({ ok: true, seeded: seeded, from: from, to: to, model: buildModel_(null, to) });
+  } catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiRollForwardTargets' }; }
 }
