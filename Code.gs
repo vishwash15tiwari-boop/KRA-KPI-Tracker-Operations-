@@ -652,12 +652,17 @@ function buildModel_(teamId, month) {
   var records = scorecards.reduce(function (s, sc) {
     return s + sc.kpis.filter(function (k) { return k.achievement != null; }).length;
   }, 0);
-  return { ok: true, month: effMonth, months: months,
+  var model = { ok: true, month: effMonth, months: months,
            teams: teams, scorecards: scorecards,
            actions: actions, comments: comments, reviews: reviews, audit: audit,
            source: fromSheet ? 'Google Sheet' : 'Master data (in code)',
            records: records,
            generated_at: new Date().toISOString() };
+  /* Overlay each employee's individual KRA/KPI configuration from the dedicated
+   * config sheet. Defensive: if that sheet is missing, unshared or empty, the
+   * base model passes through untouched. */
+  try { applyIndividualConfig_(model, effMonth); } catch (e) { model.config_note = String(e && e.message || e); }
+  return model;
 }
 
 /** Proves the master is internally consistent before any target is loaded. */
@@ -1034,4 +1039,335 @@ function apiSaveReview(p) {
     audit_(s.name, 'review', id, action, 'status ' + rec.status + (rec.final_rating ? ' final ' + rec.final_rating : ''));
     return jsonSafe_({ ok: true, id: id, model: buildModel_(null, p.month || null) });
   } catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiSaveReview' }; }
+}
+
+/* ======================================================================
+ * INDIVIDUAL KRA / KPI CONFIGURATION  ·  dedicated config sheet
+ * ----------------------------------------------------------------------
+ * A second spreadsheet is the controlled source of truth for individually
+ * configured KRA/KPIs and their full change history. The app keeps reading its
+ * base model from the primary backend (BACKEND_SHEET_ID); this layer overlays
+ * each employee's individual configuration on top, so an edit shows up live,
+ * while every change is written with who / when / old value / new value /
+ * version — nothing is overwritten without a trace.
+ *
+ * Seven tabs, one responsibility each:
+ *   Employees          reference roster (synced from the primary backend)
+ *   KRA_KPI_Master     catalogue of KPI definitions (shared + individually owned)
+ *   Individual_KRA_KPI the live per-employee assignment: weightage, target, params
+ *   KRA_KPI_History    append-only change log: field, old -> new, version, actor
+ *   Users_Access       who may view / edit configuration
+ *   Lookup_Master      controlled dropdown values (units, directions, statuses …)
+ *   System_Log         provisioning / errors / integration events
+ * ====================================================================== */
+
+var CONFIG_SHEET_ID = '1n-yGh70aDJy6ejabFZOFbpbubLi2nApF6-ciRZs10cM';
+
+var C_TAB = {
+  EMP: 'Employees', MASTER: 'KRA_KPI_Master', INDIV: 'Individual_KRA_KPI',
+  HIST: 'KRA_KPI_History', USERS: 'Users_Access', LOOKUP: 'Lookup_Master', SYSLOG: 'System_Log'
+};
+var C_SCHEMA = {};
+C_SCHEMA[C_TAB.EMP]    = ['employee_id', 'employee_name', 'team_id', 'team_name', 'designation', 'reporting_manager', 'status', 'synced_at'];
+C_SCHEMA[C_TAB.MASTER] = ['kpi_id', 'kra_name', 'perspective', 'kpi_name', 'measurement_type', 'direction', 'default_weightage', 'source_of_tracking', 'goal_description', 'owner_scope', 'active', 'created_at', 'created_by', 'updated_at', 'updated_by', 'version'];
+C_SCHEMA[C_TAB.INDIV]  = ['config_id', 'employee_id', 'kpi_id', 'kra_name', 'perspective', 'kpi_name', 'weightage', 'target_value', 'target_unit', 'measurement_type', 'direction', 'source_of_tracking', 'goal_description', 'status', 'effective_from', 'effective_to', 'version', 'created_at', 'created_by', 'updated_at', 'updated_by', 'active'];
+C_SCHEMA[C_TAB.HIST]   = ['history_id', 'changed_at', 'changed_by', 'employee_id', 'employee_name', 'config_id', 'kpi_id', 'kpi_name', 'field', 'old_value', 'new_value', 'action', 'version', 'effective_period', 'note'];
+C_SCHEMA[C_TAB.USERS]  = ['user_id', 'email', 'name', 'role', 'can_view', 'can_edit_config', 'scope', 'active', 'updated_at'];
+C_SCHEMA[C_TAB.LOOKUP] = ['lookup_id', 'category', 'value', 'label', 'sort_order', 'active'];
+C_SCHEMA[C_TAB.SYSLOG] = ['log_id', 'at', 'actor', 'level', 'event', 'detail'];
+
+/* ---- config-sheet accessors (isolated from the primary backend helpers) -- */
+function cfgSS_() {
+  try { return SpreadsheetApp.openById(CONFIG_SHEET_ID); }
+  catch (e) { throw new Error('Cannot open the configuration spreadsheet ' + CONFIG_SHEET_ID +
+    '. Share it (Editor) with the account running this web app.'); }
+}
+function cfgTab_(name) {
+  var ss = cfgSS_(), sh = ss.getSheetByName(name), h = C_SCHEMA[name];
+  if (!sh) sh = ss.insertSheet(name);
+  var head = sh.getRange(1, 1, 1, h.length).getValues()[0];
+  var blank = head.every(function (v) { return v === '' || v == null; });
+  if (blank) sh.getRange(1, 1, 1, h.length).setValues([h]).setFontWeight('bold').setBackground('#EAF0FB');
+  if (sh.getFrozenRows() < 1) sh.setFrozenRows(1);
+  return sh;
+}
+function cfgRead_(name) {
+  var sh = cfgTab_(name), h = C_SCHEMA[name], last = sh.getLastRow();
+  if (last < 2) return [];
+  return sh.getRange(2, 1, last - 1, h.length).getValues().map(function (r) {
+    var o = {}; h.forEach(function (k, i) { o[k] = r[i]; }); return o;
+  });
+}
+function cfgAppend_(name, obj) {
+  var sh = cfgTab_(name), h = C_SCHEMA[name];
+  sh.appendRow(h.map(function (k) { var v = obj[k]; return v == null ? '' : v; }));
+  return obj;
+}
+function cfgUpsert_(name, obj) {   // by first-column id
+  var sh = cfgTab_(name), h = C_SCHEMA[name], id = obj[h[0]], at = -1, last = sh.getLastRow();
+  if (id && last >= 2) {
+    var ids = sh.getRange(2, 1, last - 1, 1).getValues();
+    for (var i = 0; i < ids.length; i++) if (String(ids[i][0]) === String(id)) { at = i + 2; break; }
+  }
+  var row = h.map(function (k) { var v = obj[k]; return v == null ? '' : v; });
+  if (at > 0) sh.getRange(at, 1, 1, h.length).setValues([row]); else sh.appendRow(row);
+  return obj;
+}
+function cfgFind_(name, match) {
+  return cfgRead_(name).filter(function (o) {
+    for (var k in match) if (String(o[k]) !== String(match[k])) return false; return true;
+  });
+}
+function sysLog_(actor, level, event, detail) {
+  try { cfgAppend_(C_TAB.SYSLOG, { log_id: Utilities.getUuid(), at: nowIso_(), actor: actor || 'system',
+    level: level || 'info', event: event || '', detail: detail || '' }); } catch (e) {}
+}
+
+/* One history row per field that actually changed (old -> new), plus add / remove
+ * markers. The version is the config row's version AFTER the change. */
+function histRow_(actor, emp, cfgId, kpiId, kpiName, field, oldV, newV, action, version, period) {
+  cfgAppend_(C_TAB.HIST, { history_id: Utilities.getUuid(), changed_at: nowIso_(), changed_by: actor,
+    employee_id: emp.employee_id, employee_name: emp.employee_name, config_id: cfgId, kpi_id: kpiId,
+    kpi_name: kpiName, field: field, old_value: oldV == null ? '' : String(oldV),
+    new_value: newV == null ? '' : String(newV), action: action, version: version,
+    effective_period: period || '', note: '' });
+}
+
+/* ---- provisioning: create all seven tabs and seed the reference data ----- */
+function provisionConfigSheet() {
+  var out = [];
+  Object.keys(C_TAB).forEach(function (k) { cfgTab_(C_TAB[k]); out.push(C_TAB[k]); });
+
+  // Employees + KRA_KPI_Master snapshots come from the primary backend model.
+  var model = buildModel_(null, null);
+  var now = nowIso_();
+  var empRows = model.scorecards.map(function (s) {
+    var team = model.teams.filter(function (t) { return t.team_id === s.team_id; })[0] || {};
+    return { employee_id: s.employee_id, employee_name: s.employee_name, team_id: s.team_id,
+      team_name: team.team_name || '', designation: s.designation || '', reporting_manager: s.reporting_manager || '',
+      status: 'ACTIVE', synced_at: now };
+  });
+  cfgReplaceAll_(C_TAB.EMP, empRows);
+
+  var seenKpi = {}, masterRows = [];
+  model.scorecards.forEach(function (s) {
+    s.kpis.forEach(function (k) {
+      if (seenKpi[k.kpi_id]) return; seenKpi[k.kpi_id] = 1;
+      masterRows.push({ kpi_id: k.kpi_id, kra_name: k.kra, perspective: k.perspective, kpi_name: k.kpi,
+        measurement_type: k.unit, direction: k.direction, default_weightage: k.weightage,
+        source_of_tracking: k.source, goal_description: k.goal, owner_scope: 'shared', active: 'TRUE',
+        created_at: now, created_by: 'provision', updated_at: now, updated_by: 'provision', version: 1 });
+    });
+  });
+  cfgReplaceAll_(C_TAB.MASTER, masterRows);
+
+  // Users_Access seeded from the roster's resolved roles.
+  var userRows = model.scorecards.map(function (s, i) {
+    var role = !s.reporting_manager ? 'Management' : 'Employee';
+    return { user_id: 'U' + ('000' + (i + 1)).slice(-3), email: '', name: s.employee_name, role: role,
+      can_view: 'TRUE', can_edit_config: (role === 'Management' || role === 'HR') ? 'TRUE' : 'FALSE',
+      scope: s.team_id, active: 'TRUE', updated_at: now };
+  });
+  cfgReplaceAll_(C_TAB.USERS, userRows);
+
+  // Lookup_Master: the controlled vocabularies the editor offers.
+  var lk = [], seq = 0;
+  function lkAdd(cat, val, label) { lk.push({ lookup_id: 'LK' + ('000' + (++seq)).slice(-3), category: cat, value: val, label: label || val, sort_order: seq, active: 'TRUE' }); }
+  ['CR', 'MT', 'COUNT', 'PERCENT', 'DAYS'].forEach(function (u) { lkAdd('measurement_type', u); });
+  lkAdd('direction', 'HIGHER_IS_BETTER', 'Higher is better'); lkAdd('direction', 'LOWER_IS_BETTER', 'Lower is better');
+  ['Active', 'Draft', 'Inactive'].forEach(function (s) { lkAdd('status', s); });
+  ['Financial', 'Customer', 'Internal Process', 'Learning & Growth', 'Supply', 'Demand', 'Growth', 'Operations', 'Quality', 'Process', 'Finance'].forEach(function (p) { lkAdd('perspective', p); });
+  ['Management', 'HR', 'Manager', 'Employee'].forEach(function (r) { lkAdd('role', r); });
+  cfgReplaceAll_(C_TAB.LOOKUP, lk);
+
+  sysLog_('provision', 'info', 'provisionConfigSheet', out.length + ' tabs; ' + empRows.length + ' employees, ' + masterRows.length + ' KPIs seeded');
+  return 'Config sheet ready: ' + out.join(', ') + '\nEmployees: ' + empRows.length +
+    '\nKRA_KPI_Master: ' + masterRows.length + '\nUsers_Access: ' + userRows.length + '\nLookup values: ' + lk.length;
+}
+function cfgReplaceAll_(name, objs) {
+  var sh = cfgTab_(name), h = C_SCHEMA[name];
+  if (sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, h.length).clearContent();
+  if (objs.length) sh.getRange(2, 1, objs.length, h.length)
+    .setValues(objs.map(function (o) { return h.map(function (k) { var v = o[k]; return v == null ? '' : v; }); }));
+}
+
+/* ---- access control (Users_Access first, role logic as the fallback) ----- */
+function canEditConfig_(s, empId) {
+  try {
+    var email = String(s.email || '').toLowerCase();
+    if (email && email !== '(unknown)') {
+      var u = cfgFind_(C_TAB.USERS, { email: email }).filter(function (r) { return String(r.active).toUpperCase() !== 'FALSE'; })[0];
+      if (u) return String(u.can_edit_config).toUpperCase() === 'TRUE';
+    }
+  } catch (e) { /* fall through to role logic */ }
+  return s.admin || s.role === 'HR' || s.role === 'Management' ||
+    (s.employee_id && isManagerChain_(s.employee_id, empId, s._byId));
+}
+function requireEditConfig_(s, empId) {
+  if (!canEditConfig_(s, empId)) throw new Error('You do not have permission to configure this employee’s KRA / KPIs.');
+}
+
+/* ---- overlay: fold the individual config onto the base model -------------
+ * Called at the end of buildModel_. Defensive: any failure (sheet not shared,
+ * not provisioned) leaves the base model exactly as it was. */
+function applyIndividualConfig_(model, month) {
+  var indiv;
+  try { indiv = cfgRead_(C_TAB.INDIV); } catch (e) { return model; }
+  if (!indiv || !indiv.length) return model;
+  var byEmp = {};
+  indiv.forEach(function (r) {
+    if (String(r.active).toUpperCase() === 'FALSE') return;
+    (byEmp[r.employee_id] = byEmp[r.employee_id] || []).push(r);
+  });
+  model.scorecards.forEach(function (sc) {
+    var rows = byEmp[sc.employee_id]; if (!rows || !rows.length) return;
+    var actualBy = {}; sc.kpis.forEach(function (k) { actualBy[k.kpi_id] = k; });   // actuals stay on the primary backend
+    var kpis = rows.map(function (r) {
+      var base = actualBy[r.kpi_id] || {};
+      var tv = numOrNull_(r.target_value), av = base.actual != null ? base.actual : null;
+      var dir = r.direction || base.direction || 'HIGHER_IS_BETTER', unit = r.measurement_type || r.target_unit || base.unit || '';
+      var ach = (tv == null || av == null) ? null : achievementPct_(tv, av, dir, unit);
+      var wt = numOrNull_(r.weightage) || 0;
+      var ws = ach == null ? null : weightedScore_(wt, ach);
+      var lvl = ach == null ? null : (ach >= 100 ? 5 : ach >= 90 ? 4 : ach >= 75 ? 3 : ach >= 60 ? 2 : 1);
+      return { kpi_id: String(r.kpi_id), config_id: String(r.config_id), perspective: String(r.perspective || ''),
+        kra: String(r.kra_name || ''), kpi: String(r.kpi_name || ''), weightage: wt, goal: String(r.goal_description || ''),
+        source: String(r.source_of_tracking || ''), unit: unit, direction: dir, target: tv, actual: av,
+        achievement: ach, variance: (tv == null || av == null) ? null : round1_(av - tv),
+        weighted_score: ws, level: lvl, status: statusFor_(ach, lvl), configured: true };
+    });
+    var earned = 0, measured = 0;
+    kpis.forEach(function (r) { if (r.weighted_score != null && isFinite(r.weighted_score)) { earned += r.weighted_score; measured += Number(r.weightage) || 0; } });
+    var memberAch = measured > 0 ? Math.round(earned / measured * 1000) / 10 : null;
+    sc.kpis = kpis; sc.measured_weightage = measured;
+    sc.overall_score = measured > 0 ? Math.round(earned * 10) / 10 : null;
+    sc.kpi_achievement = memberAch; sc.status = statusFor_(memberAch, null); sc.configured = true;
+  });
+  model.records = model.scorecards.reduce(function (s, sc) { return s + sc.kpis.filter(function (k) { return k.achievement != null; }).length; }, 0);
+  return model;
+}
+
+/* ---- READ one employee's editable config (seeded from base on first edit) - */
+function apiKpiConfig(p) {
+  try {
+    p = p || {};
+    var s = resolveSession_();
+    var empId = p.employee_id, month = monthKey_(p.month) || '';
+    var model = buildModel_(null, month || null);      // already overlaid with any saved config
+    var sc = model.scorecards.filter(function (x) { return x.employee_id === empId; })[0];
+    if (!sc) throw new Error('Unknown employee.');
+    var items = sc.kpis.map(function (k) {
+      return { kpi_id: k.kpi_id, config_id: k.config_id || '', kra: k.kra, perspective: k.perspective,
+        kpi: k.kpi, weightage: k.weightage, target: k.target, unit: k.unit, direction: k.direction,
+        source: k.source, goal: k.goal, configured: !!k.configured };
+    });
+    var hist = [];
+    try { hist = cfgFind_(C_TAB.HIST, { employee_id: empId }); } catch (e) {}
+    hist = hist.sort(function (a, b) { return String(b.changed_at).localeCompare(String(a.changed_at)); }).slice(0, 40);
+    var lookups = {};
+    try { cfgRead_(C_TAB.LOOKUP).forEach(function (l) { if (String(l.active).toUpperCase() === 'FALSE') return; (lookups[l.category] = lookups[l.category] || []).push({ value: l.value, label: l.label }); }); } catch (e) {}
+    return jsonSafe_({ ok: true, employee_id: empId, employee_name: sc.employee_name, month: month || model.month,
+      can_edit: canEditConfig_(s, empId), items: items, history: hist, lookups: lookups });
+  } catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiKpiConfig' }; }
+}
+
+/* ---- SAVE: reconcile the desired list, write history + version + log ------ */
+function apiSaveKpiConfig(p) {
+  try {
+    p = p || {};
+    var s = resolveSession_();
+    var empId = p.employee_id;
+    requireEditConfig_(s, empId);
+
+    var base = buildModel_(null, null);
+    var sc = base.scorecards.filter(function (x) { return x.employee_id === empId; })[0];
+    if (!sc) throw new Error('Unknown employee.');
+    var team = base.teams.filter(function (t) { return t.team_id === sc.team_id; })[0] || {};
+    var emp = { employee_id: empId, employee_name: sc.employee_name };
+    var month = monthKey_(p.month) || monthKey_(base.month) || '';
+    var period = month;
+
+    var items = (p.items || []).filter(function (it) { return it && !it._remove; });
+    if (!items.length) throw new Error('An employee needs at least one KRA / KPI.');
+    var total = 0; items.forEach(function (it) { total += Number(it.weightage) || 0; });
+    if (Math.round(total) !== 100) throw new Error('Weightages must total 100% (currently ' + Math.round(total) + '%).');
+    items.forEach(function (it) { if (!String(it.kpi || '').trim()) throw new Error('Every KPI needs a name.'); });
+
+    // current active config for this employee, indexed by config_id
+    var prior = {};
+    cfgFind_(C_TAB.INDIV, { employee_id: empId }).forEach(function (r) { if (String(r.active).toUpperCase() !== 'FALSE') prior[r.config_id] = r; });
+    var now = nowIso_(), actor = s.name, seen = {}, changes = 0;
+    var FIELDS = [['kra', 'kra_name'], ['perspective', 'perspective'], ['kpi', 'kpi_name'], ['weightage', 'weightage'],
+      ['target', 'target_value'], ['unit', 'measurement_type'], ['direction', 'direction'], ['source', 'source_of_tracking'], ['goal', 'goal_description']];
+
+    items.forEach(function (it) {
+      var cfgId = it.config_id, existing = cfgId ? prior[cfgId] : null;
+      var kpiId = it.kpi_id || existing && existing.kpi_id || ('KPI-CFG-' + uid8_());
+      var unit = ['CR', 'MT', 'COUNT', 'PERCENT', 'DAYS'].indexOf(it.unit) >= 0 ? it.unit : 'PERCENT';
+      var dir = it.direction === 'LOWER_IS_BETTER' ? 'LOWER_IS_BETTER' : 'HIGHER_IS_BETTER';
+      var desired = { kra_name: String(it.kra || 'General').trim(), perspective: String(it.perspective || ''),
+        kpi_name: String(it.kpi).trim(), weightage: Number(it.weightage) || 0,
+        target_value: (it.target == null || it.target === '') ? '' : Number(it.target), target_unit: unit,
+        measurement_type: unit, direction: dir, source_of_tracking: String(it.source || ''), goal_description: String(it.goal || '') };
+
+      if (!existing) {                                   // NEW individual assignment
+        cfgId = 'CFG-' + uid8_();
+        var rowN = { config_id: cfgId, employee_id: empId, kpi_id: kpiId, kra_name: desired.kra_name,
+          perspective: desired.perspective, kpi_name: desired.kpi_name, weightage: desired.weightage,
+          target_value: desired.target_value, target_unit: unit, measurement_type: unit, direction: dir,
+          source_of_tracking: desired.source_of_tracking, goal_description: desired.goal_description,
+          status: 'Active', effective_from: period, effective_to: '', version: 1,
+          created_at: now, created_by: actor, updated_at: now, updated_by: actor, active: 'TRUE' };
+        cfgUpsert_(C_TAB.INDIV, rowN);
+        ensureMaster_(kpiId, desired, empId, actor, now);
+        histRow_(actor, emp, cfgId, kpiId, desired.kpi_name, 'assignment', '', 'created', it.kpi_id ? 'assign' : 'create', 1, period);
+        changes++;
+      } else {                                           // MODIFY existing
+        var diffs = [];
+        FIELDS.forEach(function (f) {
+          var col = f[1], oldV = existing[col], newV = desired[col];
+          if (String(oldV == null ? '' : oldV) !== String(newV == null ? '' : newV)) diffs.push([col, oldV, newV, f[0]]);
+        });
+        if (diffs.length) {
+          var version = (Number(existing.version) || 1) + 1;
+          var upd = {}; C_SCHEMA[C_TAB.INDIV].forEach(function (k) { upd[k] = existing[k]; });
+          Object.keys(desired).forEach(function (k) { upd[k] = desired[k]; });
+          upd.version = version; upd.updated_at = now; upd.updated_by = actor; upd.active = 'TRUE'; upd.status = 'Active';
+          cfgUpsert_(C_TAB.INDIV, upd);
+          diffs.forEach(function (d) { histRow_(actor, emp, existing.config_id, kpiId, desired.kpi_name, d[3], d[1], d[2], 'update', version, period); });
+          // definition change also refreshes this employee's owned master entry
+          if (diffs.some(function (d) { return ['kra_name', 'perspective', 'kpi_name', 'measurement_type', 'direction', 'source_of_tracking', 'goal_description'].indexOf(d[0]) >= 0; }))
+            ensureMaster_(kpiId, desired, empId, actor, now);
+          changes++;
+        }
+        cfgId = existing.config_id;
+      }
+      seen[cfgId] = 1;
+    });
+
+    // retire dropped assignments (present before, absent now)
+    Object.keys(prior).forEach(function (cid) {
+      if (seen[cid]) return;
+      var r = prior[cid], version = (Number(r.version) || 1) + 1;
+      var upd = {}; C_SCHEMA[C_TAB.INDIV].forEach(function (k) { upd[k] = r[k]; });
+      upd.active = 'FALSE'; upd.status = 'Inactive'; upd.effective_to = period; upd.version = version; upd.updated_at = now; upd.updated_by = actor;
+      cfgUpsert_(C_TAB.INDIV, upd);
+      histRow_(actor, emp, cid, r.kpi_id, r.kpi_name, 'assignment', 'active', 'removed', 'remove', version, period);
+      changes++;
+    });
+
+    sysLog_(actor, 'info', 'apiSaveKpiConfig', empId + ' — ' + changes + ' change(s), weightage 100%');
+    return jsonSafe_({ ok: true, changes: changes, model: buildModel_(null, month || null) });
+  } catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiSaveKpiConfig' }; }
+}
+
+function ensureMaster_(kpiId, d, empId, actor, now) {
+  var existing = cfgFind_(C_TAB.MASTER, { kpi_id: kpiId })[0];
+  var version = existing ? (Number(existing.version) || 1) + 1 : 1;
+  cfgUpsert_(C_TAB.MASTER, { kpi_id: kpiId, kra_name: d.kra_name, perspective: d.perspective, kpi_name: d.kpi_name,
+    measurement_type: d.measurement_type, direction: d.direction, default_weightage: d.weightage,
+    source_of_tracking: d.source_of_tracking, goal_description: d.goal_description,
+    owner_scope: (existing && existing.owner_scope === 'shared') ? 'shared' : empId, active: 'TRUE',
+    created_at: existing ? existing.created_at : now, created_by: existing ? existing.created_by : actor,
+    updated_at: now, updated_by: actor, version: version });
 }

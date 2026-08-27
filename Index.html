@@ -666,6 +666,73 @@ button.pscore:hover .bdg{background:var(--accent);color:#fff}
 /* Rank/list rows: rounded hover fills, tabular scores. */
 .rrow,.acard,.cmp-row,.act-r{border-radius:var(--r-ctl)}
 @media(max-width:560px){.page-h h1{font-size:18px}}
+
+/* ============================== KRA / KPI CONFIG EDITOR ================= */
+.cfg-edit{display:inline-flex;align-items:center;gap:6px;margin-left:var(--s3);border:1px solid var(--line-2);
+  background:var(--card);color:var(--accent-2);font:inherit;font-size:var(--fs-xs);font-weight:var(--fw-b);
+  padding:6px 12px;border-radius:var(--r-pill);cursor:pointer;transition:border-color var(--d1) var(--ease),background var(--d1) var(--ease)}
+.cfg-edit svg{width:14px;height:14px}
+.cfg-edit:hover{border-color:var(--accent);background:var(--accent-soft)}
+.cfg-head{display:flex;flex-direction:column;gap:var(--s3);margin-bottom:var(--s5)}
+.cfg-title h1{font-size:var(--fs-xxl);font-weight:var(--fw-h);letter-spacing:-.025em}
+.cfg-title .kind{color:var(--muted);font-size:var(--fs-sm);margin-top:2px}
+.cfg-title .dot{margin:0 5px;color:var(--faint)}
+.cfg-bar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:var(--s4);flex-wrap:wrap;
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);padding:var(--s3) var(--s4);
+  box-shadow:var(--shadow-1),var(--hair);margin-bottom:var(--s3)}
+.cfg-total{display:flex;align-items:baseline;gap:8px;font-size:var(--fs-sm);color:var(--ink-2);font-weight:var(--fw-m)}
+.cfg-total b{font-size:var(--fs-lg);font-weight:var(--fw-h);font-variant-numeric:tabular-nums}
+.cfg-total span{font-size:var(--fs-2xs);color:var(--muted);font-weight:var(--fw-m)}
+.cfg-total.ok b{color:var(--good)} .cfg-total.bad b{color:var(--bad)}
+.cfg-actions{margin-left:auto;display:flex;gap:var(--s2);flex-wrap:wrap}
+.cfg-note{font-size:var(--fs-2xs);color:var(--muted);margin:0 0 var(--s5);line-height:1.55}
+.cfg-rows{display:flex;flex-direction:column;gap:var(--s4)}
+.cfg-row{background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);
+  padding:var(--s4) var(--s5);box-shadow:var(--shadow-1),var(--hair)}
+.cfg-row-h{display:flex;align-items:center;gap:var(--s3);margin-bottom:var(--s3)}
+.cfg-row-h .cfg-f-kpi{flex:1;font-size:var(--fs-md);font-weight:var(--fw-b)}
+.cfg-rm{flex:0 0 auto;width:30px;height:30px;border-radius:var(--r-ctl);border:1px solid var(--line-2);
+  background:var(--card);color:var(--muted);font-size:19px;line-height:1;cursor:pointer;
+  transition:all var(--d1) var(--ease)}
+.cfg-rm:hover{border-color:var(--bad);color:var(--bad);background:var(--bad-soft)}
+.cfg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:var(--s3) var(--s4)}
+.cfg-field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.cfg-field.cfg-full{margin-top:var(--s3)}
+.cfg-field>span{font-size:var(--fs-2xs);font-weight:var(--fw-b);color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.cfg-in{width:100%;font-family:var(--font);font-size:var(--fs-sm);font-weight:var(--fw-m);color:var(--ink);
+  background:var(--bg-2);border:1px solid var(--line-2);border-radius:var(--r-ctl);padding:8px 10px;
+  transition:border-color var(--d1) var(--ease),box-shadow var(--d1) var(--ease)}
+.cfg-in:focus{outline:none;border-color:var(--accent);box-shadow:var(--ring);background:var(--card)}
+select.cfg-in{cursor:pointer;-webkit-appearance:none;appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+  background-position:calc(100% - 15px) 52%,calc(100% - 10px) 52%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:26px}
+textarea.cfg-in{resize:vertical;min-height:44px;line-height:1.5}
+.cfg-suffix{position:relative;display:flex;align-items:center}
+.cfg-suffix .cfg-f-wt{padding-right:26px;font-variant-numeric:tabular-nums}
+.cfg-suffix em{position:absolute;right:11px;font-style:normal;color:var(--muted);font-weight:var(--fw-b);font-size:var(--fs-xs);pointer-events:none}
+.cfg-addbig{margin-top:var(--s4);width:100%;border:1px dashed var(--line-2);background:var(--bg-2);color:var(--accent-2);
+  font:inherit;font-weight:var(--fw-b);font-size:var(--fs-sm);padding:12px;border-radius:var(--r-card);cursor:pointer;
+  transition:border-color var(--d1) var(--ease),background var(--d1) var(--ease)}
+.cfg-addbig:hover{border-color:var(--accent);background:var(--accent-soft)}
+/* Change history */
+#cfg-history{padding:var(--s2) var(--s3)}
+.cfg-hist-empty{color:var(--muted);font-size:var(--fs-sm);padding:var(--s3) var(--s2)}
+.cfg-h{padding:var(--s3) var(--s2);border-bottom:1px solid var(--line-soft)}
+.cfg-h:last-child{border-bottom:none}
+.cfg-h-top{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap}
+.cfg-h-act{font-size:var(--fs-3xs);font-weight:var(--fw-b);text-transform:uppercase;letter-spacing:.05em;
+  padding:2px 8px;border-radius:var(--r-pill);background:var(--surface);color:var(--muted)}
+.cfg-h-act.a-create,.cfg-h-act.a-assign{background:var(--accent-soft);color:var(--accent-2)}
+.cfg-h-act.a-update{background:var(--warn-soft);color:var(--warn)}
+.cfg-h-act.a-remove{background:var(--bad-soft);color:var(--bad)}
+.cfg-h-kpi{font-weight:var(--fw-b);color:var(--ink);font-size:var(--fs-sm)}
+.cfg-h-field{font-size:var(--fs-2xs);color:var(--muted);background:var(--surface);padding:1px 7px;border-radius:var(--r-pill)}
+.cfg-h-when{margin-left:auto;font-size:var(--fs-2xs);color:var(--faint);white-space:nowrap}
+.cfg-h-body{margin-top:5px;font-size:var(--fs-xs);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cfg-h-body s{color:var(--muted);text-decoration:line-through;font-variant-numeric:tabular-nums}
+.cfg-h-body b{color:var(--ink);font-weight:var(--fw-b);font-variant-numeric:tabular-nums}
+.cfg-h-arrow{color:var(--faint)}
+@media(max-width:560px){.cfg-h-when{margin-left:0;width:100%}.cfg-actions{width:100%}.cfg-actions .btn{flex:1}}
 </style>
 </head>
 <body>
@@ -1332,6 +1399,7 @@ function doWrite(fn, payload, opts) {
     S.saving = false;
     if (!resp || !resp.ok) { toast((resp && resp.error) || 'Could not save.', 'bad'); return; }
     if (resp.model) { S.model = resp.model; S._demo = null; Hist.clear(); }
+    if (opts.onSuccess) opts.onSuccess(resp);
     if (opts.close) S.detail = null; else refreshDetail();
     render();
     toast(opts.success || 'Saved', 'good');
@@ -1744,8 +1812,11 @@ function EmployeeScreen() {
     MiniStat('Team rank', rank == null ? '—' : rank + '<em> / ' + total + '</em>') +
     '</div>';
 
-  var table = '<div class="block"><div class="sect">Assigned KRA / KPI<span class="r">the exact figures behind the chart</span></div>' +
-    KpiTable(kpis, 'emp|' + m.employee_id, false) + '</div>';
+  var table = '<div class="block"><div class="sect">Assigned KRA / KPI' +
+    '<span class="r">the exact figures behind the chart</span>' +
+    (canConfig(m) ? '<button class="cfg-edit" data-config="' + esc(m.employee_id) + '" title="Configure this individual’s KRA / KPIs">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>Configure</button>' : '') +
+    '</div>' + KpiTable(kpis, 'emp|' + m.employee_id, false) + '</div>';
 
   /* The interactive performance chart leads - what is carrying the score and
      what is dragging on it, with any pending KPIs drawn as hollow bars rather
@@ -1754,6 +1825,120 @@ function EmployeeScreen() {
   return back + head + mini + PerfChart(m) + HistoryPanel(m) + table;
 }
 function MiniStat(l, v) { return '<div class="mstat"><div class="l">' + esc(l) + '</div><div class="v">' + v + '</div></div>'; }
+
+/* ============================== KRA / KPI CONFIG ======================
+   Individual configuration editor: add / modify / remove the KRA/KPIs assigned
+   to one person and set their weightage, target and parameters. While the editor
+   is open the FORM is the source of truth — add/remove manipulate the DOM
+   directly and never trigger an app re-render, so nothing typed is lost. Save
+   collects the rows; the server reconciles them against the dedicated config
+   sheet and returns the recomputed model. Every change is versioned there and
+   logged with old -> new values, shown back in the Change history panel. */
+function canConfig(m) {
+  var s = S.session; if (!s) return false;
+  /* Respect the "view as" preview role so the editor is hidden when previewing
+     an Employee; HR / Management / a manager may configure. The server enforces
+     the authoritative rule (and that a manager only edits their own reports). */
+  var role = (typeof effRole === 'function') ? effRole() : (s.role || 'Management');
+  return role === 'HR' || role === 'Management' || role === 'Manager';
+}
+var CFG_UNITS = [['PERCENT', '%'], ['CR', '₹ Cr'], ['MT', 'MT'], ['DAYS', 'Days'], ['COUNT', 'Count']];
+var CFG_DIRS = [['HIGHER_IS_BETTER', 'Higher is better'], ['LOWER_IS_BETTER', 'Lower is better']];
+function cfgOpts(opts, sel) {
+  return opts.map(function (o) { return '<option value="' + esc(o[0]) + '"' + (o[0] === sel ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('');
+}
+function cfgField(label, control, cls) {
+  return '<label class="cfg-field ' + (cls || '') + '"><span>' + esc(label) + '</span>' + control + '</label>';
+}
+function cfgRowHtml(it) {
+  it = it || {};
+  return '<div class="cfg-row" data-kpi-id="' + esc(it.kpi_id || '') + '" data-config-id="' + esc(it.config_id || '') + '">' +
+    '<div class="cfg-row-h">' +
+      '<input class="cfg-in cfg-f-kpi" placeholder="KPI name" value="' + esc(it.kpi || '') + '" aria-label="KPI name">' +
+      '<button type="button" class="cfg-rm" data-cfg-remove aria-label="Remove this KPI" title="Remove KPI">×</button>' +
+    '</div>' +
+    '<div class="cfg-grid">' +
+      cfgField('KRA', '<input class="cfg-in cfg-f-kra" placeholder="KRA" value="' + esc(it.kra || '') + '">') +
+      cfgField('Perspective', '<input class="cfg-in cfg-f-persp" placeholder="Perspective" value="' + esc(it.perspective || '') + '">') +
+      cfgField('Weightage', '<span class="cfg-suffix"><input class="cfg-in cfg-f-wt" type="number" min="0" max="100" step="0.5" value="' + (it.weightage != null && it.weightage !== '' ? esc(it.weightage) : '') + '"><em>%</em></span>') +
+      cfgField('Measurement', '<select class="cfg-in cfg-f-unit">' + cfgOpts(CFG_UNITS, it.unit || 'PERCENT') + '</select>') +
+      cfgField('Direction', '<select class="cfg-in cfg-f-dir">' + cfgOpts(CFG_DIRS, it.direction || 'HIGHER_IS_BETTER') + '</select>') +
+      cfgField('Target (' + esc(monthShort(S.month)) + ')', '<input class="cfg-in cfg-f-target" type="number" step="any" placeholder="—" value="' + (it.target != null && it.target !== '' ? esc(it.target) : '') + '">') +
+      cfgField('Source of tracking', '<input class="cfg-in cfg-f-source" placeholder="e.g. Monthly MIS" value="' + esc(it.source || '') + '">') +
+    '</div>' +
+    cfgField('Goal / description', '<textarea class="cfg-in cfg-f-goal" rows="2" placeholder="What good looks like for this KPI">' + esc(it.goal || '') + '</textarea>', 'cfg-full') +
+    '</div>';
+}
+function cfgMemberFor(id) {
+  return ((Sel.model() && Sel.model().scorecards) || []).filter(function (x) { return x.employee_id === id; })[0] || null;
+}
+function ConfigScreen() {
+  var m = cfgMemberFor(S.configFor);
+  if (!m) { S.configFor = null; return PageHead('Not found', '') + '<div class="empty">That employee is not available for this period.</div>'; }
+  var t = ((Sel.model() && Sel.model().teams) || []).filter(function (x) { return x.team_id === m.team_id; })[0];
+  var rows = (m.kpis || []).map(cfgRowHtml).join('');
+  var head = '<div class="cfg-head"><button class="back" data-cfg-cancel>‹ Back to profile</button>' +
+    '<div class="cfg-title"><h1>Configure KRA / KPI</h1>' +
+    '<div class="kind">' + esc(m.employee_name) + (t ? ' <span class="dot">·</span> ' + esc(t.team_name) : '') +
+    ' <span class="dot">·</span> targets for ' + esc(monthLabel(S.month)) + '</div></div></div>';
+  var bar = '<div class="cfg-bar"><div class="cfg-total" id="cfg-total"></div>' +
+    '<div class="cfg-actions">' +
+      '<button type="button" class="btn sm sub" data-cfg-add>+ Add KRA / KPI</button>' +
+      '<button type="button" class="btn sm sub" data-cfg-cancel>Cancel</button>' +
+      '<button type="button" class="btn sm" id="cfg-save" data-cfg-save="' + esc(m.employee_id) + '">Save configuration</button>' +
+    '</div></div>';
+  var note = '<p class="cfg-note">Weightages must total 100%. Changes are versioned and logged individually — editing one person never changes anyone else’s KRA / KPIs.</p>';
+  return head + bar + note +
+    '<div class="cfg-rows" id="cfg-rows">' + rows + '</div>' +
+    '<button type="button" class="cfg-addbig" data-cfg-add>+ Add another KRA / KPI</button>' +
+    '<div class="block" style="margin-top:var(--s7)"><div class="sect">Change history' +
+      '<span class="r">who changed what · newest first</span></div>' +
+      '<div class="pcard" id="cfg-history"><div class="cfg-hist-empty">Loading history…</div></div></div>';
+}
+function cfgCollect() {
+  var items = [];
+  document.querySelectorAll('#cfg-rows .cfg-row').forEach(function (row) {
+    var g = function (sel) { var el = row.querySelector(sel); return el ? String(el.value) : ''; };
+    var tgt = g('.cfg-f-target');
+    items.push({ kpi_id: row.getAttribute('data-kpi-id') || '', config_id: row.getAttribute('data-config-id') || '',
+      kpi: g('.cfg-f-kpi').trim(), kra: g('.cfg-f-kra').trim(), perspective: g('.cfg-f-persp').trim(),
+      weightage: Number(g('.cfg-f-wt')) || 0, unit: g('.cfg-f-unit'), direction: g('.cfg-f-dir'),
+      target: tgt === '' ? null : Number(tgt), source: g('.cfg-f-source').trim(), goal: g('.cfg-f-goal').trim() });
+  });
+  return items;
+}
+function cfgRecalcTotal() {
+  var el = document.getElementById('cfg-total'); if (!el) return;
+  var sum = 0, n = 0;
+  document.querySelectorAll('#cfg-rows .cfg-f-wt').forEach(function (i) { sum += Number(i.value) || 0; n++; });
+  var ok = Math.round(sum) === 100;
+  el.className = 'cfg-total ' + (ok ? 'ok' : 'bad');
+  el.innerHTML = 'Total weightage <b>' + (Math.round(sum * 10) / 10) + '%</b><span>' +
+    (ok ? 'balanced' : 'must equal 100%') + ' · ' + n + ' KPI' + (n === 1 ? '' : 's') + '</span>';
+  var save = document.getElementById('cfg-save'); if (save) save.disabled = !ok || n === 0;
+}
+function cfgAfterRender() {
+  cfgRecalcTotal();
+  if (S._cfgHistFor !== S.configFor) { S._cfgHistFor = S.configFor; cfgLoadHistory(S.configFor); }
+}
+function cfgLoadHistory(empId) {
+  var box = document.getElementById('cfg-history'); if (!box) return;
+  if (!Api.live()) { box.innerHTML = '<div class="cfg-hist-empty">Change history is recorded once configuration is saved through the deployed app.</div>'; return; }
+  Write.call('apiKpiConfig', { employee_id: empId, month: S.month }, function (resp) {
+    var b = document.getElementById('cfg-history'); if (!b) return;
+    var h = (resp && resp.history) || [];
+    b.innerHTML = h.length ? h.map(cfgHistRow).join('') : '<div class="cfg-hist-empty">No changes recorded yet for this individual.</div>';
+  }, function () { var b = document.getElementById('cfg-history'); if (b) b.innerHTML = '<div class="cfg-hist-empty">Could not load history.</div>'; });
+}
+function cfgHistRow(x) {
+  var when = String(x.changed_at || '').slice(0, 16).replace('T', ' ');
+  var isField = x.field && x.field !== 'assignment';
+  var chg = isField ? '<div class="cfg-h-body"><s>' + esc(String(x.old_value == null || x.old_value === '' ? '—' : x.old_value)) +
+    '</s><span class="cfg-h-arrow">→</span><b>' + esc(String(x.new_value == null || x.new_value === '' ? '—' : x.new_value)) + '</b></div>' : '';
+  return '<div class="cfg-h"><div class="cfg-h-top"><span class="cfg-h-act a-' + esc(x.action || '') + '">' + esc(x.action || 'change') + '</span>' +
+    '<span class="cfg-h-kpi">' + esc(x.kpi_name || '') + '</span>' + (isField ? '<span class="cfg-h-field">' + esc(x.field) + '</span>' : '') +
+    '<span class="cfg-h-when">' + esc(when) + ' · ' + esc(x.changed_by || '') + (x.version ? ' · v' + esc(x.version) : '') + '</span></div>' + chg + '</div>';
+}
 
 /* One status bucket per KPI, from the same thresholds as the backend contract,
    so the dashboard filter agrees with every pill and node. */
@@ -2024,7 +2209,8 @@ function render() {
 
   /* Two team-level screens and the profile. Team is the landing view, so an
      unknown or stale view key falls back to it rather than to nothing. */
-  var body = S.employee ? EmployeeScreen()
+  var body = S.configFor ? ConfigScreen()
+    : S.employee ? EmployeeScreen()
     : S.view === 'overview' ? ExecutiveOverview()
     : S.view === 'teams' ? (PageHead('Teams', 'Compare teams · ' + esc(monthLabel(S.month))) + TeamsTable())
     : S.view === 'analytics' ? AnalyticsScreen()
@@ -2035,6 +2221,7 @@ function render() {
     : FlowchartScreen();
   $('#view').innerHTML = body;
   $('#banner').innerHTML = demo || '';   // full-bleed sibling above .wrap, so .demo spans edge to edge
+  if (S.configFor) cfgAfterRender();     // recompute the weightage total and load change history
   renderDrawer();
 }
 
@@ -2088,6 +2275,29 @@ function toView(v) {
 document.addEventListener('click', function (e) {
   var nv = e.target.closest('[data-view]');
   if (nv) { toView(nv.dataset.view); return; }
+  /* Individual KRA/KPI configuration. Add/remove edit the live form DOM in
+     place (no re-render, so nothing typed is lost); Save reconciles server-side. */
+  var openCfg = e.target.closest('[data-config]');
+  if (openCfg) { S.configFor = openCfg.dataset.config; S._cfgHistFor = null; S.detail = null; render(); $('.canvas').scrollTop = 0; return; }
+  var addR = e.target.closest('[data-cfg-add]');
+  if (addR) { var c = document.getElementById('cfg-rows');
+    if (c) { c.insertAdjacentHTML('beforeend', cfgRowHtml({})); cfgRecalcTotal();
+      var last = c.lastElementChild, inp = last && last.querySelector('.cfg-f-kpi'); if (inp) inp.focus(); } return; }
+  var rmR = e.target.closest('[data-cfg-remove]');
+  if (rmR) { var row = rmR.closest('.cfg-row'); if (row) { row.remove(); cfgRecalcTotal(); } return; }
+  if (e.target.closest('[data-cfg-cancel]')) { S.configFor = null; S._cfgHistFor = null; render(); $('.canvas').scrollTop = 0; return; }
+  var svCfg = e.target.closest('[data-cfg-save]');
+  if (svCfg) {
+    var empId = svCfg.dataset.cfgSave, items = cfgCollect();
+    var kept = items.filter(function (it) { return it.kpi; });
+    if (!kept.length) { toast('Add at least one KRA / KPI.', 'bad'); return; }
+    if (kept.some(function (it) { return !it.kpi; })) { toast('Every KPI needs a name.', 'bad'); return; }
+    var tot = kept.reduce(function (a, it) { return a + (Number(it.weightage) || 0); }, 0);
+    if (Math.round(tot) !== 100) { toast('Weightages must total 100% (now ' + (Math.round(tot * 10) / 10) + '%).', 'bad'); return; }
+    doWrite('apiSaveKpiConfig', { employee_id: empId, month: S.month, items: kept },
+      { success: 'Configuration saved · scores recomputed', onSuccess: function () { S.configFor = null; S._cfgHistFor = null; S.employee = empId; } });
+    return;
+  }
   var kf = e.target.closest('[data-kfilter]');
   if (kf) { S.kpiFilter = kf.dataset.kfilter; render(); return; }
   // Donut legend → open the KPI list already filtered to that status slice.
@@ -2192,6 +2402,11 @@ document.addEventListener('change', function (e) {
     if (S.view === 'profile') { var l = Sel.lead(); S.employee = l ? l.employee_id : null; }
     render(); $('.canvas').scrollTop = 0;
   }
+});
+/* Live weightage total as the config form is typed (the form is not re-rendered
+   while open, so this updates the running total and the Save gate directly). */
+document.addEventListener('input', function (e) {
+  if (S.configFor && e.target.classList && e.target.classList.contains('cfg-f-wt')) cfgRecalcTotal();
 });
 document.addEventListener('keydown', function (e) {
   // While the drawer is open: Escape closes it, Tab stays trapped inside it.
