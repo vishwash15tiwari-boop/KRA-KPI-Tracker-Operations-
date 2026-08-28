@@ -855,6 +855,13 @@ textarea.cfg-in{resize:vertical;min-height:44px;line-height:1.5}
 .map-v{font-size:var(--fs-sm);font-weight:var(--fw-b);color:var(--ink);margin-top:4px;line-height:1.3;
   overflow:hidden;text-overflow:ellipsis}
 .map-arrow{display:flex;align-items:center;color:var(--faint);font-weight:var(--fw-b);flex:0 0 auto}
+/* Auto-assign */
+.aa-assignee{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:var(--s3);padding:var(--s3) var(--s4);
+  background:var(--accent-soft);border:1px solid var(--accent-glow);border-radius:var(--r-ctl);font-size:var(--fs-sm);color:var(--ink-2)}
+.aa-assignee b{color:var(--ink);font-weight:var(--fw-b)}
+.aa-assignee em{font-style:normal;color:var(--muted);font-size:var(--fs-2xs);margin-left:auto}
+.auto-tag{margin-left:8px;font-size:var(--fs-3xs);font-weight:var(--fw-b);text-transform:uppercase;letter-spacing:.05em;
+  color:var(--accent-2);background:var(--accent-soft);padding:1px 6px;border-radius:var(--r-pill);vertical-align:middle}
 </style>
 </head>
 <body>
@@ -1575,6 +1582,56 @@ function ActionCard(a) {
       (a.due_date ? ' · due ' + esc(String(a.due_date).slice(0, 10)) : '') + '</div></button>';
 }
 var ACTION_TABS = [['open', 'Open'], ['mine', 'Mine'], ['overdue', 'Overdue'], ['completed', 'Completed'], ['all', 'All']];
+/* ============================== AUTO-ASSIGN TASKS =====================
+   A task is an Action; auto-assign picks the eligible person on the team who
+   carries the chosen KRA/KPI (least-loaded by default). Same Action record, so
+   it shows up in the Action Tracker with owner + status like any other. */
+function teamKpiOptions(teamId, sel) {
+  var members = ((Sel.model() && Sel.model().scorecards) || []).filter(function (sc) { return sc.team_id === teamId; });
+  var seen = {}, opts = '<option value="">— team-wide task —</option>';
+  members.forEach(function (sc) {
+    (sc.kpis || []).forEach(function (k) {
+      if (seen[k.kpi]) return; seen[k.kpi] = 1;
+      opts += '<option value="' + esc(k.kpi_id) + '" data-name="' + esc(k.kpi) + '"' + (k.kpi_id === sel ? ' selected' : '') + '>' + esc(k.kpi) + '</option>';
+    });
+  });
+  return opts;
+}
+function clientAutoAssignee(teamId, kpiId, kpiName) {
+  var model = Sel.model() || {}, members = (model.scorecards || []).filter(function (sc) { return sc.team_id === teamId; });
+  if (!members.length) return null;
+  var elig = members.filter(function (sc) { return (sc.kpis || []).some(function (k) { return (kpiId && k.kpi_id === kpiId) || (kpiName && k.kpi === kpiName); }); });
+  if (!elig.length) elig = members;
+  var actions = model.actions || [];
+  var open = function (id) { return actions.filter(function (a) { return a.employee_id === id && a.status !== 'Completed' && a.status !== 'Cancelled'; }).length; };
+  var pick = elig.slice().sort(function (a, b) { return open(a.employee_id) - open(b.employee_id); })[0];
+  return pick ? { name: pick.employee_name, open: open(pick.employee_id), eligible: elig.length } : null;
+}
+function aaPreview() {
+  var t = $('#aa-team'), k = $('#aa-kpi'), box = $('#aa-assignee'); if (!t || !box) return;
+  var opt = k && k.options[k.selectedIndex];
+  var pick = clientAutoAssignee(t.value, k ? k.value : '', opt ? opt.getAttribute('data-name') : '');
+  box.innerHTML = pick
+    ? '<span class="cdot good"></span>Will be assigned to <b>' + esc(pick.name) + '</b><em>' + pick.open + ' open · ' + pick.eligible + ' eligible · least-loaded</em>'
+    : '<span class="cdot warn"></span>No eligible employee on this team.';
+}
+function AutoAssignBody() {
+  var teams = Sel.teams(), curTeam = S.team || (teams[0] && teams[0].team_id) || '';
+  var teamOpts = teams.map(function (t) { return '<option value="' + esc(t.team_id) + '"' + (t.team_id === curTeam ? ' selected' : '') + '>' + esc(t.team_name) + '</option>'; }).join('');
+  var priOpts = ['High', 'Medium', 'Low'].map(function (x) { return '<option' + (x === 'Medium' ? ' selected' : '') + '>' + x + '</option>'; }).join('');
+  return '<div class="d-h"><div><div class="eyebrow">Create &amp; auto-assign</div><h2>Auto-assign task</h2></div>' +
+    '<button class="x" data-close="1" aria-label="Close">×</button></div>' +
+    '<div class="d-b">' +
+      '<div class="field"><span class="lb">Team</span><select class="inp" id="aa-team">' + teamOpts + '</select></div>' +
+      '<div class="field"><span class="lb">KRA / KPI</span><select class="inp" id="aa-kpi">' + teamKpiOptions(curTeam) + '</select></div>' +
+      '<div class="field"><span class="lb">Task title</span><input class="inp" id="aa-title" placeholder="What needs doing"></div>' +
+      '<div class="frow"><div class="field"><span class="lb">Priority</span><select class="inp" id="aa-pri">' + priOpts + '</select></div>' +
+        '<div class="field"><span class="lb">Due date</span><input class="inp" id="aa-due" type="date"></div></div>' +
+      '<div class="aa-assignee" id="aa-assignee"></div>' +
+      '<p class="tr-note">The task is created as an Action and assigned automatically to the eligible person on the team who carries this KPI (fewest open tasks wins). Admins set the rule in Lookup_Master.</p>' +
+      '<div class="fbtns"><button class="btn sm" data-doautoassign="1">Create &amp; auto-assign</button></div>' +
+    '</div>';
+}
 function ActionsScreen() {
   var acts = allActions(), me = S.session && S.session.employee_id, filt = S.actionFilter || 'open';
   var counts = { open: acts.filter(isOpenAct).length, mine: acts.filter(function (a) { return me && a.employee_id === me; }).length,
@@ -1592,14 +1649,18 @@ function ActionsScreen() {
   }).join('') + '</div>';
   var rows = shown.length ? shown.map(function (a) {
     var over = isOverdue(a);
+    var auto = String(a.created_by || '').indexOf('Auto-assign') === 0;
     return '<button type="button" class="act-r" data-openaction="' + esc(a.action_id) + '">' +
       '<span class="pri ' + esc(a.priority || 'Medium') + '">' + esc((a.priority || 'M').slice(0, 1)) + '</span>' +
-      '<span class="an">' + esc(a.title) + '<small>' + (a.kpi_id ? esc(kpiNameOf(a.employee_id, a.kpi_id)) + ' · ' : '') + esc(ownerName(a.employee_id)) + '</small></span>' +
+      '<span class="an">' + esc(a.title) + (auto ? '<span class="auto-tag" title="Auto-assigned by team KRA/KPI">auto</span>' : '') +
+        '<small>' + (a.kpi_id ? esc(kpiNameOf(a.employee_id, a.kpi_id)) + ' · ' : '') + esc(ownerName(a.employee_id)) + '</small></span>' +
       '<span class="act-due' + (over ? ' over' : '') + '">' + (a.due_date ? esc(String(a.due_date).slice(0, 10)) : '—') + '</span>' +
       '<span class="ast ' + (over ? 'Blocked' : esc(a.status)) + '">' + (over ? 'Overdue' : esc(a.status)) + '</span></button>';
   }).join('') : '<div class="empty">No ' + (filt === 'all' ? '' : esc(filt) + ' ') + 'actions ' + (acts.length ? 'in this view.' : 'yet — raise one from any at-risk KPI.') + '</div>';
   return PageHead('Action Tracker', 'Corrective actions · ' + esc(monthLabel(S.month))) +
-    '<div class="block"><div class="sect">Actions<span class="r"><button class="btn sm" data-newaction="team">+ New action</button></span></div>' +
+    '<div class="block"><div class="sect">Actions<span class="r">' +
+      (canConfig() ? '<button class="btn sm sub" data-autoassign="1" title="Create a task and auto-assign it by the team KRA/KPI">⚡ Auto-assign task</button> ' : '') +
+      '<button class="btn sm" data-newaction="team">+ New action</button></span></div>' +
     tabs + '<div class="panel" style="padding:0 var(--s3)">' + rows + '</div></div>';
 }
 var HINT = '<span style="font-weight:500;text-transform:none;letter-spacing:0;color:var(--faint)">';
@@ -2057,8 +2118,10 @@ function FlowchartScreen() {
 
   var trend = '<div class="block"><div class="sect">Team score trend<span class="r">mean overall score by month</span></div>' +
     '<div class="pcard">' + BarTrend(teamTrend(t.team_id), { label: 'Team score', max: 100, empty: 'A trend appears once this team carries more than one measured period.' }) + '</div></div>';
-  var kra = '<div class="block"><div class="sect">KRA performance<span class="r">achievement %</span></div>' +
-    '<div class="pcard">' + KraBars(Sel.byKra(allK)) + '</div></div>';
+  var kra = '<div class="block"><div class="sect">KRA performance<span class="r">achievement %</span>' +
+    (canConfig() ? '<button class="cfg-edit" data-configteam="' + esc(t.team_id) + '" title="Edit this team’s KRA / KPI template">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>Configure team</button>' : '') +
+    '</div><div class="pcard">' + KraBars(Sel.byKra(allK)) + '</div></div>';
   var rank = '<div class="block"><div class="sect">Ranking<span class="r">by overall score</span></div>' +
     '<div class="pcard" style="padding-top:var(--s2);padding-bottom:var(--s2)">' + RankList(members, true) + '</div></div>';
 
@@ -2159,28 +2222,51 @@ function cfgRowHtml(it) {
 function cfgMemberFor(id) {
   return ((Sel.model() && Sel.model().scorecards) || []).filter(function (x) { return x.employee_id === id; })[0] || null;
 }
-function ConfigScreen() {
-  var m = cfgMemberFor(S.configFor);
-  if (!m) { S.configFor = null; return PageHead('Not found', '') + '<div class="empty">That employee is not available for this period.</div>'; }
-  var t = ((Sel.model() && Sel.model().teams) || []).filter(function (x) { return x.team_id === m.team_id; })[0];
-  var rows = (m.kpis || []).map(cfgRowHtml).join('');
-  var head = '<div class="cfg-head"><button class="back" data-cfg-cancel>‹ Back to profile</button>' +
-    '<div class="cfg-title"><h1>Configure KRA / KPI</h1>' +
-    '<div class="kind">' + esc(m.employee_name) + (t ? ' <span class="dot">·</span> ' + esc(t.team_name) : '') +
-    ' <span class="dot">·</span> targets for ' + esc(monthLabel(S.month)) + '</div></div></div>';
+/* The one editor, two subjects: an individual (S.configFor) or a team template
+   (S.configTeam). Same rows, same collect, same weightage gate — no duplicate
+   screen. A team template seeds from a member who has no personal override, so
+   it reflects the team's current KRA/KPIs. */
+function teamSeedMember(teamId) {
+  var ms = ((Sel.model() && Sel.model().scorecards) || []).filter(function (sc) { return sc.team_id === teamId; });
+  var pref = ms.filter(function (m) { return !m.configured || m.team_configured; });
+  return pref.filter(function (m) { return !m.reporting_manager; })[0] || pref[0] ||
+    ms.filter(function (m) { return !m.reporting_manager; })[0] || ms[0] || null;
+}
+function cfgShell(title, kind, rows, saveBtn, note, histLabel, backLabel) {
+  var head = '<div class="cfg-head"><button class="back" data-cfg-cancel>‹ ' + esc(backLabel) + '</button>' +
+    '<div class="cfg-title"><h1>' + esc(title) + '</h1><div class="kind">' + kind + '</div></div></div>';
   var bar = '<div class="cfg-bar"><div class="cfg-total" id="cfg-total"></div>' +
     '<div class="cfg-actions">' +
       '<button type="button" class="btn sm sub" data-cfg-add>+ Add KRA / KPI</button>' +
-      '<button type="button" class="btn sm sub" data-cfg-cancel>Cancel</button>' +
-      '<button type="button" class="btn sm" id="cfg-save" data-cfg-save="' + esc(m.employee_id) + '">Save configuration</button>' +
+      '<button type="button" class="btn sm sub" data-cfg-cancel>Cancel</button>' + saveBtn +
     '</div></div>';
-  var note = '<p class="cfg-note">Weightages must total 100%. Changes are versioned and logged individually — editing one person never changes anyone else’s KRA / KPIs.</p>';
-  return head + bar + note +
+  return head + bar + '<p class="cfg-note">' + note + '</p>' +
     '<div class="cfg-rows" id="cfg-rows">' + rows + '</div>' +
     '<button type="button" class="cfg-addbig" data-cfg-add>+ Add another KRA / KPI</button>' +
-    '<div class="block" style="margin-top:var(--s7)"><div class="sect">Change history' +
-      '<span class="r">who changed what · newest first</span></div>' +
+    '<div class="block" style="margin-top:var(--s7)"><div class="sect">Change history<span class="r">' + esc(histLabel) + '</span></div>' +
       '<div class="pcard" id="cfg-history"><div class="cfg-hist-empty">Loading history…</div></div></div>';
+}
+function ConfigScreen() {
+  if (S.configTeam) {
+    var teamId = S.configTeam;
+    var t = ((Sel.model() && Sel.model().teams) || []).filter(function (x) { return x.team_id === teamId; })[0];
+    if (!t) { S.configTeam = null; return PageHead('Not found', '') + '<div class="empty">That team is not available.</div>'; }
+    var members = ((Sel.model() && Sel.model().scorecards) || []).filter(function (sc) { return sc.team_id === teamId; });
+    var seed = teamSeedMember(teamId);
+    var trows = ((seed && seed.kpis) || []).map(cfgRowHtml).join('');
+    var tkind = esc(t.team_name) + ' <span class="dot">·</span> ' + plural(members.length, 'member') + ' <span class="dot">·</span> targets for ' + esc(monthLabel(S.month));
+    var tsave = '<button type="button" class="btn sm" id="cfg-save" data-cfg-save-team="' + esc(teamId) + '">Save team template</button>';
+    var tnote = 'This is the <b>team template</b> — weightages must total 100%. Saving applies immediately to everyone on ' + esc(t.team_name) + ' who doesn’t have a personal override; individually-configured people keep their own set. Every change is versioned and logged.';
+    return cfgShell('Configure team KRA / KPI', tkind, trows, tsave, tnote, 'team template · newest first', 'Back to team');
+  }
+  var m = cfgMemberFor(S.configFor);
+  if (!m) { S.configFor = null; return PageHead('Not found', '') + '<div class="empty">That employee is not available for this period.</div>'; }
+  var tm = ((Sel.model() && Sel.model().teams) || []).filter(function (x) { return x.team_id === m.team_id; })[0];
+  var rows = (m.kpis || []).map(cfgRowHtml).join('');
+  var kind = esc(m.employee_name) + (tm ? ' <span class="dot">·</span> ' + esc(tm.team_name) : '') + ' <span class="dot">·</span> targets for ' + esc(monthLabel(S.month));
+  var save = '<button type="button" class="btn sm" id="cfg-save" data-cfg-save="' + esc(m.employee_id) + '">Save configuration</button>';
+  var note = 'Weightages must total 100%. Changes are versioned and logged individually — editing one person never changes anyone else’s KRA / KPIs.';
+  return cfgShell('Configure KRA / KPI', kind, rows, save, note, 'who changed what · newest first', 'Back to profile');
 }
 function cfgCollect() {
   var items = [];
@@ -2194,6 +2280,15 @@ function cfgCollect() {
   });
   return items;
 }
+/* Collect + validate (shared by the individual and team save). Returns the
+   kept rows, or null after toasting the reason. */
+function cfgCollectValid() {
+  var kept = cfgCollect().filter(function (it) { return it.kpi; });
+  if (!kept.length) { toast('Add at least one KRA / KPI.', 'bad'); return null; }
+  var tot = kept.reduce(function (a, it) { return a + (Number(it.weightage) || 0); }, 0);
+  if (Math.round(tot) !== 100) { toast('Weightages must total 100% (now ' + (Math.round(tot * 10) / 10) + '%).', 'bad'); return null; }
+  return kept;
+}
 function cfgRecalcTotal() {
   var el = document.getElementById('cfg-total'); if (!el) return;
   var sum = 0, n = 0;
@@ -2206,15 +2301,19 @@ function cfgRecalcTotal() {
 }
 function cfgAfterRender() {
   cfgRecalcTotal();
-  if (S._cfgHistFor !== S.configFor) { S._cfgHistFor = S.configFor; cfgLoadHistory(S.configFor); }
+  var subj = S.configTeam ? 'TEAM:' + S.configTeam : S.configFor;
+  if (S._cfgHistFor !== subj) { S._cfgHistFor = subj; cfgLoadHistory(); }
 }
-function cfgLoadHistory(empId) {
+function cfgLoadHistory() {
   var box = document.getElementById('cfg-history'); if (!box) return;
   if (!Api.live()) { box.innerHTML = '<div class="cfg-hist-empty">Change history is recorded once configuration is saved through the deployed app.</div>'; return; }
-  Write.call('apiKpiConfig', { employee_id: empId, month: S.month }, function (resp) {
+  var fn = S.configTeam ? 'apiTeamKpiConfig' : 'apiKpiConfig';
+  var payload = S.configTeam ? { team_id: S.configTeam, month: S.month } : { employee_id: S.configFor, month: S.month };
+  var noneMsg = S.configTeam ? 'No changes recorded yet for this team template.' : 'No changes recorded yet for this individual.';
+  Write.call(fn, payload, function (resp) {
     var b = document.getElementById('cfg-history'); if (!b) return;
     var h = (resp && resp.history) || [];
-    b.innerHTML = h.length ? h.map(cfgHistRow).join('') : '<div class="cfg-hist-empty">No changes recorded yet for this individual.</div>';
+    b.innerHTML = h.length ? h.map(cfgHistRow).join('') : '<div class="cfg-hist-empty">' + noneMsg + '</div>';
   }, function () { var b = document.getElementById('cfg-history'); if (b) b.innerHTML = '<div class="cfg-hist-empty">Could not load history.</div>'; });
 }
 function cfgHistRow(x) {
@@ -2426,6 +2525,7 @@ function renderDrawer() {
   if (det.kind === 'action'){ dr.innerHTML = ActionBody(det.action); openDrawer(dr, sc, app); return; }
   if (det.kind === 'review'){ dr.innerHTML = ReviewBody(det.emp); openDrawer(dr, sc, app); return; }
   if (det.kind === 'assign'){ dr.innerHTML = AssignBody(det.emp); openDrawer(dr, sc, app); return; }
+  if (det.kind === 'autoassign'){ dr.innerHTML = AutoAssignBody(); openDrawer(dr, sc, app); setTimeout(aaPreview, 0); return; }
 
   var k = det.kpi;
   var achW = k.achievement == null ? 0 : Math.max(0, Math.min(100, k.achievement / 105 * 100));
@@ -2571,7 +2671,7 @@ function render() {
 
   /* Two team-level screens and the profile. Team is the landing view, so an
      unknown or stale view key falls back to it rather than to nothing. */
-  var body = S.configFor ? ConfigScreen()
+  var body = (S.configFor || S.configTeam) ? ConfigScreen()
     : S.employee ? EmployeeScreen()
     : S.view === 'overview' ? ExecutiveOverview()
     : S.view === 'teams' ? (PageHead('Teams', 'Compare teams · ' + esc(monthLabel(S.month))) + TeamsTable())
@@ -2585,7 +2685,7 @@ function render() {
     : FlowchartScreen();
   $('#view').innerHTML = body;
   $('#banner').innerHTML = demo || '';   // full-bleed sibling above .wrap, so .demo spans edge to edge
-  if (S.configFor) cfgAfterRender();     // recompute the weightage total and load change history
+  if (S.configFor || S.configTeam) cfgAfterRender();     // recompute the weightage total and load change history
   renderDrawer();
 }
 
@@ -2642,24 +2742,33 @@ document.addEventListener('click', function (e) {
   /* Individual KRA/KPI configuration. Add/remove edit the live form DOM in
      place (no re-render, so nothing typed is lost); Save reconciles server-side. */
   var openCfg = e.target.closest('[data-config]');
-  if (openCfg) { S.configFor = openCfg.dataset.config; S._cfgHistFor = null; S.detail = null; render(); $('.canvas').scrollTop = 0; return; }
+  if (openCfg) { S.configFor = openCfg.dataset.config; S.configTeam = null; S._cfgHistFor = null; S.detail = null; render(); $('.canvas').scrollTop = 0; return; }
+  var openCfgT = e.target.closest('[data-configteam]');
+  if (openCfgT) { S.configTeam = openCfgT.dataset.configteam; S.configFor = null; S._cfgHistFor = null; S.detail = null; render(); $('.canvas').scrollTop = 0; return; }
   var addR = e.target.closest('[data-cfg-add]');
   if (addR) { var c = document.getElementById('cfg-rows');
     if (c) { c.insertAdjacentHTML('beforeend', cfgRowHtml({})); cfgRecalcTotal();
       var last = c.lastElementChild, inp = last && last.querySelector('.cfg-f-kpi'); if (inp) inp.focus(); } return; }
   var rmR = e.target.closest('[data-cfg-remove]');
   if (rmR) { var row = rmR.closest('.cfg-row'); if (row) { row.remove(); cfgRecalcTotal(); } return; }
-  if (e.target.closest('[data-cfg-cancel]')) { S.configFor = null; S._cfgHistFor = null; render(); $('.canvas').scrollTop = 0; return; }
+  if (e.target.closest('[data-cfg-cancel]')) {
+    if (S.configTeam) { S.view = 'team'; S.team = S.configTeam; }
+    S.configFor = null; S.configTeam = null; S._cfgHistFor = null; render(); $('.canvas').scrollTop = 0; return;
+  }
   var svCfg = e.target.closest('[data-cfg-save]');
   if (svCfg) {
-    var empId = svCfg.dataset.cfgSave, items = cfgCollect();
-    var kept = items.filter(function (it) { return it.kpi; });
-    if (!kept.length) { toast('Add at least one KRA / KPI.', 'bad'); return; }
-    if (kept.some(function (it) { return !it.kpi; })) { toast('Every KPI needs a name.', 'bad'); return; }
-    var tot = kept.reduce(function (a, it) { return a + (Number(it.weightage) || 0); }, 0);
-    if (Math.round(tot) !== 100) { toast('Weightages must total 100% (now ' + (Math.round(tot * 10) / 10) + '%).', 'bad'); return; }
+    var kept = cfgCollectValid(); if (!kept) return;
+    var empId = svCfg.dataset.cfgSave;
     doWrite('apiSaveKpiConfig', { employee_id: empId, month: S.month, items: kept },
-      { success: 'Configuration saved · scores recomputed', onSuccess: function () { S.configFor = null; S._cfgHistFor = null; S.employee = empId; } });
+      { success: 'Configuration saved · scores recomputed', onSuccess: function () { S.configFor = null; S.configTeam = null; S._cfgHistFor = null; S.employee = empId; } });
+    return;
+  }
+  var svTeam = e.target.closest('[data-cfg-save-team]');
+  if (svTeam) {
+    var kept2 = cfgCollectValid(); if (!kept2) return;
+    var teamId = svTeam.dataset.cfgSaveTeam;
+    doWrite('apiSaveTeamKpi', { team_id: teamId, month: S.month, items: kept2 },
+      { success: 'Team template saved · applied to the team', onSuccess: function () { S.view = 'team'; S.team = teamId; S.configTeam = null; S.configFor = null; S._cfgHistFor = null; } });
     return;
   }
   /* Employee Directory: open the team-mapping drawer, then reassign. */
@@ -2669,6 +2778,17 @@ document.addEventListener('click', function (e) {
   if (doAsg) { var sel = $('#assign-team'), tid = sel ? sel.value : '';
     if (!tid) { toast('Pick a team first.', 'bad'); return; }
     doWrite('apiAssignTeam', { employee_id: doAsg.dataset.doassign, team_id: tid }, { close: true, success: 'Team reassigned' }); return; }
+  /* Auto-assign a task (Action) by the team KRA/KPI. */
+  if (e.target.closest('[data-autoassign]')) { S._trigger = e.target.closest('[data-autoassign]'); S.detail = { kind: 'autoassign' }; renderDrawer(); return; }
+  if (e.target.closest('[data-doautoassign]')) {
+    var aTeam = $('#aa-team'), aKpi = $('#aa-kpi'), aTitle = $('#aa-title');
+    if (!aTeam || !aTeam.value) { toast('Pick a team.', 'bad'); return; }
+    if (!aTitle || !aTitle.value.trim()) { toast('Give the task a title.', 'bad'); return; }
+    var opt = aKpi && aKpi.options[aKpi.selectedIndex];
+    doWrite('apiAutoAssignTask', { team_id: aTeam.value, kpi_id: aKpi ? aKpi.value : '', kpi_name: opt ? opt.getAttribute('data-name') : '',
+      title: aTitle.value, priority: ($('#aa-pri') || {}).value || 'Medium', due_date: ($('#aa-due') || {}).value || '', month: S.month },
+      { close: true, success: 'Task created & auto-assigned' }); return;
+  }
   var kf = e.target.closest('[data-kfilter]');
   if (kf) { S.kpiFilter = kf.dataset.kfilter; render(); return; }
   // Donut legend → open the KPI list already filtered to that status slice.
@@ -2798,6 +2918,8 @@ document.addEventListener('change', function (e) {
     if (btn) { btn.disabled = !!same; btn.textContent = same ? 'Select a different team' : 'Reassign to ' + tn; }
     if (mt) mt.textContent = tn;   // live-preview the target mapping
   }
+  else if (id === 'aa-team') { var kpiSel = $('#aa-kpi'); if (kpiSel) kpiSel.innerHTML = teamKpiOptions(e.target.value); aaPreview(); }
+  else if (id === 'aa-kpi') { aaPreview(); }
   else if (id === 'f-role') {
     S.viewRole = e.target.value; S.employee = null; S.detail = null;
     S.view = LANDING[S.viewRole] || 'team';
@@ -2808,7 +2930,7 @@ document.addEventListener('change', function (e) {
 /* Live weightage total as the config form is typed (the form is not re-rendered
    while open, so this updates the running total and the Save gate directly). */
 document.addEventListener('input', function (e) {
-  if (S.configFor && e.target.classList && e.target.classList.contains('cfg-f-wt')) cfgRecalcTotal();
+  if ((S.configFor || S.configTeam) && e.target.classList && e.target.classList.contains('cfg-f-wt')) cfgRecalcTotal();
   if (e.target.id === 'dir-search') dirFilter(e.target.value);
 });
 document.addEventListener('keydown', function (e) {

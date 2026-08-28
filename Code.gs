@@ -677,6 +677,7 @@ function buildModel_(teamId, month) {
    * config sheet. Defensive: if that sheet is missing, unshared or empty, the
    * base model passes through untouched. */
   try { applyTeamAssignments_(model); } catch (e) { model.config_note = String(e && e.message || e); }
+  try { applyTeamTemplate_(model, effMonth); } catch (e) { model.config_note = String(e && e.message || e); }
   try { applyIndividualConfig_(model, effMonth); } catch (e) { model.config_note = String(e && e.message || e); }
   /* Monthly-target lifecycle: attach each team's planning state for this month,
    * then apply the close policy (a missing actual becomes a 0% miss once a month
@@ -1215,6 +1216,10 @@ function provisionConfigSheet() {
   ['Active', 'Draft', 'Inactive'].forEach(function (s) { lkAdd('status', s); });
   ['Financial', 'Customer', 'Internal Process', 'Learning & Growth', 'Supply', 'Demand', 'Growth', 'Operations', 'Quality', 'Process', 'Finance'].forEach(function (p) { lkAdd('perspective', p); });
   ['Management', 'HR', 'Manager', 'Employee'].forEach(function (r) { lkAdd('role', r); });
+  // Auto-assignment rule (Feature 3): exactly one row active is the live strategy.
+  lk.push({ lookup_id: 'LK' + ('000' + (++seq)).slice(-3), category: 'assignment_rule', value: 'least_loaded', label: 'Fewest open tasks', sort_order: seq, active: 'TRUE' });
+  lk.push({ lookup_id: 'LK' + ('000' + (++seq)).slice(-3), category: 'assignment_rule', value: 'team_lead', label: 'Team lead', sort_order: seq, active: 'FALSE' });
+  lk.push({ lookup_id: 'LK' + ('000' + (++seq)).slice(-3), category: 'assignment_rule', value: 'round_robin', label: 'Round robin', sort_order: seq, active: 'FALSE' });
   cfgReplaceAll_(C_TAB.LOOKUP, lk);
 
   sysLog_('provision', 'info', 'provisionConfigSheet', out.length + ' tabs; ' + empRows.length + ' employees, ' + masterRows.length + ' KPIs seeded');
@@ -1247,6 +1252,50 @@ function requireEditConfig_(s, empId) {
 /* ---- overlay: fold the individual config onto the base model -------------
  * Called at the end of buildModel_. Defensive: any failure (sheet not shared,
  * not provisioned) leaves the base model exactly as it was. */
+/* Month-scoped targets, read once (MONTHLY_TARGETS overrides the config default). */
+function readMonthTargets_(month) {
+  var tgtBy = {};
+  try { mRead_(M_TAB.TGT).forEach(function (r) { if (monthKey_(r.month) === month) tgtBy[r.employee_id + '|' + r.kpi_id] = r; }); } catch (e) {}
+  return tgtBy;
+}
+
+/* Rebuild one scorecard's KPIs from a set of config rows (individual OR a team
+ * template — the shape is identical). Actuals and the month's target come from
+ * the primary backend for THIS employee, so a template supplies the definition,
+ * weight and default target while the person keeps their own numbers. */
+function overlayKpisFromRows_(sc, rows, tgtBy, month) {
+  var actualBy = {}; sc.kpis.forEach(function (k) { actualBy[k.kpi_id] = k; });
+  var kpis = rows.map(function (r) {
+    var base = actualBy[r.kpi_id] || {};
+    var mt = tgtBy[sc.employee_id + '|' + r.kpi_id];
+    var tv = mt ? numOrNull_(mt.target_value) : numOrNull_(r.target_value);
+    var av = base.actual != null ? base.actual : null;
+    var dir = r.direction || base.direction || 'HIGHER_IS_BETTER', unit = r.measurement_type || r.target_unit || base.unit || '';
+    var sup = suppressTarget_(unit, tv);
+    var ach = (sup || tv == null || av == null) ? null : achievementPct_(tv, av, dir, unit);
+    var wt = numOrNull_(r.weightage) || 0;
+    var ws = ach == null ? null : weightedScore_(wt, ach);
+    var lvl = ach == null ? null : (ach >= 100 ? 5 : ach >= 90 ? 4 : ach >= 75 ? 3 : ach >= 60 ? 2 : 1);
+    return { kpi_id: String(r.kpi_id), config_id: String(r.config_id), perspective: String(r.perspective || ''),
+      kra: String(r.kra_name || ''), kpi: String(r.kpi_name || ''), weightage: wt, goal: String(r.goal_description || ''),
+      source: String(r.source_of_tracking || ''), unit: unit, direction: dir, target: tv, actual: av,
+      achievement: ach, variance: (tv == null || av == null) ? null : round1_(av - tv),
+      weighted_score: ws, level: lvl, status: statusFor_(ach, lvl), configured: true,
+      target_status: targetStatus_(mt), target_version: mt ? (numOrNull_(mt.version) || '') : '',
+      criteria: mt ? String(mt.measurement_criteria || '') : '', waived: mt ? (String(mt.waived).toUpperCase() === 'TRUE') : false,
+      suppressed: sup };
+  });
+  var earned = 0, measured = 0;
+  kpis.forEach(function (r) { if (r.weighted_score != null && isFinite(r.weighted_score)) { earned += r.weighted_score; measured += Number(r.weightage) || 0; } });
+  var memberAch = measured > 0 ? Math.round(earned / measured * 1000) / 10 : null;
+  sc.kpis = kpis; sc.measured_weightage = measured;
+  sc.overall_score = measured > 0 ? Math.round(earned * 10) / 10 : null;
+  sc.kpi_achievement = memberAch; sc.status = statusFor_(memberAch, null); sc.configured = true;
+}
+
+/* Overlay each employee's INDIVIDUAL config (the most specific layer, applied
+ * last so it wins over any team template). Rows keyed 'TEAM:<id>' are team
+ * templates and are skipped here — applyTeamTemplate_ handles those. */
 function applyIndividualConfig_(model, month) {
   var indiv;
   try { indiv = cfgRead_(C_TAB.INDIV); } catch (e) { return model; }
@@ -1254,49 +1303,44 @@ function applyIndividualConfig_(model, month) {
   var byEmp = {};
   indiv.forEach(function (r) {
     if (String(r.active).toUpperCase() === 'FALSE') return;
+    if (String(r.employee_id).indexOf('TEAM:') === 0) return;
     (byEmp[r.employee_id] = byEmp[r.employee_id] || []).push(r);
   });
-  /* Month-scoped target values live in MONTHLY_TARGETS, not the config sheet: the
-   * config carries the DEFAULT target for the assignment, but a specific month's
-   * target (and its Draft/Approved lifecycle) is period data. Prefer the month's
-   * target when one has been set, so a configured person's targets vary by month
-   * exactly like everyone else's. */
-  var tgtBy = {};
-  try { mRead_(M_TAB.TGT).forEach(function (r) { if (monthKey_(r.month) === month) tgtBy[r.employee_id + '|' + r.kpi_id] = r; }); } catch (e) {}
+  var tgtBy = readMonthTargets_(month);
   model.scorecards.forEach(function (sc) {
     var rows = byEmp[sc.employee_id]; if (!rows || !rows.length) return;
-    var actualBy = {}; sc.kpis.forEach(function (k) { actualBy[k.kpi_id] = k; });   // actuals stay on the primary backend
-    var kpis = rows.map(function (r) {
-      var base = actualBy[r.kpi_id] || {};
-      var mt = tgtBy[sc.employee_id + '|' + r.kpi_id];
-      var tv = mt ? numOrNull_(mt.target_value) : numOrNull_(r.target_value);
-      var av = base.actual != null ? base.actual : null;
-      var dir = r.direction || base.direction || 'HIGHER_IS_BETTER', unit = r.measurement_type || r.target_unit || base.unit || '';
-      var sup = suppressTarget_(unit, tv);
-      var ach = (sup || tv == null || av == null) ? null : achievementPct_(tv, av, dir, unit);
-      var wt = numOrNull_(r.weightage) || 0;
-      var ws = ach == null ? null : weightedScore_(wt, ach);
-      var lvl = ach == null ? null : (ach >= 100 ? 5 : ach >= 90 ? 4 : ach >= 75 ? 3 : ach >= 60 ? 2 : 1);
-      return { kpi_id: String(r.kpi_id), config_id: String(r.config_id), perspective: String(r.perspective || ''),
-        kra: String(r.kra_name || ''), kpi: String(r.kpi_name || ''), weightage: wt, goal: String(r.goal_description || ''),
-        source: String(r.source_of_tracking || ''), unit: unit, direction: dir, target: tv, actual: av,
-        achievement: ach, variance: (tv == null || av == null) ? null : round1_(av - tv),
-        weighted_score: ws, level: lvl, status: statusFor_(ach, lvl), configured: true,
-        target_status: targetStatus_(mt), target_version: mt ? (numOrNull_(mt.version) || '') : '',
-        criteria: mt ? String(mt.measurement_criteria || '') : '', waived: mt ? (String(mt.waived).toUpperCase() === 'TRUE') : false,
-        suppressed: sup };
-    });
-    var earned = 0, measured = 0;
-    kpis.forEach(function (r) { if (r.weighted_score != null && isFinite(r.weighted_score)) { earned += r.weighted_score; measured += Number(r.weightage) || 0; } });
-    var memberAch = measured > 0 ? Math.round(earned / measured * 1000) / 10 : null;
-    sc.kpis = kpis; sc.measured_weightage = measured;
-    sc.overall_score = measured > 0 ? Math.round(earned * 10) / 10 : null;
-    sc.kpi_achievement = memberAch; sc.status = statusFor_(memberAch, null); sc.configured = true;
+    overlayKpisFromRows_(sc, rows, tgtBy, month);
   });
   model.records = model.scorecards.reduce(function (s, sc) { return s + sc.kpis.filter(function (k) { return k.achievement != null; }).length; }, 0);
   return model;
 }
 
+/* Overlay a TEAM template onto every member of that team who has no individual
+ * config of their own — so a team-level edit reflects immediately for the whole
+ * team, while a personally-configured member keeps their tailored set. Runs
+ * BEFORE applyIndividualConfig_ (team is the weaker layer). */
+function applyTeamTemplate_(model, month) {
+  var indiv;
+  try { indiv = cfgRead_(C_TAB.INDIV); } catch (e) { return model; }
+  if (!indiv || !indiv.length) return model;
+  var teamTpl = {}, hasIndiv = {};
+  indiv.forEach(function (r) {
+    if (String(r.active).toUpperCase() === 'FALSE') return;
+    var eid = String(r.employee_id);
+    if (eid.indexOf('TEAM:') === 0) { var tid = eid.slice(5); (teamTpl[tid] = teamTpl[tid] || []).push(r); }
+    else hasIndiv[eid] = true;
+  });
+  if (!Object.keys(teamTpl).length) return model;
+  var tgtBy = readMonthTargets_(month);
+  model.scorecards.forEach(function (sc) {
+    if (hasIndiv[sc.employee_id]) return;                 // individual config wins
+    var rows = teamTpl[sc.team_id]; if (!rows || !rows.length) return;
+    overlayKpisFromRows_(sc, rows, tgtBy, month);
+    sc.team_configured = true;
+  });
+  model.records = model.scorecards.reduce(function (s, sc) { return s + sc.kpis.filter(function (k) { return k.achievement != null; }).length; }, 0);
+  return model;
+}
 /* ---- READ one employee's editable config (seeded from base on first edit) - */
 function apiKpiConfig(p) {
   try {
@@ -1322,95 +1366,164 @@ function apiKpiConfig(p) {
 }
 
 /* ---- SAVE: reconcile the desired list, write history + version + log ------ */
+/* Shared reconcile for a "subject" — an individual (employee_id) OR a team
+ * template (subjectId 'TEAM:<id>'). Writes Individual_KRA_KPI + versioned
+ * KRA_KPI_History (one row per changed field, old -> new) and returns the change
+ * count. This is the single configuration path — the team editor and the
+ * individual editor run the exact same logic, just a different subject. */
+function reconcileConfig_(subjectId, subjectName, ownerScope, month, actor, items) {
+  var period = month || '', now = nowIso_(), emp = { employee_id: subjectId, employee_name: subjectName };
+  var prior = {};
+  cfgFind_(C_TAB.INDIV, { employee_id: subjectId }).forEach(function (r) { if (String(r.active).toUpperCase() !== 'FALSE') prior[r.config_id] = r; });
+  var seen = {}, changes = 0;
+  var FIELDS = [['kra', 'kra_name'], ['perspective', 'perspective'], ['kpi', 'kpi_name'], ['weightage', 'weightage'],
+    ['target', 'target_value'], ['unit', 'measurement_type'], ['direction', 'direction'], ['source', 'source_of_tracking'], ['goal', 'goal_description']];
+  items.forEach(function (it) {
+    var cfgId = it.config_id, existing = cfgId ? prior[cfgId] : null;
+    var kpiId = it.kpi_id || existing && existing.kpi_id || ('KPI-CFG-' + uid8_());
+    var unit = ['CR', 'MT', 'COUNT', 'PERCENT', 'DAYS'].indexOf(it.unit) >= 0 ? it.unit : 'PERCENT';
+    var dir = it.direction === 'LOWER_IS_BETTER' ? 'LOWER_IS_BETTER' : 'HIGHER_IS_BETTER';
+    var desired = { kra_name: String(it.kra || 'General').trim(), perspective: String(it.perspective || ''),
+      kpi_name: String(it.kpi).trim(), weightage: Number(it.weightage) || 0,
+      target_value: (it.target == null || it.target === '') ? '' : Number(it.target), target_unit: unit,
+      measurement_type: unit, direction: dir, source_of_tracking: String(it.source || ''), goal_description: String(it.goal || '') };
+    if (!existing) {
+      cfgId = 'CFG-' + uid8_();
+      cfgUpsert_(C_TAB.INDIV, { config_id: cfgId, employee_id: subjectId, kpi_id: kpiId, kra_name: desired.kra_name,
+        perspective: desired.perspective, kpi_name: desired.kpi_name, weightage: desired.weightage,
+        target_value: desired.target_value, target_unit: unit, measurement_type: unit, direction: dir,
+        source_of_tracking: desired.source_of_tracking, goal_description: desired.goal_description,
+        status: 'Active', effective_from: period, effective_to: '', version: 1,
+        created_at: now, created_by: actor, updated_at: now, updated_by: actor, active: 'TRUE' });
+      ensureMaster_(kpiId, desired, ownerScope, actor, now);
+      histRow_(actor, emp, cfgId, kpiId, desired.kpi_name, 'assignment', '', 'created', it.kpi_id ? 'assign' : 'create', 1, period);
+      changes++;
+    } else {
+      var diffs = [];
+      FIELDS.forEach(function (f) {
+        var col = f[1], oldV = existing[col], newV = desired[col];
+        if (String(oldV == null ? '' : oldV) !== String(newV == null ? '' : newV)) diffs.push([col, oldV, newV, f[0]]);
+      });
+      if (diffs.length) {
+        var version = (Number(existing.version) || 1) + 1;
+        var upd = {}; C_SCHEMA[C_TAB.INDIV].forEach(function (k) { upd[k] = existing[k]; });
+        Object.keys(desired).forEach(function (k) { upd[k] = desired[k]; });
+        upd.version = version; upd.updated_at = now; upd.updated_by = actor; upd.active = 'TRUE'; upd.status = 'Active';
+        cfgUpsert_(C_TAB.INDIV, upd);
+        diffs.forEach(function (d) { histRow_(actor, emp, existing.config_id, kpiId, desired.kpi_name, d[3], d[1], d[2], 'update', version, period); });
+        if (diffs.some(function (d) { return ['kra_name', 'perspective', 'kpi_name', 'measurement_type', 'direction', 'source_of_tracking', 'goal_description'].indexOf(d[0]) >= 0; }))
+          ensureMaster_(kpiId, desired, ownerScope, actor, now);
+        changes++;
+      }
+      cfgId = existing.config_id;
+    }
+    seen[cfgId] = 1;
+  });
+  Object.keys(prior).forEach(function (cid) {
+    if (seen[cid]) return;
+    var r = prior[cid], version = (Number(r.version) || 1) + 1;
+    var upd = {}; C_SCHEMA[C_TAB.INDIV].forEach(function (k) { upd[k] = r[k]; });
+    upd.active = 'FALSE'; upd.status = 'Inactive'; upd.effective_to = period; upd.version = version; upd.updated_at = now; upd.updated_by = actor;
+    cfgUpsert_(C_TAB.INDIV, upd);
+    histRow_(actor, emp, cid, r.kpi_id, r.kpi_name, 'assignment', 'active', 'removed', 'remove', version, period);
+    changes++;
+  });
+  return changes;
+}
+
+function validateConfigItems_(items, subjectWord) {
+  if (!items.length) throw new Error('A ' + subjectWord + ' needs at least one KRA / KPI.');
+  var total = 0; items.forEach(function (it) { total += Number(it.weightage) || 0; });
+  if (Math.round(total) !== 100) throw new Error('Weightages must total 100% (currently ' + Math.round(total) + '%).');
+  items.forEach(function (it) { if (!String(it.kpi || '').trim()) throw new Error('Every KPI needs a name.'); });
+}
+
+/* ---- SAVE one employee's individual config ------------------------------- */
 function apiSaveKpiConfig(p) {
   try {
     p = p || {};
     var s = resolveSession_();
     var empId = p.employee_id;
     requireEditConfig_(s, empId);
-
     var base = buildModel_(null, null);
     var sc = base.scorecards.filter(function (x) { return x.employee_id === empId; })[0];
     if (!sc) throw new Error('Unknown employee.');
-    var team = base.teams.filter(function (t) { return t.team_id === sc.team_id; })[0] || {};
-    var emp = { employee_id: empId, employee_name: sc.employee_name };
     var month = monthKey_(p.month) || monthKey_(base.month) || '';
-    var period = month;
-
     var items = (p.items || []).filter(function (it) { return it && !it._remove; });
-    if (!items.length) throw new Error('An employee needs at least one KRA / KPI.');
-    var total = 0; items.forEach(function (it) { total += Number(it.weightage) || 0; });
-    if (Math.round(total) !== 100) throw new Error('Weightages must total 100% (currently ' + Math.round(total) + '%).');
-    items.forEach(function (it) { if (!String(it.kpi || '').trim()) throw new Error('Every KPI needs a name.'); });
-
-    // current active config for this employee, indexed by config_id
-    var prior = {};
-    cfgFind_(C_TAB.INDIV, { employee_id: empId }).forEach(function (r) { if (String(r.active).toUpperCase() !== 'FALSE') prior[r.config_id] = r; });
-    var now = nowIso_(), actor = s.name, seen = {}, changes = 0;
-    var FIELDS = [['kra', 'kra_name'], ['perspective', 'perspective'], ['kpi', 'kpi_name'], ['weightage', 'weightage'],
-      ['target', 'target_value'], ['unit', 'measurement_type'], ['direction', 'direction'], ['source', 'source_of_tracking'], ['goal', 'goal_description']];
-
-    items.forEach(function (it) {
-      var cfgId = it.config_id, existing = cfgId ? prior[cfgId] : null;
-      var kpiId = it.kpi_id || existing && existing.kpi_id || ('KPI-CFG-' + uid8_());
-      var unit = ['CR', 'MT', 'COUNT', 'PERCENT', 'DAYS'].indexOf(it.unit) >= 0 ? it.unit : 'PERCENT';
-      var dir = it.direction === 'LOWER_IS_BETTER' ? 'LOWER_IS_BETTER' : 'HIGHER_IS_BETTER';
-      var desired = { kra_name: String(it.kra || 'General').trim(), perspective: String(it.perspective || ''),
-        kpi_name: String(it.kpi).trim(), weightage: Number(it.weightage) || 0,
-        target_value: (it.target == null || it.target === '') ? '' : Number(it.target), target_unit: unit,
-        measurement_type: unit, direction: dir, source_of_tracking: String(it.source || ''), goal_description: String(it.goal || '') };
-
-      if (!existing) {                                   // NEW individual assignment
-        cfgId = 'CFG-' + uid8_();
-        var rowN = { config_id: cfgId, employee_id: empId, kpi_id: kpiId, kra_name: desired.kra_name,
-          perspective: desired.perspective, kpi_name: desired.kpi_name, weightage: desired.weightage,
-          target_value: desired.target_value, target_unit: unit, measurement_type: unit, direction: dir,
-          source_of_tracking: desired.source_of_tracking, goal_description: desired.goal_description,
-          status: 'Active', effective_from: period, effective_to: '', version: 1,
-          created_at: now, created_by: actor, updated_at: now, updated_by: actor, active: 'TRUE' };
-        cfgUpsert_(C_TAB.INDIV, rowN);
-        ensureMaster_(kpiId, desired, empId, actor, now);
-        histRow_(actor, emp, cfgId, kpiId, desired.kpi_name, 'assignment', '', 'created', it.kpi_id ? 'assign' : 'create', 1, period);
-        changes++;
-      } else {                                           // MODIFY existing
-        var diffs = [];
-        FIELDS.forEach(function (f) {
-          var col = f[1], oldV = existing[col], newV = desired[col];
-          if (String(oldV == null ? '' : oldV) !== String(newV == null ? '' : newV)) diffs.push([col, oldV, newV, f[0]]);
-        });
-        if (diffs.length) {
-          var version = (Number(existing.version) || 1) + 1;
-          var upd = {}; C_SCHEMA[C_TAB.INDIV].forEach(function (k) { upd[k] = existing[k]; });
-          Object.keys(desired).forEach(function (k) { upd[k] = desired[k]; });
-          upd.version = version; upd.updated_at = now; upd.updated_by = actor; upd.active = 'TRUE'; upd.status = 'Active';
-          cfgUpsert_(C_TAB.INDIV, upd);
-          diffs.forEach(function (d) { histRow_(actor, emp, existing.config_id, kpiId, desired.kpi_name, d[3], d[1], d[2], 'update', version, period); });
-          // definition change also refreshes this employee's owned master entry
-          if (diffs.some(function (d) { return ['kra_name', 'perspective', 'kpi_name', 'measurement_type', 'direction', 'source_of_tracking', 'goal_description'].indexOf(d[0]) >= 0; }))
-            ensureMaster_(kpiId, desired, empId, actor, now);
-          changes++;
-        }
-        cfgId = existing.config_id;
-      }
-      seen[cfgId] = 1;
-    });
-
-    // retire dropped assignments (present before, absent now)
-    Object.keys(prior).forEach(function (cid) {
-      if (seen[cid]) return;
-      var r = prior[cid], version = (Number(r.version) || 1) + 1;
-      var upd = {}; C_SCHEMA[C_TAB.INDIV].forEach(function (k) { upd[k] = r[k]; });
-      upd.active = 'FALSE'; upd.status = 'Inactive'; upd.effective_to = period; upd.version = version; upd.updated_at = now; upd.updated_by = actor;
-      cfgUpsert_(C_TAB.INDIV, upd);
-      histRow_(actor, emp, cid, r.kpi_id, r.kpi_name, 'assignment', 'active', 'removed', 'remove', version, period);
-      changes++;
-    });
-
-    sysLog_(actor, 'info', 'apiSaveKpiConfig', empId + ' — ' + changes + ' change(s), weightage 100%');
+    validateConfigItems_(items, 'employee');
+    var changes = reconcileConfig_(empId, sc.employee_name, empId, month, s.name, items);
+    sysLog_(s.name, 'info', 'apiSaveKpiConfig', empId + ' — ' + changes + ' change(s), weightage 100%');
     return jsonSafe_({ ok: true, changes: changes, model: buildModel_(null, month || null) });
   } catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiSaveKpiConfig' }; }
 }
 
+/* ---- Team-wise KRA/KPI editing (Feature 2) ------------------------------
+ * The team template is stored the same way as individual config, under the
+ * synthetic subject 'TEAM:<id>', so it reuses the whole versioned/audited path
+ * — no duplicate configuration store or screen. Admin edits any team; a team
+ * lead edits only their own team; employees cannot edit. */
+function isTeamLead_(s, teamId) {
+  if (!s.employee_id) return false;
+  var me = s._byId && s._byId[s.employee_id];
+  return !!(me && me.team_id === teamId && !me.reporting_manager);
+}
+function canEditTeam_(s, teamId) {
+  return !!(s.admin || s.role === 'HR' || s.role === 'Management' || isTeamLead_(s, teamId));
+}
+function requireEditTeam_(s, teamId) {
+  if (!canEditTeam_(s, teamId)) throw new Error('You do not have permission to edit this team’s KRA / KPIs.');
+}
+function apiTeamKpiConfig(p) {
+  try {
+    p = p || {};
+    var s = resolveSession_();
+    var teamId = p.team_id, month = monthKey_(p.month) || '';
+    var model = buildModel_(null, month || null);
+    var team = model.teams.filter(function (t) { return t.team_id === teamId; })[0];
+    if (!team) throw new Error('Unknown team.');
+    var members = model.scorecards.filter(function (sc) { return sc.team_id === teamId; });
+    var tpl = cfgFind_(C_TAB.INDIV, { employee_id: 'TEAM:' + teamId }).filter(function (r) { return String(r.active).toUpperCase() !== 'FALSE'; });
+    var items;
+    if (tpl.length) {
+      items = tpl.map(function (r) {
+        return { kpi_id: r.kpi_id, config_id: r.config_id, kra: r.kra_name, perspective: r.perspective, kpi: r.kpi_name,
+          weightage: numOrNull_(r.weightage), target: numOrNull_(r.target_value), unit: r.measurement_type,
+          direction: r.direction, source: r.source_of_tracking, goal: r.goal_description, configured: true };
+      });
+    } else {
+      var lead = members.filter(function (m) { return !m.reporting_manager; })[0] || members[0];
+      items = (lead ? lead.kpis : []).map(function (k) {
+        return { kpi_id: k.kpi_id, config_id: '', kra: k.kra, perspective: k.perspective, kpi: k.kpi,
+          weightage: k.weightage, target: k.target, unit: k.unit, direction: k.direction, source: k.source, goal: k.goal, configured: false };
+      });
+    }
+    var hist = [];
+    try { hist = cfgFind_(C_TAB.HIST, { employee_id: 'TEAM:' + teamId }); } catch (e) {}
+    hist = hist.sort(function (a, b) { return String(b.changed_at).localeCompare(String(a.changed_at)); }).slice(0, 40);
+    var lookups = {};
+    try { cfgRead_(C_TAB.LOOKUP).forEach(function (l) { if (String(l.active).toUpperCase() === 'FALSE') return; (lookups[l.category] = lookups[l.category] || []).push({ value: l.value, label: l.label }); }); } catch (e) {}
+    return jsonSafe_({ ok: true, team_id: teamId, team_name: team.team_name, month: month || model.month,
+      can_edit: canEditTeam_(s, teamId), member_count: members.length, has_template: tpl.length > 0,
+      items: items, history: hist, lookups: lookups });
+  } catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiTeamKpiConfig' }; }
+}
+function apiSaveTeamKpi(p) {
+  try {
+    p = p || {};
+    var s = resolveSession_();
+    var teamId = p.team_id;
+    requireEditTeam_(s, teamId);
+    var base = buildModel_(null, null);
+    var team = base.teams.filter(function (t) { return t.team_id === teamId; })[0];
+    if (!team) throw new Error('Unknown team.');
+    var month = monthKey_(p.month) || monthKey_(base.month) || '';
+    var items = (p.items || []).filter(function (it) { return it && !it._remove; });
+    validateConfigItems_(items, 'team');
+    var changes = reconcileConfig_('TEAM:' + teamId, team.team_name + ' — team template', teamId, month, s.name, items);
+    sysLog_(s.name, 'info', 'apiSaveTeamKpi', teamId + ' — ' + changes + ' change(s) to the team template');
+    return jsonSafe_({ ok: true, changes: changes, model: buildModel_(null, month || null) });
+  } catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiSaveTeamKpi' }; }
+}
 function ensureMaster_(kpiId, d, empId, actor, now) {
   var existing = cfgFind_(C_TAB.MASTER, { kpi_id: kpiId })[0];
   var version = existing ? (Number(existing.version) || 1) + 1 : 1;
@@ -1684,4 +1797,62 @@ function applyTeamAssignments_(model) {
     if (to && to !== sc.team_id) { sc.team_id = to; sc.team_assigned = true; }
   });
   return model;
+}
+
+/* ======================================================================
+ * AUTO-ASSIGN TASKS (Feature 3)
+ * ----------------------------------------------------------------------
+ * A "task" is an Action (no duplicate entity): raising one against a team's
+ * KRA/KPI auto-picks the eligible employee — the person on that team who
+ * carries that KPI — by a configurable rule (least-loaded by default, or team
+ * lead / round-robin). The assigned employee and status live in the Action
+ * record; the rule is auditable and stored in Lookup_Master so admins can change
+ * it without code.
+ * ====================================================================== */
+function autoAssignRule_() {
+  try {
+    var r = cfgFind_(C_TAB.LOOKUP, { category: 'assignment_rule' }).filter(function (x) { return String(x.active).toUpperCase() === 'TRUE'; })[0];
+    if (r && r.value) return String(r.value);
+  } catch (e) {}
+  return 'least_loaded';
+}
+function autoAssignee_(model, teamId, kpiId, kpiName) {
+  var members = model.scorecards.filter(function (sc) { return sc.team_id === teamId; });
+  if (!members.length) return null;
+  var elig = members.filter(function (sc) {
+    return (sc.kpis || []).some(function (k) { return (kpiId && k.kpi_id === kpiId) || (kpiName && k.kpi === kpiName); });
+  });
+  if (!elig.length) elig = members;                 // team-wide task → whole team eligible
+  var rule = autoAssignRule_(), actions = model.actions || [];
+  function openCount(id) { return actions.filter(function (a) { return a.employee_id === id && a.status !== 'Completed' && a.status !== 'Cancelled'; }).length; }
+  function totalCount(id) { return actions.filter(function (a) { return a.employee_id === id; }).length; }
+  var pick;
+  if (rule === 'team_lead') pick = elig.filter(function (m) { return !m.reporting_manager; })[0] || elig[0];
+  else if (rule === 'round_robin') pick = elig.slice().sort(function (a, b) { return totalCount(a.employee_id) - totalCount(b.employee_id); })[0];
+  else pick = elig.slice().sort(function (a, b) { return openCount(a.employee_id) - openCount(b.employee_id); })[0];
+  return pick ? { employee_id: pick.employee_id, employee_name: pick.employee_name, rule: rule,
+    open: openCount(pick.employee_id), eligible: elig.length } : null;
+}
+function apiAutoAssignTask(p) {
+  try {
+    p = p || {};
+    var s = resolveSession_();
+    var teamId = p.team_id;
+    requireEditTeam_(s, teamId);
+    var base = buildModel_(null, p.month || null);
+    var team = base.teams.filter(function (t) { return t.team_id === teamId; })[0];
+    if (!team) throw new Error('Unknown team.');
+    if (!String(p.title || '').trim()) throw new Error('Give the task a title.');
+    var pick = autoAssignee_(base, teamId, p.kpi_id || '', p.kpi_name || '');
+    if (!pick) throw new Error('No eligible employee found for this team.');
+    var month = monthKey_(p.month) || monthKey_(base.month) || '';
+    var id = 'ACN-' + Utilities.getUuid().slice(0, 8);
+    mUpsertRow_(M_TAB.ACTION, { action_id: id, created_at: nowIso_(), updated_at: nowIso_(), month: month, team_id: teamId,
+      employee_id: pick.employee_id, kpi_id: p.kpi_id || '', title: p.title, root_cause: '',
+      priority: (['High', 'Medium', 'Low'].indexOf(p.priority) >= 0 ? p.priority : 'Medium'), status: 'Open',
+      due_date: p.due_date || '', resolution: '', created_by: 'Auto-assign · ' + pick.rule });
+    audit_(s.name, 'action', id, 'auto_assign', p.title + ' → ' + pick.employee_name + ' (rule ' + pick.rule + ')');
+    sysLog_(s.name, 'info', 'apiAutoAssignTask', p.title + ' → ' + pick.employee_name + ' [' + (team.team_name || teamId) + ']');
+    return jsonSafe_({ ok: true, id: id, assignee: pick.employee_name, rule: pick.rule, model: buildModel_(null, month || null) });
+  } catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiAutoAssignTask' }; }
 }
