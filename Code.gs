@@ -676,6 +676,7 @@ function buildModel_(teamId, month) {
   /* Overlay each employee's individual KRA/KPI configuration from the dedicated
    * config sheet. Defensive: if that sheet is missing, unshared or empty, the
    * base model passes through untouched. */
+  try { applyTeamAssignments_(model); } catch (e) { model.config_note = String(e && e.message || e); }
   try { applyIndividualConfig_(model, effMonth); } catch (e) { model.config_note = String(e && e.message || e); }
   /* Monthly-target lifecycle: attach each team's planning state for this month,
    * then apply the close policy (a missing actual becomes a 0% miss once a month
@@ -1104,7 +1105,7 @@ var C_TAB = {
   HIST: 'KRA_KPI_History', USERS: 'Users_Access', LOOKUP: 'Lookup_Master', SYSLOG: 'System_Log'
 };
 var C_SCHEMA = {};
-C_SCHEMA[C_TAB.EMP]    = ['employee_id', 'employee_name', 'team_id', 'team_name', 'designation', 'reporting_manager', 'status', 'synced_at'];
+C_SCHEMA[C_TAB.EMP]    = ['employee_id', 'employee_name', 'team_id', 'team_name', 'designation', 'reporting_manager', 'status', 'assigned_team_id', 'assigned_team_name', 'team_updated_by', 'team_updated_at', 'synced_at'];
 C_SCHEMA[C_TAB.MASTER] = ['kpi_id', 'kra_name', 'perspective', 'kpi_name', 'measurement_type', 'direction', 'default_weightage', 'source_of_tracking', 'goal_description', 'owner_scope', 'active', 'created_at', 'created_by', 'updated_at', 'updated_by', 'version'];
 C_SCHEMA[C_TAB.INDIV]  = ['config_id', 'employee_id', 'kpi_id', 'kra_name', 'perspective', 'kpi_name', 'weightage', 'target_value', 'target_unit', 'measurement_type', 'direction', 'source_of_tracking', 'goal_description', 'status', 'effective_from', 'effective_to', 'version', 'created_at', 'created_by', 'updated_at', 'updated_by', 'active'];
 C_SCHEMA[C_TAB.HIST]   = ['history_id', 'changed_at', 'changed_by', 'employee_id', 'employee_name', 'config_id', 'kpi_id', 'kpi_name', 'field', 'old_value', 'new_value', 'action', 'version', 'effective_period', 'note'];
@@ -1626,4 +1627,61 @@ function apiRollForwardTargets(p) {
     audit_(s.name, 'target', 'roll-' + to, 'roll_forward', seeded + ' targets seeded into ' + to + ' from ' + from);
     return jsonSafe_({ ok: true, seeded: seeded, from: from, to: to, model: buildModel_(null, to) });
   } catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiRollForwardTargets' }; }
+}
+/* ======================================================================
+ * EMPLOYEE DIRECTORY — map an employee to a team
+ * ----------------------------------------------------------------------
+ * Team assignment is configuration, so it lives on the config sheet (the
+ * primary roster is never rewritten): a reassignment records assigned_team_id
+ * on the Employees tab + a KRA_KPI_History row (field 'team', old -> new), and
+ * applyTeamAssignments_ overlays it onto the model so the person moves teams
+ * everywhere at once. An employee always belongs to exactly one team, so a move
+ * replaces the assignment — there is no way to create a duplicate.
+ * ====================================================================== */
+function apiAssignTeam(p) {
+  try {
+    p = p || {};
+    var s = resolveSession_();
+    requireEditConfig_(s, p.employee_id);
+    var base = buildModel_(null, null);
+    var sc = base.scorecards.filter(function (x) { return x.employee_id === p.employee_id; })[0];
+    if (!sc) throw new Error('Unknown employee.');
+    var team = base.teams.filter(function (t) { return t.team_id === p.team_id; })[0];
+    if (!team) throw new Error('Choose a valid team.');
+    if (sc.team_id === p.team_id) throw new Error(sc.employee_name + ' is already on ' + (team.team_name || p.team_id) + '.');
+    var fromTeam = base.teams.filter(function (t) { return t.team_id === sc.team_id; })[0] || {};
+    var now = nowIso_(), actor = s.name;
+
+    var existing = cfgFind_(C_TAB.EMP, { employee_id: p.employee_id })[0];
+    var row = {};
+    C_SCHEMA[C_TAB.EMP].forEach(function (k) { row[k] = existing ? existing[k] : ''; });
+    row.employee_id = p.employee_id; row.employee_name = sc.employee_name;
+    row.team_id = existing && existing.team_id ? existing.team_id : sc.team_id;   // original team, preserved
+    row.team_name = existing && existing.team_name ? existing.team_name : (fromTeam.team_name || '');
+    row.designation = sc.designation || ''; row.reporting_manager = sc.reporting_manager || ''; row.status = 'ACTIVE';
+    row.assigned_team_id = p.team_id; row.assigned_team_name = team.team_name || p.team_id;
+    row.team_updated_by = actor; row.team_updated_at = now; row.synced_at = now;
+    cfgUpsert_(C_TAB.EMP, row);
+
+    histRow_(actor, { employee_id: p.employee_id, employee_name: sc.employee_name }, '', '', sc.employee_name,
+      'team', (fromTeam.team_name || sc.team_id), (team.team_name || p.team_id), 'reassign', 1, '');
+    sysLog_(actor, 'info', 'apiAssignTeam', sc.employee_name + ' → ' + (team.team_name || p.team_id));
+    return jsonSafe_({ ok: true, model: buildModel_(null, null) });
+  } catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiAssignTeam' }; }
+}
+
+/* Overlay team reassignments onto the model (before the KPI overlay). Defensive:
+ * a missing / unshared config sheet leaves the roster untouched. */
+function applyTeamAssignments_(model) {
+  var rows;
+  try { rows = cfgRead_(C_TAB.EMP); } catch (e) { return model; }
+  if (!rows || !rows.length) return model;
+  var teamName = {}; model.teams.forEach(function (t) { teamName[t.team_id] = t.team_name; });
+  var moveTo = {};
+  rows.forEach(function (r) { if (r.assigned_team_id && teamName[r.assigned_team_id] != null) moveTo[r.employee_id] = r.assigned_team_id; });
+  model.scorecards.forEach(function (sc) {
+    var to = moveTo[sc.employee_id];
+    if (to && to !== sc.team_id) { sc.team_id = to; sc.team_assigned = true; }
+  });
+  return model;
 }

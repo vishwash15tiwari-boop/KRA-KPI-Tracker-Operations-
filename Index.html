@@ -813,6 +813,48 @@ textarea.cfg-in{resize:vertical;min-height:44px;line-height:1.5}
 .bg-wt{font-size:var(--fs-3xs);color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
 .tgt-cmp{margin-top:var(--s6)}
 @media(max-width:900px){.tgt-wrap{grid-template-columns:1fr}.tg-rail{flex-direction:row;overflow-x:auto;max-height:none}.tg-mrow{flex:0 0 210px}}
+/* ============================== EMPLOYEE DIRECTORY ===================== */
+.dir-tools{display:flex;align-items:center;gap:var(--s4);flex-wrap:wrap;margin-bottom:var(--s4)}
+.dir-search{flex:1 1 260px;display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line-2);
+  border-radius:var(--r-ctl);padding:0 12px;transition:border-color var(--d1) var(--ease),box-shadow var(--d1) var(--ease)}
+.dir-search:focus-within{border-color:var(--accent);box-shadow:var(--ring)}
+.dir-search svg{width:16px;height:16px;color:var(--muted);flex:0 0 auto}
+.dir-search input{flex:1;border:none;outline:none;background:none;font:inherit;font-size:var(--fs-sm);
+  color:var(--ink);padding:10px 0}
+.dir-teams{display:flex;gap:6px;flex-wrap:wrap}
+.dir-chip{font-size:var(--fs-2xs);font-weight:var(--fw-b);color:var(--ink-2);background:var(--surface);
+  border:1px solid var(--line);border-radius:var(--r-pill);padding:4px 10px;display:inline-flex;align-items:center;gap:6px}
+.dir-chip em{font-style:normal;color:var(--accent-2);font-weight:var(--fw-b)}
+.dir-list{display:flex;flex-direction:column}
+.dir-row{display:grid;grid-template-columns:auto 1fr auto auto auto;align-items:center;gap:var(--s3);
+  width:100%;border:none;background:none;font:inherit;color:inherit;text-align:left;cursor:pointer;
+  padding:9px var(--s2);border-bottom:1px solid var(--line-soft);border-radius:var(--r-ctl);
+  transition:background var(--d1) var(--ease)}
+.dir-row:last-of-type{border-bottom:none}
+.dir-row:hover:not([disabled]){background:var(--surface)}
+.dir-row[disabled]{cursor:default}
+.dir-id{min-width:0;display:flex;flex-direction:column;line-height:1.3}
+.dir-id b{font-weight:var(--fw-m);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dir-id span{font-size:var(--fs-2xs);color:var(--muted)}
+.dir-team{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-xs);font-weight:var(--fw-m);
+  color:var(--ink-2);white-space:nowrap}
+.dir-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex:0 0 auto}
+.dir-moved{margin-left:6px;font-size:var(--fs-3xs);font-weight:var(--fw-b);text-transform:uppercase;letter-spacing:.04em;
+  color:var(--warn);background:var(--warn-soft);padding:1px 6px;border-radius:var(--r-pill)}
+.dir-score{font-weight:var(--fw-b);font-variant-numeric:tabular-nums;min-width:40px;text-align:right}
+.dir-row .chev{color:var(--faint);flex:0 0 12px;text-align:center}
+.dir-row:hover:not([disabled]) .chev{color:var(--muted)}
+.dir-empty{padding:var(--s5) var(--s2);color:var(--muted);font-size:var(--fs-sm);text-align:center}
+@media(max-width:560px){.dir-row{grid-template-columns:auto 1fr auto}.dir-team,.dir-score{display:none}}
+
+/* Employee → Team → Role mapping (assignment drawer) */
+.map{display:flex;align-items:stretch;gap:var(--s2);background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r-card);padding:var(--s4)}
+.map-node{flex:1;min-width:0;text-align:center}
+.map-k{font-size:var(--fs-3xs);font-weight:var(--fw-b);text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.map-v{font-size:var(--fs-sm);font-weight:var(--fw-b);color:var(--ink);margin-top:4px;line-height:1.3;
+  overflow:hidden;text-overflow:ellipsis}
+.map-arrow{display:flex;align-items:center;color:var(--faint);font-weight:var(--fw-b);flex:0 0 auto}
 </style>
 </head>
 <body>
@@ -2187,6 +2229,78 @@ function cfgHistRow(x) {
 
 /* One status bucket per KPI, from the same thresholds as the backend contract,
    so the dashboard filter agrees with every pill and node. */
+
+/* ============================== EMPLOYEE DIRECTORY ====================
+   Manage people and their team mapping. Workflow: pick an employee → see their
+   current Team → Role → reassign to a team. Search filters the list in place
+   (no re-render, so the box keeps focus); the reassignment itself goes through
+   the drawer so it is a deliberate, confirmed act. An employee belongs to
+   exactly one team, so a move replaces the mapping — no duplicates possible. */
+function DirectoryScreen() {
+  var people = orgScorecards().slice().sort(function (a, b) { return String(a.employee_name).localeCompare(String(b.employee_name)); });
+  var teams = Sel.teams(), teamName = {}; teams.forEach(function (t) { teamName[t.team_id] = t.team_name; });
+  var canEdit = canConfig();
+  var rows = people.map(function (m) {
+    var tn = teamName[m.team_id] || '—', role = m.designation || '—';
+    var moved = m.team_assigned ? '<span class="dir-moved" title="Reassigned via the directory">reassigned</span>' : '';
+    return '<button type="button" class="dir-row" data-assign="' + esc(m.employee_id) + '"' +
+      ' data-search="' + esc((m.employee_name + ' ' + tn + ' ' + role).toLowerCase()) + '"' +
+      (canEdit ? '' : ' disabled') + '>' +
+      Avatar(m.employee_name, 'sm') +
+      '<span class="dir-id"><b>' + esc(m.employee_name) + '</b><span>' + esc(role) + '</span></span>' +
+      '<span class="dir-team"><i class="dir-dot"></i>' + esc(tn) + moved + '</span>' +
+      '<span class="dir-score">' + show(m.overall_score) + '</span>' +
+      (canEdit ? '<span class="chev" aria-hidden="true">›</span>' : '') + '</button>';
+  }).join('');
+  var teamChips = teams.map(function (t) {
+    var n = orgScorecards().filter(function (x) { return x.team_id === t.team_id; }).length;
+    return '<span class="dir-chip">' + esc(t.team_name) + '<em>' + n + '</em></span>';
+  }).join('');
+  return PageHead('Employee Directory', 'Map people to teams · ' + plural(people.length, 'employee')) +
+    '<div class="mini">' + MiniStat('Employees', String(people.length)) + MiniStat('Teams', String(teams.length)) +
+      MiniStat('Reassigned', String(people.filter(function (m) { return m.team_assigned; }).length)) +
+      MiniStat('You can edit', canEdit ? 'Yes' : 'View only') + '</div>' +
+    '<div class="block"><div class="dir-tools"><div class="dir-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>' +
+      '<input id="dir-search" type="search" placeholder="Search people, team or role…" aria-label="Search the directory" autocomplete="off"></div>' +
+      '<div class="dir-teams">' + teamChips + '</div></div>' +
+      '<div class="pcard" style="padding:var(--s2) var(--s2)"><div class="dir-list" id="dir-list">' + rows +
+      '<div class="dir-empty" id="dir-empty" hidden>No one matches that search.</div></div></div>' +
+      (canEdit ? '' : '<p class="tr-note">You can view the directory. Reassigning people to teams needs HR, Management or a team manager.</p>') +
+    '</div>';
+}
+function dirFilter(q) {
+  q = String(q || '').trim().toLowerCase();
+  var list = document.getElementById('dir-list'); if (!list) return;
+  var shown = 0;
+  list.querySelectorAll('.dir-row').forEach(function (r) {
+    var hit = !q || (r.getAttribute('data-search') || '').indexOf(q) >= 0;
+    r.hidden = !hit; if (hit) shown++;
+  });
+  var empty = document.getElementById('dir-empty'); if (empty) empty.hidden = shown > 0;
+}
+
+/* Drawer: the Employee → Team → Role mapping and the reassignment control. */
+function AssignBody(emp) {
+  var teams = Sel.teams(), teamName = {}; teams.forEach(function (t) { teamName[t.team_id] = t.team_name; });
+  var curTeam = teamName[emp.team_id] || '—';
+  var opts = teams.map(function (t) { return '<option value="' + esc(t.team_id) + '"' + (t.team_id === emp.team_id ? ' selected' : '') + '>' + esc(t.team_name) + '</option>'; }).join('');
+  var kpiCount = (emp.kpis || []).length;
+  return '<div class="d-h"><div><div class="eyebrow">Team mapping</div><h2>' + esc(emp.employee_name) + '</h2></div>' +
+    '<button class="x" data-close="1" aria-label="Close">×</button></div>' +
+    '<div class="d-b">' +
+      '<div class="map"><div class="map-node"><div class="map-k">Employee</div><div class="map-v">' + esc(emp.employee_name) + '</div></div>' +
+        '<div class="map-arrow">→</div>' +
+        '<div class="map-node"><div class="map-k">Team</div><div class="map-v" id="map-team">' + esc(curTeam) + '</div></div>' +
+        '<div class="map-arrow">→</div>' +
+        '<div class="map-node"><div class="map-k">Role</div><div class="map-v">' + esc(emp.designation || '—') + '</div></div></div>' +
+      '<div class="d-sect" style="margin-top:var(--s5)">Reassign to a team</div>' +
+      '<div class="field"><span class="lb">Team</span><select class="inp" id="assign-team">' + opts + '</select></div>' +
+      '<p class="tr-note">Moving ' + esc(emp.employee_name) + ' updates their team everywhere at once — flowchart, rankings and team rollups. Their assigned KRA / KPIs stay with them; apply the new team’s template from that person’s Configure screen if needed. This change is versioned and logged.</p>' +
+      '<div class="fbtns"><button class="btn sm" id="assign-btn" data-doassign="' + esc(emp.employee_id) + '" disabled>Select a different team</button></div>' +
+      '<div class="d-rule"></div><div class="d-sect">Current KRA / KPIs</div>' +
+      '<p class="tr-note" style="margin-top:0">' + plural(kpiCount, 'KPI') + ' assigned' + (emp.overall_score != null ? ' · overall score ' + show(emp.overall_score) : '') + '. Open the profile to configure them individually.</p>' +
+    '</div>';
+}
 function kpiBucket(k) {
   if (k.achievement == null) return 'pending';
   if (k.achievement >= 90) return 'ontrack';
@@ -2311,6 +2425,7 @@ function renderDrawer() {
   if (det.kind === 'def')   { dr.innerHTML = DefBody(det.kpi); openDrawer(dr, sc, app); return; }
   if (det.kind === 'action'){ dr.innerHTML = ActionBody(det.action); openDrawer(dr, sc, app); return; }
   if (det.kind === 'review'){ dr.innerHTML = ReviewBody(det.emp); openDrawer(dr, sc, app); return; }
+  if (det.kind === 'assign'){ dr.innerHTML = AssignBody(det.emp); openDrawer(dr, sc, app); return; }
 
   var k = det.kpi;
   var achW = k.achievement == null ? 0 : Math.max(0, Math.min(100, k.achievement / 105 * 100));
@@ -2387,14 +2502,15 @@ var NAV = [
   { id: 'actions', label: 'Actions', icon: '<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/>' },
   { id: 'reviews', label: 'Reviews', icon: '<path d="M4 5a2 2 0 0 1 2-2h9l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M9 12l2 2 4-4"/>' },
   { id: 'analytics', label: 'Analytics', icon: '<path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 15l3-4 3 2 4-6"/>' },
+  { id: 'directory', label: 'Directory', icon: '<circle cx="12" cy="8" r="3.2"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/><path d="M18.5 3.5v5M16 6h5"/>' },
   { id: 'admin', label: 'Admin', icon: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/>' },
   { id: 'profile', label: 'Profile', icon: '<circle cx="12" cy="8" r="3.4"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/>' }
 ];
 /* Same data model, four jobs-to-be-done: the rail shows only the modules a role
    needs, and each role lands where its work starts (spec §2). */
 var NAV_BY_ROLE = {
-  Management: ['overview', 'teams', 'targets', 'kpi', 'actions', 'reviews', 'analytics'],
-  HR:         ['overview', 'teams', 'targets', 'kpi', 'actions', 'reviews', 'analytics', 'admin'],
+  Management: ['overview', 'teams', 'directory', 'targets', 'kpi', 'actions', 'reviews', 'analytics'],
+  HR:         ['overview', 'teams', 'directory', 'targets', 'kpi', 'actions', 'reviews', 'analytics', 'admin'],
   Manager:    ['team', 'targets', 'kpi', 'actions', 'reviews', 'profile'],
   Employee:   ['profile', 'actions', 'reviews']
 };
@@ -2461,6 +2577,7 @@ function render() {
     : S.view === 'teams' ? (PageHead('Teams', 'Compare teams · ' + esc(monthLabel(S.month))) + TeamsTable())
     : S.view === 'targets' ? TargetsScreen()
     : S.view === 'analytics' ? AnalyticsScreen()
+    : S.view === 'directory' ? DirectoryScreen()
     : S.view === 'admin' ? AdminScreen()
     : S.view === 'kpi' ? KpiScreen()
     : S.view === 'actions' ? ActionsScreen()
@@ -2545,6 +2662,13 @@ document.addEventListener('click', function (e) {
       { success: 'Configuration saved · scores recomputed', onSuccess: function () { S.configFor = null; S._cfgHistFor = null; S.employee = empId; } });
     return;
   }
+  /* Employee Directory: open the team-mapping drawer, then reassign. */
+  var asg = e.target.closest('[data-assign]');
+  if (asg) { var em = scById(asg.dataset.assign); if (em) { S._trigger = asg; S.detail = { kind: 'assign', emp: em }; renderDrawer(); } return; }
+  var doAsg = e.target.closest('[data-doassign]');
+  if (doAsg) { var sel = $('#assign-team'), tid = sel ? sel.value : '';
+    if (!tid) { toast('Pick a team first.', 'bad'); return; }
+    doWrite('apiAssignTeam', { employee_id: doAsg.dataset.doassign, team_id: tid }, { close: true, success: 'Team reassigned' }); return; }
   var kf = e.target.closest('[data-kfilter]');
   if (kf) { S.kpiFilter = kf.dataset.kfilter; render(); return; }
   // Donut legend → open the KPI list already filtered to that status slice.
@@ -2667,6 +2791,13 @@ document.addEventListener('change', function (e) {
   if (id === 'f-team') { S.team = e.target.value; S.employee = null; S.detail = null; render(); $('.canvas').scrollTop = 0; }
   else if (id === 'f-month') { S.month = e.target.value; S.detail = null; S._demo = null; Hist.clear(); load(); }
   else if (id === 'f-emp') { S.employee = e.target.value || null; S.detail = null; render(); }
+  else if (id === 'assign-team') {
+    var emp = S.detail && S.detail.emp, btn = $('#assign-btn'), mt = $('#map-team');
+    var tn = e.target.options[e.target.selectedIndex] ? e.target.options[e.target.selectedIndex].text : '';
+    var same = emp && e.target.value === emp.team_id;
+    if (btn) { btn.disabled = !!same; btn.textContent = same ? 'Select a different team' : 'Reassign to ' + tn; }
+    if (mt) mt.textContent = tn;   // live-preview the target mapping
+  }
   else if (id === 'f-role') {
     S.viewRole = e.target.value; S.employee = null; S.detail = null;
     S.view = LANDING[S.viewRole] || 'team';
@@ -2678,6 +2809,7 @@ document.addEventListener('change', function (e) {
    while open, so this updates the running total and the Save gate directly). */
 document.addEventListener('input', function (e) {
   if (S.configFor && e.target.classList && e.target.classList.contains('cfg-f-wt')) cfgRecalcTotal();
+  if (e.target.id === 'dir-search') dirFilter(e.target.value);
 });
 document.addEventListener('keydown', function (e) {
   // While the drawer is open: Escape closes it, Tab stays trapped inside it.
