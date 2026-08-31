@@ -494,6 +494,10 @@ button.vb-col:hover .vb-track i{filter:brightness(1.08) saturate(1.08)}
 /* --- Flowchart node: status label + exception count (spec §03) --------- */
 .node .nst{margin-top:8px}
 .node .nex{margin-top:6px;font-size:var(--fs-2xs);font-weight:var(--fw-b);color:var(--warn)}
+.node .nfls{margin-top:6px;display:flex;flex-wrap:wrap;justify-content:center;gap:4px}
+.node .nfl{font-size:var(--fs-3xs);font-weight:var(--fw-b);padding:1px 7px;border-radius:var(--r-pill);white-space:nowrap}
+.node .nfl.warn{color:var(--warn);background:var(--warn-soft)}
+.node .nfl.bad{color:var(--bad);background:var(--bad-soft)}
 
 /* --- All-clear line (admin weightage check) --------------------------- */
 .att-ok{display:flex;align-items:center;gap:var(--s2);padding:var(--s3) var(--s2);color:var(--muted);font-size:var(--fs-sm)}
@@ -2100,15 +2104,18 @@ function FlowchartScreen() {
 
   var node = function (m, isLead, idx) {
     var ex = exceptionsOf(m).length;
+    var overdue = actionsFor(m.employee_id).filter(isOverdue).length;   // action issue count (brief §9)
+    var flags = (ex ? '<span class="nfl warn">' + ex + ' KPI' + (ex === 1 ? '' : 's') + ' at risk</span>' : '') +
+      (overdue ? '<span class="nfl bad">' + overdue + ' overdue</span>' : '');
     return '<div class="node' + (isLead ? ' lead' : '') + '" data-emp="' + esc(m.employee_id) + '"' +
       ' tabindex="0" role="button"' +
       ' style="animation-delay:' + (isLead ? 0 : Math.min(idx * 45, 400)) + 'ms">' +
       Avatar(m.employee_name, isLead ? 'lg' : 'xl') +
       '<div class="nn">' + esc(m.employee_name) + '</div>' +
       '<div class="nd">' + esc(m.designation || '—') + '</div>' +
-      '<div class="ns">' + show(m.overall_score) + '</div>' +
+      '<div class="ns">' + show(m.overall_score) + '<em>/100</em></div>' +
       '<span class="st ' + tone(m.kpi_achievement) + ' nst">' + esc(m.status || 'Pending Data') + '</span>' +
-      (ex ? '<div class="nex">' + ex + ' KPI' + (ex === 1 ? '' : 's') + ' need attention</div>' : '') +
+      (flags ? '<div class="nfls">' + flags + '</div>' : '') +
       (isLead ? '<div class="tag">Team lead</div>' : '') + '</div>';
   };
 
@@ -2608,14 +2615,31 @@ var NAV = [
 ];
 /* Same data model, four jobs-to-be-done: the rail shows only the modules a role
    needs, and each role lands where its work starts (spec §2). */
+/* Visibility ≠ permission (brief §3/§52: "restrict modification, not
+   understanding"). Every role sees the whole performance picture — teams,
+   people, KRA/KPI, targets, actions, reviews, analytics — and role only gates
+   what can be CHANGED (the Configure / target / approve / reassign controls are
+   each permission-checked in place, and the server is authoritative). Only the
+   Admin governance surface is scoped to HR / Management. There is no generic
+   "Overview" destination (brief §4): each role lands directly in its work. */
+var COMMON_NAV = ['teams', 'team', 'directory', 'kpi', 'targets', 'actions', 'reviews', 'analytics', 'profile'];
 var NAV_BY_ROLE = {
-  Management: ['overview', 'teams', 'directory', 'targets', 'kpi', 'actions', 'reviews', 'analytics'],
-  HR:         ['overview', 'teams', 'directory', 'targets', 'kpi', 'actions', 'reviews', 'analytics', 'admin'],
-  Manager:    ['team', 'targets', 'kpi', 'actions', 'reviews', 'profile'],
-  Employee:   ['profile', 'actions', 'reviews']
+  Management: COMMON_NAV.concat(['admin']),
+  HR:         COMMON_NAV.concat(['admin']),
+  Manager:    COMMON_NAV,
+  Employee:   COMMON_NAV
 };
-var LANDING = { Management: 'overview', HR: 'overview', Manager: 'team', Employee: 'profile' };
+var LANDING = { Management: 'teams', HR: 'teams', Manager: 'team', Employee: 'profile' };
 function effRole() { return S.viewRole || (S.session && S.session.role) || 'Management'; }
+/* "My profile" opens the signed-in person's own scorecard when they map to an
+   employee (so an Employee sees themselves, brief §12/§52); management/admin who
+   don't map to a person fall back to the team lead. */
+function myProfileId() {
+  var mine = S.session && S.session.employee_id;
+  if (mine && Sel.member(mine)) return mine;
+  if (mine && ((Sel.model() && Sel.model().scorecards) || []).some(function (s) { return s.employee_id === mine; })) return mine;
+  var l = Sel.lead(); return l ? l.employee_id : null;
+}
 function navIds() { return NAV_BY_ROLE[effRole()] || NAV_BY_ROLE.Management; }
 function buildRail() {
   var active = S.employee ? 'profile' : S.view, ids = navIds();
@@ -2695,7 +2719,7 @@ function applyLanding() {
   if (S._landed || !S.session || !S.model) return;
   S._landed = true;
   S.view = LANDING[effRole()] || 'team';
-  if (S.view === 'profile') { var l = Sel.lead(); S.employee = l ? l.employee_id : null; }
+  if (S.view === 'profile') { S.employee = myProfileId(); }
 }
 function load() {
   S.loading = true; S.error = null; S._demo = null; Hist.clear(); render();
@@ -2732,7 +2756,7 @@ function load() {
 /* ============================== EVENTS ================================= */
 function toView(v) {
   S.detail = null;
-  if (v === 'profile') { var l = Sel.lead(); S.employee = l ? l.employee_id : null; }
+  if (v === 'profile') { S.employee = myProfileId(); }
   else { S.employee = null; S.view = v; }
   render(); $('.canvas').scrollTop = 0;
 }
@@ -2923,7 +2947,7 @@ document.addEventListener('change', function (e) {
   else if (id === 'f-role') {
     S.viewRole = e.target.value; S.employee = null; S.detail = null;
     S.view = LANDING[S.viewRole] || 'team';
-    if (S.view === 'profile') { var l = Sel.lead(); S.employee = l ? l.employee_id : null; }
+    if (S.view === 'profile') { S.employee = myProfileId(); }
     render(); $('.canvas').scrollTop = 0;
   }
 });
