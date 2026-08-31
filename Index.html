@@ -889,6 +889,25 @@ textarea.cfg-in{resize:vertical;min-height:44px;line-height:1.5}
 .gs-v{font-weight:var(--fw-b);font-variant-numeric:tabular-nums;font-size:var(--fs-xs);white-space:nowrap}
 .gs-v.good{color:var(--good)}.gs-v.warn{color:var(--warn)}.gs-v.bad{color:var(--bad)}
 .gs-empty{padding:var(--s4) var(--s2);color:var(--muted);font-size:var(--fs-sm)}
+/* Exceptions (Performance / Data / Config) */
+.exg{margin-bottom:var(--s3)}
+.exg:last-child{margin-bottom:0}
+.exg-h{display:flex;align-items:baseline;gap:8px;padding:var(--s2) var(--s2) 6px}
+.exg-dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;align-self:center}
+.exg-dot.bad{background:var(--bad)}.exg-dot.warn{background:var(--warn)}.exg-dot.none{background:var(--faint)}
+.exg-h{font-size:var(--fs-sm);font-weight:var(--fw-b);color:var(--ink)}
+.exg-h em{font-style:normal;color:var(--muted);font-weight:var(--fw-b)}
+.exg-sub{margin-left:auto;font-size:var(--fs-2xs);color:var(--muted);font-weight:var(--fw-n)}
+.ex-r{display:grid;grid-template-columns:minmax(0,2.2fr) minmax(0,1fr) minmax(0,1.2fr) auto;align-items:center;gap:var(--s3);
+  width:100%;border:0;background:none;font:inherit;color:inherit;text-align:left;cursor:pointer;
+  padding:8px var(--s2);border-bottom:1px solid var(--line-soft);border-radius:var(--r-ctl);transition:background var(--d1) var(--ease)}
+.ex-r:hover{background:var(--surface)}
+.ex-p{min-width:0;font-weight:var(--fw-m);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ex-o{min-width:0;color:var(--ink-2);font-size:var(--fs-xs);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ex-i{min-width:0;color:var(--muted);font-size:var(--fs-xs);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ex-a{color:var(--accent-2);font-weight:var(--fw-b);font-size:var(--fs-xs);white-space:nowrap;text-align:right}
+.ex-more{font-size:var(--fs-2xs);color:var(--muted);font-weight:var(--fw-b);padding:6px var(--s2)}
+@media(max-width:640px){.ex-r{grid-template-columns:1fr auto}.ex-o,.ex-i{display:none}}
 @media(max-width:720px){.gsearch{flex-basis:44px}.gsearch input{width:0}.gsearch:focus-within{position:absolute;left:var(--s3);right:var(--s3);flex-basis:auto;z-index:61}.gsearch:focus-within input{width:auto}}
 </style>
 </head>
@@ -1846,6 +1865,58 @@ function teamTrend(teamId) {
     return { month: mo, v: vals.length ? Math.round(vals.reduce(function (a, b) { return a + b; }, 0) / vals.length * 10) / 10 : null };
   }).filter(function (p) { return p.v != null; });
 }
+/* ============================== EXCEPTIONS ============================
+   A central exception mechanism (brief §33/§34): every issue is classified as
+   a PERFORMANCE problem (the actual is poor), a DATA problem (the actual/target
+   is missing) or a CONFIG problem (weightage/mapping is invalid) — never
+   collapsed into one "At Risk". Each carries Problem → Owner → Impact → Action
+   and jumps to the object that fixes it. */
+function classifyExceptions(scs) {
+  var perf = [], data = [], config = [];
+  scs.forEach(function (sc) {
+    var kpis = sc.kpis || [];
+    if (!kpis.length) {
+      config.push({ problem: 'Not mapped to any KRA / KPI', owner: sc.employee_name, impact: 'No scorecard this period', action: 'Configure', goto: 'config::' + sc.employee_id });
+      return;
+    }
+    var wt = 0; kpis.forEach(function (k) { wt += Number(k.weightage) || 0; });
+    if (Math.round(wt) !== 100 && Math.round(wt) !== 0)
+      config.push({ problem: 'Weightage totals ' + Math.round(wt) + '% — should be 100%', owner: sc.employee_name, impact: 'Score is out of a partial base', action: 'Configure', goto: 'config::' + sc.employee_id });
+    kpis.forEach(function (k) {
+      var ids = sc.employee_id + '|' + k.kpi_id;
+      if (k.target == null && k.actual == null)
+        config.push({ problem: k.kpi + ' — no target set', owner: sc.employee_name, impact: 'Cannot be measured', action: 'Set target', goto: 'kpi::' + ids });
+      else if (k.actual == null)
+        data.push({ problem: k.kpi + ' — actual not entered', owner: sc.employee_name, impact: 'Not contributing to the score', action: 'Enter actual', goto: 'kpi::' + ids });
+      else if (k.achievement != null && k.achievement < 90)
+        perf.push({ problem: k.kpi + ' — ' + show(k.achievement) + '% (' + (k.status || '') + ')', owner: sc.employee_name, impact: (k.achievement < 75 ? 'Off track' : 'At risk') + ' · weight ' + show(k.weightage) + '%', action: 'Raise action', goto: 'kpi::' + ids, sev: k.achievement });
+    });
+  });
+  perf.sort(function (a, b) { return (a.sev || 0) - (b.sev || 0); });
+  return { Performance: perf, Data: data, Config: config };
+}
+function ExceptionsPanel(scs, title) {
+  var ex = classifyExceptions(scs);
+  var total = ex.Performance.length + ex.Data.length + ex.Config.length;
+  if (!total) return '<div class="block"><div class="sect">' + esc(title || 'Exceptions') + '<span class="r">all clear</span></div>' +
+    '<div class="pcard"><div class="att-ok"><span class="cdot good"></span>No performance, data or configuration exceptions this period.</div></div></div>';
+  var meta = { Performance: ['bad', 'the actual is below target'], Data: ['none', 'an actual or target is missing'], Config: ['warn', 'weightage or mapping needs fixing'] };
+  var body = ['Performance', 'Data', 'Config'].map(function (t) {
+    var list = ex[t]; if (!list.length) return '';
+    return '<div class="exg"><div class="exg-h"><span class="exg-dot ' + meta[t][0] + '"></span>' + esc(t) +
+      ' <em>' + list.length + '</em><span class="exg-sub">' + esc(meta[t][1]) + '</span></div>' +
+      list.slice(0, 12).map(function (x) {
+        return '<button type="button" class="ex-r" data-goto="' + esc(x.goto) + '">' +
+          '<span class="ex-p">' + esc(x.problem) + '</span>' +
+          '<span class="ex-o">' + esc(x.owner) + '</span>' +
+          '<span class="ex-i">' + esc(x.impact) + '</span>' +
+          '<span class="ex-a">' + esc(x.action) + ' ›</span></button>';
+      }).join('') + (list.length > 12 ? '<div class="ex-more">+ ' + (list.length - 12) + ' more ' + esc(t.toLowerCase()) + ' exceptions</div>' : '') + '</div>';
+  }).join('');
+  return '<div class="block"><div class="sect">' + esc(title || 'Exceptions') +
+    '<span class="r">' + ex.Performance.length + ' performance · ' + ex.Data.length + ' data · ' + ex.Config.length + ' config</span></div>' +
+    '<div class="pcard" style="padding:var(--s3) var(--s2)">' + body + '</div></div>';
+}
 function ExecutiveOverview() {
   var scs = orgScorecards(), kpis = orgKpis(), scored = kpis.filter(function (k) { return k.achievement != null; });
   var orgScore = Sel.mean(scs.map(function (s) { return s.overall_score; })), kpiAch = poolAch(kpis);
@@ -2162,6 +2233,7 @@ function FlowchartScreen() {
     strip +
     '<div class="block">' + chart + '</div>' +
     '<div class="two">' + trend + kra + '</div>' +
+    ExceptionsPanel(members, 'Team exceptions') +
     rank;
 }
 
@@ -2783,7 +2855,7 @@ function render() {
   var body = (S.configFor || S.configTeam) ? ConfigScreen()
     : S.employee ? EmployeeScreen()
     : S.view === 'overview' ? ExecutiveOverview()
-    : S.view === 'teams' ? (PageHead('Teams', 'Compare teams · ' + esc(monthLabel(S.month))) + TeamsTable())
+    : S.view === 'teams' ? (PageHead('Teams', 'Compare teams · ' + esc(monthLabel(S.month))) + TeamsTable() + ExceptionsPanel(orgScorecards(), 'Organisation exceptions'))
     : S.view === 'targets' ? TargetsScreen()
     : S.view === 'analytics' ? AnalyticsScreen()
     : S.view === 'directory' ? DirectoryScreen()
@@ -2854,6 +2926,7 @@ document.addEventListener('click', function (e) {
     else if (gtype === 'team') { S.team = gid; S.view = 'team'; S.employee = null; S.configFor = null; S.configTeam = null; S.detail = null; render(); $('.canvas').scrollTop = 0; }
     else if (gtype === 'kpi') { var pk = gid.split('|'), ow = scById(pk[0]); if (ow) { var kk = (ow.kpis || []).filter(function (x) { return x.kpi_id === pk[1]; })[0]; if (kk) { kk.__owner = ow.employee_id; S.detail = { kind: 'kpi', kpi: kk, owner: ow }; renderDrawer(); } } }
     else if (gtype === 'action') { var aa = allActions().filter(function (x) { return x.action_id === gid; })[0]; if (aa) { S.detail = { kind: 'action', action: aa }; renderDrawer(); } }
+    else if (gtype === 'config') { var scc = scById(gid); if (scc) { S.team = scc.team_id; S.configFor = gid; S.configTeam = null; S._cfgHistFor = null; S.employee = null; S.detail = null; render(); $('.canvas').scrollTop = 0; } }
     return;
   }
   if (!e.target.closest('.gsearch')) { var gb = document.getElementById('gsearch-res'); if (gb && !gb.hidden) { gb.hidden = true; gb.innerHTML = ''; } }
