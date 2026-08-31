@@ -869,6 +869,27 @@ textarea.cfg-in{resize:vertical;min-height:44px;line-height:1.5}
 .aa-assignee em{font-style:normal;color:var(--muted);font-size:var(--fs-2xs);margin-left:auto}
 .auto-tag{margin-left:8px;font-size:var(--fs-3xs);font-weight:var(--fw-b);text-transform:uppercase;letter-spacing:.05em;
   color:var(--accent-2);background:var(--accent-soft);padding:1px 6px;border-radius:var(--r-pill);vertical-align:middle}
+/* Global search (top bar) */
+.gsearch{position:relative;flex:0 1 300px;min-width:150px;display:flex;align-items:center;gap:7px;
+  background:var(--surface);border:1px solid var(--line-2);border-radius:var(--r-pill);padding:0 12px}
+.gsearch:focus-within{background:var(--card);border-color:var(--accent);box-shadow:var(--ring)}
+.gsearch>svg{width:15px;height:15px;color:var(--muted);flex:0 0 auto}
+.gsearch input{flex:1;min-width:0;border:none;outline:none;background:none;font:inherit;font-size:var(--fs-sm);color:var(--ink);padding:8px 0}
+.gsearch input::-webkit-search-cancel-button{-webkit-appearance:none}
+.gsearch-res{position:absolute;top:calc(100% + 6px);right:0;width:360px;max-width:88vw;max-height:60vh;overflow-y:auto;
+  background:var(--card);border:1px solid var(--line-2);border-radius:var(--r-card);box-shadow:var(--shadow-3);z-index:60;padding:var(--s2)}
+.gs-grp{font-size:var(--fs-3xs);font-weight:var(--fw-b);color:var(--muted);text-transform:uppercase;letter-spacing:.07em;padding:var(--s3) var(--s2) 4px}
+.gs-row{display:flex;align-items:center;gap:var(--s2);width:100%;border:0;background:none;font:inherit;color:inherit;text-align:left;
+  cursor:pointer;padding:8px var(--s2);border-radius:var(--r-ctl);transition:background var(--d1) var(--ease)}
+.gs-row:hover{background:var(--surface)}
+.gs-t{flex:0 0 auto;font-size:var(--fs-3xs);font-weight:var(--fw-b);text-transform:uppercase;letter-spacing:.04em;color:var(--accent-2);
+  background:var(--accent-soft);padding:2px 7px;border-radius:var(--r-pill);min-width:54px;text-align:center}
+.gs-m{flex:1;min-width:0;font-weight:var(--fw-m);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gs-m em{font-style:normal;color:var(--muted);font-weight:var(--fw-n);margin-left:7px;font-size:var(--fs-xs)}
+.gs-v{font-weight:var(--fw-b);font-variant-numeric:tabular-nums;font-size:var(--fs-xs);white-space:nowrap}
+.gs-v.good{color:var(--good)}.gs-v.warn{color:var(--warn)}.gs-v.bad{color:var(--bad)}
+.gs-empty{padding:var(--s4) var(--s2);color:var(--muted);font-size:var(--fs-sm)}
+@media(max-width:720px){.gsearch{flex-basis:44px}.gsearch input{width:0}.gsearch:focus-within{position:absolute;left:var(--s3);right:var(--s3);flex-basis:auto;z-index:61}.gsearch:focus-within input{width:auto}}
 </style>
 </head>
 <body>
@@ -2687,10 +2708,50 @@ function buildTopbar() {
       Sel.members().map(function (p) { return '<option value="' + esc(p.employee_id) + '"' + (p.employee_id === S.employee ? ' selected' : '') + '>' + esc(p.employee_name) + '</option>'; }).join('') +
       '</select></span>';
   }
-  /* Filters left, identity right; the freshness chip stays quiet metadata. */
+  /* Filters left, a global search across the performance graph in the middle,
+     identity right; the freshness chip stays quiet metadata (brief §40). */
+  var search = '<div class="gsearch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>' +
+    '<input id="gsearch" type="search" placeholder="Search people, teams, KRA, KPI, actions…" autocomplete="off" aria-label="Search the performance graph">' +
+    '<div class="gsearch-res" id="gsearch-res" hidden></div></div>';
   $('#tbar').innerHTML = teamSel + monthSel + empSel + FreshChip() +
-    '<span class="grow"></span>' + roleChip();
+    '<span class="grow"></span>' + search + roleChip();
 }
+/* Global search across the whole performance graph (brief §40): people, teams,
+   KRA/KPI and actions, each result a jump straight to that object. */
+function gsearch(q) {
+  var box = document.getElementById('gsearch-res'); if (!box) return;
+  q = String(q || '').trim().toLowerCase();
+  if (q.length < 2) { box.hidden = true; box.innerHTML = ''; return; }
+  var m = Sel.model() || {}, teamName = {}; (m.teams || []).forEach(function (t) { teamName[t.team_id] = t.team_name; });
+  var out = '', hits = 0;
+  function grp(label) { return '<div class="gs-grp">' + esc(label) + '</div>'; }
+  function row(type, ids, main, sub, right, tone) {
+    hits++;
+    return '<button type="button" class="gs-row" data-goto="' + esc(type + '::' + ids) + '">' +
+      '<span class="gs-t">' + esc(type) + '</span><span class="gs-m">' + main + (sub ? '<em>' + sub + '</em>' : '') + '</span>' +
+      (right != null ? '<span class="gs-v ' + (tone || '') + '">' + right + '</span>' : '') + '</button>';
+  }
+  var emps = (m.scorecards || []).filter(function (s) { return String(s.employee_name).toLowerCase().indexOf(q) >= 0; }).slice(0, 6);
+  if (emps.length) out += grp('People') + emps.map(function (s) {
+    return row('person', s.employee_id, esc(s.employee_name), esc((s.designation || '') + ' · ' + (teamName[s.team_id] || '')), s.overall_score == null ? '—' : show(s.overall_score), tone(s.kpi_achievement));
+  }).join('');
+  var teams = (m.teams || []).filter(function (t) { return String(t.team_name).toLowerCase().indexOf(q) >= 0; });
+  if (teams.length) out += grp('Teams') + teams.map(function (t) {
+    var n = (m.scorecards || []).filter(function (s) { return s.team_id === t.team_id; }).length;
+    return row('team', t.team_id, esc(t.team_name), plural(n, 'member'), null);
+  }).join('');
+  var kpis = []; (m.scorecards || []).forEach(function (s) { (s.kpis || []).forEach(function (k) { if ((String(k.kpi) + ' ' + String(k.kra)).toLowerCase().indexOf(q) >= 0) kpis.push({ s: s, k: k }); }); });
+  if (kpis.length) out += grp('KRA / KPI') + kpis.slice(0, 8).map(function (x) {
+    return row('kpi', x.s.employee_id + '|' + x.k.kpi_id, esc(x.k.kpi), esc(x.k.kra + ' · ' + x.s.employee_name), x.k.achievement == null ? 'Pending' : show(x.k.achievement) + '%', tone(x.k.achievement));
+  }).join('');
+  var acts = (m.actions || []).filter(function (a) { return String(a.title).toLowerCase().indexOf(q) >= 0; }).slice(0, 5);
+  if (acts.length) out += grp('Actions') + acts.map(function (a) {
+    return row('action', a.action_id, esc(a.title), esc(ownerName(a.employee_id)), esc(a.status));
+  }).join('');
+  box.innerHTML = hits ? out : '<div class="gs-empty">No matches for “' + esc(q) + '”.</div>';
+  box.hidden = false;
+}
+function gsClose() { var b = document.getElementById('gsearch-res'); if (b) { b.hidden = true; b.innerHTML = ''; } var i = document.getElementById('gsearch'); if (i) i.value = ''; }
 function roleChip() {
   var s = S.session; if (!s) return '';
   if (!s.canSwitch) return '<span class="role-chip" title="Signed in as ' + esc(s.email || 'this account') + '">' + esc(s.role) + '</span>';
@@ -2785,6 +2846,17 @@ function toView(v) {
   render(); $('.canvas').scrollTop = 0;
 }
 document.addEventListener('click', function (e) {
+  /* Global search: navigate to a result, and close the dropdown on any outside click. */
+  var gt = e.target.closest('[data-goto]');
+  if (gt) {
+    var gp = gt.dataset.goto.split('::'), gtype = gp[0], gid = gp[1]; gsClose();
+    if (gtype === 'person') { var sp = scById(gid); if (sp) { S.team = sp.team_id; S.employee = gid; S.configFor = null; S.configTeam = null; S.detail = null; render(); $('.canvas').scrollTop = 0; } }
+    else if (gtype === 'team') { S.team = gid; S.view = 'team'; S.employee = null; S.configFor = null; S.configTeam = null; S.detail = null; render(); $('.canvas').scrollTop = 0; }
+    else if (gtype === 'kpi') { var pk = gid.split('|'), ow = scById(pk[0]); if (ow) { var kk = (ow.kpis || []).filter(function (x) { return x.kpi_id === pk[1]; })[0]; if (kk) { kk.__owner = ow.employee_id; S.detail = { kind: 'kpi', kpi: kk, owner: ow }; renderDrawer(); } } }
+    else if (gtype === 'action') { var aa = allActions().filter(function (x) { return x.action_id === gid; })[0]; if (aa) { S.detail = { kind: 'action', action: aa }; renderDrawer(); } }
+    return;
+  }
+  if (!e.target.closest('.gsearch')) { var gb = document.getElementById('gsearch-res'); if (gb && !gb.hidden) { gb.hidden = true; gb.innerHTML = ''; } }
   var nv = e.target.closest('[data-view]');
   if (nv) { toView(nv.dataset.view); return; }
   /* Individual KRA/KPI configuration. Add/remove edit the live form DOM in
@@ -2980,6 +3052,7 @@ document.addEventListener('change', function (e) {
 document.addEventListener('input', function (e) {
   if ((S.configFor || S.configTeam) && e.target.classList && e.target.classList.contains('cfg-f-wt')) cfgRecalcTotal();
   if (e.target.id === 'dir-search') dirFilter(e.target.value);
+  if (e.target.id === 'gsearch') gsearch(e.target.value);
 });
 document.addEventListener('keydown', function (e) {
   // While the drawer is open: Escape closes it, Tab stays trapped inside it.
