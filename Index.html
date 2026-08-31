@@ -1827,9 +1827,6 @@ function orgKpis() {
   return out;
 }
 function poolAch(kpis) { var e = 0, w = 0; kpis.forEach(function (k) { if (k.achievement != null) { e += k.weighted_score; w += k.weightage; } }); return w > 0 ? Math.round(e / w * 1000) / 10 : null; }
-function Card(label, value, sub, hl) {
-  return '<div class="card' + (hl ? ' hl' : '') + '"><div class="l">' + esc(label) + '</div><div class="v">' + value + '</div>' + (sub ? '<div class="s">' + esc(sub) + '</div>' : '') + '</div>';
-}
 function orgTrend() {
   return Sel.months().map(function (mo) {
     var m = Hist.modelFor(mo); if (!m) return { month: mo, v: null };
@@ -1948,37 +1945,19 @@ function ExceptionsPanel(scs, title) {
     '<span class="r">' + ex.Performance.length + ' performance · ' + ex.Data.length + ' data · ' + ex.Config.length + ' config</span></div>' +
     '<div class="pcard" style="padding:var(--s3) var(--s2)">' + body + '</div></div>';
 }
-function ExecutiveOverview() {
-  var scs = orgScorecards(), kpis = orgKpis(), scored = kpis.filter(function (k) { return k.achievement != null; });
-  var orgScore = Sel.mean(scs.map(function (s) { return s.overall_score; })), kpiAch = poolAch(kpis);
-  var critical = scored.filter(function (k) { return k.achievement < 75; }).length;
-  var atrisk = scored.filter(function (k) { return k.achievement < 90; }).length;
-  var overdue = allActions().filter(isOverdue).length, openA = allActions().filter(isOpenAct).length;
-  var measured = scs.filter(function (s) { return s.overall_score != null; }).length;
-  var cards = '<div class="cards">' +
-    Card('Org performance', orgScore == null ? '—' : String(show(orgScore)), measured + ' of ' + plural(scs.length, 'person') + ' measured', true) +
-    Card('KPI achievement', kpiAch == null ? '—' : show(kpiAch) + '<em>%</em>', scored.length + ' of ' + kpis.length + ' KPIs with results') +
-    Card('Critical · off track', String(critical), atrisk + ' at risk or worse') +
-    Card('Overdue actions', String(overdue), openA + ' open in total') + '</div>';
-  var trend = '<div class="block"><div class="sect">Organisation score trend<span class="r">overall score by month</span></div>' +
-    '<div class="pcard">' + BarTrend(orgTrend(), { label: 'Org score', max: 100, empty: 'A trend appears once more than one period carries data.' }) + '</div></div>';
-  var persp = '<div class="block"><div class="sect">Performance by perspective<span class="r">achievement %</span></div><div class="pcard">' + KraBars(perspGroups(kpis)) + '</div></div>';
-  return PageHead('Executive Overview', 'Organisation performance · ' + esc(monthLabel(S.month))) + cards +
-    '<div class="two">' + trend + persp + '</div>' +
-    TeamsTable();
-}
 function AnalyticsScreen() {
   var kpis = orgKpis(), dist = statusDist(kpis);
   var trend = '<div class="block"><div class="sect">Organisation score trend<span class="r">overall score by month</span></div>' +
     '<div class="pcard">' + BarTrend(orgTrend(), { label: 'Org score', max: 100, empty: 'A trend appears once more than one period carries data.' }) + '</div></div>';
-  var teams = '<div class="block"><div class="sect">Team score comparison<span class="r">overall score · click a bar</span></div>' +
-    '<div class="pcard">' + VBars(teamScoreItems()) + '</div></div>';
+  /* Analytics is trends & drivers — NOT a second team roster. Team comparison
+     has one home (the Teams screen), so it is not repeated here (§56). */
+  var drivers = '<div class="block"><div class="sect">KRA drivers<span class="r">achievement % by perspective</span></div>' +
+    '<div class="pcard">' + KraBars(perspGroups(kpis)) + '</div></div>';
   var donut = '<div class="block"><div class="sect">KPI status distribution<span class="r">' + dist.scored + ' measured · click to filter</span></div>' +
     '<div class="pcard">' + Donut(dist.segs, { centerLabel: 'KPIs' }) + '</div></div>';
   return PageHead('Analytics', 'Trends &amp; distribution · ' + esc(monthLabel(S.month))) +
     trend +
-    '<div class="two">' + teams + donut + '</div>' +
-    TeamsTable();
+    '<div class="two">' + drivers + donut + '</div>';
 }
 /* HR / Admin governance surface: the framework at a glance, weightage
    validation, and the audit trail of every write. KPI definitions and role
@@ -2013,28 +1992,6 @@ function reviewStatus(empId) { var r = reviewFor(empId); return r ? r.status : '
 var RATING_LABELS = ['', 'Needs focus', 'Below expectation', 'Meets', 'Strong', 'Outstanding'];
 function reviewTone(st) { return st === 'Finalized' ? 'good' : st === 'Not Started' ? 'none' : 'warn'; }
 
-function ReviewsScreen() {
-  var t = Sel.team(); if (!t) return PageHead('Reviews', '') + '<div class="empty">No team selected.</div>';
-  var members = Sel.members();
-  var c = { 'Not Started': 0, done: 0, 'Finalized': 0 };
-  members.forEach(function (m) { var st = reviewStatus(m.employee_id); if (st === 'Finalized') c.Finalized++; else if (st === 'Not Started') c['Not Started']++; else c.done++; });
-  var cards = '<div class="mini">' +
-    MiniStat('Participants', String(members.length)) +
-    MiniStat('Not started', String(c['Not Started'])) +
-    MiniStat('In progress', String(c.done)) +
-    MiniStat('Finalized', String(c.Finalized)) + '</div>';
-  var rows = members.map(function (m) {
-    var st = reviewStatus(m.employee_id), r = reviewFor(m.employee_id);
-    return '<button type="button" class="act-r" data-openreview="' + esc(m.employee_id) + '">' +
-      Avatar(m.employee_name) +
-      '<span class="an">' + esc(m.employee_name) + '<small>' + esc(m.designation || '') + '</small></span>' +
-      '<span class="act-due">' + (r && r.final_rating ? 'Final ' + esc(r.final_rating) + '/5' : (m.overall_score == null ? '—' : show(m.overall_score))) + '</span>' +
-      '<span class="st ' + reviewTone(st) + '">' + esc(st) + '</span></button>';
-  }).join('');
-  return PageHead(t.team_name + ' — Reviews', 'Performance review cycle · ' + esc(monthLabel(S.month))) + cards +
-    '<div class="block"><div class="sect">Participants<span class="r">click to open a review</span></div>' +
-    '<div class="panel" style="padding:0 var(--s3)">' + (rows || '<div class="empty">No members.</div>') + '</div></div>';
-}
 function ReviewBody(emp) {
   var r = reviewFor(emp.employee_id) || { status: 'Not Started', self_rating: '', self_comment: '', mgr_rating: '', mgr_comment: '', final_rating: '' };
   var s = S.session || {}, isSelf = s.employee_id && s.employee_id === emp.employee_id;
@@ -2272,8 +2229,7 @@ function FlowchartScreen() {
   var content;
   if (teamTab === 'people') {
     content = '<div class="block"><div class="sect">People<span class="r">by overall score · click to open a profile</span></div>' +
-      '<div class="pcard" style="padding-top:var(--s2);padding-bottom:var(--s2)">' + RankList(members, true) + '</div></div>' +
-      ExceptionsPanel(members, 'Team exceptions');
+      '<div class="pcard" style="padding-top:var(--s2);padding-bottom:var(--s2)">' + RankList(members, true) + '</div></div>';
   } else if (teamTab === 'kpi') {
     var kAll = Sel.allKpis(), filt = S.kpiFilter || 'all', kc = { all: kAll.length, ontrack: 0, atrisk: 0, offtrack: 0, pending: 0 };
     kAll.forEach(function (k) { kc[kpiBucket(k)]++; });
@@ -2607,26 +2563,6 @@ function kpiBucket(k) {
   return 'offtrack';
 }
 var KPI_TABS = [['all', 'All'], ['ontrack', 'On Track'], ['atrisk', 'At Risk'], ['offtrack', 'Off Track'], ['pending', 'Pending Data']];
-function KpiScreen() {
-  var t = Sel.team(), kpis = Sel.allKpis();
-  if (!t) return PageHead('No team selected', '') + '<div class="empty">No teams are available to show for this period.</div>';
-  var filt = S.kpiFilter || 'all';
-  var counts = { all: kpis.length, ontrack: 0, atrisk: 0, offtrack: 0, pending: 0 };
-  kpis.forEach(function (k) { counts[kpiBucket(k)]++; });
-  // Saved views (spec §05): All / On Track / At Risk / Off Track / Pending Data.
-  var tabs = '<div class="tabs" role="tablist" aria-label="Filter KPIs by status">' + KPI_TABS.map(function (tb) {
-    return '<button type="button" class="tab' + (filt === tb[0] ? ' on' : '') + '" role="tab" aria-selected="' +
-      (filt === tb[0] ? 'true' : 'false') + '" data-kfilter="' + tb[0] + '">' + esc(tb[1]) +
-      '<span class="tab-c">' + counts[tb[0]] + '</span></button>';
-  }).join('') + '</div>';
-  var shown = filt === 'all' ? kpis : kpis.filter(function (k) { return kpiBucket(k) === filt; });
-  var label = KPI_TABS.filter(function (x) { return x[0] === filt; })[0][1];
-  var table = shown.length ? KpiTable(shown, 'team', true)
-    : '<div class="panel"><div class="empty">No KPIs are ' + esc(label) + ' for this period.</div></div>';
-  return PageHead(t.team_name + ' — KRA / KPI', 'Every assigned KPI · ' + esc(monthLabel(S.month))) +
-    '<div class="block"><div class="sect">Performance<span class="r">filter by status · click a KPI for detail</span></div>' +
-    tabs + table + '</div>';
-}
 
 function PageHead(title, kind) {
   return '<div class="page-h"><div><h1>' + esc(title) + '</h1>' +
@@ -2816,7 +2752,10 @@ var NAV = [
    each permission-checked in place, and the server is authoritative). Only the
    Admin governance surface is scoped to HR / Management. There is no generic
    "Overview" destination (brief §4): each role lands directly in its work. */
-var COMMON_NAV = ['teams', 'team', 'directory', 'kpi', 'targets', 'actions', 'reviews', 'analytics', 'profile'];
+/* Workspace-centric IA (Direction A): the Team IS the workspace — KRA/KPI,
+   Actions and Reviews are tabs inside it, reached by opening a team from Teams
+   (or search). Cross-team roll-ups stay top-level. */
+var COMMON_NAV = ['teams', 'directory', 'targets', 'actions', 'analytics', 'profile'];
 var NAV_BY_ROLE = {
   Management: COMMON_NAV.concat(['admin']),
   HR:         COMMON_NAV.concat(['admin']),
@@ -2929,17 +2868,16 @@ function render() {
 
   /* Two team-level screens and the profile. Team is the landing view, so an
      unknown or stale view key falls back to it rather than to nothing. */
+  /* Workspace-centric IA: KRA/KPI and Reviews are tabs inside the team
+     workspace, not standalone destinations, so they are not routed here. */
   var body = (S.configFor || S.configTeam) ? ConfigScreen()
     : S.employee ? EmployeeScreen()
-    : S.view === 'overview' ? ExecutiveOverview()
     : S.view === 'teams' ? (PageHead('Teams', 'Compare teams · ' + esc(monthLabel(S.month))) + TeamsTable() + ExceptionsPanel(orgScorecards(), 'Organisation exceptions'))
     : S.view === 'targets' ? TargetsScreen()
     : S.view === 'analytics' ? AnalyticsScreen()
     : S.view === 'directory' ? DirectoryScreen()
     : S.view === 'admin' ? AdminScreen()
-    : S.view === 'kpi' ? KpiScreen()
     : S.view === 'actions' ? ActionsScreen()
-    : S.view === 'reviews' ? ReviewsScreen()
     : FlowchartScreen();
   $('#view').innerHTML = body;
   $('#banner').innerHTML = demo || '';   // full-bleed sibling above .wrap, so .demo spans edge to edge
@@ -3065,7 +3003,7 @@ document.addEventListener('click', function (e) {
   if (kf) { S.kpiFilter = kf.dataset.kfilter; render(); return; }
   // Donut legend → open the KPI list already filtered to that status slice.
   var sn = e.target.closest('[data-statusnav]');
-  if (sn) { S.kpiFilter = sn.dataset.statusnav; S.employee = null; S.detail = null; S.view = 'kpi'; render(); $('.canvas').scrollTop = 0; return; }
+  if (sn) { S.kpiFilter = sn.dataset.statusnav; S.employee = null; S.detail = null; S.view = 'team'; S.teamTab = 'kpi'; render(); $('.canvas').scrollTop = 0; return; }
   var af = e.target.closest('[data-afilter]');
   if (af) { S.actionFilter = af.dataset.afilter; render(); return; }
   var goteam = e.target.closest('[data-team]');
