@@ -56,7 +56,7 @@ button,select,input{font-family:inherit;cursor:pointer}
   box-shadow:var(--shadow-1),var(--hair);position:relative;overflow:hidden;
   transition:box-shadow var(--d2) var(--ease-out),transform var(--d2) var(--ease-out),border-color var(--d1) var(--ease)}
 .card::after{content:"";position:absolute;inset:0 0 auto 0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.85),transparent)}
-.card:hover{box-shadow:var(--shadow-2),var(--hair);transform:translateY(-2px);border-color:var(--line-2)}
+.card:hover{border-color:var(--line-2)}
 .card .l{font-size:var(--fs-2xs);font-weight:var(--fw-b);color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
 .card .v{font-size:var(--fs-xxl);font-weight:var(--fw-h);letter-spacing:-.035em;line-height:1.02;margin-top:10px;font-variant-numeric:tabular-nums}
 .card .v em{font-style:normal;font-size:var(--fs-lg);color:var(--faint);font-weight:var(--fw-b);letter-spacing:-.01em}
@@ -254,10 +254,13 @@ td.kpi{padding-left:var(--s6)}
 .mini{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--s4);margin-bottom:var(--s7)}
 .mstat{background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);padding:var(--s4) var(--s5);box-shadow:var(--shadow-1),var(--hair);
   transition:box-shadow var(--d2) var(--ease-out),transform var(--d2) var(--ease-out)}
-.mstat:hover{box-shadow:var(--shadow-2),var(--hair);transform:translateY(-1px)}
+.mstat:hover{border-color:var(--line-2)}
 .mstat .l{font-size:var(--fs-2xs);font-weight:var(--fw-m);color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
 .mstat .v{font-size:var(--fs-xl);font-weight:var(--fw-h);letter-spacing:-.03em;margin-top:6px;font-variant-numeric:tabular-nums}
 .mstat .v em{font-style:normal;font-size:var(--fs-sm);color:var(--faint);font-weight:var(--fw-m)}
+.mstat .ms-sub{font-size:var(--fs-2xs);color:var(--muted);font-weight:var(--fw-m);margin-top:5px;
+  font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ms-sub .up,.pscore .l .up{color:var(--good)}.ms-sub .down,.pscore .l .down{color:var(--bad)}.ms-sub .flat,.pscore .l .flat{color:var(--muted)}
 
 /* Profile header card */
 .phead{display:flex;align-items:center;gap:var(--s4);flex-wrap:wrap;background:var(--card);
@@ -2095,11 +2098,13 @@ function FlowchartScreen() {
   var kpiAch = (function () { var e = 0, w = 0; scored.forEach(function (k) { e += k.weighted_score; w += k.weightage; }); return w > 0 ? Math.round(e / w * 1000) / 10 : null; })();
   var onTrack = scored.filter(function (k) { return k.achievement >= 90; }).length;
   var attention = scored.length - onTrack;
+  var tTrend = teamTrend(t.team_id);
+  var tOverdue = members.reduce(function (a, m) { return a + actionsFor(m.employee_id).filter(isOverdue).length; }, 0);
   var strip = '<div class="mini">' +
-    MiniStat('Team score', teamScore == null ? '—' : String(show(teamScore))) +
-    MiniStat('KPI achievement', kpiAch == null ? '—' : show(kpiAch) + '<em>%</em>') +
-    MiniStat('On track', onTrack + '<em> / ' + scored.length + '</em>') +
-    MiniStat('Needs attention', String(attention)) +
+    MiniStat('Team score', teamScore == null ? '—' : show(teamScore) + '<em>/100</em>', deltaText(tTrend) || 'mean overall') +
+    MiniStat('KPI achievement', kpiAch == null ? '—' : show(kpiAch) + '<em>%</em>', onTrack + ' of ' + scored.length + ' KPIs on track') +
+    MiniStat('Needs attention', String(attention), attention ? '<span class="down">' + plural(attention, 'KPI') + ' below target</span>' : '<span class="up">all on track</span>') +
+    MiniStat('Open / overdue', String(tOverdue), tOverdue ? '<span class="down">actions overdue</span>' : 'no overdue actions') +
     '</div>';
 
   var node = function (m, isLead, idx) {
@@ -2151,22 +2156,33 @@ function EmployeeScreen() {
     return w > 0 ? Math.round(e / w * 1000) / 10 : null;
   })();
   var rank = Sel.rankOf(m.employee_id), total = Sel.members().filter(function (x) { return x.overall_score != null; }).length;
+  /* Context for the story line (brief §60): change vs last period, the gap that
+     remains, exceptions and the work under way — so the score never stands alone. */
+  var hist = Hist.employee(m.employee_id);
+  var atRisk = exceptionsOf(m).length;
+  var openA = actionsFor(m.employee_id).filter(isOpenAct).length, overdue = actionsFor(m.employee_id).filter(isOverdue).length;
+  var rev = reviewStatus(m.employee_id);
 
   var back = '<button class="back" data-back="1">‹ ' + esc(t ? t.team_name : 'Team') + '</button>';
   var head = '<div class="phead">' + Avatar(m.employee_name, 'lg') +
     '<div class="id"><h1>' + esc(m.employee_name) + '</h1>' +
-    '<div class="meta">' + esc(m.designation || '—') + (m.region ? '<span class="dot">·</span>' + esc(m.region) : '') + '</div></div>' +
+    '<div class="meta">' + esc(m.designation || '—') + (t ? '<span class="dot">·</span>' + esc(t.team_name) : '') +
+      (m.region ? '<span class="dot">·</span>' + esc(m.region) : '') + '</div></div>' +
     /* The score is the one figure on the page that is derived rather than
-       reported, so it is a control: it has to be able to explain itself. */
+       reported, so it is a control: it has to be able to explain itself. It now
+       carries its own change vs the previous period rather than standing alone. */
     '<button class="pscore" data-score="1" aria-label="Overall score ' + show(m.overall_score) +
-    '. Show how it was calculated"><div class="v">' + show(m.overall_score) + '</div>' +
-    '<div class="l">Overall score<span class="bdg">Breakdown</span></div></button></div>';
+    '. Show how it was calculated"><div class="v">' + show(m.overall_score) + '<em>/100</em></div>' +
+    '<div class="l">' + (deltaText(hist) || 'Overall score') + '<span class="bdg">Breakdown</span></div></button></div>';
 
   var mini = '<div class="mini">' +
-    MiniStat('KPI achievement', kpiAch == null ? '—' : show(kpiAch) + '<em>%</em>') +
-    MiniStat('KPIs assigned', String(kpis.length)) +
-    MiniStat('Weightage measured', m.measured_weightage == null ? '—' : show(m.measured_weightage) + '<em>%</em>') +
-    MiniStat('Team rank', rank == null ? '—' : rank + '<em> / ' + total + '</em>') +
+    MiniStat('KPI achievement', kpiAch == null ? '—' : show(kpiAch) + '<em>%</em>',
+      atRisk ? '<span class="down">' + plural(atRisk, 'KPI') + ' at risk</span>' : (scored.length ? '<span class="up">all measured on track</span>' : 'awaiting data')) +
+    MiniStat('Open actions', String(openA),
+      overdue ? '<span class="down">' + overdue + ' overdue</span>' : (openA ? 'in progress' : 'none open')) +
+    MiniStat('Team rank', rank == null ? '—' : rank + '<em> / ' + total + '</em>',
+      rank === 1 ? '<span class="up">team best</span>' : (rank == null ? 'unmeasured' : 'by overall score')) +
+    MiniStat('Review', esc(rev), 'cycle ' + esc(monthShort(S.month))) +
     '</div>';
 
   var table = '<div class="block"><div class="sect">Assigned KRA / KPI' +
@@ -2181,7 +2197,15 @@ function EmployeeScreen() {
      strongest / needs-attention callout, and finally the exact figures. */
   return back + head + mini + PerfChart(m) + HistoryPanel(m) + table;
 }
-function MiniStat(l, v) { return '<div class="mstat"><div class="l">' + esc(l) + '</div><div class="v">' + v + '</div></div>'; }
+function MiniStat(l, v, sub) { return '<div class="mstat"><div class="l">' + esc(l) + '</div><div class="v">' + v + '</div>' + (sub ? '<div class="ms-sub">' + sub + '</div>' : '') + '</div>'; }
+/* Compact change vs the previous period as plain text (not a pill) for the
+   metric sub-lines — the "· +4 vs Jul" half of the brief's inline metric. */
+function deltaText(points, suffix) {
+  if (!points || points.length < 2) return '';
+  var a = points[points.length - 2], b = points[points.length - 1], d = Math.round((b.v - a.v) * 10) / 10;
+  if (!d) return '<span class="flat">no change vs ' + esc(monthShort(a.month)) + '</span>';
+  return '<span class="' + (d > 0 ? 'up' : 'down') + '">' + (d > 0 ? '▲' : '▼') + ' ' + Math.abs(d).toFixed(1) + (suffix || '') + ' vs ' + esc(monthShort(a.month)) + '</span>';
+}
 
 /* ============================== KRA / KPI CONFIG ======================
    Individual configuration editor: add / modify / remove the KRA/KPIs assigned
