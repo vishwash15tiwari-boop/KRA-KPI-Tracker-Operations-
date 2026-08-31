@@ -920,6 +920,14 @@ textarea.cfg-in{resize:vertical;min-height:44px;line-height:1.5}
 .ai-arrow{font-weight:var(--fw-b);color:var(--faint)}.ai-arrow.up{color:var(--good)}.ai-arrow.down{color:var(--bad)}
 .ai-d{margin-left:auto;font-weight:var(--fw-h);font-variant-numeric:tabular-nums}
 .ai-d.up{color:var(--good)}.ai-d.down{color:var(--bad)}.ai-d.flat{color:var(--muted)}
+/* Review development focus */
+.rf{display:flex;flex-direction:column;gap:2px;margin-top:6px}
+.rf-r{display:flex;align-items:center;gap:var(--s3);width:100%;border:0;background:none;font:inherit;color:inherit;text-align:left;
+  cursor:pointer;padding:7px var(--s2);border-radius:var(--r-ctl);transition:background var(--d1) var(--ease)}
+.rf-r:hover{background:var(--surface)}
+.rf-n{flex:1;min-width:0;font-weight:var(--fw-m);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rf-n em{font-style:normal;color:var(--muted);font-weight:var(--fw-n);margin-left:7px;font-size:var(--fs-xs)}
+.rf-r .chev{color:var(--faint)}
 @media(max-width:720px){.gsearch{flex-basis:44px}.gsearch input{width:0}.gsearch:focus-within{position:absolute;left:var(--s3);right:var(--s3);flex-basis:auto;z-index:61}.gsearch:focus-within input{width:auto}}
 </style>
 </head>
@@ -1988,6 +1996,25 @@ function reviewStatus(empId) { var r = reviewFor(empId); return r ? r.status : '
 var RATING_LABELS = ['', 'Needs focus', 'Below expectation', 'Meets', 'Strong', 'Outstanding'];
 function reviewTone(st) { return st === 'Finalized' ? 'good' : st === 'Not Started' ? 'none' : 'warn'; }
 
+/* Evidence-driven next cycle (brief §28/§29): the lowest-achieving KRA/KPIs this
+   period become the recommended development focus for the next one — so a review
+   produces a forward plan, not just a rating. */
+function ReviewFocus(emp) {
+  var weak = (emp.kpis || []).filter(function (k) { return k.achievement != null && k.achievement < 90; })
+    .sort(function (a, b) { return a.achievement - b.achievement; }).slice(0, 3);
+  if (!weak.length) return '<div class="d-sect" style="margin-top:var(--s4)">Development focus · next period</div>' +
+    '<p class="tr-note" style="margin-top:0"><span class="cdot good"></span> All measured KRA/KPIs are on track — hold the standard next period.</p>';
+  var openA = actionsFor(emp.employee_id).filter(isOpenAct).length;
+  var rows = weak.map(function (k) {
+    return '<button type="button" class="rf-r" data-kpi="' + esc(emp.employee_id + '::' + k.kpi_id) + '">' +
+      '<span class="st ' + tone(k.achievement) + '">' + show(k.achievement) + '%</span>' +
+      '<span class="rf-n">' + esc(k.kpi) + '<em>' + esc(k.kra || '') + '</em></span><span class="chev">›</span></button>';
+  }).join('');
+  return '<div class="d-sect" style="margin-top:var(--s4)">Development focus · next period</div>' +
+    '<p class="tr-note" style="margin:0 0 var(--s2)">Carry the lowest-achieving areas this cycle into the next one:</p>' +
+    '<div class="rf">' + rows + '</div>' +
+    (openA ? '<p class="tr-note">' + plural(openA, 'action') + ' already open to address these.</p>' : '<p class="tr-note">No corrective action open yet — raise one from the KPI.</p>');
+}
 function ReviewBody(emp) {
   var r = reviewFor(emp.employee_id) || { status: 'Not Started', self_rating: '', self_comment: '', mgr_rating: '', mgr_comment: '', final_rating: '' };
   var s = S.session || {}, isSelf = s.employee_id && s.employee_id === emp.employee_id;
@@ -2006,6 +2033,7 @@ function ReviewBody(emp) {
       pair('Review status', '<span class="st ' + reviewTone(r.status) + '">' + esc(r.status) + '</span>' + (locked ? ' <span class="quiet" style="font-size:var(--fs-xs)">· locked</span>' : '')) +
       (r.finalized_at ? pair('Finalized', esc(r.reviewer || '') + (r.reviewer ? ' · ' : '') + esc(String(r.finalized_at).slice(0, 10))) : (r.submitted_at ? pair('Self submitted', esc(String(r.submitted_at).slice(0, 10))) : '')) +
       '<div class="d-sect" style="margin-top:var(--s3)">Performance evidence</div>' + evid +
+      ReviewFocus(emp) +
       '<div class="form">' +
         '<div class="d-sect">Self-assessment</div>' +
         '<div class="field"><span class="lb">Self rating</span>' + rsel('rv-self', r.self_rating) + '</div>' +
