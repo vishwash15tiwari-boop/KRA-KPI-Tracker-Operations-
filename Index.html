@@ -904,6 +904,22 @@ textarea.cfg-in{resize:vertical;min-height:44px;line-height:1.5}
 .bmk-v{font-size:var(--fs-xs);font-weight:var(--fw-b);font-variant-numeric:tabular-nums;color:var(--ink)}
 .bmk-d{font-size:var(--fs-2xs);font-weight:var(--fw-b);font-variant-numeric:tabular-nums;min-width:40px;text-align:right}
 .bmk-d.up{color:var(--good)}.bmk-d.down{color:var(--bad)}.bmk-d.flat{color:var(--muted)}
+/* Profile review summary */
+.rv-sum{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s4)}
+.rv-k{font-size:var(--fs-2xs);color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:var(--fw-b)}
+.rv-v{font-size:var(--fs-lg);font-weight:var(--fw-b);margin-top:5px;font-variant-numeric:tabular-nums}
+.rv-v em{font-style:normal;font-size:var(--fs-sm);color:var(--faint);font-weight:var(--fw-m)}
+@media(max-width:560px){.rv-sum{grid-template-columns:1fr}}
+/* Action impact (before → after) */
+.ai{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-ctl);padding:var(--s3) var(--s4);margin:var(--s3) 0}
+.ai-h{font-size:var(--fs-2xs);color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:var(--fw-b);margin-bottom:6px}
+.ai-h em{font-style:normal;color:var(--accent-2);text-transform:none;letter-spacing:0}
+.ai-r{display:flex;align-items:center;gap:var(--s3)}
+.ai-b,.ai-a{display:flex;flex-direction:column;font-size:var(--fs-lg);font-weight:var(--fw-b);font-variant-numeric:tabular-nums;color:var(--ink)}
+.ai-b small,.ai-a small{font-size:var(--fs-3xs);color:var(--muted);font-weight:var(--fw-m);text-transform:uppercase;letter-spacing:.04em}
+.ai-arrow{font-weight:var(--fw-b);color:var(--faint)}.ai-arrow.up{color:var(--good)}.ai-arrow.down{color:var(--bad)}
+.ai-d{margin-left:auto;font-weight:var(--fw-h);font-variant-numeric:tabular-nums}
+.ai-d.up{color:var(--good)}.ai-d.down{color:var(--bad)}.ai-d.flat{color:var(--muted)}
 @media(max-width:720px){.gsearch{flex-basis:44px}.gsearch input{width:0}.gsearch:focus-within{position:absolute;left:var(--s3);right:var(--s3);flex-basis:auto;z-index:61}.gsearch:focus-within input{width:auto}}
 </style>
 </head>
@@ -1713,6 +1729,26 @@ function ActionsScreen() {
     tabs + '<div class="panel" style="padding:0 var(--s3)">' + rows + '</div></div>';
 }
 var HINT = '<span style="font-weight:500;text-transform:none;letter-spacing:0;color:var(--faint)">';
+/* Action impact (brief §26): the linked KPI's achievement at the time the action
+   was raised vs now — the "did it work?" close of the measure→act→re-measure
+   loop. Uses real history; shows nothing until there are two points to compare. */
+function ActionImpact(a) {
+  if (!a || !a.action_id || !a.kpi_id || !a.employee_id) return '';
+  var m = ((Sel.model() && Sel.model().scorecards) || []).filter(function (x) { return x.employee_id === a.employee_id; })[0];
+  var k = m && (m.kpis || []).filter(function (x) { return x.kpi_id === a.kpi_id; })[0];
+  if (!k) return '';
+  var pts = Hist.kpi(a.employee_id, k.kpi);
+  if (!pts || pts.length < 2) return '';
+  var raised = String(a.created_at || a.month || '').slice(0, 7), before = null, after = pts[pts.length - 1].v;
+  pts.forEach(function (p) { if (p.month <= raised) before = p.v; });
+  if (before == null) before = pts[0].v;
+  var d = Math.round((after - before) * 10) / 10, cls = d > 0 ? 'up' : d < 0 ? 'down' : 'flat';
+  return '<div class="ai"><div class="ai-h">Impact on ' + esc(k.kpi) + (a.status === 'Completed' ? '' : ' <em>· tracking</em>') + '</div>' +
+    '<div class="ai-r"><span class="ai-b">' + show(before) + '%<small>when raised</small></span>' +
+    '<span class="ai-arrow ' + cls + '">→</span>' +
+    '<span class="ai-a">' + show(after) + '%<small>now</small></span>' +
+    '<span class="ai-d ' + cls + '">' + (d > 0 ? '+' : '') + d + '</span></div></div>';
+}
 function ActionBody(a) {
   a = a || {};
   var members = (Sel.model() && Sel.model().scorecards) || [];
@@ -1729,6 +1765,7 @@ function ActionBody(a) {
     '<button class="x" data-close="1" aria-label="Close">×</button></div>' +
     '<div class="d-b"><div class="form">' +
       (!isNew ? '<div class="cmt-empty" style="margin:calc(var(--s2)*-1) 0 0">Raised by ' + esc(a.created_by || '—') + ' · ' + esc(String(a.created_at || '').slice(0, 10)) + (a.updated_at ? ' · updated ' + esc(String(a.updated_at).slice(0, 10)) : '') + '</div>' : '') +
+      ActionImpact(a) +
       ownerField + kpiField +
       '<div class="field"><span class="lb">Title</span><input class="inp" id="a-title" value="' + esc(a.title || '') + '" placeholder="What will be done"></div>' +
       '<div class="field"><span class="lb">Root cause</span><textarea class="ta" id="a-cause" placeholder="Why is the KPI off track?">' + esc(a.root_cause || '') + '</textarea></div>' +
@@ -2273,11 +2310,40 @@ function EmployeeScreen() {
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>Configure</button>' : '') +
     '</div>' + KpiTable(kpis, 'emp|' + m.employee_id, false) + '</div>';
 
-  /* The interactive performance chart leads - what is carrying the score and
-     what is dragging on it, with any pending KPIs drawn as hollow bars rather
-     than named in prose - then the score's history over the loaded periods, a
-     strongest / needs-attention callout, and finally the exact figures. */
-  return back + head + mini + PerfChart(m) + HistoryPanel(m) + table;
+  /* The profile is a workspace too (brief §12/§47): the same tabbed model as the
+     team, scoped to one person — no new screens, the pieces just move behind tabs. */
+  var empTab = S.empTab || 'performance';
+  var ET = [['performance', 'Performance'], ['kpi', 'KRA / KPI'], ['actions', 'Actions'], ['review', 'Review']];
+  var etabs = '<div class="tabs wtabs" role="tablist" aria-label="Profile">' + ET.map(function (x) {
+    return '<button type="button" class="tab' + (empTab === x[0] ? ' on' : '') + '" role="tab" aria-selected="' + (empTab === x[0] ? 'true' : 'false') + '" data-emptab="' + esc(x[0]) + '">' + esc(x[1]) + '</button>';
+  }).join('') + '</div>';
+
+  var pcontent;
+  if (empTab === 'kpi') {
+    pcontent = table;
+  } else if (empTab === 'actions') {
+    var myActs = actionsFor(m.employee_id).slice().sort(function (a, b) { var ao = isOverdue(a) ? 0 : isOpenAct(a) ? 1 : 2, bo = isOverdue(b) ? 0 : isOpenAct(b) ? 1 : 2; return ao - bo; });
+    var arows = myActs.length ? myActs.map(function (a) {
+      var over = isOverdue(a), auto = String(a.created_by || '').indexOf('Auto-assign') === 0;
+      return '<button type="button" class="act-r" data-openaction="' + esc(a.action_id) + '">' +
+        '<span class="pri ' + esc(a.priority || 'Medium') + '">' + esc((a.priority || 'M').slice(0, 1)) + '</span>' +
+        '<span class="an">' + esc(a.title) + (auto ? '<span class="auto-tag">auto</span>' : '') + '<small>' + (a.kpi_id ? esc(kpiNameOf(a.employee_id, a.kpi_id)) + ' · ' : '') + esc(a.status) + '</small></span>' +
+        '<span class="act-due' + (over ? ' over' : '') + '">' + (a.due_date ? esc(String(a.due_date).slice(0, 10)) : '—') + '</span>' +
+        '<span class="ast ' + (over ? 'Blocked' : esc(a.status)) + '">' + (over ? 'Overdue' : esc(a.status)) + '</span></button>';
+    }).join('') : '<div class="empty">No actions for ' + esc(m.employee_name) + ' — raise one from any at-risk KPI.</div>';
+    pcontent = '<div class="block"><div class="sect">Actions<span class="r">' + (canWrite(m.employee_id) ? '<button class="btn sm" data-newaction="' + esc(m.employee_id) + '::">+ New action</button>' : 'assigned to this person') + '</span></div>' +
+      '<div class="panel" style="padding:0 var(--s3)">' + arows + '</div></div>';
+  } else if (empTab === 'review') {
+    var rst = reviewStatus(m.employee_id), rr = reviewFor(m.employee_id);
+    pcontent = '<div class="block"><div class="sect">Performance review<span class="r">cycle ' + esc(monthLabel(S.month)) + '</span></div>' +
+      '<div class="pcard"><div class="rv-sum"><div><div class="rv-k">Status</div><div class="rv-v"><span class="st ' + reviewTone(rst) + '">' + esc(rst) + '</span></div></div>' +
+      '<div><div class="rv-k">Final rating</div><div class="rv-v">' + (rr && rr.final_rating ? esc(rr.final_rating) + ' <em>/ 5</em>' : '—') + '</div></div>' +
+      '<div><div class="rv-k">Overall score</div><div class="rv-v">' + show(m.overall_score) + '<em>/100</em></div></div></div>' +
+      '<div class="fbtns" style="margin-top:var(--s4)"><button class="btn sm" data-openreview="' + esc(m.employee_id) + '">Open review</button></div></div></div>';
+  } else {
+    pcontent = PerfChart(m) + HistoryPanel(m);
+  }
+  return back + head + mini + etabs + pcontent;
 }
 function MiniStat(l, v, sub) { return '<div class="mstat"><div class="l">' + esc(l) + '</div><div class="v">' + v + '</div>' + (sub ? '<div class="ms-sub">' + sub + '</div>' : '') + '</div>'; }
 /* Compact change vs the previous period as plain text (not a pill) for the
@@ -2904,6 +2970,8 @@ document.addEventListener('click', function (e) {
   if (nv) { toView(nv.dataset.view); return; }
   var ttab = e.target.closest('[data-teamtab]');
   if (ttab) { S.teamTab = ttab.dataset.teamtab; render(); $('.canvas').scrollTop = 0; return; }
+  var etab = e.target.closest('[data-emptab]');
+  if (etab) { S.empTab = etab.dataset.emptab; render(); $('.canvas').scrollTop = 0; return; }
   /* Individual KRA/KPI configuration. Add/remove edit the live form DOM in
      place (no re-render, so nothing typed is lost); Save reconciles server-side. */
   var openCfg = e.target.closest('[data-config]');
