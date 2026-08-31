@@ -448,19 +448,6 @@ button.dn-lg:hover{background:var(--surface)}
 .dn-lv{font-weight:var(--fw-b);font-variant-numeric:tabular-nums;color:var(--ink)}
 .dn-lv em{font-style:normal;color:var(--muted);font-weight:var(--fw-m);margin-left:6px;font-size:var(--fs-xs)}
 
-/* --- Vertical comparison bars — value on top, category below -------------- */
-.vb{display:flex;align-items:flex-end;gap:var(--s4);height:198px;padding-top:var(--s4)}
-.vb-col{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;height:100%;
-  background:none;border:0;padding:0;font:inherit;color:inherit}
-button.vb-col{cursor:pointer}
-.vb-v{font-size:var(--fs-sm);font-weight:var(--fw-b);color:var(--ink);font-variant-numeric:tabular-nums;margin-bottom:6px}
-.vb-track{flex:1;width:100%;max-width:60px;display:flex;align-items:flex-end;background:var(--well);
-  border-radius:6px 6px 0 0;overflow:hidden}
-.vb-track i{width:100%;background:var(--c);border-radius:6px 6px 0 0;
-  transition:filter var(--d1) var(--ease);animation:growY .55s var(--ease) backwards}
-button.vb-col:hover .vb-track i{filter:brightness(1.08) saturate(1.08)}
-.vb-l{font-size:var(--fs-2xs);color:var(--muted);font-weight:var(--fw-m);margin-top:var(--s2);text-align:center;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 @keyframes growY{from{height:0}}
 
 /* Chart tone → fill colour, shared by donut and vertical bars. */
@@ -1233,22 +1220,6 @@ function Donut(segments, opts) {
     '</div><div class="dn-legend">' + legend + '</div></div>';
 }
 
-/* Vertical bars for a small comparison — value on top, category below, rounded
-   caps, one hover state. The clean bar-graph read; each column can open its team. */
-function VBars(items, opts) {
-  opts = opts || {};
-  var vals = items.map(function (it) { return it.value == null ? 0 : it.value; });
-  var max = Math.max.apply(null, vals.concat([opts.max || 0])) || 100;
-  max = Math.max(10, Math.ceil(max / 10) * 10);
-  return '<div class="vb">' + items.map(function (it) {
-    var h = it.value == null ? 0 : Math.max(3, it.value / max * 100), tag = it.nav ? 'button' : 'div';
-    return '<' + tag + (it.nav ? ' type="button" data-team="' + esc(it.nav) + '"' : '') + ' class="vb-col"' +
-      ' title="' + esc(it.label + ': ' + (it.value == null ? 'no score' : show(it.value))) + '">' +
-      '<span class="vb-v">' + (it.value == null ? '—' : show(it.value)) + '</span>' +
-      '<span class="vb-track"><i class="t-' + (it.tone || 'accent') + '" style="height:' + h + '%"></i></span>' +
-      '<span class="vb-l">' + esc(it.label) + '</span></' + tag + '>';
-  }).join('') + '</div>';
-}
 function monthShort(p) {
   var d = String(p).split('-');
   return ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -1872,18 +1843,6 @@ function statusDist(kpis) {
     { label: 'Off Track', value: d['Off Track'], tone: 'bad', nav: 'offtrack' }
   ] };
 }
-/* Each team's overall score for the comparison bars, coloured by its KPI
-   achievement so a struggling team reads red at a glance; the bar opens the team. */
-function teamScoreItems() {
-  return Sel.teams().map(function (t) {
-    var scs = orgScorecards().filter(function (s) { return s.team_id === t.team_id; });
-    var score = Sel.mean(scs.map(function (s) { return s.overall_score; }));
-    var kpis = []; scs.forEach(function (s) { (s.kpis || []).forEach(function (k) { kpis.push(k); }); });
-    var ach = poolAch(kpis);
-    return { label: t.team_name, value: score, nav: t.team_id,
-      tone: ach == null ? 'accent' : ach >= 90 ? 'good' : ach >= 75 ? 'warn' : 'bad' };
-  });
-}
 /* A team's mean overall score by month, for the team-screen trend line. */
 function teamTrend(teamId) {
   return Sel.months().map(function (mo) {
@@ -2137,16 +2096,12 @@ function BulkGrid(members) {
     '<div class="bulk-grid">' + blocks + '</div></div>';
 }
 
-function CompareStrip() {
-  var tName = (Sel.team() || {}).team_name || 'This team';
-  return '<div class="two tgt-cmp">' +
-    '<div class="block"><div class="sect">Team comparison<span class="r">achievement · ' + esc(monthLabel(S.month)) + '</span></div><div class="pcard tg-cmp-c">' + VBars(teamScoreItems()) + '</div></div>' +
-    '<div class="block"><div class="sect">' + esc(tName) + ' leaderboard<span class="r">click to open</span></div><div class="pcard">' + RankList(Sel.members(), true) + '</div></div></div>';
-}
 
-function TargetsScreen() {
-  var sub = 'Team → individual → month · ' + monthLabel(S.month);
-  var head = PageHead('Targets & Achievement', sub);
+/* Target management is a TAB inside the team workspace (Direction A), not a
+   standalone destination — the body only, no PageHead. The old CompareStrip was
+   dropped: its team-comparison (VBars) is owned by the Teams screen and its
+   leaderboard (RankList) by the team's People tab (§56). */
+function TargetsBody() {
   var members = Sel.members();
   var toolbar = '<div class="tg-toolbar">' +
     '<div class="tg-modes"><button type="button" class="tg-mode' + (S.bulk ? '' : ' on') + '" data-bulktoggle="ind">Individual</button>' +
@@ -2158,7 +2113,7 @@ function TargetsScreen() {
     if (sel && (!S.targetEmp || !members.filter(function (m) { return m.employee_id === S.targetEmp; })[0])) S.targetEmp = sel.employee_id;
     main = '<div class="tgt-wrap">' + MemberRail(sel) + MemberTargets(sel) + '</div>';
   }
-  return head + MonthStateBar() + toolbar + main + CompareStrip();
+  return MonthStateBar() + toolbar + main;
 }
 
 /* The team screen and the landing one. Per the UI/UX spec the flowchart is the
@@ -2221,7 +2176,7 @@ function FlowchartScreen() {
      team lives here without leaving context; each tab reuses the same renderers
      the dedicated screens use (no duplicate screens, §56). */
   var teamTab = S.teamTab || 'overview';
-  var TT = [['overview', 'Overview'], ['people', 'People'], ['kpi', 'KRA / KPI'], ['actions', 'Actions'], ['reviews', 'Reviews']];
+  var TT = [['overview', 'Overview'], ['people', 'People'], ['kpi', 'KRA / KPI'], ['targets', 'Targets'], ['actions', 'Actions'], ['reviews', 'Reviews']];
   var tabBar = '<div class="tabs wtabs" role="tablist" aria-label="Team workspace">' + TT.map(function (x) {
     return '<button type="button" class="tab' + (teamTab === x[0] ? ' on' : '') + '" role="tab" aria-selected="' + (teamTab === x[0] ? 'true' : 'false') + '" data-teamtab="' + esc(x[0]) + '">' + esc(x[1]) + '</button>';
   }).join('') + '</div>';
@@ -2238,6 +2193,8 @@ function FlowchartScreen() {
     content = '<div class="block"><div class="sect">KRA / KPI<span class="r">filter by status · click a KPI for detail</span>' +
       (canConfig() ? '<button class="cfg-edit" data-configteam="' + esc(t.team_id) + '" title="Edit this team’s KRA / KPI template"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>Configure team</button>' : '') +
       '</div>' + ktabs + (shown.length ? KpiTable(shown, 'team', true) : '<div class="panel"><div class="empty">No KPIs in this view.</div></div>') + '</div>';
+  } else if (teamTab === 'targets') {
+    content = TargetsBody();
   } else if (teamTab === 'actions') {
     var tActs = allActions().filter(function (a) { return members.some(function (m) { return m.employee_id === a.employee_id; }); })
       .sort(function (a, b) { var ao = isOverdue(a) ? 0 : isOpenAct(a) ? 1 : 2, bo = isOverdue(b) ? 0 : isOpenAct(b) ? 1 : 2; return ao !== bo ? ao - bo : String(a.due_date || '~').localeCompare(String(b.due_date || '~')); });
@@ -2734,7 +2691,6 @@ var NAV = [
   { id: 'overview', label: 'Overview', icon: '<path d="M4 13h6V4H4zM14 20h6v-9h-6zM14 8h6V4h-6zM4 20h6v-4H4z"/>' },
   { id: 'teams', label: 'Teams', icon: '<circle cx="7" cy="8" r="2.3"/><circle cx="17" cy="8" r="2.3"/><path d="M3 19a4 4 0 0 1 8 0"/><path d="M13 19a4 4 0 0 1 8 0"/>' },
   { id: 'team', label: 'Team', icon: '<circle cx="9" cy="8" r="3"/><path d="M4 20a5 5 0 0 1 10 0"/><circle cx="17.5" cy="9" r="2.4"/><path d="M15 20a4.5 4.5 0 0 1 6.5-4"/>' },
-  { id: 'targets', label: 'Targets', icon: '<circle cx="12" cy="12" r="8.2"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.8" fill="currentColor" stroke="none"/>' },
   { id: 'kpi', label: 'KRA / KPI', icon: '<path d="M4 6h16M4 12h16M4 18h10"/><circle cx="19" cy="18" r="2"/>' },
   { id: 'actions', label: 'Actions', icon: '<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/>' },
   { id: 'reviews', label: 'Reviews', icon: '<path d="M4 5a2 2 0 0 1 2-2h9l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M9 12l2 2 4-4"/>' },
@@ -2755,7 +2711,7 @@ var NAV = [
 /* Workspace-centric IA (Direction A): the Team IS the workspace — KRA/KPI,
    Actions and Reviews are tabs inside it, reached by opening a team from Teams
    (or search). Cross-team roll-ups stay top-level. */
-var COMMON_NAV = ['teams', 'directory', 'targets', 'actions', 'analytics', 'profile'];
+var COMMON_NAV = ['teams', 'directory', 'actions', 'analytics', 'profile'];
 var NAV_BY_ROLE = {
   Management: COMMON_NAV.concat(['admin']),
   HR:         COMMON_NAV.concat(['admin']),
@@ -2873,7 +2829,6 @@ function render() {
   var body = (S.configFor || S.configTeam) ? ConfigScreen()
     : S.employee ? EmployeeScreen()
     : S.view === 'teams' ? (PageHead('Teams', 'Compare teams · ' + esc(monthLabel(S.month))) + TeamsTable() + ExceptionsPanel(orgScorecards(), 'Organisation exceptions'))
-    : S.view === 'targets' ? TargetsScreen()
     : S.view === 'analytics' ? AnalyticsScreen()
     : S.view === 'directory' ? DirectoryScreen()
     : S.view === 'admin' ? AdminScreen()
