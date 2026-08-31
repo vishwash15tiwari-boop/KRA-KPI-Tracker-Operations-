@@ -2229,12 +2229,57 @@ function FlowchartScreen() {
   var rank = '<div class="block"><div class="sect">Ranking<span class="r">by overall score</span></div>' +
     '<div class="pcard" style="padding-top:var(--s2);padding-bottom:var(--s2)">' + RankList(members, true) + '</div></div>';
 
-  return PageHead(t.team_name, 'Team performance · ' + esc(monthLabel(S.month))) +
-    strip +
-    '<div class="block">' + chart + '</div>' +
-    '<div class="two">' + trend + kra + '</div>' +
-    ExceptionsPanel(members, 'Team exceptions') +
-    rank;
+  /* Team workspace as one tabbed environment (brief §8) — everything about the
+     team lives here without leaving context; each tab reuses the same renderers
+     the dedicated screens use (no duplicate screens, §56). */
+  var teamTab = S.teamTab || 'overview';
+  var TT = [['overview', 'Overview'], ['people', 'People'], ['kpi', 'KRA / KPI'], ['actions', 'Actions'], ['reviews', 'Reviews']];
+  var tabBar = '<div class="tabs wtabs" role="tablist" aria-label="Team workspace">' + TT.map(function (x) {
+    return '<button type="button" class="tab' + (teamTab === x[0] ? ' on' : '') + '" role="tab" aria-selected="' + (teamTab === x[0] ? 'true' : 'false') + '" data-teamtab="' + esc(x[0]) + '">' + esc(x[1]) + '</button>';
+  }).join('') + '</div>';
+
+  var content;
+  if (teamTab === 'people') {
+    content = '<div class="block"><div class="sect">People<span class="r">by overall score · click to open a profile</span></div>' +
+      '<div class="pcard" style="padding-top:var(--s2);padding-bottom:var(--s2)">' + RankList(members, true) + '</div></div>' +
+      ExceptionsPanel(members, 'Team exceptions');
+  } else if (teamTab === 'kpi') {
+    var kAll = Sel.allKpis(), filt = S.kpiFilter || 'all', kc = { all: kAll.length, ontrack: 0, atrisk: 0, offtrack: 0, pending: 0 };
+    kAll.forEach(function (k) { kc[kpiBucket(k)]++; });
+    var ktabs = '<div class="tabs">' + KPI_TABS.map(function (tb) { return '<button type="button" class="tab' + (filt === tb[0] ? ' on' : '') + '" data-kfilter="' + tb[0] + '">' + esc(tb[1]) + '<span class="tab-c">' + kc[tb[0]] + '</span></button>'; }).join('') + '</div>';
+    var shown = filt === 'all' ? kAll : kAll.filter(function (k) { return kpiBucket(k) === filt; });
+    content = '<div class="block"><div class="sect">KRA / KPI<span class="r">filter by status · click a KPI for detail</span>' +
+      (canConfig() ? '<button class="cfg-edit" data-configteam="' + esc(t.team_id) + '" title="Edit this team’s KRA / KPI template"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>Configure team</button>' : '') +
+      '</div>' + ktabs + (shown.length ? KpiTable(shown, 'team', true) : '<div class="panel"><div class="empty">No KPIs in this view.</div></div>') + '</div>';
+  } else if (teamTab === 'actions') {
+    var tActs = allActions().filter(function (a) { return members.some(function (m) { return m.employee_id === a.employee_id; }); })
+      .sort(function (a, b) { var ao = isOverdue(a) ? 0 : isOpenAct(a) ? 1 : 2, bo = isOverdue(b) ? 0 : isOpenAct(b) ? 1 : 2; return ao !== bo ? ao - bo : String(a.due_date || '~').localeCompare(String(b.due_date || '~')); });
+    var actRows = tActs.length ? tActs.map(function (a) {
+      var over = isOverdue(a), auto = String(a.created_by || '').indexOf('Auto-assign') === 0;
+      return '<button type="button" class="act-r" data-openaction="' + esc(a.action_id) + '">' +
+        '<span class="pri ' + esc(a.priority || 'Medium') + '">' + esc((a.priority || 'M').slice(0, 1)) + '</span>' +
+        '<span class="an">' + esc(a.title) + (auto ? '<span class="auto-tag">auto</span>' : '') + '<small>' + (a.kpi_id ? esc(kpiNameOf(a.employee_id, a.kpi_id)) + ' · ' : '') + esc(ownerName(a.employee_id)) + '</small></span>' +
+        '<span class="act-due' + (over ? ' over' : '') + '">' + (a.due_date ? esc(String(a.due_date).slice(0, 10)) : '—') + '</span>' +
+        '<span class="ast ' + (over ? 'Blocked' : esc(a.status)) + '">' + (over ? 'Overdue' : esc(a.status)) + '</span></button>';
+    }).join('') : '<div class="empty">No actions for this team yet — raise one from any at-risk KPI.</div>';
+    content = '<div class="block"><div class="sect">Actions<span class="r">' +
+      (canConfig() ? '<button class="btn sm sub" data-autoassign="1">⚡ Auto-assign</button> ' : '') +
+      '<button class="btn sm" data-newaction="team">+ New action</button></span></div>' +
+      '<div class="panel" style="padding:0 var(--s3)">' + actRows + '</div></div>';
+  } else if (teamTab === 'reviews') {
+    var revRows = members.map(function (m) {
+      var st = reviewStatus(m.employee_id), r = reviewFor(m.employee_id);
+      return '<button type="button" class="act-r" data-openreview="' + esc(m.employee_id) + '">' + Avatar(m.employee_name) +
+        '<span class="an">' + esc(m.employee_name) + '<small>' + esc(m.designation || '') + '</small></span>' +
+        '<span class="act-due">' + (r && r.final_rating ? 'Final ' + esc(r.final_rating) + '/5' : (m.overall_score == null ? '—' : show(m.overall_score))) + '</span>' +
+        '<span class="st ' + reviewTone(st) + '">' + esc(st) + '</span></button>';
+    }).join('');
+    content = '<div class="block"><div class="sect">Reviews<span class="r">evidence-based · click to open a review</span></div>' +
+      '<div class="panel" style="padding:0 var(--s3)">' + revRows + '</div></div>';
+  } else {
+    content = '<div class="block">' + chart + '</div>' + '<div class="two">' + trend + kra + '</div>' + ExceptionsPanel(members, 'Team exceptions');
+  }
+  return PageHead(t.team_name, 'Team performance · ' + esc(monthLabel(S.month))) + strip + tabBar + content;
 }
 
 function EmployeeScreen() {
@@ -2932,6 +2977,8 @@ document.addEventListener('click', function (e) {
   if (!e.target.closest('.gsearch')) { var gb = document.getElementById('gsearch-res'); if (gb && !gb.hidden) { gb.hidden = true; gb.innerHTML = ''; } }
   var nv = e.target.closest('[data-view]');
   if (nv) { toView(nv.dataset.view); return; }
+  var ttab = e.target.closest('[data-teamtab]');
+  if (ttab) { S.teamTab = ttab.dataset.teamtab; render(); $('.canvas').scrollTop = 0; return; }
   /* Individual KRA/KPI configuration. Add/remove edit the live form DOM in
      place (no re-render, so nothing typed is lost); Save reconciles server-side. */
   var openCfg = e.target.closest('[data-config]');
