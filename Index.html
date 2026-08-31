@@ -908,6 +908,15 @@ textarea.cfg-in{resize:vertical;min-height:44px;line-height:1.5}
 .ex-a{color:var(--accent-2);font-weight:var(--fw-b);font-size:var(--fs-xs);white-space:nowrap;text-align:right}
 .ex-more{font-size:var(--fs-2xs);color:var(--muted);font-weight:var(--fw-b);padding:6px var(--s2)}
 @media(max-width:640px){.ex-r{grid-template-columns:1fr auto}.ex-o,.ex-i{display:none}}
+/* KPI benchmark (drawer) */
+.bmk{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-ctl);padding:var(--s3) var(--s4);margin-bottom:var(--s4)}
+.bmk-h{font-size:var(--fs-2xs);color:var(--muted);font-weight:var(--fw-m);margin-bottom:6px}
+.bmk-h b{color:var(--ink);font-weight:var(--fw-b)}
+.bmk-r{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:var(--s3);padding:3px 0}
+.bmk-l{font-size:var(--fs-xs);color:var(--ink-2)}
+.bmk-v{font-size:var(--fs-xs);font-weight:var(--fw-b);font-variant-numeric:tabular-nums;color:var(--ink)}
+.bmk-d{font-size:var(--fs-2xs);font-weight:var(--fw-b);font-variant-numeric:tabular-nums;min-width:40px;text-align:right}
+.bmk-d.up{color:var(--good)}.bmk-d.down{color:var(--bad)}.bmk-d.flat{color:var(--muted)}
 @media(max-width:720px){.gsearch{flex-basis:44px}.gsearch input{width:0}.gsearch:focus-within{position:absolute;left:var(--s3);right:var(--s3);flex-basis:auto;z-index:61}.gsearch:focus-within input{width:auto}}
 </style>
 </head>
@@ -1355,6 +1364,28 @@ function ScoreBody(m) {
 }
 
 /* A KPI's own history, inside the KPI it belongs to. */
+/* Is this achievement genuinely good? Compare the KPI against the team and the
+   organisation average for the same KPI (brief §35), so a number has a yardstick. */
+function KpiBenchmark(k, owner) {
+  if (k.achievement == null || !owner) return '';
+  var all = [];
+  ((Sel.model() && Sel.model().scorecards) || []).forEach(function (sc) {
+    (sc.kpis || []).forEach(function (x) { if (x.kpi === k.kpi && x.achievement != null) all.push({ team: sc.team_id, v: x.achievement }); });
+  });
+  if (all.length < 2) return '';
+  var mean = function (a) { return a.length ? Math.round(a.reduce(function (s, x) { return s + x; }, 0) / a.length * 10) / 10 : null; };
+  var teamAvg = mean(all.filter(function (x) { return x.team === owner.team_id; }).map(function (x) { return x.v; }));
+  var orgAvg = mean(all.map(function (x) { return x.v; }));
+  function cmp(label, val) {
+    if (val == null) return '';
+    var d = Math.round((k.achievement - val) * 10) / 10, cls = d > 0 ? 'up' : d < 0 ? 'down' : 'flat';
+    return '<div class="bmk-r"><span class="bmk-l">' + esc(label) + '</span><span class="bmk-v">' + show(val) + '%</span>' +
+      '<span class="bmk-d ' + cls + '">' + (d > 0 ? '+' : '') + d + '</span></div>';
+  }
+  var rows = cmp('Team average', teamAvg) + cmp('Organisation average', orgAvg);
+  if (!rows) return '';
+  return '<div class="bmk"><div class="bmk-h">This KPI is <b>' + show(k.achievement) + '%</b> — how that compares</div>' + rows + '</div>';
+}
 function KpiTrendBlock(k, owner) {
   var pts = owner ? Hist.kpi(owner.employee_id, k.kpi) : [];
   return '<div class="d-rule"></div><div class="d-sect">Achievement by month</div>' +
@@ -2716,6 +2747,7 @@ function renderDrawer() {
         '<div><div class="k">Variance vs target</div><div class="v"' + (vCls ? ' style="color:var(--' + vCls + ')"' : '') + '>' + vTxt + '</div></div>' +
       '</div>' +
       (k.achievement == null ? '' : '<div class="pair" style="margin-top:calc(var(--s4)*-1)"><div class="d-ach">' + TARGET_TICK + '<i class="' + tone(k.achievement) + '" style="width:' + achW + '%"></i></div></div>') +
+      KpiBenchmark(k, det.owner) +
       '<div class="d-meas" style="grid-template-columns:1fr 1fr">' +
         '<div><div class="k">Weightage</div><div class="v">' + show(k.weightage) + '%</div></div>' +
         '<div><div class="k">Weighted score</div><div class="v">' + show(k.weighted_score) + '<span style="color:var(--faint);font-weight:var(--fw-m)"> / ' + show(k.weightage) + '</span></div></div>' +
