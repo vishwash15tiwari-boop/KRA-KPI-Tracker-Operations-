@@ -1,0 +1,5 @@
+# Real clasp config holds your Apps Script project's scriptId — the example
+# file below is the committed placeholder; your real .clasp.json stays local.
+.clasp.json
+# clasp's OAuth token cache. This is a credential — never commit it.
+.clasprc.json

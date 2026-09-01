@@ -157,14 +157,67 @@ deployments → edit → New version**. For the config features: **share the con
 sheet with the web-app account (Editor)** and run **`provisionConfigSheet()`**
 once. First write auto-creates any missing tabs.
 
+### Continuous deployment (optional)
+`.github/workflows/deploy.yml` pushes `Code.gs` + `Index.html` to the Apps
+Script project with `clasp` on every push to this branch, then (if
+`CLASP_DEPLOYMENT_ID` is set) rolls the live web app URL forward. It needs an
+Apps Script project that already exists and has been deployed by hand at
+least once (§9 above) — CI only pushes new *versions* into that same
+project/deployment; it never creates the project or changes who it executes
+as. `.claspignore` keeps the push scoped to just those two files + the
+manifest — this root also holds the unrelated PerformOS app, which clasp
+must never see.
+
+**One-time setup:**
+1. **Note the script ID and deployment ID** of your existing deployment —
+   Project Settings in the Apps Script editor has the script ID; **Deploy →
+   Manage deployments** has the deployment ID under the deployment you want
+   CI to keep updating.
+2. **Get clasp credentials for CI**, from any machine with Node.js:
+   ```bash
+   npm install -g @google/clasp
+   clasp login
+   cat ~/.clasprc.json
+   ```
+   `clasp login` opens a one-time Google sign-in in your browser (only you
+   can complete this — it's your account). `~/.clasprc.json` is the
+   resulting token. Copy its full contents; treat it like a password — paste
+   it only into the GitHub secret below, never into a committed file.
+3. **Add three repository secrets** — this repo → **Settings → Secrets and
+   variables → Actions → New repository secret**:
+
+   | Secret | Value |
+   |---|---|
+   | `CLASP_CREDENTIALS` | full contents of `~/.clasprc.json` from step 2 |
+   | `CLASP_SCRIPT_ID` | the script ID from step 1 |
+   | `CLASP_DEPLOYMENT_ID` | the deployment ID from step 1 — optional, see below |
+4. Push a commit that touches `Code.gs` or `Index.html`. The **Actions** tab
+   shows the run.
+
+**Leaving out `CLASP_DEPLOYMENT_ID`:** the workflow still runs and still
+pushes code, but only to the project's *head* version (the `/dev` URL, for
+editors) — not the production web app URL. Reasonable while only one person
+is iterating; add the secret once every push should go live automatically —
+that trade-off is yours to make, not a default this file picks for you.
+
+**Rotating or revoking access:** `clasp login` credentials are a standing
+grant. Rotate them like any leaked secret — `clasp logout` on the machine
+you generated them from (or revoke under your Google Account's *Third-party
+access*), generate a fresh `~/.clasprc.json`, update the `CLASP_CREDENTIALS`
+secret.
+
 ## 10. Git & concurrent-session discipline
 Branch: **`claude/operations-kra-kpi-tracker-4c02x4`** (owner `vishwash15tiwari-boop`).
 **Multiple Claude sessions push to this branch simultaneously.** Always:
 `git fetch` → check `git rev-list --left-right --count HEAD...origin/<branch>` →
 if diverged, **rebase onto origin** (never `--force`, never clobber the other
 session's commits) → verify → push (fast-forward). Commit messages end with a
-`Co-Authored-By:` line. Commit only `Code.gs`/`Index.html` (never `preview.html`
-or scratchpad files).
+`Co-Authored-By:` line. For this app, commit only `Code.gs`/`Index.html` and
+the deploy scaffolding (`.github/workflows/deploy.yml`, `.claspignore`,
+`.gitignore`, `.clasp.json.example`) — never `preview.html` or scratchpad
+files. (This root also holds the unrelated **PerformOS** app — see
+`PERFORMOS.md` — which has its own files and is not part of this app's
+deploy path; `.claspignore` keeps `clasp push` from ever touching it.)
 
 ## 11. How to work here (decision-first)
 Before anything significant: **state the problem, assumptions, alternatives,
