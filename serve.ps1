@@ -24,7 +24,7 @@ while ($listener.IsListening) {
   try {
     $rel = [System.Uri]::UnescapeDataString($req.Url.LocalPath)
     $path = $rel -replace '/', '\'
-    if ($path -eq '\' -or $path -eq '') { $path = '\index.html' }
+    if ($path -eq '\' -or $path -eq '') { $path = '\PerformOS.html' }
     $file = Join-Path $root $path.TrimStart('\')
     if (Test-Path $file -PathType Leaf) {
       $ext = [System.IO.Path]::GetExtension($file).ToLower()

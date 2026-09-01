@@ -12,13 +12,18 @@ Employee → Organisation → Team → KRA → KPI → Target 1–5 → Actual
   → Leaderboard → Review → Analytics
 ```
 
-## Why this lives in its own folder
+## Sharing this branch with the KRA / KPI Tracker
 
-This branch also hosts the **KRA / KPI Tracker** (`Code.gs` + `Index.html` at
-the repo root — a Google Apps Script app). PerformOS is a completely
-different, independent product with a different architecture, so it's kept
-self-contained in this folder rather than mixed in at the root — nothing here
-touches or depends on `Code.gs` / `Index.html`, and nothing there touches this.
+This branch also hosts the **KRA / KPI Tracker** (`Code.gs` + `Index.html`,
+`CLAUDE.md` — a Google Apps Script app). PerformOS is a completely different,
+independent product with a different architecture; its files (`PerformOS.html`,
+`app.css`, `js/`, `serve.ps1`, this file) sit at the same root level but don't
+touch or depend on the Tracker's files, and vice versa.
+
+The entry file is named **`PerformOS.html`**, not `index.html` — on a
+case-insensitive filesystem (Windows, macOS by default) a folder cannot hold
+both `Index.html` and `index.html` as distinct files, so this avoids colliding
+with the Tracker's `Index.html` when the branch is checked out locally.
 
 ## Architecture
 
