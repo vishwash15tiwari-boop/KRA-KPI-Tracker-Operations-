@@ -1,8 +1,0 @@
-# clasp pushes from the repo root, but this root also holds the unrelated
-# PerformOS app (PerformOS.html, app.css, js/, serve.ps1) and docs. Ignore
-# everything by default, then explicitly un-ignore only what the Apps Script
-# project actually is: Code.gs, Index.html, and its manifest.
-**/**
-!Code.gs
-!Index.html
-!appsscript.json
