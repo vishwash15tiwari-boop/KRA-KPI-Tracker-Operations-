@@ -1,10 +1,10 @@
 # PerformOS — Employee Performance Management Platform
 
-A real, database-backed Employee Performance Management platform built around a
-**Target 1–5** model: every KRA/KPI has five target thresholds, an employee's
-actual is compared against them (direction-aware — higher-is-better,
-lower-is-better, or range), and the highest level cleared is the primary
-result. Percentage is supporting information only.
+A Google Apps Script web app, shipped as **two deployable files** —
+`Code.gs` (backend) and `Index.html` (frontend) — built around a
+**Target 1–5** model: every KRA/KPI carries five target thresholds, an
+employee's actual is compared against them (direction-aware), and the highest
+level cleared is the primary result. Percentage is supporting information only.
 
 ```
 Employee → Organisation → Team → KRA → KPI → Target 1–5 → Actual
@@ -12,58 +12,80 @@ Employee → Organisation → Team → KRA → KPI → Target 1–5 → Actual
   → Leaderboard → Review → Analytics
 ```
 
-## Why this branch is separate from the KRA/KPI Tracker branches
+## Deploy
 
-This repository also hosts the **KRA / KPI Tracker** (a Google Apps Script app,
-`Code.gs` + `Index.html`, on `claude/operations-kra-kpi-tracker-4c02x4` and its
-sibling branches). PerformOS is a distinct product with a distinct
-architecture, so it lives on its own orphan branch
-(`claude/employee-performance-platform`) with no shared history — pushing here
-never touches the Tracker's branches, and vice versa.
+1. Create a new Apps Script project (<https://script.google.com>).
+2. Paste **`Code.gs`** into the script file, and add an HTML file named
+   **`Index`** containing `Index.html`.
+3. Optional but recommended: enable *Show "appsscript.json" manifest file* in
+   Project Settings and paste `appsscript.json` over the generated manifest.
+4. **Deploy → New deployment → Web app**, then open the URL.
+
+No setup step is required. On first load the script creates its own backend
+spreadsheet, provisions 16 tabs, and seeds a complete demo organisation
+(structure, ~46 people, KRAs/KPIs, FY 2026–27 targets and five months of
+performance). To point it at a specific spreadsheet instead, set the
+`PERFORMOS_DB_ID` script property before first load. `provisionAndSeed()` can
+also be run manually from the editor, and is safe to re-run.
+
+Run **`selfTest()`** from the editor to verify the calculation engine — it
+checks the demo figures, all three KPI directions, every target state and the
+weighted aggregation, and logs a pass/fail line for each.
 
 ## Architecture
 
-This runs entirely in the browser, backed by a **real IndexedDB relational
-database** — not mock data, not a static demo:
+The backend owns all business logic, so scoring is authoritative and the client
+only ever visualises.
 
-- **`js/schema.js`** — the table/index/foreign-key definitions.
-- **`js/db.js`** — a small relational engine over IndexedDB: transactions,
-  indexed lookups, foreign-key enforcement on write, composite indexes.
-- **`js/domain.js`** — all business logic, kept out of the views: the
-  Target-1–5 calculation engine (direction-aware), KRA/overall aggregation
-  (weighted mean, with stored components so results are always explainable),
-  RBAC (`can()` / `canScope()`, enforced before every write), audit logging,
-  notifications, leaderboard and analytics derivation.
-- **`js/seed.js`** — realistic fictional demo data: the organisation structure
-  (Leadership / Business Units / Central Functions / Support Functions, per
-  the authoritative org chart), ~40 employees, a 3-KRA/8-KPI framework
-  covering all three KPI directions, FY 2026–27 with 5 months of history.
-- **`js/ui.js`** — app shell (sidebar, topbar, breadcrumbs, global search,
-  period selector, notifications), the hash router, drawer/modal overlay
-  system, and the `TargetProgress` component — the product's core visual.
-- **`js/pages.js`** — the 12 sidebar modules (People: Directory / Organization
-  / Teams · Performance: KRA-KPI / Targets / Performance / Reviews /
-  Leaderboard · Analytics: Reports / Performance Analytics · System:
-  Notifications / Administration) plus every contextual drawer and modal.
+**`Code.gs`**
+- *Repository* — one spreadsheet tab per table (16 tables), positional column
+  contract, `read_`/`write_`/`append_`/`upsert_`/`bulkUpdate_`.
+- *Calculation engine* — `levelFor_()` resolves the achieved target level for
+  higher-is-better, lower-is-better and range KPIs; `aggregate_()` performs the
+  weighted rollup and keeps its components so a result can always be explained;
+  `recompute_()` persists KPI levels, KRA rollups and the overall employee level.
+- *Leaderboard / analytics* — derived from performance rows on demand, never a
+  stored rank, so they are always reproducible.
+- *Authorization* — `resolveSession_`, `can_`, `canScope_` enforce role and
+  manager-chain scope on **every write**, plus period locking; an audit row is
+  written for each change and notifications are raised on real events.
+- *API* — `apiBootstrap` returns session + the whole model for a period in one
+  round trip; each write returns a freshly recomputed model.
 
-Data persists in the browser's IndexedDB across reloads. There is no server —
-this design was a deliberate response to the environment it was built in
-(no Node/Python toolchain available to run a conventional backend), but the
-domain layer (`domain.js`) is written with no DOM dependency, so it can be
-lifted onto a real server (Node/Prisma, .NET/EF, etc.) for a multi-user
-deployment without rewriting the business logic.
+**`Index.html`** — the entire frontend in one file: app shell (sidebar, topbar,
+breadcrumbs, global search, period selector, notifications, role switcher), the
+hash router, the drawer/modal overlay system, the reusable `TargetProgress`
+component (full ladder / hero / compact ticks / pill), and the twelve modules:
 
-## Running it locally
+| People | Performance | Analytics | System |
+|---|---|---|---|
+| Employee Directory | KRA / KPI | Reports | Notifications |
+| Organization | Targets | Performance Analytics | Administration |
+| Teams | Performance | | |
+| | Reviews | | |
+| | Leaderboard | | |
 
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File serve.ps1
-```
-
-Serves the app at `http://localhost:8190/`. First load seeds the database
-automatically.
+Employee Profile, Team, KRA, KPI, Target and Review are **contextual
+drill-downs** (drawers), not sidebar items — the interface follows a
+progressive-disclosure model: concise lists → drawers for detail → modals for
+actions.
 
 ## Demo employee
 
 **Rahul Sharma** — `EMP-00124` — Infra Business / Metals Team, manager Amit
 Sharma. Monthly Sales ₹27L → Target 4, New Customer Revenue ₹32L → Target 5,
-Collection ₹11L → Target 3 → overall **Target 4**.
+Collection ₹11L → Target 3 → overall **Target 4** (weighted score 4.3).
+
+## A note on the specification's §17 example
+
+The brief's worked example lists KPI levels 4, 5, 3, 4 at weights 40%, 20%,
+15%, 25% and prints a weighted aggregate of **4.00**. Those figures actually
+sum to **4.05** (1.6 + 1.0 + 0.45 + 1.0). Both map to Target 4, so the
+published conclusion stands; this implementation reports the arithmetically
+correct score, and `selfTest()` asserts 4.05.
+
+## Relationship to the other branches in this repository
+
+This repository's other branches hold the **KRA / KPI Tracker**, a different
+product. PerformOS lives on its own branch with no shared history, so work on
+one never disturbs the other.
