@@ -30,6 +30,35 @@
  *      "T - 2 days") and a qualitative one ("As per Collections Process").
  *      Bands are therefore stored as the ORIGINAL TEXT and interpreted by the
  *      Bands engine below, which detects direction rather than assuming it.
+ *
+ * DEPLOY — two files, no build step, no dependencies
+ *   1. Paste this file as Code.gs, and Index.html as an HTML file named
+ *      exactly "Index" (doGet loads it by that name — do not rename it).
+ *   2. Deploy → New deployment → Web app, execute as me.
+ *   3. Open the URL. The first load seeds itself; nothing to run by hand.
+ *   Re-import any time from Administration. Identity is a deterministic hash
+ *   of the names, so importing twice UPDATES rather than duplicating. The
+ *   source sheet must be shared with the account the web app runs as.
+ *   selfTest() runs 21 assertions from the editor.
+ *
+ * CURRENTLY IMPORTED
+ *   5 teams · 38 people · 90 KRAs · 91 KPIs · 208 individual KPI assignments.
+ *   Every person's per-KPI weightage totals exactly 100.
+ *
+ * OPEN DATA DECISIONS — stated, never silently corrected, because these
+ * ladders decide people's ratings. The Structure Review screen lists them.
+ *   · "PDD ₹ Cr Recovered" (Ravi Naik, Ankur, Venkat) runs ≥ ₹9 Cr at
+ *     Target 1 down to < ₹5 Cr at Target 5, so recovering LESS scores
+ *     higher — although the KPI reads as something to increase. Needs a
+ *     decision from the KRA owner; reverse the bands if unintended.
+ *   · Two KPIs have no measurable ladder and must be awarded by hand:
+ *     "Reporting & Escalations" (Vishwash) and "Adherence to Reminder
+ *     (Total)" (Sai Nitin).
+ *
+ * A LEVEL is the highest band cleared counting CONSECUTIVELY from Target 1 —
+ * a gap stops the count, so clearing T1, T2 and T4 is Target 2, not Target 4.
+ * Unscored KPIs leave the rollup DENOMINATOR rather than counting as zero;
+ * measured_weightage reports how much of a scorecard is actually measured.
  * ========================================================================== */
 
 var APP_NAME = 'PerformOS';
