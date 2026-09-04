@@ -227,19 +227,26 @@ var M={teams:{},emps:{},kras:{},kpis:{},periods:{},
   period:function(id){return M.periods[id||S.period]||{};},
   settings:function(){return (S.model&&S.model.settings)||{};}};
 
-var PERMS={super_admin:['*'],hr_admin:['view','edit_target','edit_framework','enter_actual','admin','export'],
-  business_head:['view','edit_target','edit_framework','enter_actual','export'],
-  team_leader:['view','edit_target','enter_actual','export'],manager:['view','enter_actual','export'],
-  employee:['view','enter_own'],auditor:['view','export']};
-function can(a){var s=S.session;if(!s)return false;var p=PERMS[s.role_id]||[];return p.indexOf('*')>=0||p.indexOf(a)>=0;}
-function scoped(empId){var s=S.session;if(!s||!empId)return false;
-  if(s.role_id==='super_admin'||s.role_id==='hr_admin'||s.role_id==='business_head')return true;
-  if(!s.employee_id)return false;
-  if(s.employee_id===empId)return true;
-  var me=M.emps[s.employee_id],them=M.emps[empId];
-  if(!me||!them)return false;
-  if(s.role_id==='team_leader'||s.role_id==='manager')return me.team_id===them.team_id;
-  return false;}
+/* Permissions come from the server with the session — the client keeps NO copy
+   of the role table. An earlier version duplicated both the role→permission
+   map and the scope rules here, so editing one of them would have left the
+   buttons disagreeing with what the server actually allows. These helpers only
+   decide what to SHOW; every write is checked again server-side regardless. */
+function can(a){
+  var p=(S.session&&S.session.perms)||[];
+  return p.indexOf('*')>=0||p.indexOf(a)>=0;
+}
+function scoped(empId){
+  var s=S.session;if(!s||!empId)return false;
+  var sc=s.scope||{kind:'none'};
+  if(sc.kind==='all')return true;
+  if(sc.kind==='self')return String(s.employee_id)===String(empId);
+  if(sc.kind==='team'){
+    var them=M.emps[empId];
+    return !!them&&String(them.team_id)===String(sc.team_id);
+  }
+  return false;
+}
 function canTarget(e){return can('edit_target')&&scoped(e);}
 function canFramework(e){return can('edit_framework')&&scoped(e);}
 function canActual(e){return (can('enter_actual')||(S.session&&S.session.employee_id===e&&can('enter_own')))&&scoped(e);}
@@ -733,7 +740,11 @@ P.admin=function(){
     '<p class="help">Re-read the definitions from the KRA / KPI sheet. Identity is derived from the names, so importing '+
     'twice is safe — it updates rather than duplicating.</p>'+
     fld('Source sheet ID','<input class="in" id="imp-id" value="'+h((S.model&&S.model.source_sheet_id)||'')+'">')+
-    '<label class="help"><input type="checkbox" id="imp-rep"> Replace existing assignments and targets</label>'+
+    '<label class="help" style="display:flex;gap:7px;align-items:flex-start;line-height:1.45">'+
+    '<input type="checkbox" id="imp-rep" style="margin-top:2px">'+
+    '<span><b>Replace instead of merge.</b> Discards the current assignments and '+
+    '<b>'+h(M.period().name)+'</b> targets <i>of the people in the imported sheet</i>, then rebuilds them. '+
+    'Other months and anyone absent from the sheet are left alone. Recorded actuals are never deleted.</span></label>'+
     '<div class="row" style="margin-top:10px"><button class="btn primary" id="imp-go">'+icon('dl')+'Import now</button></div>'+
     '<p class="help" style="margin-top:8px">The sheet must be shared with the account this web app runs as.</p></div>'+
     '<div class="card"><div class="sh"><h3>Rollup rule</h3></div><p class="help">'+h((st.rollup&&st.rollup.description)||'—')+'</p>'+

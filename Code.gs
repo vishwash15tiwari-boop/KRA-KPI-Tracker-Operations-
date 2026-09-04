@@ -101,86 +101,133 @@ function doGet() {
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
-/* -------------------------------------------------------------- REPOSITORY -- */
+/* -------------------------------------------------------------- REPOSITORY --
+ * Each tab is a table; column order is the contract (append, never reorder).
+ *
+ * Everything is read ONCE per request into _CACHE and written back ONCE per
+ * table by commit_(). This is not an optimisation, it is what makes the app
+ * work: Apps Script charges a round trip per getValues/setValues and caps an
+ * execution at six minutes. The earlier version re-read a whole table inside
+ * every upsert AND re-stamped the header row on every tab_() call, so a full
+ * import of 208 assignments cost thousands of sheet operations and could not
+ * finish. Reading 11 tables and writing back the few that changed costs a
+ * couple of dozen.
+ *
+ * Callers mutate the objects read_() hands back and then upsert_() them; since
+ * those objects ARE the cache, that stays consistent within a request.
+ * ------------------------------------------------------------------------- */
+var _SS = null, _CACHE = {}, _DIRTY = {}, _TABS = {};
+
 function ss_() {
+  if (_SS) return _SS;
   var props = PropertiesService.getScriptProperties();
   var id = props.getProperty(PROP_DB);
-  if (id) { try { return SpreadsheetApp.openById(id); } catch (e) {} }
+  if (id) { try { _SS = SpreadsheetApp.openById(id); return _SS; } catch (e) {} }
   var bound = null;
   try { bound = SpreadsheetApp.getActiveSpreadsheet(); } catch (e) {}
-  var ss = bound || SpreadsheetApp.create(APP_NAME + ' — Backend');
-  props.setProperty(PROP_DB, ss.getId());
-  return ss;
+  _SS = bound || SpreadsheetApp.create(APP_NAME + ' — Backend');
+  props.setProperty(PROP_DB, _SS.getId());
+  return _SS;
 }
+
+/* Stamps the header only when the sheet is new or its first cell is wrong —
+   re-writing it on every access was three wasted round trips per upsert. */
 function tab_(name) {
-  var ss = ss_(), sh = ss.getSheetByName(name), head = SCHEMA[name];
-  if (!sh) sh = ss.insertSheet(name);
-  if (sh.getMaxColumns() < head.length) sh.insertColumnsAfter(sh.getMaxColumns(), head.length - sh.getMaxColumns());
-  sh.getRange(1, 1, 1, head.length).setValues([head]).setFontWeight('bold').setBackground('#F1F5F9');
-  sh.setFrozenRows(1);
+  if (_TABS[name]) return _TABS[name];
+  var ss = ss_(), sh = ss.getSheetByName(name), head = SCHEMA[name], fresh = false;
+  if (!sh) { sh = ss.insertSheet(name); fresh = true; }
+  if (sh.getMaxColumns() < head.length) {
+    sh.insertColumnsAfter(sh.getMaxColumns(), head.length - sh.getMaxColumns());
+  }
+  if (!fresh) {
+    var first = sh.getRange(1, 1).getValue();
+    fresh = String(first).trim() !== String(head[0]);
+  }
+  if (fresh) {
+    sh.getRange(1, 1, 1, head.length).setValues([head]).setFontWeight('bold').setBackground('#F1F5F9');
+    sh.setFrozenRows(1);
+  }
+  _TABS[name] = sh;
   return sh;
 }
+
 function read_(name) {
-  var ss; try { ss = ss_(); } catch (e) { return []; }
-  var sh = ss.getSheetByName(name);
-  if (!sh || sh.getLastRow() < 2) return [];
-  var head = SCHEMA[name];
-  return sh.getRange(2, 1, sh.getLastRow() - 1, head.length).getValues()
-    .filter(function (r) { return String(r[0]).trim() !== ''; })
-    .map(function (r) { var o = {}; head.forEach(function (k, i) { o[k] = r[i]; }); return o; });
-}
-function write_(name, objs) {
-  var sh = tab_(name), head = SCHEMA[name], need = objs.length + 1;
-  if (sh.getMaxRows() < need) sh.insertRowsAfter(sh.getMaxRows(), need - sh.getMaxRows());
-  if (sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, head.length).clearContent();
-  if (objs.length) {
-    sh.getRange(2, 1, objs.length, head.length).setValues(objs.map(function (o) {
-      return head.map(function (k) { return o[k] == null ? '' : o[k]; });
-    }));
-  }
-  return objs.length;
-}
-function append_(name, obj) {
-  var sh = tab_(name), head = SCHEMA[name];
-  sh.appendRow(head.map(function (k) { return obj[k] == null ? '' : obj[k]; }));
-  return obj;
-}
-function upsert_(name, obj) {
-  var sh = tab_(name), head = SCHEMA[name], id = String(obj[head[0]]);
-  var at = -1, last = sh.getLastRow();
+  if (_CACHE[name]) return _CACHE[name];
+  var head = SCHEMA[name], rows = [];
+  var sh; try { sh = tab_(name); } catch (e) { _CACHE[name] = rows; return rows; }
+  var last = sh.getLastRow();
   if (last >= 2) {
-    var ids = sh.getRange(2, 1, last - 1, 1).getValues();
-    for (var i = 0; i < ids.length; i++) if (String(ids[i][0]) === id) { at = i + 2; break; }
+    rows = sh.getRange(2, 1, last - 1, head.length).getValues()
+      .filter(function (r) { return String(r[0]).trim() !== ''; })
+      .map(function (r) { var o = {}; head.forEach(function (k, i) { o[k] = r[i]; }); return o; });
   }
-  var row = head.map(function (k) { return obj[k] == null ? '' : obj[k]; });
-  if (at > 0) sh.getRange(at, 1, 1, head.length).setValues([row]); else sh.appendRow(row);
+  _CACHE[name] = rows;
+  return rows;
+}
+
+function write_(name, objs) {
+  _CACHE[name] = (objs || []).slice();
+  _DIRTY[name] = true;
+  return _CACHE[name].length;
+}
+function append_(name, obj) { read_(name).push(obj); _DIRTY[name] = true; return obj; }
+
+function upsert_(name, obj) {
+  var rows = read_(name), key = SCHEMA[name][0], id = String(obj[key]);
+  for (var i = 0; i < rows.length; i++) {
+    if (String(rows[i][key]) === id) { rows[i] = obj; _DIRTY[name] = true; return obj; }
+  }
+  rows.push(obj); _DIRTY[name] = true;
   return obj;
 }
 function del_(name, id) {
-  var sh = tab_(name), last = sh.getLastRow();
-  if (last < 2) return false;
-  var ids = sh.getRange(2, 1, last - 1, 1).getValues();
-  for (var i = 0; i < ids.length; i++) {
-    if (String(ids[i][0]) === String(id)) { sh.deleteRow(i + 2); return true; }
+  var rows = read_(name), key = SCHEMA[name][0];
+  for (var i = 0; i < rows.length; i++) {
+    if (String(rows[i][key]) === String(id)) { rows.splice(i, 1); _DIRTY[name] = true; return true; }
   }
   return false;
 }
 function bulkUpdate_(name, objs) {
-  if (!objs.length) return 0;
-  var sh = tab_(name), head = SCHEMA[name], last = sh.getLastRow();
-  if (last < 2) return 0;
-  var all = sh.getRange(2, 1, last - 1, head.length).getValues();
-  var rowOf = {};
-  for (var i = 0; i < all.length; i++) rowOf[String(all[i][0])] = i;
+  if (!objs || !objs.length) return 0;
   var n = 0;
-  objs.forEach(function (o) {
-    var r = rowOf[String(o[head[0]])];
-    if (r === undefined) return;
-    all[r] = head.map(function (k) { return o[k] == null ? '' : o[k]; });
-    n++;
-  });
-  sh.getRange(2, 1, all.length, head.length).setValues(all);
+  objs.forEach(function (o) { upsert_(name, o); n++; });
   return n;
+}
+
+/* Writes every changed table back in one setValues each, then clears whatever
+   the table shrank past. MUST be called before an API function returns, or the
+   request's changes are discarded. */
+function commit_() {
+  var names = Object.keys(_DIRTY), written = 0;
+  names.forEach(function (name) {
+    var rows = _CACHE[name] || [], head = SCHEMA[name], sh = tab_(name);
+    var need = rows.length + 1;
+    if (sh.getMaxRows() < need) sh.insertRowsAfter(sh.getMaxRows(), need - sh.getMaxRows());
+    if (rows.length) {
+      sh.getRange(2, 1, rows.length, head.length).setValues(rows.map(function (o) {
+        return head.map(function (k) { return o[k] == null ? '' : o[k]; });
+      }));
+    }
+    var last = sh.getLastRow();
+    if (last > rows.length + 1) {
+      sh.getRange(rows.length + 2, 1, last - rows.length - 1, head.length).clearContent();
+    }
+    delete _DIRTY[name];
+    written++;
+  });
+  return written;
+}
+
+/* Resolves the period an API call should act on. Nothing may fall back to an
+   empty period: targets written with period_id "" belong to no month, are
+   invisible in every view, and quietly make a KPI look like it has no ladder. */
+function periodOr_(id) {
+  if (id) return String(id);
+  var set = read_(T.SETTINGS).filter(function (r) { return r.key === "current_period"; })[0];
+  if (set && set.value) return String(set.value);
+  var ps = read_(T.PERIODS).sort(function (a, b) { return num_(a.sort) - num_(b.sort); });
+  if (ps.length) return String(ps[ps.length - 1].id);
+  throw new Error("No period is defined, so there is nothing to write targets against.");
 }
 
 /* --------------------------------------------------------------- UTILITIES -- */
@@ -323,6 +370,16 @@ function resolveSession_(viewAs) {
     var u = users.filter(function (x) { return String(x.id) === String(viewAs); })[0];
     if (u) { s.role_id = u.role_id; s.employee_id = u.employee_id || ''; s.name = u.name; }
   }
+  /* The client used to keep its own copy of ROLE_PERMS and its own copy of the
+     scope rules, so editing one table silently desynchronised the buttons from
+     what the server would actually allow. Ship the resolved permissions and
+     the scope shape instead — the server stays the only definition. */
+  s.perms = (ROLE_PERMS[s.role_id] || []).slice();
+  s.scope = (s.role_id === 'super_admin' || s.role_id === 'hr_admin' || s.role_id === 'business_head')
+    ? { kind: 'all' }
+    : (s.role_id === 'team_leader' || s.role_id === 'manager')
+      ? { kind: 'team', team_id: (idx_(emps)[s.employee_id] || {}).team_id || '' }
+      : (s.employee_id ? { kind: 'self' } : { kind: 'none' });
   s._byId = idx_(emps);
   return s;
 }
@@ -447,16 +504,17 @@ function buildModel_(periodId) {
 function apiBootstrap(periodId, viewAs) {
   try {
     var s = resolveSession_(viewAs);
-    return jsonSafe_({ ok: true, model: buildModel_(periodId), users: s.users,
+    var _m = buildModel_(periodId); commit_();
+    return jsonSafe_({ ok: true, model: _m, users: s.users,
       session: { email: s.email, name: s.name, role_id: s.role_id, employee_id: s.employee_id,
-                 admin: s.admin, can_switch: s.can_switch } });
+                 admin: s.admin, can_switch: s.can_switch, perms: s.perms, scope: s.scope } });
   } catch (e) {
     return { ok: false, error: String(e && e.message || e), where: 'apiBootstrap',
              stack: String(e && e.stack || '').split('\n').slice(0, 4).join(' | ') };
   }
 }
 function apiModel(periodId) {
-  try { return jsonSafe_({ ok: true, model: buildModel_(periodId) }); }
+  try { var m = buildModel_(periodId); commit_(); return jsonSafe_({ ok: true, model: m }); }
   catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiModel' }; }
 }
 function apiPing() { return { ok: true, app: APP_NAME, at: nowIso_() }; }
@@ -468,6 +526,7 @@ function apiSaveTargets(p) {
   try {
     p = p || {};
     var s = resolveSession_(p.view_as);
+    p.period_id = periodOr_(p.period_id);
     requirePerm_(s, 'edit_target', 'edit targets');
     requireScope_(s, p.employee_id, 'edit this person’s targets');
     var bands = [p.t1, p.t2, p.t3, p.t4, p.t5].map(function (x) { return x == null ? '' : String(x).trim(); });
@@ -486,7 +545,8 @@ function apiSaveTargets(p) {
     audit_(s.name, 'target', id, 'edit_bands', old,
       { t1: bands[0], t2: bands[1], t3: bands[2], t4: bands[3], t5: bands[4] },
       'kind=' + parsed.kind + ' direction=' + parsed.direction);
-    return jsonSafe_({ ok: true, parsed: parsed, model: buildModel_(p.period_id) });
+    var _m = buildModel_(p.period_id); commit_();
+    return jsonSafe_({ ok: true, parsed: parsed, model: _m });
   } catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiSaveTargets' }; }
 }
 
@@ -495,6 +555,7 @@ function apiSaveAssignment(p) {
   try {
     p = p || {};
     var s = resolveSession_(p.view_as);
+    p.period_id = periodOr_(p.period_id);
     requirePerm_(s, 'edit_framework', 'edit the KRA/KPI framework');
     requireScope_(s, p.employee_id, 'edit this person’s KRA/KPI');
     var emp = s._byId[p.employee_id]; if (!emp) throw new Error('Unknown employee.');
@@ -521,7 +582,8 @@ function apiSaveAssignment(p) {
     }
     audit_(s.name, 'assignment', id, prev ? 'edit' : 'create', old,
       { kra: p.kra_name, kpi: p.kpi_name, weightage: wt });
-    return jsonSafe_({ ok: true, model: buildModel_(p.period_id) });
+    var _m = buildModel_(p.period_id); commit_();
+    return jsonSafe_({ ok: true, model: _m });
   } catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiSaveAssignment' }; }
 }
 
@@ -530,6 +592,7 @@ function apiRemoveAssignment(p) {
   try {
     p = p || {};
     var s = resolveSession_(p.view_as);
+    p.period_id = periodOr_(p.period_id);
     requirePerm_(s, 'edit_framework', 'edit the KRA/KPI framework');
     requireScope_(s, p.employee_id, 'edit this person’s KRA/KPI');
     var a = read_(T.ASSIGN).filter(function (x) { return String(x.id) === String(p.assignment_id); })[0];
@@ -537,7 +600,8 @@ function apiRemoveAssignment(p) {
     a.status = 'Inactive'; a.updated_by = s.name; a.updated_at = nowIso_();
     upsert_(T.ASSIGN, a);
     audit_(s.name, 'assignment', a.id, 'remove', { kpi: a.kpi_id, weightage: a.weightage }, null, p.reason || '');
-    return jsonSafe_({ ok: true, model: buildModel_(p.period_id) });
+    var _m = buildModel_(p.period_id); commit_();
+    return jsonSafe_({ ok: true, model: _m });
   } catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiRemoveAssignment' }; }
 }
 
@@ -546,6 +610,7 @@ function apiSaveActual(p) {
   try {
     p = p || {};
     var s = resolveSession_(p.view_as);
+    p.period_id = periodOr_(p.period_id);
     var own = String(s.employee_id || '') === String(p.employee_id);
     if (!(can_(s, 'enter_actual') || (own && can_(s, 'enter_own')))) {
       throw new Error('Your role cannot record performance.');
@@ -568,7 +633,8 @@ function apiSaveActual(p) {
       updated_by: s.name, updated_at: nowIso_() });
     var res = recomputeOne_(p.employee_id, p.kpi_id, p.period_id, s.name);
     audit_(s.name, 'performance', id, 'record', old, { actual: actual, manual_level: manual, level: res.level });
-    return jsonSafe_({ ok: true, level: res.level, model: buildModel_(p.period_id) });
+    var _m = buildModel_(p.period_id); commit_();
+    return jsonSafe_({ ok: true, level: res.level, model: _m });
   } catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiSaveActual' }; }
 }
 
@@ -596,6 +662,7 @@ function apiRecomputeAll(p) {
   try {
     p = p || {};
     var s = resolveSession_(p.view_as);
+    p.period_id = periodOr_(p.period_id);
     requirePerm_(s, 'admin', 'recompute the period');
     var n = 0;
     read_(T.PERF).forEach(function (r) {
@@ -603,7 +670,8 @@ function apiRecomputeAll(p) {
       recomputeOne_(r.employee_id, r.kpi_id, r.period_id, s.name); n++;
     });
     audit_(s.name, 'period', p.period_id, 'recompute_all', null, { rows: n });
-    return jsonSafe_({ ok: true, rows: n, model: buildModel_(p.period_id) });
+    var _m = buildModel_(p.period_id); commit_();
+    return jsonSafe_({ ok: true, rows: n, model: _m });
   } catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiRecomputeAll' }; }
 }
 
@@ -666,14 +734,17 @@ function apiImportFromSource(p) {
   try {
     p = p || {};
     var s = resolveSession_(p.view_as);
+    p.period_id = periodOr_(p.period_id);
     requirePerm_(s, 'edit_framework', 'import the framework');
     var res = importFromSource_(p.sheet_id || SOURCE_SHEET_ID, p.period_id, s.name, !!p.replace);
     audit_(s.name, 'system', 'import', 'import_source', null, res);
-    return jsonSafe_({ ok: true, result: res, model: buildModel_(p.period_id) });
+    var _m = buildModel_(p.period_id); commit_();
+    return jsonSafe_({ ok: true, result: res, model: _m });
   } catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiImportFromSource' }; }
 }
 
 function importFromSource_(sheetId, periodId, actor, replace) {
+  periodId = periodOr_(periodId);
   var src;
   try { src = SpreadsheetApp.openById(sheetId); }
   catch (e) {
@@ -692,7 +763,26 @@ function importFromSource_(sheetId, periodId, actor, replace) {
   var people = blocks.filter(function (b) { return b.isPerson; });
   if (!people.length) throw new Error('No individual KRA/KPI blocks were found in that workbook.');
 
-  if (replace) { write_(T.ASSIGN, []); write_(T.TARGETS, []); }
+  /* "Replace" must not reach beyond what is being imported. Clearing the whole
+     TARGETS table destroyed every other month: importing September wiped
+     August, whose recorded actuals then had no ladder left to score against.
+     And clearing every assignment deleted the scorecards of anyone absent
+     from this import. So drop only this period's targets, and only for the
+     people this workbook actually contains. */
+  if (replace) {
+    var inImport = {};
+    people.forEach(function (b) { inImport[slug_(b.name)] = true; });
+    var empSlug = {};
+    read_(T.EMPLOYEES).forEach(function (e) { empSlug[e.id] = slug_(e.name); });
+    write_(T.ASSIGN, read_(T.ASSIGN).filter(function (a) {
+      return !inImport[empSlug[a.employee_id]];
+    }));
+    write_(T.TARGETS, read_(T.TARGETS).filter(function (t) {
+      var samePeriod = String(t.period_id) === String(periodId);
+      var mine = !!inImport[empSlug[t.employee_id]];
+      return !(samePeriod && mine);
+    }));
+  }
 
   var teamsSeen = {}, created = { teams: 0, people: 0, kras: 0, kpis: 0, assignments: 0, targets: 0 };
   var existingEmps = read_(T.EMPLOYEES), empByName = {};
