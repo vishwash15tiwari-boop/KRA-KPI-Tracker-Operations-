@@ -1,133 +1,121 @@
 /* ============================================================================
- * PerformOS — Employee Performance Management Platform
- * Apps Script backend. Two deployable files: Code.gs + Index.html.
+ * PerformOS — Individual KRA / KPI Performance Platform
+ * Apps Script backend.  Two deployable files: Code.gs + Index.html.
  *
- * Ported from the browser-native build (IndexedDB) to Apps Script:
- *   - the database is a Google Spreadsheet, one tab per table;
- *   - the calculation engine runs HERE, server-side, so scoring is
- *     backend-authoritative and the client only ever visualises;
- *   - the client gets the whole model for a period in one round trip
- *     (apiBootstrap / apiModel) and re-adopts a freshly recomputed model
- *     after every write.
+ * WHAT THIS IS
+ *   Every person has their OWN set of KRAs and KPIs, each with its own
+ *   weightage and its own five target bands. This backend holds that
+ *   structure, lets it be edited, and resolves "which target level has this
+ *   person reached" once actuals arrive.
  *
- * The product model is Target 1–5:
- *   Employee → Org → Team → KRA → KPI → Target 1–5 → Actual
- *     → KPI level → KRA level → Overall employee level
- *     → Leaderboard → Review → Analytics
+ *       Team → Individual → KRA → KPI → Target 1..5 → Actual
+ *            → KPI level → KRA level → Overall level
  *
- * No setup is required to run: on first load the script creates its own
- * backend spreadsheet and seeds a full demo organisation.
+ * SOURCE OF TRUTH
+ *   The definitions come from the KRA/KPI workbook
+ *   1c0_pP4Mmye5s5D_vzoxrvJ-utkLb6JhD69TvvOBbjoo
+ *   (tabs: Metal / Plastic / Onboarding / Collections / Open Marketplace -
+ *   Control Tower, each with a per-individual tab). importFromSource() reads
+ *   it; the platform then owns an editable, audited copy so editing never
+ *   writes back over the hand-maintained original.
+ *
+ * TWO THINGS THE WORKBOOK FORCES
+ *   1. Weightage is per-KPI and sums to 100 for each person — so the overall
+ *      level is a single weighted mean over that person's KPIs. Some tabs
+ *      express it as fractions (0.35), others as percent (35) — normalised
+ *      per person on import.
+ *   2. Target bands are NOT uniformly numeric. Real ladders include
+ *      "> 28 Days", "25–28 Days", "TGT-20 Days", "≥ ₹9 Cr", "10% of LD",
+ *      "80% Cumulative of Team Target", an ordinal ladder ("T+7 days" →
+ *      "T - 2 days") and a qualitative one ("As per Collections Process").
+ *      Bands are therefore stored as the ORIGINAL TEXT and interpreted by the
+ *      Bands engine below, which detects direction rather than assuming it.
  * ========================================================================== */
 
 var APP_NAME = 'PerformOS';
 var PROP_DB = 'PERFORMOS_DB_ID';
+var SOURCE_SHEET_ID = '1c0_pP4Mmye5s5D_vzoxrvJ-utkLb6JhD69TvvOBbjoo';
 
 /* ------------------------------------------------------------------ SCHEMA --
- * One tab per table. Column order is the contract: read_() maps positionally,
- * so columns may be APPENDED but never reordered. */
+ * One tab per table. Column order is the contract: append, never reorder. */
 var T = {
-  ORG_TYPES: 'ORG_TYPES', ORG_UNITS: 'ORG_UNITS', TEAMS: 'TEAMS', EMPLOYEES: 'EMPLOYEES',
-  ROLES: 'ROLES', KRAS: 'KRAS', KPIS: 'KPIS', PERIODS: 'PERIODS', ASSIGNMENTS: 'ASSIGNMENTS',
-  TARGETS: 'TARGETS', PERFORMANCE: 'PERFORMANCE', REVIEWS: 'REVIEWS',
-  NOTIFICATIONS: 'NOTIFICATIONS', AUDIT: 'AUDIT', SETTINGS: 'SETTINGS', USERS: 'USERS'
+  TEAMS: 'TEAMS', EMPLOYEES: 'EMPLOYEES', KRAS: 'KRAS', KPIS: 'KPIS',
+  ASSIGN: 'ASSIGNMENTS', TARGETS: 'TARGETS', PERF: 'PERFORMANCE',
+  PERIODS: 'PERIODS', USERS: 'USERS', AUDIT: 'AUDIT', SETTINGS: 'SETTINGS'
 };
-
 var SCHEMA = {};
-SCHEMA[T.ORG_TYPES] = ['id', 'name', 'code', 'color', 'sort'];
-SCHEMA[T.ORG_UNITS] = ['id', 'org_type_id', 'name', 'code', 'head_id', 'status'];
-SCHEMA[T.TEAMS] = ['id', 'org_unit_id', 'name', 'code', 'leader_id', 'description', 'status'];
-SCHEMA[T.EMPLOYEES] = ['id', 'name', 'designation', 'org_type_id', 'org_unit_id', 'team_id',
-  'manager_id', 'functional_head_id', 'employment_status', 'employment_type',
-  'date_of_joining', 'location', 'role_id', 'email'];
-SCHEMA[T.ROLES] = ['id', 'name'];
-SCHEMA[T.KRAS] = ['id', 'name', 'code', 'description', 'weight', 'status', 'effective_from'];
-SCHEMA[T.KPIS] = ['id', 'kra_id', 'name', 'code', 'description', 'measurement_type', 'unit',
-  'frequency', 'direction', 'weight', 'status'];
-SCHEMA[T.PERIODS] = ['id', 'name', 'kind', 'code', 'sort', 'status', 'start_date'];
-SCHEMA[T.ASSIGNMENTS] = ['id', 'employee_id', 'kpi_id', 'kra_id', 'source', 'weight',
-  'status', 'effective_from', 'effective_to'];
-SCHEMA[T.TARGETS] = ['id', 'employee_id', 'kpi_id', 'period_id', 't1', 't2', 't3', 't4', 't5',
-  'unit', 'direction', 'status', 'version', 'created_by', 'approved_by', 'approved_at'];
-SCHEMA[T.PERFORMANCE] = ['id', 'employee_id', 'team_id', 'kra_id', 'kpi_id', 'period_id',
-  't1', 't2', 't3', 't4', 't5', 'direction', 'weight', 'actual',
-  'highest_level', 'levels_achieved', 'pct', 'score', 'status', 'updated_at'];
-SCHEMA[T.REVIEWS] = ['id', 'employee_id', 'period_id', 'status', 'mgr_achievements',
-  'mgr_strengths', 'mgr_improvements', 'emp_self', 'emp_support', 'reviewer_id', 'updated_at'];
-SCHEMA[T.NOTIFICATIONS] = ['id', 'recipient_id', 'type', 'title', 'message', 'entity_type',
-  'entity_id', 'read', 'created_at'];
-SCHEMA[T.AUDIT] = ['id', 'ts', 'actor_id', 'entity_type', 'entity_id', 'action',
-  'old_value', 'new_value', 'reason'];
-SCHEMA[T.SETTINGS] = ['key', 'value'];
-SCHEMA[T.USERS] = ['id', 'name', 'email', 'role_id', 'employee_id'];
+SCHEMA[T.TEAMS]     = ['id', 'name', 'code', 'lead_id', 'note', 'status'];
+SCHEMA[T.EMPLOYEES] = ['id', 'name', 'designation', 'team_id', 'sub_group', 'region',
+                       'manager_id', 'status', 'email'];
+SCHEMA[T.KRAS]      = ['id', 'team_id', 'perspective', 'name', 'status'];
+SCHEMA[T.KPIS]      = ['id', 'kra_id', 'name', 'goal', 'source', 'unit', 'status'];
+/* one row per person per KPI — this is what makes each scorecard individual */
+SCHEMA[T.ASSIGN]    = ['id', 'employee_id', 'kra_id', 'kpi_id', 'weightage', 'status',
+                       'updated_by', 'updated_at'];
+/* the five bands, kept as the text the workbook actually holds */
+SCHEMA[T.TARGETS]   = ['id', 'employee_id', 'kpi_id', 'period_id',
+                       't1', 't2', 't3', 't4', 't5',
+                       'version', 'updated_by', 'updated_at'];
+SCHEMA[T.PERF]      = ['id', 'employee_id', 'kpi_id', 'period_id', 'actual', 'manual_level',
+                       'level', 'kind', 'direction', 'note', 'status', 'updated_by', 'updated_at'];
+SCHEMA[T.PERIODS]   = ['id', 'name', 'kind', 'sort', 'status'];
+SCHEMA[T.USERS]     = ['id', 'name', 'email', 'role_id', 'employee_id'];
+SCHEMA[T.AUDIT]     = ['id', 'ts', 'actor', 'entity_type', 'entity_id', 'action',
+                       'old_value', 'new_value', 'reason'];
+SCHEMA[T.SETTINGS]  = ['key', 'value'];
 
 /* ----------------------------------------------------------------- SERVING -- */
 function doGet() {
   return HtmlService.createHtmlOutputFromFile('Index')
-    .setTitle(APP_NAME + ' — Employee Performance Management')
+    .setTitle(APP_NAME + ' — Individual KRA / KPI Performance')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
-/* -------------------------------------------------------------- REPOSITORY --
- * The backend spreadsheet. If none is configured the script creates one and
- * remembers its id, so a fresh deployment needs no manual setup. Set the
- * PERFORMOS_DB_ID script property to point at a specific spreadsheet instead. */
+/* -------------------------------------------------------------- REPOSITORY -- */
 function ss_() {
   var props = PropertiesService.getScriptProperties();
   var id = props.getProperty(PROP_DB);
-  if (id) {
-    try { return SpreadsheetApp.openById(id); }
-    catch (e) { /* unreachable/deleted — fall through and make a new one */ }
-  }
+  if (id) { try { return SpreadsheetApp.openById(id); } catch (e) {} }
   var bound = null;
   try { bound = SpreadsheetApp.getActiveSpreadsheet(); } catch (e) {}
   var ss = bound || SpreadsheetApp.create(APP_NAME + ' — Backend');
   props.setProperty(PROP_DB, ss.getId());
   return ss;
 }
-
 function tab_(name) {
-  var ss = ss_(), sh = ss.getSheetByName(name);
-  var head = SCHEMA[name];
+  var ss = ss_(), sh = ss.getSheetByName(name), head = SCHEMA[name];
   if (!sh) sh = ss.insertSheet(name);
   if (sh.getMaxColumns() < head.length) sh.insertColumnsAfter(sh.getMaxColumns(), head.length - sh.getMaxColumns());
   sh.getRange(1, 1, 1, head.length).setValues([head]).setFontWeight('bold').setBackground('#F1F5F9');
   sh.setFrozenRows(1);
   return sh;
 }
-
 function read_(name) {
-  var ss;
-  try { ss = ss_(); } catch (e) { return []; }
+  var ss; try { ss = ss_(); } catch (e) { return []; }
   var sh = ss.getSheetByName(name);
   if (!sh || sh.getLastRow() < 2) return [];
   var head = SCHEMA[name];
-  var values = sh.getRange(2, 1, sh.getLastRow() - 1, head.length).getValues();
-  return values.filter(function (r) { return String(r[0]).trim() !== ''; })
+  return sh.getRange(2, 1, sh.getLastRow() - 1, head.length).getValues()
+    .filter(function (r) { return String(r[0]).trim() !== ''; })
     .map(function (r) { var o = {}; head.forEach(function (k, i) { o[k] = r[i]; }); return o; });
 }
-
-/* Rewrites a whole tab. Used by provisioning only. */
 function write_(name, objs) {
-  var sh = tab_(name), head = SCHEMA[name];
-  var need = objs.length + 1;
+  var sh = tab_(name), head = SCHEMA[name], need = objs.length + 1;
   if (sh.getMaxRows() < need) sh.insertRowsAfter(sh.getMaxRows(), need - sh.getMaxRows());
   if (sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, head.length).clearContent();
   if (objs.length) {
-    var rows = objs.map(function (o) { return head.map(function (k) { var v = o[k]; return v == null ? '' : v; }); });
-    sh.getRange(2, 1, rows.length, head.length).setValues(rows);
+    sh.getRange(2, 1, objs.length, head.length).setValues(objs.map(function (o) {
+      return head.map(function (k) { return o[k] == null ? '' : o[k]; });
+    }));
   }
   return objs.length;
 }
-
 function append_(name, obj) {
   var sh = tab_(name), head = SCHEMA[name];
-  sh.appendRow(head.map(function (k) { var v = obj[k]; return v == null ? '' : v; }));
+  sh.appendRow(head.map(function (k) { return obj[k] == null ? '' : obj[k]; }));
   return obj;
 }
-
-/* Upsert by the first column (the id). One row per logical key, history-safe
- * because callers version rather than overwrite where it matters. */
 function upsert_(name, obj) {
   var sh = tab_(name), head = SCHEMA[name], id = String(obj[head[0]]);
   var at = -1, last = sh.getLastRow();
@@ -135,46 +123,49 @@ function upsert_(name, obj) {
     var ids = sh.getRange(2, 1, last - 1, 1).getValues();
     for (var i = 0; i < ids.length; i++) if (String(ids[i][0]) === id) { at = i + 2; break; }
   }
-  var row = head.map(function (k) { var v = obj[k]; return v == null ? '' : v; });
-  if (at > 0) sh.getRange(at, 1, 1, head.length).setValues([row]);
-  else sh.appendRow(row);
+  var row = head.map(function (k) { return obj[k] == null ? '' : obj[k]; });
+  if (at > 0) sh.getRange(at, 1, 1, head.length).setValues([row]); else sh.appendRow(row);
   return obj;
 }
-
-/* Bulk update of specific rows by id — avoids a full rewrite when recompute
- * touches many performance rows at once. */
+function del_(name, id) {
+  var sh = tab_(name), last = sh.getLastRow();
+  if (last < 2) return false;
+  var ids = sh.getRange(2, 1, last - 1, 1).getValues();
+  for (var i = 0; i < ids.length; i++) {
+    if (String(ids[i][0]) === String(id)) { sh.deleteRow(i + 2); return true; }
+  }
+  return false;
+}
 function bulkUpdate_(name, objs) {
   if (!objs.length) return 0;
   var sh = tab_(name), head = SCHEMA[name], last = sh.getLastRow();
   if (last < 2) return 0;
-  var ids = sh.getRange(2, 1, last - 1, 1).getValues();
-  var rowOf = {};
-  for (var i = 0; i < ids.length; i++) rowOf[String(ids[i][0])] = i + 2;
   var all = sh.getRange(2, 1, last - 1, head.length).getValues();
+  var rowOf = {};
+  for (var i = 0; i < all.length; i++) rowOf[String(all[i][0])] = i;
   var n = 0;
   objs.forEach(function (o) {
     var r = rowOf[String(o[head[0]])];
-    if (!r) return;
-    all[r - 2] = head.map(function (k) { var v = o[k]; return v == null ? '' : v; });
+    if (r === undefined) return;
+    all[r] = head.map(function (k) { return o[k] == null ? '' : o[k]; });
     n++;
   });
-  sh.getRange(2, 1, last - 1, head.length).setValues(all);
+  sh.getRange(2, 1, all.length, head.length).setValues(all);
   return n;
 }
 
 /* --------------------------------------------------------------- UTILITIES -- */
 function uid_(p) { return (p || 'id') + '-' + Utilities.getUuid().slice(0, 8); }
 function nowIso_() { return new Date().toISOString(); }
+function idx_(a) { var o = {}; a.forEach(function (x) { o[x.id] = x; }); return o; }
 function num_(v) {
   if (v === null || v === undefined || v === '') return null;
   var n = typeof v === 'number' ? v : Number(String(v).replace(/[,\s%₹]/g, ''));
   return isFinite(n) ? n : null;
 }
-function idx_(arr) { var o = {}; arr.forEach(function (x) { o[x.id] = x; }); return o; }
-
-/* google.script.run cannot serialise NaN/Infinity/Date — a single one anywhere
- * makes the WHOLE return arrive as null, which the client can only report as
- * "the server returned nothing". This is the backstop. */
+function slug_(s) { return String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
+/* google.script.run cannot serialise NaN/Infinity/Date; one of them anywhere
+   makes the WHOLE payload arrive as null. This is the backstop. */
 function jsonSafe_(o) {
   if (o === null || o === undefined) return null;
   var t = typeof o;
@@ -182,1002 +173,764 @@ function jsonSafe_(o) {
   if (t === 'string' || t === 'boolean') return o;
   if (o instanceof Date) return o.toISOString();
   if (Object.prototype.toString.call(o) === '[object Array]') return o.map(jsonSafe_);
-  if (t === 'object') { var out = {}; Object.keys(o).forEach(function (k) { out[k] = jsonSafe_(o[k]); }); return out; }
+  if (t === 'object') { var r = {}; Object.keys(o).forEach(function (k) { r[k] = jsonSafe_(o[k]); }); return r; }
   return String(o);
 }
 
 /* ==========================================================================
- * CALCULATION ENGINE — the heart of the product.
- * Reproducible from stored targets + actual: same input, same level, always.
+ * BANDS — interprets the workbook's "Target 1..5" text.
+ * Verified against all 16 distinct ladder patterns in the source workbook.
  * ======================================================================== */
-var LEVEL_LABELS = { 0: 'Below T1', 1: 'Target 1', 2: 'Target 2', 3: 'Target 3', 4: 'Target 4', 5: 'Target 5' };
+var EMPTY_BAND = /^(|-|--|—|–|n\/?a|na|nil|tbd)$/i;
 
-/**
- * Which Target level did an actual reach?
- *   targets   [t1..t5]
- *   direction higher_is_better | lower_is_better | range
- * Returns the highest CONSECUTIVE level cleared from T1 up, the per-level
- * achieved flags, and a supporting percentage. Never assumes higher-is-better.
- */
-function levelFor_(targets, actual, direction) {
-  var t = (targets || []).map(function (x) { return (x === null || x === undefined || x === '') ? null : Number(x); });
-  if (actual === null || actual === undefined || actual === '' || isNaN(Number(actual))) {
-    return { level: null, achieved: [false, false, false, false, false], pct: null };
+/* Bands expressed relative to a date/target rather than as a magnitude:
+   "T+7 days", "T - 2 days", "On Time". Turning these into 7 or 2 would
+   invert their meaning, so they are never given a numeric value. */
+function bandIsRelative_(s) {
+  return /(^|[^A-Za-z])T\s*[+\-]\s*\d/i.test(s) || /on\s*time/i.test(s) || /as\s+per\b/i.test(s);
+}
+function bandValue_(raw) {
+  var s = String(raw == null ? '' : raw).trim();
+  if (EMPTY_BAND.test(s) || bandIsRelative_(s)) return null;
+  s = s.replace(/[₹$,]/g, ' ');
+  /* A hyphen FOLLOWING A LETTER is a separator, not a minus sign. Without
+     this, "TGT-20 Days" parses as -20 and every DSO score inverts. */
+  s = s.replace(/([A-Za-z])\s*-\s*/g, '$1 ');
+  var range = s.match(/(\d+(?:\.\d+)?)\s*[–—]\s*(\d+(?:\.\d+)?)/) ||
+              s.match(/(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)/);
+  if (range) return (parseFloat(range[1]) + parseFloat(range[2])) / 2;   /* range → midpoint */
+  var m = s.match(/-?\d+(?:\.\d+)?/);
+  if (!m) return null;
+  var n = parseFloat(m[0]);
+  return isFinite(n) ? n : null;
+}
+function parseBands_(raw) {
+  var display = [], values = [], defined = 0, relative = 0, i;
+  for (i = 0; i < 5; i++) {
+    var b = raw[i] == null ? '' : String(raw[i]).trim();
+    display.push(b);
+    if (!EMPTY_BAND.test(b)) defined++;
+    if (b && bandIsRelative_(b)) relative++;
+    values.push(bandValue_(b));
   }
-  var a = Number(actual), dir = direction || 'higher_is_better';
-  var achieved = [false, false, false, false, false], level = 0;
-
-  if (dir === 'lower_is_better') {
-    for (var i = 0; i < 5; i++) achieved[i] = t[i] !== null && a <= t[i];
-  } else if (dir === 'range') {
-    /* t1 = minimum acceptable, t5 = maximum acceptable, t3 = ideal. Outside
-     * [t1,t5] is below target; inside, closeness to the ideal raises the level. */
-    var lo = t[0], hi = t[4], mid = t[2];
-    if (lo !== null && hi !== null && a >= lo && a <= hi) {
-      var half = Math.max(Math.abs(mid - lo), Math.abs(hi - mid)) || 1;
-      var closeness = 1 - Math.abs(a - mid) / half;
-      var rl = Math.max(1, Math.min(5, Math.round(1 + closeness * 4)));
-      for (var r = 0; r < rl; r++) achieved[r] = true;
+  var nums = values.filter(function (v) { return v !== null; });
+  /* ORDER MATTERS: an ordinal ladder has no parseable magnitudes, so it must
+     be caught BEFORE the "nothing numeric" fallback or it reads as qualitative. */
+  if (relative >= 2) {
+    return { kind: 'ordinal', direction: 'ordinal', values: [1, 2, 3, 4, 5], display: display,
+             defined: defined, note: 'Ordinal ladder — Target 5 is best; level is awarded, not measured.' };
+  }
+  if (defined <= 1 || nums.length === 0) {
+    return { kind: 'qualitative', direction: 'manual', values: values, display: display,
+             defined: defined, note: 'No numeric ladder — the level must be awarded manually.' };
+  }
+  var first = null, last = null;
+  for (i = 0; i < 5; i++) if (values[i] !== null) { first = values[i]; break; }
+  for (i = 4; i >= 0; i--) if (values[i] !== null) { last = values[i]; break; }
+  var direction = last >= first ? 'higher_is_better' : 'lower_is_better';
+  var mono = true, prev = null;
+  for (i = 0; i < 5; i++) {
+    var v = values[i]; if (v === null) continue;
+    if (prev !== null) {
+      if (direction === 'higher_is_better' && v < prev) mono = false;
+      if (direction === 'lower_is_better' && v > prev) mono = false;
     }
-  } else {
-    for (var h = 0; h < 5; h++) achieved[h] = t[h] !== null && a >= t[h];
+    prev = v;
   }
-  for (var k = 0; k < 5; k++) { if (achieved[k]) level = k + 1; else break; }
-
-  var pct = null, top = t[4] !== null ? t[4] : t[2];
-  if (top !== null && top !== 0) {
-    pct = dir === 'lower_is_better' ? (a === 0 ? 100 : top / a * 100) : a / top * 100;
-    pct = Math.round(Math.min(pct, 999) * 10) / 10;
+  return { kind: 'numeric', direction: direction, values: values, display: display,
+           defined: defined, monotonic: mono,
+           note: mono ? '' : 'Ladder is not monotonic — Target 1..5 do not move in one direction.' };
+}
+/* Highest level cleared, counting consecutively from Target 1. */
+function levelFromBands_(parsed, actual) {
+  if (parsed.kind !== 'numeric') return null;
+  if (actual === null || actual === undefined || actual === '' || isNaN(Number(actual))) return null;
+  var a = Number(actual), level = 0;
+  for (var i = 0; i < 5; i++) {
+    if (parsed.values[i] === null) break;
+    var ok = parsed.direction === 'lower_is_better' ? (a <= parsed.values[i]) : (a >= parsed.values[i]);
+    if (ok) level = i + 1; else break;
   }
-  return { level: level, achieved: achieved, pct: pct };
+  return level;
 }
-
-/**
- * Weighted aggregation of levels → an overall level.
- * Keeps the components so a result can always be explained rather than being
- * a black box (spec: "do not hide this methodology").
- */
-function aggregate_(items) {
-  var comps = items.filter(function (it) { return it.level !== null && it.level !== undefined && Number(it.weight) > 0; });
-  if (!comps.length) return { level: null, score: null, components: [] };
-  var wsum = 0, acc = 0;
-  comps.forEach(function (it) { var w = Number(it.weight) || 0; wsum += w; acc += it.level * w; });
-  var score = wsum > 0 ? acc / wsum : 0;
-  return {
-    level: Math.max(1, Math.min(5, Math.round(score))),
-    score: Math.round(score * 100) / 100,
-    components: comps.map(function (it) { return { ref: it.ref, level: it.level, weight: it.weight }; })
-  };
-}
-
-/**
- * Recompute one employee's period end-to-end and persist the derived values:
- * each KPI's level from its own targets+actual, the KRA rollups, and the
- * overall employee level. Returns the summary the UI reads.
- */
-function recompute_(employeeId, periodId) {
-  var perf = read_(T.PERFORMANCE).filter(function (r) {
-    return String(r.employee_id) === String(employeeId) && String(r.period_id) === String(periodId);
-  });
-  var kpis = idx_(read_(T.KPIS)), kras = idx_(read_(T.KRAS));
-  var updates = [], kpiResults = [];
-
-  perf.forEach(function (rec) {
-    var kpi = kpis[rec.kpi_id] || {};
-    var res = levelFor_([rec.t1, rec.t2, rec.t3, rec.t4, rec.t5], rec.actual, rec.direction || kpi.direction);
-    rec.highest_level = res.level === null ? '' : res.level;
-    rec.levels_achieved = res.achieved.map(function (b) { return b ? 1 : 0; }).join('');
-    rec.pct = res.pct === null ? '' : res.pct;
-    rec.score = res.level === null ? '' : res.level;
-    rec.updated_at = nowIso_();
-    updates.push(rec);
-    if (res.level !== null) {
-      kpiResults.push({ ref: rec.kpi_id, level: res.level, weight: num_(kpi.weight) || num_(rec.weight) || 1, kraId: rec.kra_id });
-    }
-  });
-  if (updates.length) bulkUpdate_(T.PERFORMANCE, updates);
-
-  var byKra = {};
-  kpiResults.forEach(function (k) { (byKra[k.kraId] = byKra[k.kraId] || []).push(k); });
-  var kraResults = Object.keys(byKra).map(function (kraId) {
-    var agg = aggregate_(byKra[kraId]);
-    return { ref: kraId, level: agg.level, score: agg.score, weight: num_((kras[kraId] || {}).weight) || 1 };
-  });
-  var overall = aggregate_(kraResults.map(function (k) { return { ref: k.ref, level: k.level, weight: k.weight }; }));
-
-  return {
-    employee_id: employeeId, period_id: periodId,
-    overall_level: overall.level, overall_score: overall.score,
-    kra_results: kraResults, kpi_count: kpiResults.length
-  };
-}
-
-/* Overall summaries for every employee in a period, computed from the stored
- * (already recomputed) performance rows — no re-derivation of KPI levels. */
-function overallsFor_(periodId, perfRows, kpisById, krasById) {
-  var byEmp = {};
-  perfRows.forEach(function (r) {
-    if (String(r.period_id) !== String(periodId)) return;
-    (byEmp[r.employee_id] = byEmp[r.employee_id] || []).push(r);
-  });
-  var out = {};
-  Object.keys(byEmp).forEach(function (empId) {
-    var byKra = {};
-    byEmp[empId].forEach(function (r) {
-      var lvl = num_(r.highest_level);
-      if (lvl === null) return;
-      var w = num_((kpisById[r.kpi_id] || {}).weight) || num_(r.weight) || 1;
-      (byKra[r.kra_id] = byKra[r.kra_id] || []).push({ ref: r.kpi_id, level: lvl, weight: w });
-    });
-    var kraResults = Object.keys(byKra).map(function (kraId) {
-      var agg = aggregate_(byKra[kraId]);
-      return { ref: kraId, level: agg.level, score: agg.score, weight: num_((krasById[kraId] || {}).weight) || 1 };
-    });
-    var overall = aggregate_(kraResults.map(function (k) { return { ref: k.ref, level: k.level, weight: k.weight }; }));
-    out[empId] = { overall_level: overall.level, overall_score: overall.score, kra_results: kraResults };
-  });
+/* Weightage arrives as fractions on some tabs and percent on others. */
+function normaliseWeights_(list) {
+  var sum = 0, i;
+  for (i = 0; i < list.length; i++) sum += (num_(list[i]) || 0);
+  var scale = (sum > 0 && sum <= 1.5) ? 100 : 1, out = [];
+  for (i = 0; i < list.length; i++) out.push(Math.round((num_(list[i]) || 0) * scale * 100) / 100);
   return out;
 }
 
-/* Leaderboard derived from performance rows — never a stored rank, always
- * reproducible. Deterministic order: overall score, then T5 hits, then T4+
- * hits, then name. */
-function leaderboard_(periodId, perfRows, employees, overalls) {
-  var stats = {};
-  perfRows.forEach(function (r) {
-    if (String(r.period_id) !== String(periodId)) return;
-    var s = stats[r.employee_id] || (stats[r.employee_id] = { t5: 0, t4plus: 0, eligible: 0 });
-    s.eligible++;
-    var lvl = num_(r.highest_level);
-    if (lvl !== null) { if (lvl === 5) s.t5++; if (lvl >= 4) s.t4plus++; }
-  });
-  var rows = employees.filter(function (e) { return stats[e.id]; }).map(function (e) {
-    var s = stats[e.id], ov = overalls[e.id] || {};
-    return {
-      employee_id: e.id, name: e.name, team_id: e.team_id,
-      overall_level: ov.overall_level === undefined ? null : ov.overall_level,
-      overall_score: ov.overall_score === undefined ? null : ov.overall_score,
-      t5: s.t5, t4plus: s.t4plus, eligible: s.eligible,
-      t5rate: s.eligible ? Math.round(s.t5 / s.eligible * 100) : 0
-    };
-  });
-  rows.sort(function (a, b) {
-    return (b.overall_score || 0) - (a.overall_score || 0) || b.t5 - a.t5 || b.t4plus - a.t4plus ||
-      String(a.name).localeCompare(String(b.name));
-  });
-  rows.forEach(function (r, i) { r.rank = i + 1; });
-  return rows;
-}
-
-function analytics_(periodId, perfRows) {
-  var dist = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }, scored = 0, total = 0;
-  perfRows.forEach(function (r) {
-    if (String(r.period_id) !== String(periodId)) return;
-    total++;
-    var lvl = num_(r.highest_level);
-    if (lvl !== null) { dist[lvl]++; scored++; }
-  });
-  return {
-    total: total, scored: dist, count: scored,
-    t5rate: scored ? Math.round(dist[5] / scored * 100) : 0,
-    t4plus: scored ? Math.round((dist[4] + dist[5]) / scored * 100) : 0
-  };
-}
+var LEVEL_LABELS = { 0: 'Below T1', 1: 'Target 1', 2: 'Target 2', 3: 'Target 3', 4: 'Target 4', 5: 'Target 5' };
 
 /* ==========================================================================
- * SESSION & AUTHORIZATION — server-authoritative (spec: not just UI hiding).
+ * SESSION & AUTHORIZATION — enforced here, not merely hidden in the UI.
  * ======================================================================== */
 var ROLE_PERMS = {
   super_admin: ['*'],
-  hr_admin: ['view', 'create', 'edit', 'delete', 'approve', 'publish', 'export', 'lock', 'admin'],
-  business_head: ['view', 'create', 'edit', 'approve', 'publish', 'export'],
-  team_leader: ['view', 'create', 'edit', 'approve', 'export'],
-  manager: ['view', 'create', 'edit', 'export'],
-  employee: ['view', 'edit_own'],
+  hr_admin: ['view', 'edit_target', 'edit_framework', 'enter_actual', 'admin', 'export'],
+  business_head: ['view', 'edit_target', 'edit_framework', 'enter_actual', 'export'],
+  team_leader: ['view', 'edit_target', 'enter_actual', 'export'],
+  manager: ['view', 'enter_actual', 'export'],
+  employee: ['view', 'enter_own'],
   auditor: ['view', 'export']
 };
-
 function currentEmail_() {
   try { return (Session.getActiveUser().getEmail() || Session.getEffectiveUser().getEmail() || '').toLowerCase(); }
   catch (e) { return ''; }
 }
-
-/**
- * Who is calling. The signed-in email is matched against EMPLOYEES.email; an
- * unmatched caller falls back to an administrator who may preview other roles
- * (documented first-run behaviour, same as the Tracker).
- */
-function resolveSession_(viewAsUserId) {
-  var emps = read_(T.EMPLOYEES), users = read_(T.USERS);
-  var email = currentEmail_(), me = null;
+function resolveSession_(viewAs) {
+  /* every entry point resolves the session first, so the seed has to be in
+     place by now or the role list — and therefore "view as" — comes back empty */
+  ensureSeeded_();
+  var emps = read_(T.EMPLOYEES), users = read_(T.USERS), email = currentEmail_(), me = null;
   emps.forEach(function (e) { if (email && String(e.email || '').toLowerCase() === email) me = e; });
   var isAdmin = !me;
-  var role = me ? (me.role_id || 'employee') : 'super_admin';
-  var employeeId = me ? me.id : '';
-  var name = me ? me.name : (email || 'Administrator');
-
-  /* "View as" preview — only an admin may assume another demo user, and it
-   * changes the REAL permission set, not just the visible controls. */
-  if (viewAsUserId && isAdmin) {
-    var u = users.filter(function (x) { return String(x.id) === String(viewAsUserId); })[0];
-    if (u) { role = u.role_id; employeeId = u.employee_id || ''; name = u.name; }
+  var s = { email: email || '(unknown)', name: me ? me.name : (email || 'Administrator'),
+            role_id: me ? (me.status === 'lead' ? 'team_leader' : 'employee') : 'super_admin',
+            employee_id: me ? me.id : '', admin: isAdmin, can_switch: isAdmin, users: users };
+  if (viewAs && isAdmin) {
+    var u = users.filter(function (x) { return String(x.id) === String(viewAs); })[0];
+    if (u) { s.role_id = u.role_id; s.employee_id = u.employee_id || ''; s.name = u.name; }
   }
-  return {
-    email: email || '(unknown)', name: name, role_id: role, employee_id: employeeId,
-    admin: isAdmin, can_switch: isAdmin, users: users
-  };
+  s._byId = idx_(emps);
+  return s;
 }
-
 function can_(s, action) {
-  var perms = ROLE_PERMS[s.role_id] || [];
-  return perms.indexOf('*') >= 0 || perms.indexOf(action) >= 0;
+  var p = ROLE_PERMS[s.role_id] || [];
+  return p.indexOf('*') >= 0 || p.indexOf(action) >= 0;
 }
-
-/** May this session act on this employee's data? */
-function canScope_(s, employeeId, empsById) {
+/* May this session act on this person's data? Admin/HR/head: anyone.
+   Team leader / manager: their own team. Employee: only themselves. */
+function canScope_(s, empId) {
   if (s.role_id === 'super_admin' || s.role_id === 'hr_admin' || s.role_id === 'business_head') return true;
-  if (!s.employee_id || !employeeId) return false;
-  if (String(s.employee_id) === String(employeeId)) return true;
-  var e = empsById[employeeId], guard = 0;
-  while (e && guard++ < 30) {
-    if (String(e.manager_id) === String(s.employee_id)) return true;
-    e = empsById[e.manager_id];
-  }
+  if (!s.employee_id || !empId) return false;
+  if (String(s.employee_id) === String(empId)) return true;
+  var me = s._byId[s.employee_id], them = s._byId[empId];
+  if (!me || !them) return false;
+  if (s.role_id === 'team_leader' || s.role_id === 'manager') return String(me.team_id) === String(them.team_id);
   return false;
 }
-
-function requireScope_(s, employeeId, empsById, what) {
-  if (!canScope_(s, employeeId, empsById)) {
-    throw new Error('You do not have permission to ' + (what || 'change this') + '.');
-  }
+function requireScope_(s, empId, what) {
+  if (!canScope_(s, empId)) throw new Error('You do not have permission to ' + (what || 'change this') + '.');
 }
-
-function audit_(actorId, entityType, entityId, action, oldValue, newValue, reason) {
-  try {
-    append_(T.AUDIT, {
-      id: uid_('aud'), ts: nowIso_(), actor_id: actorId || 'system', entity_type: entityType,
-      entity_id: String(entityId), action: action,
-      old_value: oldValue === null || oldValue === undefined ? '' : JSON.stringify(oldValue),
-      new_value: newValue === null || newValue === undefined ? '' : JSON.stringify(newValue),
-      reason: reason || ''
-    });
-  } catch (e) { /* the audit trail must never break the write it records */ }
+function requirePerm_(s, action, what) {
+  if (!can_(s, action)) throw new Error('Your role cannot ' + (what || action) + '.');
 }
-
-function notify_(recipientId, type, title, message, entityType, entityId) {
+function audit_(actor, type, id, action, oldV, newV, reason) {
   try {
-    append_(T.NOTIFICATIONS, {
-      id: uid_('ntf'), recipient_id: recipientId || 'all', type: type, title: title,
-      message: message, entity_type: entityType || '', entity_id: entityId || '',
-      read: 0, created_at: nowIso_()
-    });
+    append_(T.AUDIT, { id: uid_('aud'), ts: nowIso_(), actor: actor || 'system', entity_type: type,
+      entity_id: String(id), action: action,
+      old_value: oldV == null ? '' : JSON.stringify(oldV), new_value: newV == null ? '' : JSON.stringify(newV),
+      reason: reason || '' });
   } catch (e) {}
 }
 
 /* ==========================================================================
- * MODEL — everything the client needs for one period, in one round trip.
- * Performance rows are period-scoped (the full history would be far larger
- * than the UI ever shows at once); per-period overall summaries for every
- * employee are included so trends and history render without extra calls.
+ * MODEL — the whole structure for one period, in one round trip.
  * ======================================================================== */
 function buildModel_(periodId) {
   ensureSeeded_();
   var periods = read_(T.PERIODS).sort(function (a, b) { return num_(a.sort) - num_(b.sort); });
-  var months = periods.filter(function (p) { return p.kind === 'month'; });
   var settings = {};
-  read_(T.SETTINGS).forEach(function (s) {
-    var v = s.value;
-    try { v = JSON.parse(s.value); } catch (e) {}
-    settings[s.key] = v;
+  read_(T.SETTINGS).forEach(function (r) {
+    var v = r.value; try { v = JSON.parse(r.value); } catch (e) {}
+    settings[r.key] = v;
   });
-  var effPeriod = periodId || settings.current_period || (months.length ? months[Math.min(4, months.length - 1)].id : '');
+  var eff = periodId || settings.current_period || (periods.length ? periods[periods.length - 1].id : '');
 
-  var employees = read_(T.EMPLOYEES), kras = read_(T.KRAS), kpis = read_(T.KPIS);
-  var kpisById = idx_(kpis), krasById = idx_(kras);
-  var allPerf = read_(T.PERFORMANCE);
-  var perf = allPerf.filter(function (r) { return String(r.period_id) === String(effPeriod); });
+  var teams = read_(T.TEAMS), emps = read_(T.EMPLOYEES);
+  var kras = read_(T.KRAS), kpis = read_(T.KPIS);
+  var assigns = read_(T.ASSIGN).filter(function (a) { return String(a.status || 'Active') !== 'Inactive'; });
+  var targets = read_(T.TARGETS).filter(function (t) { return String(t.period_id) === String(eff); });
+  var perf = read_(T.PERF).filter(function (p) { return String(p.period_id) === String(eff); });
 
-  var overalls = overallsFor_(effPeriod, allPerf, kpisById, krasById);
+  var tgtBy = {}, perfBy = {};
+  targets.forEach(function (t) { tgtBy[t.employee_id + '|' + t.kpi_id] = t; });
+  perf.forEach(function (p) { perfBy[p.employee_id + '|' + p.kpi_id] = p; });
 
-  /* history: overall level per employee per month, for trends (small payload) */
-  var history = {};
-  months.forEach(function (p) {
-    var ov = overallsFor_(p.id, allPerf, kpisById, krasById);
-    Object.keys(ov).forEach(function (empId) {
-      (history[empId] = history[empId] || []).push({ period_id: p.id, level: ov[empId].overall_level, score: ov[empId].overall_score });
+  /* one scorecard row per assignment, with its bands interpreted */
+  var rows = [], byEmp = {};
+  assigns.forEach(function (a) {
+    var key = a.employee_id + '|' + a.kpi_id;
+    var t = tgtBy[key], p = perfBy[key], kpi = kpis.filter(function (k) { return k.id === a.kpi_id; })[0] || {};
+    var bandsRaw = t ? [t.t1, t.t2, t.t3, t.t4, t.t5] : ['', '', '', '', ''];
+    var parsed = parseBands_(bandsRaw);
+    var actual = p ? num_(p.actual) : null;
+    var manual = p ? num_(p.manual_level) : null;
+    var level = parsed.kind === 'numeric' ? levelFromBands_(parsed, actual) : (manual === null ? null : manual);
+    var row = {
+      employee_id: a.employee_id, kra_id: a.kra_id, kpi_id: a.kpi_id,
+      assignment_id: a.id, weightage: num_(a.weightage) || 0,
+      kpi: kpi.name || '', goal: kpi.goal || '', source: kpi.source || '', unit: kpi.unit || '',
+      bands: parsed.display, kind: parsed.kind, direction: parsed.direction,
+      values: parsed.values, band_note: parsed.note || '',
+      target_version: t ? (num_(t.version) || 1) : null,
+      actual: actual, manual_level: manual, level: level,
+      status: p ? (p.status || '') : ''
+    };
+    rows.push(row);
+    (byEmp[a.employee_id] = byEmp[a.employee_id] || []).push(row);
+  });
+
+  /* rollups: weightage is per-KPI and sums to 100 per person, so the overall
+     level is one weighted mean over that person's KPIs. A KRA level is the
+     same mean renormalised within the KRA. Only scored KPIs count, and the
+     denominator says how much of the scorecard is actually measured. */
+  var overalls = {};
+  Object.keys(byEmp).forEach(function (empId) {
+    var list = byEmp[empId], acc = 0, wsum = 0, assigned = 0, kraAcc = {};
+    list.forEach(function (r) {
+      assigned += r.weightage;
+      if (r.level === null) return;
+      acc += r.level * r.weightage; wsum += r.weightage;
+      var k = kraAcc[r.kra_id] || (kraAcc[r.kra_id] = { a: 0, w: 0 });
+      k.a += r.level * r.weightage; k.w += r.weightage;
     });
+    var kraLevels = {};
+    Object.keys(kraAcc).forEach(function (kid) {
+      var k = kraAcc[kid];
+      kraLevels[kid] = k.w > 0 ? Math.round(k.a / k.w * 100) / 100 : null;
+    });
+    overalls[empId] = {
+      score: wsum > 0 ? Math.round(acc / wsum * 100) / 100 : null,
+      level: wsum > 0 ? Math.max(1, Math.min(5, Math.round(acc / wsum))) : null,
+      measured_weightage: Math.round(wsum * 100) / 100,
+      assigned_weightage: Math.round(assigned * 100) / 100,
+      kpi_count: list.length,
+      scored_count: list.filter(function (r) { return r.level !== null; }).length,
+      kra_levels: kraLevels
+    };
   });
 
   return {
-    ok: true,
-    period_id: effPeriod,
-    org_types: read_(T.ORG_TYPES).sort(function (a, b) { return num_(a.sort) - num_(b.sort); }),
-    org_units: read_(T.ORG_UNITS),
-    teams: read_(T.TEAMS),
-    employees: employees,
-    roles: read_(T.ROLES),
-    kras: kras,
-    kpis: kpis,
-    periods: periods,
-    performance: perf.map(function (r) {
-      return {
-        id: r.id, employee_id: r.employee_id, team_id: r.team_id, kra_id: r.kra_id, kpi_id: r.kpi_id,
-        period_id: r.period_id, t1: num_(r.t1), t2: num_(r.t2), t3: num_(r.t3), t4: num_(r.t4), t5: num_(r.t5),
-        direction: r.direction, weight: num_(r.weight), actual: num_(r.actual),
-        highest_level: num_(r.highest_level), pct: num_(r.pct), status: r.status
-      };
-    }),
-    overalls: overalls,
-    history: history,
-    leaderboard: leaderboard_(effPeriod, allPerf, employees, overalls),
-    analytics: analytics_(effPeriod, allPerf),
-    reviews: read_(T.REVIEWS).filter(function (r) { return String(r.period_id) === String(effPeriod); }),
-    notifications: read_(T.NOTIFICATIONS).sort(function (a, b) { return String(b.created_at).localeCompare(String(a.created_at)); }).slice(0, 60),
+    ok: true, period_id: eff, periods: periods, settings: settings,
+    teams: teams, employees: emps, kras: kras, kpis: kpis,
+    rows: rows, overalls: overalls,
     audit: read_(T.AUDIT).sort(function (a, b) { return String(b.ts).localeCompare(String(a.ts)); }).slice(0, 40),
-    settings: settings,
+    source_sheet_id: SOURCE_SHEET_ID,
     generated_at: nowIso_()
   };
 }
 
 /* ------------------------------------------------------------------- API --- */
-
-/** Session + model in one call. Everything the client needs to start. */
-function apiBootstrap(periodId, viewAsUserId) {
+function apiBootstrap(periodId, viewAs) {
   try {
-    var s = resolveSession_(viewAsUserId);
-    var model = buildModel_(periodId);
-    return jsonSafe_({
-      ok: true,
-      session: { email: s.email, name: s.name, role_id: s.role_id, employee_id: s.employee_id, admin: s.admin, can_switch: s.can_switch },
-      users: s.users, model: model
-    });
+    var s = resolveSession_(viewAs);
+    return jsonSafe_({ ok: true, model: buildModel_(periodId), users: s.users,
+      session: { email: s.email, name: s.name, role_id: s.role_id, employee_id: s.employee_id,
+                 admin: s.admin, can_switch: s.can_switch } });
   } catch (e) {
     return { ok: false, error: String(e && e.message || e), where: 'apiBootstrap',
              stack: String(e && e.stack || '').split('\n').slice(0, 4).join(' | ') };
   }
 }
-
 function apiModel(periodId) {
   try { return jsonSafe_({ ok: true, model: buildModel_(periodId) }); }
   catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiModel' }; }
 }
+function apiPing() { return { ok: true, app: APP_NAME, at: nowIso_() }; }
 
-function apiPing() { return { ok: true, ping: 'ok', app: APP_NAME, at: nowIso_() }; }
+/** Edit the five target bands for one person's KPI. Bands are free text by
+ *  design — the workbook holds "> 28 Days" and "≥ ₹9 Cr" — so validation
+ *  checks interpretability and ladder direction, not numeric format. */
+function apiSaveTargets(p) {
+  try {
+    p = p || {};
+    var s = resolveSession_(p.view_as);
+    requirePerm_(s, 'edit_target', 'edit targets');
+    requireScope_(s, p.employee_id, 'edit this person’s targets');
+    var bands = [p.t1, p.t2, p.t3, p.t4, p.t5].map(function (x) { return x == null ? '' : String(x).trim(); });
+    var parsed = parseBands_(bands);
+    if (parsed.kind === 'numeric' && !parsed.monotonic) {
+      throw new Error('Target 1..5 must move in one direction. As entered they go up and down, so no level could be resolved.');
+    }
+    var id = 'tgt_' + p.employee_id + '_' + p.kpi_id + '_' + p.period_id;
+    var prev = read_(T.TARGETS).filter(function (t) { return String(t.id) === id; })[0];
+    var old = prev ? { t1: prev.t1, t2: prev.t2, t3: prev.t3, t4: prev.t4, t5: prev.t5 } : null;
+    upsert_(T.TARGETS, { id: id, employee_id: p.employee_id, kpi_id: p.kpi_id, period_id: p.period_id,
+      t1: bands[0], t2: bands[1], t3: bands[2], t4: bands[3], t5: bands[4],
+      version: prev ? (num_(prev.version) || 1) + 1 : 1, updated_by: s.name, updated_at: nowIso_() });
+    /* the level depends on the ladder, so re-resolve it now */
+    recomputeOne_(p.employee_id, p.kpi_id, p.period_id, s.name);
+    audit_(s.name, 'target', id, 'edit_bands', old,
+      { t1: bands[0], t2: bands[1], t3: bands[2], t4: bands[3], t5: bands[4] },
+      'kind=' + parsed.kind + ' direction=' + parsed.direction);
+    return jsonSafe_({ ok: true, parsed: parsed, model: buildModel_(p.period_id) });
+  } catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiSaveTargets' }; }
+}
 
-/** Enter/update an actual → recompute levels → audit → notify on Target 5. */
+/** Edit the KRA/KPI definition and weightage carried by one assignment. */
+function apiSaveAssignment(p) {
+  try {
+    p = p || {};
+    var s = resolveSession_(p.view_as);
+    requirePerm_(s, 'edit_framework', 'edit the KRA/KPI framework');
+    requireScope_(s, p.employee_id, 'edit this person’s KRA/KPI');
+    var emp = s._byId[p.employee_id]; if (!emp) throw new Error('Unknown employee.');
+    var wt = num_(p.weightage);
+    if (wt === null || wt < 0 || wt > 100) throw new Error('Weightage must be between 0 and 100.');
+    if (!String(p.kra_name || '').trim()) throw new Error('The KRA needs a name.');
+    if (!String(p.kpi_name || '').trim()) throw new Error('The KPI needs a name.');
+
+    var kraId = ensureKra_(emp.team_id, p.perspective, p.kra_name);
+    var kpiId = ensureKpi_(kraId, p.kpi_name, p.goal, p.source, p.unit);
+    var assigns = read_(T.ASSIGN);
+    var prev = p.assignment_id ? assigns.filter(function (a) { return String(a.id) === String(p.assignment_id); })[0] : null;
+    var id = prev ? prev.id : uid_('asg');
+    var old = prev ? { kra: prev.kra_id, kpi: prev.kpi_id, weightage: prev.weightage } : null;
+    upsert_(T.ASSIGN, { id: id, employee_id: p.employee_id, kra_id: kraId, kpi_id: kpiId,
+      weightage: wt, status: 'Active', updated_by: s.name, updated_at: nowIso_() });
+    /* a brand-new assignment starts with an empty ladder the user then fills */
+    if (!prev) {
+      var tid = 'tgt_' + p.employee_id + '_' + kpiId + '_' + p.period_id;
+      if (!read_(T.TARGETS).filter(function (t) { return String(t.id) === tid; }).length) {
+        upsert_(T.TARGETS, { id: tid, employee_id: p.employee_id, kpi_id: kpiId, period_id: p.period_id,
+          t1: '', t2: '', t3: '', t4: '', t5: '', version: 1, updated_by: s.name, updated_at: nowIso_() });
+      }
+    }
+    audit_(s.name, 'assignment', id, prev ? 'edit' : 'create', old,
+      { kra: p.kra_name, kpi: p.kpi_name, weightage: wt });
+    return jsonSafe_({ ok: true, model: buildModel_(p.period_id) });
+  } catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiSaveAssignment' }; }
+}
+
+/** Remove a KPI from one person's scorecard (the definition stays in the catalogue). */
+function apiRemoveAssignment(p) {
+  try {
+    p = p || {};
+    var s = resolveSession_(p.view_as);
+    requirePerm_(s, 'edit_framework', 'edit the KRA/KPI framework');
+    requireScope_(s, p.employee_id, 'edit this person’s KRA/KPI');
+    var a = read_(T.ASSIGN).filter(function (x) { return String(x.id) === String(p.assignment_id); })[0];
+    if (!a) throw new Error('That assignment no longer exists.');
+    a.status = 'Inactive'; a.updated_by = s.name; a.updated_at = nowIso_();
+    upsert_(T.ASSIGN, a);
+    audit_(s.name, 'assignment', a.id, 'remove', { kpi: a.kpi_id, weightage: a.weightage }, null, p.reason || '');
+    return jsonSafe_({ ok: true, model: buildModel_(p.period_id) });
+  } catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiRemoveAssignment' }; }
+}
+
+/** Record an actual (numeric ladders) or award a level (ordinal/qualitative). */
 function apiSaveActual(p) {
   try {
     p = p || {};
     var s = resolveSession_(p.view_as);
-    var emps = read_(T.EMPLOYEES), empsById = idx_(emps);
-    requireScope_(s, p.employee_id, empsById, 'edit this performance');
-    var periods = idx_(read_(T.PERIODS)), per = periods[p.period_id];
+    var own = String(s.employee_id || '') === String(p.employee_id);
+    if (!(can_(s, 'enter_actual') || (own && can_(s, 'enter_own')))) {
+      throw new Error('Your role cannot record performance.');
+    }
+    requireScope_(s, p.employee_id, 'record this performance');
+    var per = read_(T.PERIODS).filter(function (x) { return String(x.id) === String(p.period_id); })[0];
     if (per && String(per.status) === 'locked' && s.role_id !== 'super_admin' && s.role_id !== 'hr_admin') {
-      throw new Error('Period ' + per.name + ' is locked.');
+      throw new Error(per.name + ' is locked.');
     }
-    var rows = read_(T.PERFORMANCE);
-    var rec = null;
-    for (var i = 0; i < rows.length; i++) {
-      if (String(rows[i].employee_id) === String(p.employee_id) && String(rows[i].kpi_id) === String(p.kpi_id) &&
-          String(rows[i].period_id) === String(p.period_id)) { rec = rows[i]; break; }
-    }
-    if (!rec) throw new Error('No performance record for that KPI and period.');
-    var val = num_(p.value);
-    if (p.value !== '' && val === null) throw new Error('Enter a numeric actual value.');
-    var oldActual = num_(rec.actual), oldLevel = num_(rec.highest_level);
-    rec.actual = val === null ? '' : val;
-    rec.status = 'submitted';
-    rec.updated_at = nowIso_();
-    upsert_(T.PERFORMANCE, rec);
-
-    var summary = recompute_(p.employee_id, p.period_id);
-    var fresh = read_(T.PERFORMANCE).filter(function (r) { return String(r.id) === String(rec.id); })[0] || rec;
-    var newLevel = num_(fresh.highest_level);
-    var emp = empsById[p.employee_id] || {}, kpi = idx_(read_(T.KPIS))[p.kpi_id] || {};
-
-    audit_(s.employee_id || s.email, 'performance', rec.id, 'edit_actual',
-      { actual: oldActual, level: oldLevel }, { actual: val, level: newLevel });
-    if (newLevel === 5 && oldLevel !== 5) {
-      notify_(emp.manager_id || 'all', 'Target 5 Achieved', 'Target 5 achieved',
-        emp.name + ' achieved Target 5 for ' + kpi.name + ' (' + ((periods[p.period_id] || {}).name || p.period_id) + ').',
-        'employee', p.employee_id);
-    }
-    return jsonSafe_({ ok: true, summary: summary, model: buildModel_(p.period_id) });
-  } catch (e) {
-    return { ok: false, error: String(e && e.message || e), where: 'apiSaveActual' };
-  }
+    var id = 'prf_' + p.employee_id + '_' + p.kpi_id + '_' + p.period_id;
+    var prev = read_(T.PERF).filter(function (x) { return String(x.id) === id; })[0];
+    var old = prev ? { actual: prev.actual, manual_level: prev.manual_level, level: prev.level } : null;
+    var actual = (p.actual === '' || p.actual == null) ? '' : num_(p.actual);
+    if (p.actual !== '' && p.actual != null && actual === null) throw new Error('The actual must be a number.');
+    var manual = (p.manual_level === '' || p.manual_level == null) ? '' : num_(p.manual_level);
+    if (manual !== '' && (manual < 0 || manual > 5)) throw new Error('An awarded level must be between 0 and 5.');
+    upsert_(T.PERF, { id: id, employee_id: p.employee_id, kpi_id: p.kpi_id, period_id: p.period_id,
+      actual: actual, manual_level: manual, level: '', kind: '', direction: '',
+      note: p.note || (prev ? prev.note : ''), status: 'recorded',
+      updated_by: s.name, updated_at: nowIso_() });
+    var res = recomputeOne_(p.employee_id, p.kpi_id, p.period_id, s.name);
+    audit_(s.name, 'performance', id, 'record', old, { actual: actual, manual_level: manual, level: res.level });
+    return jsonSafe_({ ok: true, level: res.level, model: buildModel_(p.period_id) });
+  } catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiSaveActual' }; }
 }
 
-/** Save several actuals for one employee/period in one transaction-ish pass. */
-function apiSavePerformance(p) {
-  try {
-    p = p || {};
-    var s = resolveSession_(p.view_as);
-    var emps = read_(T.EMPLOYEES), empsById = idx_(emps);
-    requireScope_(s, p.employee_id, empsById, 'enter this performance');
-    var periods = idx_(read_(T.PERIODS)), per = periods[p.period_id];
-    if (per && String(per.status) === 'locked' && s.role_id !== 'super_admin' && s.role_id !== 'hr_admin') {
-      throw new Error('Period ' + per.name + ' is locked.');
-    }
-    var entries = p.entries || [];
-    if (!entries.length) throw new Error('Nothing to save.');
-    var rows = read_(T.PERFORMANCE), updates = [];
-    entries.forEach(function (en) {
-      var val = num_(en.value);
-      if (val === null) return;
-      for (var i = 0; i < rows.length; i++) {
-        var r = rows[i];
-        if (String(r.employee_id) === String(p.employee_id) && String(r.kpi_id) === String(en.kpi_id) &&
-            String(r.period_id) === String(p.period_id)) {
-          r.actual = val; r.status = 'submitted'; r.updated_at = nowIso_(); updates.push(r); break;
-        }
-      }
-    });
-    if (updates.length) bulkUpdate_(T.PERFORMANCE, updates);
-    var summary = recompute_(p.employee_id, p.period_id);
-    var emp = empsById[p.employee_id] || {};
-    audit_(s.employee_id || s.email, 'performance', p.employee_id + '|' + p.period_id, 'enter_performance', null, { kpis: updates.length });
-    notify_(emp.manager_id || 'all', 'Performance Submitted', 'Performance submitted',
-      emp.name + ' submitted performance for ' + ((per || {}).name || p.period_id) + '.', 'employee', p.employee_id);
-    return jsonSafe_({ ok: true, saved: updates.length, summary: summary, model: buildModel_(p.period_id) });
-  } catch (e) {
-    return { ok: false, error: String(e && e.message || e), where: 'apiSavePerformance' };
-  }
+/* Resolve and persist one KPI's level from its stored ladder + actual. */
+function recomputeOne_(empId, kpiId, periodId, actor) {
+  var id = 'prf_' + empId + '_' + kpiId + '_' + periodId;
+  var rec = read_(T.PERF).filter(function (x) { return String(x.id) === id; })[0];
+  var tgt = read_(T.TARGETS).filter(function (t) {
+    return String(t.employee_id) === String(empId) && String(t.kpi_id) === String(kpiId) &&
+           String(t.period_id) === String(periodId); })[0];
+  if (!rec) return { level: null };
+  var parsed = parseBands_(tgt ? [tgt.t1, tgt.t2, tgt.t3, tgt.t4, tgt.t5] : ['', '', '', '', '']);
+  var level = parsed.kind === 'numeric'
+    ? levelFromBands_(parsed, num_(rec.actual))
+    : (num_(rec.manual_level) === null ? null : num_(rec.manual_level));
+  rec.level = level === null ? '' : level;
+  rec.kind = parsed.kind; rec.direction = parsed.direction;
+  rec.updated_by = actor || rec.updated_by; rec.updated_at = nowIso_();
+  upsert_(T.PERF, rec);
+  return { level: level, parsed: parsed };
 }
 
-/** Edit a KPI's five target thresholds for a period. Validates ordering by
- *  direction (never applies higher-is-better rules to a range KPI), versions
- *  the target, and mirrors the change onto the performance row so the level
- *  recomputes against the new ladder. */
-function apiSaveTarget(p) {
-  try {
-    p = p || {};
-    var s = resolveSession_(p.view_as);
-    var emps = read_(T.EMPLOYEES), empsById = idx_(emps);
-    requireScope_(s, p.employee_id, empsById, 'set this target');
-    if (!can_(s, 'edit')) throw new Error('Your role cannot edit targets.');
-    var kpi = idx_(read_(T.KPIS))[p.kpi_id];
-    if (!kpi) throw new Error('Unknown KPI.');
-    var dir = kpi.direction || 'higher_is_better';
-    var t = [num_(p.t1), num_(p.t2), num_(p.t3), num_(p.t4), num_(p.t5)];
-    for (var i = 1; i < 5; i++) {
-      if (t[i] === null || t[i - 1] === null) continue;
-      if (dir === 'higher_is_better' && t[i] < t[i - 1]) throw new Error('For higher-is-better, T' + (i + 1) + ' must be ≥ T' + i + '.');
-      if (dir === 'lower_is_better' && t[i] > t[i - 1]) throw new Error('For lower-is-better, T' + (i + 1) + ' must be ≤ T' + i + '.');
-    }
-    var targets = read_(T.TARGETS), rec = null;
-    for (var j = 0; j < targets.length; j++) {
-      if (String(targets[j].employee_id) === String(p.employee_id) && String(targets[j].kpi_id) === String(p.kpi_id) &&
-          String(targets[j].period_id) === String(p.period_id)) { rec = targets[j]; break; }
-    }
-    var old = rec ? { t1: num_(rec.t1), t2: num_(rec.t2), t3: num_(rec.t3), t4: num_(rec.t4), t5: num_(rec.t5) } : null;
-    var version = rec ? (num_(rec.version) || 1) + 1 : 1;
-    var row = {
-      id: rec ? rec.id : ('tgt_' + p.employee_id + '_' + p.kpi_id + '_' + p.period_id),
-      employee_id: p.employee_id, kpi_id: p.kpi_id, period_id: p.period_id,
-      t1: t[0], t2: t[1], t3: t[2], t4: t[3], t5: t[4],
-      unit: kpi.unit, direction: dir, status: 'published', version: version,
-      created_by: rec ? rec.created_by : (s.employee_id || s.email),
-      approved_by: s.employee_id || s.email, approved_at: nowIso_()
-    };
-    upsert_(T.TARGETS, row);
-
-    /* keep the performance row's ladder in step, then recompute */
-    var perf = read_(T.PERFORMANCE), pr = null;
-    for (var k = 0; k < perf.length; k++) {
-      if (String(perf[k].employee_id) === String(p.employee_id) && String(perf[k].kpi_id) === String(p.kpi_id) &&
-          String(perf[k].period_id) === String(p.period_id)) { pr = perf[k]; break; }
-    }
-    if (pr) {
-      pr.t1 = t[0]; pr.t2 = t[1]; pr.t3 = t[2]; pr.t4 = t[3]; pr.t5 = t[4];
-      pr.updated_at = nowIso_();
-      upsert_(T.PERFORMANCE, pr);
-    }
-    var summary = recompute_(p.employee_id, p.period_id);
-    audit_(s.employee_id || s.email, 'target', row.id, 'edit_target', old,
-      { t1: t[0], t2: t[1], t3: t[2], t4: t[3], t5: t[4] }, 'Target revision v' + version);
-    notify_(p.employee_id, 'Target Changed', 'Targets updated',
-      'Your targets for ' + kpi.name + ' were updated (v' + version + ').', 'employee', p.employee_id);
-    return jsonSafe_({ ok: true, summary: summary, model: buildModel_(p.period_id) });
-  } catch (e) {
-    return { ok: false, error: String(e && e.message || e), where: 'apiSaveTarget' };
-  }
-}
-
-/** Create/update a performance review. */
-function apiSaveReview(p) {
-  try {
-    p = p || {};
-    var s = resolveSession_(p.view_as);
-    var empsById = idx_(read_(T.EMPLOYEES));
-    requireScope_(s, p.employee_id, empsById, 'edit this review');
-    var id = 'rev_' + p.employee_id + '_' + p.period_id;
-    var existing = read_(T.REVIEWS).filter(function (r) { return String(r.id) === id; })[0];
-    var STATUSES = ['Draft', 'Pending', 'Submitted', 'Completed', 'Overdue'];
-    var status = STATUSES.indexOf(p.status) >= 0 ? p.status : 'Draft';
-    var row = {
-      id: id, employee_id: p.employee_id, period_id: p.period_id, status: status,
-      mgr_achievements: p.mgr_achievements || '', mgr_strengths: p.mgr_strengths || '',
-      mgr_improvements: p.mgr_improvements || '', emp_self: p.emp_self || '',
-      emp_support: p.emp_support || '', reviewer_id: s.employee_id || s.email, updated_at: nowIso_()
-    };
-    upsert_(T.REVIEWS, row);
-    audit_(s.employee_id || s.email, 'review', id, existing ? 'update_review' : 'create_review',
-      existing ? { status: existing.status } : null, { status: status });
-    notify_(p.employee_id, 'Review Completed', 'Review updated',
-      'Your review was updated (' + status + ').', 'review', id);
-    return jsonSafe_({ ok: true, model: buildModel_(p.period_id) });
-  } catch (e) {
-    return { ok: false, error: String(e && e.message || e), where: 'apiSaveReview' };
-  }
-}
-
-/** Add an employee. Employee ID must be unique and well-formed. */
-function apiSaveEmployee(p) {
-  try {
-    p = p || {};
-    var s = resolveSession_(p.view_as);
-    if (!can_(s, 'create')) throw new Error('Your role cannot add employees.');
-    var id = String(p.id || '').trim();
-    if (!/^EMP-\d{5}$/.test(id)) throw new Error('Employee ID must look like EMP-00200.');
-    var emps = read_(T.EMPLOYEES);
-    if (emps.filter(function (e) { return String(e.id) === id; }).length) throw new Error('Employee ID ' + id + ' already exists.');
-    if (!String(p.name || '').trim()) throw new Error('Name is required.');
-    var team = idx_(read_(T.TEAMS))[p.team_id];
-    if (!team) throw new Error('Choose a valid team.');
-    var unit = idx_(read_(T.ORG_UNITS))[team.org_unit_id] || {};
-    append_(T.EMPLOYEES, {
-      id: id, name: p.name, designation: p.designation || 'Executive',
-      org_type_id: unit.org_type_id || '', org_unit_id: unit.id || '', team_id: team.id,
-      manager_id: team.leader_id || '', functional_head_id: unit.head_id || '',
-      employment_status: 'Active', employment_type: p.employment_type || 'Full-time',
-      date_of_joining: p.date_of_joining || nowIso_().slice(0, 10), location: p.location || '',
-      role_id: 'employee', email: p.email || ''
-    });
-    audit_(s.employee_id || s.email, 'employee', id, 'create', null, { name: p.name, team: team.name });
-    return jsonSafe_({ ok: true, model: buildModel_(p.period_id) });
-  } catch (e) {
-    return { ok: false, error: String(e && e.message || e), where: 'apiSaveEmployee' };
-  }
-}
-
-function apiSaveKra(p) {
-  try {
-    p = p || {};
-    var s = resolveSession_(p.view_as);
-    if (!can_(s, 'create')) throw new Error('Your role cannot create KRAs.');
-    if (!String(p.name || '').trim()) throw new Error('Name is required.');
-    var id = p.id || ('kra_' + uid_('').slice(-6));
-    upsert_(T.KRAS, {
-      id: id, name: p.name, code: p.code || String(p.name).slice(0, 3).toUpperCase(),
-      description: p.description || '', weight: num_(p.weight) || 0, status: 'Active',
-      effective_from: p.effective_from || nowIso_().slice(0, 10)
-    });
-    audit_(s.employee_id || s.email, 'kra', id, 'create', null, { name: p.name, weight: p.weight });
-    return jsonSafe_({ ok: true, model: buildModel_(p.period_id) });
-  } catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiSaveKra' }; }
-}
-
-function apiSaveKpi(p) {
-  try {
-    p = p || {};
-    var s = resolveSession_(p.view_as);
-    if (!can_(s, 'create')) throw new Error('Your role cannot create KPIs.');
-    if (!String(p.name || '').trim()) throw new Error('Name is required.');
-    if (!idx_(read_(T.KRAS))[p.kra_id]) throw new Error('Choose a valid KRA.');
-    var DIRS = ['higher_is_better', 'lower_is_better', 'range'];
-    var MTS = ['number', 'currency', 'percentage', 'quantity', 'count', 'ratio', 'time', 'boolean', 'rating'];
-    var id = p.id || ('kpi_' + uid_('').slice(-6));
-    upsert_(T.KPIS, {
-      id: id, kra_id: p.kra_id, name: p.name, code: p.code || String(p.name).slice(0, 3).toUpperCase(),
-      description: p.description || '',
-      measurement_type: MTS.indexOf(p.measurement_type) >= 0 ? p.measurement_type : 'number',
-      unit: p.unit || '', frequency: p.frequency || 'Monthly',
-      direction: DIRS.indexOf(p.direction) >= 0 ? p.direction : 'higher_is_better',
-      weight: num_(p.weight) || 0, status: 'Active'
-    });
-    audit_(s.employee_id || s.email, 'kpi', id, 'create', null, { name: p.name, kra: p.kra_id });
-    return jsonSafe_({ ok: true, model: buildModel_(p.period_id) });
-  } catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiSaveKpi' }; }
-}
-
-function apiMarkNotifications(p) {
-  try {
-    p = p || {};
-    var rows = read_(T.NOTIFICATIONS), updates = [];
-    rows.forEach(function (r) {
-      if (p.id && String(r.id) !== String(p.id)) return;
-      if (String(r.read) === '1') return;
-      r.read = 1; updates.push(r);
-    });
-    if (updates.length) bulkUpdate_(T.NOTIFICATIONS, updates);
-    return jsonSafe_({ ok: true, marked: updates.length, model: buildModel_(p.period_id) });
-  } catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiMarkNotifications' }; }
-}
-
-/* Rebuild every derived value for a period — a safety net after bulk edits. */
+/* Recompute every stored level for a period (safety net after bulk edits). */
 function apiRecomputeAll(p) {
   try {
     p = p || {};
     var s = resolveSession_(p.view_as);
-    if (!can_(s, 'admin')) throw new Error('Only an administrator can recompute everything.');
-    var periodId = p.period_id;
-    var emps = {};
-    read_(T.PERFORMANCE).forEach(function (r) { if (String(r.period_id) === String(periodId)) emps[r.employee_id] = 1; });
-    Object.keys(emps).forEach(function (id) { recompute_(id, periodId); });
-    audit_(s.employee_id || s.email, 'period', periodId, 'recompute_all', null, { employees: Object.keys(emps).length });
-    return jsonSafe_({ ok: true, employees: Object.keys(emps).length, model: buildModel_(periodId) });
+    requirePerm_(s, 'admin', 'recompute the period');
+    var n = 0;
+    read_(T.PERF).forEach(function (r) {
+      if (String(r.period_id) !== String(p.period_id)) return;
+      recomputeOne_(r.employee_id, r.kpi_id, r.period_id, s.name); n++;
+    });
+    audit_(s.name, 'period', p.period_id, 'recompute_all', null, { rows: n });
+    return jsonSafe_({ ok: true, rows: n, model: buildModel_(p.period_id) });
   } catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiRecomputeAll' }; }
 }
 
-function apiResetDemo(p) {
+/* catalogue helpers — dedupe KRA/KPI definitions by name within a team */
+/* Deterministic identity: a KRA/KPI id is derived from its natural key
+ * (team + name, KRA + name), never from a random suffix. Two consequences
+ * that matter: importing the same workbook twice is idempotent instead of
+ * duplicating the catalogue, and two rows that share a KPI NAME under
+ * DIFFERENT KRAs can never collide onto one id (which silently dropped a
+ * person's KPI — and its weightage — before this was made deterministic). */
+function hash_(s) {
+  var h = 5381;
+  for (var i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}
+function ensureKra_(teamId, perspective, name) {
+  var key = String(teamId) + '|' + slug_(name);
+  var id = 'kra_' + slug_(name).slice(0, 24) + '_' + hash_(key).slice(0, 6);
+  var rows = read_(T.KRAS);
+  for (var i = 0; i < rows.length; i++) {
+    if (String(rows[i].id) === id) {
+      if (perspective && rows[i].perspective !== perspective) {
+        rows[i].perspective = perspective; upsert_(T.KRAS, rows[i]);
+      }
+      return id;
+    }
+  }
+  upsert_(T.KRAS, { id: id, team_id: teamId, perspective: perspective || '', name: name, status: 'Active' });
+  return id;
+}
+function ensureKpi_(kraId, name, goal, source, unit) {
+  var key = String(kraId) + '|' + slug_(name);
+  var id = 'kpi_' + slug_(name).slice(0, 24) + '_' + hash_(key).slice(0, 6);
+  var rows = read_(T.KPIS);
+  for (var i = 0; i < rows.length; i++) {
+    if (String(rows[i].id) === id) {
+      var r = rows[i], dirty = false;
+      if (goal && r.goal !== goal) { r.goal = goal; dirty = true; }
+      if (source && r.source !== source) { r.source = source; dirty = true; }
+      if (unit && r.unit !== unit) { r.unit = unit; dirty = true; }
+      if (dirty) upsert_(T.KPIS, r);
+      return id;
+    }
+  }
+  upsert_(T.KPIS, { id: id, kra_id: kraId, name: name, goal: goal || '', source: source || '',
+                    unit: unit || '', status: 'Active' });
+  return id;
+}
+
+/* ==========================================================================
+ * IMPORT — read the definitions straight out of the KRA/KPI workbook.
+ *
+ * Deliberately tolerant, because the workbook is hand-maintained: tabs get
+ * renamed, the two block families order their columns differently, and a
+ * person's header sometimes carries a Region or a second role. So blocks are
+ * FOUND by shape ("a title row followed by a row starting 'Perspective'")
+ * and columns are mapped BY HEADER NAME, never by position.
+ * ======================================================================== */
+function apiImportFromSource(p) {
   try {
     p = p || {};
     var s = resolveSession_(p.view_as);
-    if (!can_(s, 'admin')) throw new Error('Only an administrator can reset the demo data.');
-    PropertiesService.getScriptProperties().deleteProperty('PERFORMOS_SEEDED');
-    seedAll_();
-    audit_(s.employee_id || s.email, 'system', 'demo', 'reset_demo', null, null);
-    return jsonSafe_({ ok: true, model: buildModel_(null) });
-  } catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiResetDemo' }; }
+    requirePerm_(s, 'edit_framework', 'import the framework');
+    var res = importFromSource_(p.sheet_id || SOURCE_SHEET_ID, p.period_id, s.name, !!p.replace);
+    audit_(s.name, 'system', 'import', 'import_source', null, res);
+    return jsonSafe_({ ok: true, result: res, model: buildModel_(p.period_id) });
+  } catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiImportFromSource' }; }
+}
+
+function importFromSource_(sheetId, periodId, actor, replace) {
+  var src;
+  try { src = SpreadsheetApp.openById(sheetId); }
+  catch (e) {
+    throw new Error('Cannot open the source workbook ' + sheetId +
+      '. Share it with the account running this script, then try again. (' + (e && e.message || e) + ')');
+  }
+  var blocks = [];
+  src.getSheets().forEach(function (sh) {
+    var name = sh.getName();
+    if (name.indexOf('_KKT_') === 0) return;                    /* managed tabs, not definitions */
+    var last = sh.getLastRow(), lastC = Math.max(sh.getLastColumn(), 12);
+    if (last < 2) return;
+    var grid = sh.getRange(1, 1, last, lastC).getValues();
+    blocks = blocks.concat(blocksFromGrid_(grid, name));
+  });
+  var people = blocks.filter(function (b) { return b.isPerson; });
+  if (!people.length) throw new Error('No individual KRA/KPI blocks were found in that workbook.');
+
+  if (replace) { write_(T.ASSIGN, []); write_(T.TARGETS, []); }
+
+  var teamsSeen = {}, created = { teams: 0, people: 0, kras: 0, kpis: 0, assignments: 0, targets: 0 };
+  var existingEmps = read_(T.EMPLOYEES), empByName = {};
+  existingEmps.forEach(function (e) { empByName[slug_(e.name)] = e; });
+
+  people.forEach(function (b) {
+    var teamName = teamNameFor_(b.sheet);
+    var teamId = 'team_' + slug_(teamName);
+    if (!teamsSeen[teamId]) {
+      teamsSeen[teamId] = true;
+      if (!read_(T.TEAMS).filter(function (t) { return t.id === teamId; }).length) {
+        upsert_(T.TEAMS, { id: teamId, name: teamName, code: slug_(teamName).toUpperCase().slice(0, 6),
+                           lead_id: '', note: '', status: 'Active' });
+        created.teams++;
+      }
+    }
+    var emp = empByName[slug_(b.name)];
+    var empId = emp ? emp.id : ('EMP-' + slug_(b.name).toUpperCase().replace(/-/g, '').slice(0, 12));
+    if (!emp) {
+      upsert_(T.EMPLOYEES, { id: empId, name: b.name, designation: b.designation, team_id: teamId,
+        sub_group: subGroupFor_(b.sheet), region: b.extra, manager_id: '', status: 'Active', email: '' });
+      empByName[slug_(b.name)] = { id: empId, name: b.name };
+      created.people++;
+    }
+    var weights = normaliseWeights_(b.rows.map(function (r) { return r.weightage; }));
+    b.rows.forEach(function (r, i) {
+      var kraId = ensureKra_(teamId, r.perspective, r.kra || 'General');
+      var kpiId = ensureKpi_(kraId, r.kpi || r.kra, r.goal, r.source, r.unit);
+      upsert_(T.ASSIGN, { id: 'asg_' + empId + '_' + kpiId, employee_id: empId, kra_id: kraId, kpi_id: kpiId,
+        weightage: weights[i], status: 'Active', updated_by: actor, updated_at: nowIso_() });
+      created.assignments++;
+      upsert_(T.TARGETS, { id: 'tgt_' + empId + '_' + kpiId + '_' + periodId, employee_id: empId,
+        kpi_id: kpiId, period_id: periodId,
+        t1: r.targets[0], t2: r.targets[1], t3: r.targets[2], t4: r.targets[3], t5: r.targets[4],
+        version: 1, updated_by: actor, updated_at: nowIso_() });
+      created.targets++;
+    });
+  });
+  assignLeads_();
+  created.kras = read_(T.KRAS).length; created.kpis = read_(T.KPIS).length;
+  return created;
+}
+
+/* Find "title row + Perspective header row + data rows" blocks in a grid. */
+function blocksFromGrid_(grid, sheetName) {
+  function cell(r, c) { var row = grid[r]; return row && row[c] != null ? String(row[c]).replace(/\s+/g, ' ').trim() : ''; }
+  function isHeader(r) { return cell(r, 0) === 'Perspective'; }
+  var out = [], r = 0;
+  while (r < grid.length) {
+    if (cell(r, 0) !== '' && !isHeader(r) && isHeader(r + 1)) {
+      var title = cell(r, 0), extra = cell(r, 1), hdr = r + 1, map = {};
+      for (var c = 0; c < (grid[hdr] || []).length; c++) {
+        var h = cell(hdr, c); if (h) map[h] = c;
+      }
+      function pick() {
+        for (var i = 0; i < arguments.length; i++) if (map[arguments[i]] !== undefined) return map[arguments[i]];
+        return -1;
+      }
+      var cP = pick('Perspective'), cK = pick('KRA'),
+          cI = pick('KPI', 'KPI / Definition', 'KPI/Definition'),
+          cG = pick('Goal Description', 'Goal'), cW = pick('Weightage (%)', 'Weightage'),
+          cS = pick('Source of Tracking', 'Source'), cU = pick('Unit of Measurement', 'Unit');
+      var tc = [pick('Target 1'), pick('Target 2'), pick('Target 3'), pick('Target 4'), pick('Target 5')];
+
+      var rows = [], rr = hdr + 1;
+      while (rr < grid.length) {
+        if (cell(rr, 0) === '') break;
+        if (isHeader(rr)) break;
+        if (isHeader(rr + 1)) break;                     /* next block's title */
+        var kra = cK >= 0 ? cell(rr, cK) : '', kpi = cI >= 0 ? cell(rr, cI) : '';
+        if (kra || kpi) {
+          rows.push({
+            perspective: cP >= 0 ? cell(rr, cP) : '', kra: kra, kpi: kpi,
+            goal: cG >= 0 ? cell(rr, cG) : '', weightage: cW >= 0 ? cell(rr, cW) : '',
+            source: cS >= 0 ? cell(rr, cS) : '', unit: cU >= 0 ? cell(rr, cU) : '',
+            targets: tc.map(function (i) { return i >= 0 ? cell(rr, i) : ''; })
+          });
+        }
+        rr++;
+      }
+      /* People are entered in CAPS ("AMIT JHA (Team Lead)"); section titles are
+         Title Case ("Business Development – (Purchase & Sales)"). */
+      var namePart = title, op = title.indexOf('(');
+      if (op > 0) namePart = title.slice(0, op);
+      var letters = namePart.replace(/[^A-Za-z]/g, '');
+      var isPerson = letters.length >= 2 && letters === letters.toUpperCase();
+      var name = namePart.trim(), desig = '';
+      var cp = title.lastIndexOf(')');
+      if (op > 0 && cp > op) desig = title.slice(op + 1, cp).trim();
+      if (rows.length) {
+        out.push({ sheet: sheetName, title: title, extra: extra, isPerson: isPerson,
+                   name: name, designation: desig, rows: rows });
+      }
+      r = rr; continue;
+    }
+    r++;
+  }
+  return out;
+}
+function teamNameFor_(sheet) {
+  var s = String(sheet);
+  if (/metal/i.test(s)) return 'Metal';
+  if (/plastic/i.test(s)) return 'Plastic';
+  if (/onboarding/i.test(s)) return 'Onboarding';
+  if (/collection/i.test(s)) return 'Collections';
+  if (/control\s*tower|marketplace/i.test(s)) return 'Open Marketplace - Control Tower';
+  return s.replace(/\s*\((Individual|.*KRAKPI.*)\)\s*$/i, '').trim() || s;
+}
+function subGroupFor_(sheet) {
+  if (/supply/i.test(sheet)) return 'Supply';
+  if (/demand/i.test(sheet)) return 'Demand';
+  return '';
+}
+/* The most senior designation in a team becomes its lead. */
+function assignLeads_() {
+  var RANK = [[/general\s*manager/i, 5], [/team\s*lead/i, 4], [/\bmanager\b/i, 3], [/senior\s*manager/i, 3]];
+  var emps = read_(T.EMPLOYEES), teams = read_(T.TEAMS), best = {};
+  emps.forEach(function (e) {
+    var d = String(e.designation || ''), score = 0;
+    if (/assistant/i.test(d)) return;
+    RANK.forEach(function (r) { if (r[0].test(d)) score = Math.max(score, r[1]); });
+    if (!score) return;
+    if (!best[e.team_id] || score > best[e.team_id].score) best[e.team_id] = { id: e.id, score: score };
+  });
+  teams.forEach(function (t) {
+    var b = best[t.id];
+    if (b && String(t.lead_id) !== String(b.id)) { t.lead_id = b.id; upsert_(T.TEAMS, t); }
+  });
+  /* everyone reports to their team lead unless they are the lead */
+  var leadOf = {}; read_(T.TEAMS).forEach(function (t) { leadOf[t.id] = t.lead_id; });
+  var updates = [];
+  emps.forEach(function (e) {
+    var want = (leadOf[e.team_id] && String(leadOf[e.team_id]) !== String(e.id)) ? leadOf[e.team_id] : '';
+    var isLead = leadOf[e.team_id] && String(leadOf[e.team_id]) === String(e.id);
+    if (String(e.manager_id || '') !== String(want) || (isLead && e.status !== 'lead')) {
+      e.manager_id = want; if (isLead) e.status = 'lead';
+      updates.push(e);
+    }
+  });
+  if (updates.length) bulkUpdate_(T.EMPLOYEES, updates);
 }
 
 /* ==========================================================================
- * SEED — a realistic demo organisation. The structure is authoritative (from
- * the supplied organisation chart); people, targets and performance are
- * generated deterministically so the spread of levels is reproducible.
- * Rahul Sharma (EMP-00124) carries the specified demo figures exactly.
+ * SEED — the structure as exported from the workbook on 2026-08-20, so the
+ * platform is usable before anyone runs an import. apiImportFromSource()
+ * refreshes it from the live workbook.
  * ======================================================================== */
 function ensureSeeded_() {
   var props = PropertiesService.getScriptProperties();
-  if (props.getProperty('PERFORMOS_SEEDED') === '1') return false;
-  seedAll_();
+  if (props.getProperty('PERFORMOS_SEEDED') === '3') return false;
+  seedFromEmbedded_();
   return true;
 }
-
-/** Run once manually if you prefer explicit setup. Safe to re-run. */
 function provisionAndSeed() {
   PropertiesService.getScriptProperties().deleteProperty('PERFORMOS_SEEDED');
-  seedAll_();
-  var ss = ss_();
-  return 'Seeded. Backend spreadsheet: ' + ss.getUrl();
+  seedFromEmbedded_();
+  return 'Seeded. Backend: ' + ss_().getUrl();
 }
-
-var LEADERSHIP_ = [
-  ['EMP-00001', 'Abhay Deshpande', 'Chief Executive Officer · Founder', 'CEO'],
-  ['EMP-00002', 'Ekta Narain', 'Chief Business & Impact Officer', 'CBIO'],
-  ['EMP-00003', 'Abhishek Deshpande', 'Chief Operating Officer', 'COO'],
-  ['EMP-00004', 'Vijay Vanparthi', 'Chief Financial Officer', 'CFO'],
-  ['EMP-00005', 'Vikram Prabhakar', 'Chief Product & Technology Officer', 'CPTO'],
-  ['EMP-00006', 'Anirudha Jalan', 'Chief Strategy Officer', 'CSO'],
-  ['EMP-00007', 'Sujan Parthasaradhi', 'Chief Innovation Officer', 'CIO']
-];
-
-/* [code, name, org type, head] — Business Units, Central Functions, Support */
-var UNITS_ = [
-  ['AFR', 'Alternative Fuels & Resources', 'ot_bu', 'EMP-00002'],
-  ['DRS', 'Deposit Refund System', 'ot_bu', 'EMP-00002'],
-  ['EPR', 'Extended Producer Responsibility', 'ot_bu', 'EMP-00002'],
-  ['INFRA', 'Infra Business', 'ot_bu', 'EMP-00003'],
-  ['OMP', 'Open Marketplace', 'ot_bu', 'EMP-00002'],
-  ['RECOM', 'Recommerce', 'ot_bu', 'EMP-00002'],
-  ['COMPL', 'Compliance', 'ot_cf', 'EMP-00003'],
-  ['ONBC', 'Onboarding & Collections', 'ot_cf', 'EMP-00003'],
-  ['OPS', 'Operations', 'ot_cf', 'EMP-00003'],
-  ['STRAT', 'Strategy', 'ot_cf', 'EMP-00006'],
-  ['TECH', 'Technology', 'ot_cf', 'EMP-00005'],
-  ['HW', 'Hardware', 'ot_cf', 'EMP-00005'],
-  ['FAC', 'Facility Management', 'ot_sf', 'EMP-00003'],
-  ['FINL', 'Finance & Legal', 'ot_sf', 'EMP-00004'],
-  ['MKTG', 'Marketing', 'ot_sf', 'EMP-00002'],
-  ['PC', 'People & Culture', 'ot_sf', 'EMP-00002']
-];
-
-var TEAMSPEC_ = [
-  ['INFRA', 'Metals Team', 'METAL'],
-  ['INFRA', 'Cement & Aggregates', 'CEMENT'],
-  ['OMP', 'Marketplace Sales', 'OMPSALES'],
-  ['EPR', 'EPR Compliance Desk', 'EPRDESK'],
-  ['ONBC', 'Onboarding Ops', 'ONBOPS'],
-  ['RECOM', 'Recommerce Trade', 'RCTRADE']
-];
-
-var KRAS_ = [
-  ['kra_rev', 'Revenue', 'REV', 40, 'Top-line revenue delivered across new and existing business.'],
-  ['kra_ca', 'Customer Acquisition', 'CA', 30, 'Growth of the customer base and conversion effectiveness.'],
-  ['kra_prod', 'Productivity', 'PROD', 30, 'Operational efficiency, throughput and quality of delivery.']
-];
-
-/* id, kra, name, code, measurement, unit, direction, weight, [t1..t5], definition */
-var KPIS_ = [
-  ['kpi_ms', 'kra_rev', 'Monthly Sales', 'MS', 'currency', 'L', 'higher_is_better', 40, [10, 15, 20, 25, 30], 'Total sales value closed in the period.'],
-  ['kpi_ncr', 'kra_rev', 'New Customer Revenue', 'NCR', 'currency', 'L', 'higher_is_better', 30, [10, 15, 20, 25, 30], 'Revenue from customers acquired this period.'],
-  ['kpi_col', 'kra_rev', 'Collection', 'COL', 'currency', 'L', 'higher_is_better', 30, [5, 8, 10, 12, 15], 'Payments collected against outstanding invoices.'],
-  ['kpi_na', 'kra_ca', 'New Accounts', 'NA', 'count', 'accounts', 'higher_is_better', 60, [5, 10, 15, 20, 25], 'Number of new accounts onboarded.'],
-  ['kpi_lc', 'kra_ca', 'Lead Conversion', 'LC', 'percentage', '%', 'higher_is_better', 40, [40, 50, 60, 70, 80], 'Share of qualified leads converted.'],
-  ['kpi_ut', 'kra_prod', 'Utilization', 'UT', 'percentage', '%', 'higher_is_better', 50, [60, 70, 80, 90, 95], 'Productive utilisation of available capacity.'],
-  ['kpi_ct', 'kra_prod', 'Cycle Time', 'CT', 'time', 'days', 'lower_is_better', 25, [30, 25, 20, 15, 10], 'Average days to complete the core workflow (lower is better).'],
-  ['kpi_qs', 'kra_prod', 'Quality Score', 'QS', 'number', 'pts', 'range', 25, [60, 70, 80, 90, 100], 'Balanced quality index; the ideal sits mid-band.']
-];
-
-var FIRST_ = ['Aarav', 'Vivaan', 'Aditya', 'Vihaan', 'Arjun', 'Sai', 'Reyansh', 'Krishna', 'Ishaan', 'Kabir',
-  'Ananya', 'Diya', 'Aadhya', 'Saanvi', 'Pari', 'Anika', 'Neha', 'Priya', 'Riya', 'Kavya',
-  'Rohan', 'Karan', 'Nikhil', 'Varun', 'Sneha', 'Pooja', 'Deepak', 'Manish', 'Meera', 'Divya'];
-var LAST_ = ['Sharma', 'Verma', 'Patel', 'Reddy', 'Nair', 'Iyer', 'Rao', 'Singh', 'Gupta', 'Mehta',
-  'Kulkarni', 'Bose', 'Das', 'Menon', 'Kapoor', 'Malhotra', 'Chopra', 'Bhat', 'Pillai', 'Joshi'];
-var DESIGS_ = ['Executive', 'Senior Executive', 'Associate', 'Senior Associate', 'Assistant Manager', 'Manager'];
-
-/* deterministic RNG so a reseed reproduces the same organisation */
-function rng_(seed) {
-  var s = seed >>> 0;
-  return function () { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
-}
-function hash_(str) { var h = 0; for (var i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) & 0x7fffffff; return h; }
-function pick_(r, arr) { return arr[Math.floor(r() * arr.length)]; }
-
-/** An actual that lands on a chosen target level, direction-aware. */
-function actualForLevel_(t, level, dir) {
-  function mid(a, b) { return a + (b - a) * 0.5; }
-  if (dir === 'lower_is_better') {
-    if (level <= 0) return Math.round(t[0] * 1.2);
-    if (level >= 5) return Math.round(t[4] * 0.9 * 10) / 10;
-    return Math.round(mid(t[level - 1], t[level]) * 10) / 10;
-  }
-  if (dir === 'range') {
-    var lo = t[0], hi = t[4], m = t[2];
-    if (level <= 0) return Math.round(lo - (hi - lo) * 0.2);
-    var frac = (5 - level) / 5;
-    return Math.round(m + (hi - m) * frac);
-  }
-  if (level <= 0) return Math.round(t[0] * 0.8 * 10) / 10;
-  if (level >= 5) return Math.round((t[4] + (t[4] - t[3]) * 0.4) * 10) / 10;
-  return Math.round(mid(t[level - 1], t[level]) * 10) / 10;
-}
-
-/** Rahul Sharma's exact demo actuals for August 2026 (the specified figures). */
-function rahulActual_(empId, kpiId, periodId) {
-  if (empId !== 'EMP-00124' || periodId !== 'per_2026-08') return null;
-  var map = { kpi_ms: 27, kpi_ncr: 32, kpi_col: 11, kpi_na: 26, kpi_lc: 72, kpi_ut: 92, kpi_ct: 13, kpi_qs: 88 };
-  return map[kpiId] === undefined ? null : map[kpiId];
-}
-
-function slug_(n) { return String(n).toLowerCase().replace(/[^a-z]+/g, '.').replace(/^\.|\.$/g, ''); }
-
-function seedAll_() {
-  var r = rng_(20260901);
-
-  var orgTypes = [
-    { id: 'ot_lead', name: 'Leadership', code: 'LEAD', color: '#B8860B', sort: 0 },
-    { id: 'ot_bu', name: 'Business Unit', code: 'BU', color: '#2E7D52', sort: 1 },
-    { id: 'ot_cf', name: 'Central Function', code: 'CF', color: '#7C4DBC', sort: 2 },
-    { id: 'ot_sf', name: 'Support Function', code: 'SF', color: '#2F74D0', sort: 3 }
-  ];
-  var roles = [
-    { id: 'super_admin', name: 'Super Admin' }, { id: 'hr_admin', name: 'HR / Admin' },
-    { id: 'business_head', name: 'Business Head' }, { id: 'team_leader', name: 'Team Leader' },
-    { id: 'manager', name: 'Manager' }, { id: 'employee', name: 'Employee' }, { id: 'auditor', name: 'Auditor' }
-  ];
-  var unitId = function (code) { return 'ou_' + String(code).toLowerCase(); };
-  var headOf = {}, typeOf = {};
-  UNITS_.forEach(function (u) { headOf[u[0]] = u[3]; typeOf[u[0]] = u[2]; });
-  var orgUnits = UNITS_.map(function (u) {
-    return { id: unitId(u[0]), org_type_id: u[2], name: u[1], code: u[0], head_id: u[3], status: 'Active' };
-  });
-
-  var employees = LEADERSHIP_.map(function (l, i) {
-    return {
-      id: l[0], name: l[1], designation: l[2], org_type_id: 'ot_lead', org_unit_id: '', team_id: '',
-      manager_id: i === 0 ? '' : 'EMP-00001', functional_head_id: '', employment_status: 'Active',
-      employment_type: 'Full-time', date_of_joining: '2019-04-01', location: 'Hyderabad',
-      role_id: i === 0 ? 'super_admin' : 'business_head', email: slug_(l[1]) + '@recykal.com'
-    };
-  });
-
-  /* periods: FY 2026–27 months + quarters + FY */
-  var monthDefs = [['2026-04', 'April 2026'], ['2026-05', 'May 2026'], ['2026-06', 'June 2026'],
-    ['2026-07', 'July 2026'], ['2026-08', 'August 2026'], ['2026-09', 'September 2026'],
-    ['2026-10', 'October 2026'], ['2026-11', 'November 2026'], ['2026-12', 'December 2026'],
-    ['2027-01', 'January 2027'], ['2027-02', 'February 2027'], ['2027-03', 'March 2027']];
+function seedFromEmbedded_() {
   var CURRENT = 'per_2026-08';
-  var periods = monthDefs.map(function (m, i) {
-    return { id: 'per_' + m[0], name: m[1], kind: 'month', code: m[0], sort: i,
-             status: i < 4 ? 'locked' : (i === 4 ? 'open' : 'upcoming'), start_date: m[0] + '-01' };
-  });
-  ['Q1', 'Q2', 'Q3', 'Q4', 'FY'].forEach(function (q, i) {
-    periods.push({ id: 'per_' + q, name: 'FY 2026–27 · ' + q, kind: q === 'FY' ? 'fy' : 'quarter',
-                   code: q, sort: 100 + i, status: 'open', start_date: '2026-04-01' });
-  });
-  var HIST = ['per_2026-04', 'per_2026-05', 'per_2026-06', 'per_2026-07', CURRENT];
+  var months = [['2026-04', 'April 2026'], ['2026-05', 'May 2026'], ['2026-06', 'June 2026'],
+    ['2026-07', 'July 2026'], ['2026-08', 'August 2026'], ['2026-09', 'September 2026']];
+  write_(T.PERIODS, months.map(function (m, i) {
+    return { id: 'per_' + m[0], name: m[1], kind: 'month', sort: i,
+             status: i < 4 ? 'locked' : (i === 4 ? 'open' : 'upcoming') };
+  }));
+  write_(T.SETTINGS, [
+    { key: 'current_period', value: CURRENT },
+    { key: 'source_sheet_id', value: SOURCE_SHEET_ID },
+    { key: 'rollup', value: JSON.stringify({
+        description: 'Weightage is per KPI and totals 100% per person, so the overall level is one weighted mean over that person’s scored KPIs. A KRA level is the same mean renormalised within the KRA.' }) }
+  ]);
+  write_(T.TEAMS, []); write_(T.EMPLOYEES, []); write_(T.KRAS, []); write_(T.KPIS, []);
+  write_(T.ASSIGN, []); write_(T.TARGETS, []); write_(T.PERF, []); write_(T.AUDIT, []);
 
-  var kras = KRAS_.map(function (k) {
-    return { id: k[0], name: k[1], code: k[2], description: k[4], weight: k[3], status: 'Active', effective_from: '2026-04-01' };
-  });
-  var kpis = KPIS_.map(function (k) {
-    return { id: k[0], kra_id: k[1], name: k[2], code: k[3], description: k[9],
-             measurement_type: k[4], unit: k[5], frequency: 'Monthly', direction: k[6], weight: k[7], status: 'Active' };
-  });
-  var ladder = {}, dirOf = {}, kraOf = {};
-  KPIS_.forEach(function (k) { ladder[k[0]] = k[8]; dirOf[k[0]] = k[6]; kraOf[k[0]] = k[1]; });
-
-  /* teams + members. Generated ids start at 200 so they never collide with the
-   * reserved ones (Amit Sharma EMP-00120, Rahul Sharma EMP-00124). */
-  var teams = [], empNo = 200;
-  function nextId() { empNo++; return 'EMP-' + ('00000' + empNo).slice(-5); }
-
-  TEAMSPEC_.forEach(function (ts) {
-    var code = ts[2], teamId = 'team_' + code.toLowerCase();
-    var leaderId = code === 'METAL' ? 'EMP-00120' : nextId();
-    var leaderName = code === 'METAL' ? 'Amit Sharma' : (pick_(r, FIRST_) + ' ' + pick_(r, LAST_));
-    teams.push({ id: teamId, org_unit_id: unitId(ts[0]), name: ts[1], code: code, leader_id: leaderId,
-                 description: ts[1] + ' — ' + ts[0], status: 'Active' });
-    employees.push(mkEmp_(leaderId, leaderName, 'Team Leader', ts[0], teamId, headOf[ts[0]], 'team_leader', typeOf, headOf, unitId, r));
-    var count = 5 + Math.floor(r() * 2);
-    for (var i = 0; i < count; i++) {
-      var id, name, desig, role;
-      if (code === 'METAL' && i === 0) { id = 'EMP-00124'; name = 'Rahul Sharma'; desig = 'Senior Executive'; role = 'employee'; }
-      else { id = nextId(); name = pick_(r, FIRST_) + ' ' + pick_(r, LAST_); desig = pick_(r, DESIGS_); role = (i === 1 ? 'manager' : 'employee'); }
-      employees.push(mkEmp_(id, name, desig, ts[0], teamId, leaderId, role, typeOf, headOf, unitId, r));
+  var teamsSeen = {};
+  SRC_SEED.people.forEach(function (b) {
+    var teamId = 'team_' + slug_(b.team);
+    if (!teamsSeen[teamId]) {
+      teamsSeen[teamId] = true;
+      upsert_(T.TEAMS, { id: teamId, name: b.team, code: slug_(b.team).toUpperCase().slice(0, 6),
+                         lead_id: '', note: '', status: 'Active' });
     }
-  });
-
-  var users = [
-    { id: 'u_admin', name: 'Platform Admin', email: 'admin@recykal.com', role_id: 'super_admin', employee_id: 'EMP-00001' },
-    { id: 'u_hr', name: 'Ekta Narain (HR)', email: 'ekta.narain@recykal.com', role_id: 'hr_admin', employee_id: 'EMP-00002' },
-    { id: 'u_lead', name: 'Amit Sharma (Team Leader)', email: 'amit.sharma@recykal.com', role_id: 'team_leader', employee_id: 'EMP-00120' },
-    { id: 'u_emp', name: 'Rahul Sharma (Employee)', email: 'rahul.sharma@recykal.com', role_id: 'employee', employee_id: 'EMP-00124' },
-    { id: 'u_audit', name: 'Auditor', email: 'auditor@recykal.com', role_id: 'auditor', employee_id: '' }
-  ];
-
-  /* assignments + targets + performance for every team member across HIST */
-  var assignments = [], targets = [], performance = [];
-  var members = employees.filter(function (e) { return e.team_id; });
-  members.forEach(function (emp) {
-    var er = rng_(hash_(emp.id));
-    KPIS_.forEach(function (k) {
-      var kpiId = k[0];
-      assignments.push({ id: uid_('asg'), employee_id: emp.id, kpi_id: kpiId, kra_id: kraOf[kpiId],
-        source: 'team', weight: k[7], status: 'Active', effective_from: '2026-04-01', effective_to: '' });
-      HIST.forEach(function (periodId, hi) {
-        var base = er();
-        var bucket = base < 0.08 ? 0 : base < 0.22 ? 1 : base < 0.42 ? 2 : base < 0.68 ? 3 : base < 0.88 ? 4 : 5;
-        var drift = Math.round((hi - 2) * 0.4 * (er() < 0.6 ? 1 : 0));
-        var level = Math.max(0, Math.min(5, bucket + drift));
-        var t = ladder[kpiId];
-        var actual = actualForLevel_(t, level, dirOf[kpiId]);
-        var override = rahulActual_(emp.id, kpiId, periodId);
-        if (override !== null) actual = override;
-        targets.push({ id: 'tgt_' + emp.id + '_' + kpiId + '_' + periodId, employee_id: emp.id, kpi_id: kpiId,
-          period_id: periodId, t1: t[0], t2: t[1], t3: t[2], t4: t[3], t5: t[4], unit: k[5], direction: dirOf[kpiId],
-          status: periodId === CURRENT ? 'published' : 'locked', version: 1, created_by: 'EMP-00120',
-          approved_by: 'EMP-00003', approved_at: '2026-03-28T10:00:00Z' });
-        performance.push({ id: 'prf_' + emp.id + '_' + kpiId + '_' + periodId, employee_id: emp.id, team_id: emp.team_id,
-          kra_id: kraOf[kpiId], kpi_id: kpiId, period_id: periodId,
-          t1: t[0], t2: t[1], t3: t[2], t4: t[3], t5: t[4], direction: dirOf[kpiId], weight: k[7],
-          actual: actual, highest_level: '', levels_achieved: '', pct: '', score: '',
-          status: periodId === CURRENT ? 'submitted' : 'locked', updated_at: '' });
-      });
+    var empId = 'EMP-' + slug_(b.name).toUpperCase().replace(/-/g, '').slice(0, 12);
+    upsert_(T.EMPLOYEES, { id: empId, name: b.name, designation: b.designation, team_id: teamId,
+      sub_group: b.group || '', region: b.extra || '', manager_id: '', status: 'Active', email: '' });
+    var weights = normaliseWeights_(b.kpis.map(function (r) { return r[4]; }));
+    b.kpis.forEach(function (r, i) {
+      var kraId = ensureKra_(teamId, r[0], r[1] || 'General');
+      var kpiId = ensureKpi_(kraId, r[2] || r[1], r[3], r[5], '');
+      upsert_(T.ASSIGN, { id: 'asg_' + empId + '_' + kpiId, employee_id: empId, kra_id: kraId,
+        kpi_id: kpiId, weightage: weights[i], status: 'Active', updated_by: 'seed', updated_at: nowIso_() });
+      upsert_(T.TARGETS, { id: 'tgt_' + empId + '_' + kpiId + '_' + CURRENT, employee_id: empId,
+        kpi_id: kpiId, period_id: CURRENT,
+        t1: r[6], t2: r[7], t3: r[8], t4: r[9], t5: r[10],
+        version: 1, updated_by: 'seed', updated_at: nowIso_() });
     });
   });
+  assignLeads_();
 
-  var reviews = ['EMP-00124', 'EMP-00120'].map(function (id) {
-    return { id: 'rev_' + id + '_' + CURRENT, employee_id: id, period_id: CURRENT,
-             status: id === 'EMP-00124' ? 'Submitted' : 'Draft', mgr_achievements: '', mgr_strengths: '',
-             mgr_improvements: '', emp_self: '', emp_support: '', reviewer_id: 'EMP-00120', updated_at: nowIso_() };
-  });
-
-  var notifications = [
-    { id: uid_('ntf'), recipient_id: 'EMP-00120', type: 'Target 5 Achieved', title: 'Target 5 achieved',
-      message: 'Rahul Sharma achieved Target 5 for New Customer Revenue (August 2026).',
-      entity_type: 'employee', entity_id: 'EMP-00124', read: 0, created_at: nowIso_() },
-    { id: uid_('ntf'), recipient_id: 'EMP-00120', type: 'Performance Submitted', title: 'Performance submitted',
-      message: 'Rahul Sharma submitted performance for August 2026.',
-      entity_type: 'employee', entity_id: 'EMP-00124', read: 0, created_at: nowIso_() },
-    { id: uid_('ntf'), recipient_id: 'all', type: 'Target Published', title: 'Targets published',
-      message: 'August 2026 targets have been published for all active teams.',
-      entity_type: 'period', entity_id: CURRENT, read: 0, created_at: nowIso_() },
-    { id: uid_('ntf'), recipient_id: 'EMP-00124', type: 'Review Pending', title: 'Review pending',
-      message: 'Your August 2026 performance review is pending manager sign-off.',
-      entity_type: 'review', entity_id: 'rev_EMP-00124_' + CURRENT, read: 0, created_at: nowIso_() }
-  ];
-
-  var settings = [
-    { key: 'current_period', value: CURRENT },
-    { key: 'aggregation', value: JSON.stringify({ method: 'weighted_mean', rounding: 'nearest',
-        description: 'Overall = round( Σ(level × weight) ÷ Σ weight ), weighted by KRA weight.' }) },
-    { key: 'ranking', value: JSON.stringify({ order: ['overall_score', 't5', 't4plus', 'name'],
-        description: 'Rank by overall score, then Target 5 hits, then Target 4+ hits, then name.' }) },
-    { key: 'consistency', value: JSON.stringify({ level: 4, periods: 3,
-        description: 'Consistent = Target 4+ for 3 consecutive periods.' }) }
-  ];
-
-  write_(T.ORG_TYPES, orgTypes);
-  write_(T.ROLES, roles);
-  write_(T.ORG_UNITS, orgUnits);
-  write_(T.TEAMS, teams);
-  write_(T.EMPLOYEES, employees);
-  write_(T.KRAS, kras);
-  write_(T.KPIS, kpis);
-  write_(T.PERIODS, periods);
-  write_(T.ASSIGNMENTS, assignments);
-  write_(T.TARGETS, targets);
-  write_(T.PERFORMANCE, performance);
-  write_(T.REVIEWS, reviews);
-  write_(T.NOTIFICATIONS, notifications);
-  write_(T.SETTINGS, settings);
-  write_(T.USERS, users);
-  write_(T.AUDIT, []);
-
-  /* compute every level/rollup once, so the app opens on real numbers */
-  var pairs = {};
-  performance.forEach(function (p) { pairs[p.employee_id + '|' + p.period_id] = [p.employee_id, p.period_id]; });
-  Object.keys(pairs).forEach(function (k) { recompute_(pairs[k][0], pairs[k][1]); });
-
-  PropertiesService.getScriptProperties().setProperty('PERFORMOS_SEEDED', '1');
+  var emps = read_(T.EMPLOYEES);
+  function find(re) { var m = emps.filter(function (e) { return re.test(e.name); })[0]; return m ? m.id : ''; }
+  write_(T.USERS, [
+    { id: 'u_admin', name: 'Platform Admin', email: '', role_id: 'super_admin', employee_id: '' },
+    { id: 'u_hr', name: 'HR / Admin', email: '', role_id: 'hr_admin', employee_id: '' },
+    { id: 'u_lead_col', name: 'Ravi Naik (Collections lead)', email: '', role_id: 'team_leader', employee_id: find(/^RAVI NAIK$/i) },
+    { id: 'u_lead_met', name: 'Amit Jha (Metal lead)', email: '', role_id: 'team_leader', employee_id: find(/^AMIT JHA$/i) },
+    { id: 'u_emp', name: 'Vishwash (Onboarding)', email: '', role_id: 'employee', employee_id: find(/^VISHWASH$/i) },
+    { id: 'u_audit', name: 'Auditor', email: '', role_id: 'auditor', employee_id: '' }
+  ]);
+  PropertiesService.getScriptProperties().setProperty('PERFORMOS_SEEDED', '3');
   return true;
-}
-
-function mkEmp_(id, name, desig, unitCode, teamId, managerId, roleId, typeOf, headOf, unitId, r) {
-  return {
-    id: id, name: name, designation: desig, org_type_id: typeOf[unitCode], org_unit_id: unitId(unitCode),
-    team_id: teamId, manager_id: managerId, functional_head_id: headOf[unitCode],
-    employment_status: 'Active', employment_type: (r() < 0.85 ? 'Full-time' : 'Contract'),
-    date_of_joining: '2023-0' + (1 + Math.floor(r() * 8)) + '-15',
-    location: pick_(r, ['Hyderabad', 'Bengaluru', 'Mumbai', 'Delhi', 'Pune']),
-    role_id: roleId, email: slug_(name) + id.slice(-3) + '@recykal.com'
-  };
 }
 
 /* ==========================================================================
- * SELF-TEST — proves the engine against the specified demo figures without
- * needing the UI. Run from the editor; reads the log.
+ * SELF TEST — proves the structure and the band engine from the editor.
  * ======================================================================== */
 function selfTest() {
-  var out = [];
-  function check(label, got, want) {
-    out.push((String(got) === String(want) ? 'PASS' : 'FAIL') + '  ' + label + ': ' + got + (String(got) === String(want) ? '' : ' (want ' + want + ')'));
+  var out = [], pass = 0, fail = 0;
+  function ck(label, got, want) {
+    var ok = String(got) === String(want);
+    if (ok) pass++; else fail++;
+    out.push((ok ? 'PASS  ' : 'FAIL  ') + label + ': ' + got + (ok ? '' : '  (want ' + want + ')'));
   }
   ensureSeeded_();
+  var m = buildModel_(null);
+  ck('teams', m.teams.length, 5);
+  ck('people', m.employees.length, 38);
+  ck('assignment rows', m.rows.length, 208);
+  out.push('INFO  KRAs=' + m.kras.length + '  KPIs=' + m.kpis.length + '  period=' + m.period_id);
 
-  /* the three specified KPI results for Rahul Sharma, August 2026 */
-  var perf = read_(T.PERFORMANCE).filter(function (r) {
-    return String(r.employee_id) === 'EMP-00124' && String(r.period_id) === 'per_2026-08';
+  /* every person's weightage must total 100 after normalisation */
+  var bad = [];
+  Object.keys(m.overalls).forEach(function (id) {
+    var w = m.overalls[id].assigned_weightage;
+    if (Math.abs(w - 100) > 0.5) bad.push(id + '=' + w);
   });
-  var byKpi = {};
-  perf.forEach(function (r) { byKpi[r.kpi_id] = r; });
-  check('Monthly Sales (27 → T4)', num_((byKpi.kpi_ms || {}).highest_level), 4);
-  check('New Customer Revenue (32 → T5)', num_((byKpi.kpi_ncr || {}).highest_level), 5);
-  check('Collection (11 → T3)', num_((byKpi.kpi_col || {}).highest_level), 3);
+  ck('weightage totals 100 for all 38', bad.length ? bad.join(',') : 0, 0);
 
-  var sum = recompute_('EMP-00124', 'per_2026-08');
-  check('Overall level', sum.overall_level, 4);
+  /* band engine — the 16 real ladder shapes reduce to these behaviours */
+  ck('ratio ladder direction', parseBands_(['0.6','0.75','0.9','1.0','1.05']).direction, 'higher_is_better');
+  ck('DSO days direction', parseBands_(['15','10','5','3','2']).direction, 'lower_is_better');
+  ck('TGT-20 parses as 20 not -20', parseBands_(['> 28 Days','25–28 Days','21–24 Days','TGT-20 Days','≤ 19 Days']).values[3], 20);
+  ck('range 25-28 midpoint', parseBands_(['> 28 Days','25–28 Days','21–24 Days','TGT-20 Days','≤ 19 Days']).values[1], 26.5);
+  ck('currency ≥ ₹9 Cr', parseBands_(['≥ ₹9 Cr','₹8 Cr','₹7 Cr','₹6 Cr','< ₹5 Cr']).values[0], 9);
+  ck('percent-of-LD', parseBands_(['10% of LD','15% of LD','20% of LD','25% of LD','30% of LD']).values[4], 30);
+  ck('ordinal ladder kind', parseBands_(['More than (T+7 days)','T+7 days','On Time (Defined TAT)','T-1 day','T - 2 days']).kind, 'ordinal');
+  ck('qualitative kind', parseBands_(['As per Collections Process','—','—','—','—']).kind, 'qualitative');
 
-  /* direction handling */
-  check('lower_is_better 13 days vs [30,25,20,15,10]', levelFor_([30, 25, 20, 15, 10], 13, 'lower_is_better').level, 4);
-  /* 88 sits 8 above the ideal of 80 in a 60–100 band: closeness = 1 - 8/20 = 0.6,
-     so round(1 + 0.6×4) = 3. Level 3 is the designed answer, not 4. */
-  check('range 88 in [60..100] ideal 80', levelFor_([60, 70, 80, 90, 100], 88, 'range').level, 3);
-  check('below T1 (9 vs [10..30])', levelFor_([10, 15, 20, 25, 30], 9, 'higher_is_better').level, 0);
-  check('exactly T1 (10)', levelFor_([10, 15, 20, 25, 30], 10, 'higher_is_better').level, 1);
-  check('above T5 (32)', levelFor_([10, 15, 20, 25, 30], 32, 'higher_is_better').level, 5);
-  check('no actual → null', String(levelFor_([10, 15, 20, 25, 30], null, 'higher_is_better').level), 'null');
+  var dso = parseBands_(['> 28 Days','25–28 Days','21–24 Days','TGT-20 Days','≤ 19 Days']);
+  ck('DSO 19 → T5', levelFromBands_(dso, 19), 5);
+  ck('DSO 22 → T3', levelFromBands_(dso, 22), 3);
+  ck('DSO 30 → below T1', levelFromBands_(dso, 30), 0);
+  var ratio = parseBands_(['0.6','0.75','0.9','1.0','1.05']);
+  ck('ratio 0.92 → T3', levelFromBands_(ratio, 0.92), 3);
+  ck('ratio 1.06 → T5', levelFromBands_(ratio, 1.06), 5);
+  ck('ratio 0.55 → below T1', levelFromBands_(ratio, 0.55), 0);
+  ck('ordinal is not auto-scored', String(levelFromBands_(parseBands_(['More than (T+7 days)','T+7 days','On Time (Defined TAT)','T-1 day','T - 2 days']), 3)), 'null');
 
-  /* aggregation example from the specification: 4·.40 + 5·.20 + 3·.15 + 4·.25 = 4.00 */
-  var agg = aggregate_([{ ref: 'a', level: 4, weight: 40 }, { ref: 'b', level: 5, weight: 20 },
-    { ref: 'c', level: 3, weight: 15 }, { ref: 'd', level: 4, weight: 25 }]);
-  /* The specification's §17 example prints 4.00, but its own figures give
-     4.05 (1.6 + 1.0 + 0.45 + 1.0). Both map to Target 4, so the published
-     conclusion holds; the engine reports the arithmetically correct score. */
-  check('weighted aggregate 4.05', agg.score, 4.05);
-  check('mapped level T4', agg.level, 4);
+  ck('weights normalise (fractions)', normaliseWeights_([0.35,0.1,0.1,0.2,0.15,0.1]).reduce(function(a,b){return a+b;},0), 100);
+  ck('weights normalise (percent)', normaliseWeights_([5,15,15,5,40,10,10]).reduce(function(a,b){return a+b;},0), 100);
 
-  var model = buildModel_(null);
-  check('model period', model.period_id, 'per_2026-08');
-  out.push('INFO  employees=' + model.employees.length + ' teams=' + model.teams.length +
-    ' units=' + model.org_units.length + ' perf rows(period)=' + model.performance.length +
-    ' leaderboard=' + model.leaderboard.length);
-  out.push('INFO  T5 rate=' + model.analytics.t5rate + '%  T4+ rate=' + model.analytics.t4plus + '%');
-
-  var res = out.join('\n');
-  Logger.log(res);
-  return res;
+  out.push('');
+  out.push(pass + ' passed, ' + fail + ' failed');
+  var txt = out.join('\n');
+  Logger.log(txt);
+  return txt;
 }
+/* Generated from the KRA/KPI workbook — do not hand-edit. */
+var SRC_SEED = {"source_sheet_id":"1c0_pP4Mmye5s5D_vzoxrvJ-utkLb6JhD69TvvOBbjoo","exported":"2026-08-20","people":[{"team":"Metal","group":"","sheet":"Metal (Supply \u0026 Demand KRAKPI)","name":"AMIT JHA","designation":"Team Lead - Business Development","extra":"","kpis":[["Process","Retention of Existing Transacted Sellers","Repeat Seller Transaction Rate (%)","Achieve repeat transactions from at least 50% of sellers who transacted in the previous month.","5.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Customer","New Buyer Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the KPI.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Customer","New Seller Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the KPI.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Process","Transaction from New Onboarded Buyers","New Buyer Same-Month Transaction Rate (%)","Ensure at least 20% of buyers onboarded during the month complete a transaction within the same month.","5.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","GMV","Monthly Target Achievement (%)","Achieve the defined monthly target for the KPI.","40.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Transaction Closure","Successfully Closed Transactions (Count)","Successfully close the targeted number of transactions through completion of POD, DNCN, and payment upload requirements.","10.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Process","DSO Days","Days Sales Outstanding (DSO)","Maintain DSO within the defined monthly target, calculated as (Average Receivables ÷ GMV) × Number of Days in the Month.","10.0","Monthly MIS Report","15.0","10.0","5.0","3.0","2.0"]]},{"team":"Metal","group":"","sheet":"Metal (Supply \u0026 Demand KRAKPI)","name":"ABHISEK SANYAL","designation":"Assistant Manager - Business Development","extra":"","kpis":[["Process","Retention of Existing Transacted Sellers","Repeat Seller Transaction Rate (%)","Achieve repeat transactions from at least 50% of sellers who transacted in the previous month.","5.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Customer","New Buyer Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the KPI.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Customer","New Seller Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the KPI.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Process","Transaction from New Onboarded Buyers","New Buyer Same-Month Transaction Rate (%)","Ensure at least 20% of buyers onboarded during the month complete a transaction within the same month.","5.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","GMV","Monthly Target Achievement (%)","Achieve the defined monthly target for the KPI.","40.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Transaction Closure","Successfully Closed Transactions (Count)","Successfully close the targeted number of transactions through completion of POD, DNCN, and payment upload requirements.","10.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Process","DSO Days","Days Sales Outstanding (DSO)","Maintain DSO within the defined monthly target, calculated as (Average Receivables ÷ GMV) × Number of Days in the Month.","10.0","Monthly MIS Report","15.0","10.0","5.0","3.0","2.0"]]},{"team":"Metal","group":"","sheet":"Metal (Supply \u0026 Demand KRAKPI)","name":"ADARSH KRISHNA","designation":"Assistant Manager - Business Development","extra":"","kpis":[["Process","Retention of Existing Transacted Sellers","Repeat Seller Transaction Rate (%)","Achieve repeat transactions from at least 50% of sellers who transacted in the previous month.","5.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Customer","New Buyer Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the KPI.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Customer","New Seller Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the KPI.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Process","Transaction from New Onboarded Buyers","New Buyer Same-Month Transaction Rate (%)","Ensure at least 20% of buyers onboarded during the month complete a transaction within the same month.","5.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","GMV","Monthly Target Achievement (%)","Achieve the defined monthly target for the KPI.","40.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Transaction Closure","Successfully Closed Transactions (Count)","Successfully close the targeted number of transactions through completion of POD, DNCN, and payment upload requirements.","10.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Process","DSO Days","Days Sales Outstanding (DSO)","Maintain DSO within the defined monthly target, calculated as (Average Receivables ÷ GMV) × Number of Days in the Month.","10.0","Monthly MIS Report","15.0","10.0","5.0","3.0","2.0"]]},{"team":"Metal","group":"","sheet":"Metal (Supply \u0026 Demand KRAKPI)","name":"ARIJIT DUTTA","designation":"Senior Executive - Business Development","extra":"","kpis":[["Process","Retention of Existing Transacted Sellers","Repeat Seller Transaction Rate (%)","Achieve repeat transactions from at least 50% of sellers who transacted in the previous month.","5.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Customer","New Buyer Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the KPI.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Customer","New Seller Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the KPI.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Process","Transaction from New Onboarded Buyers","New Buyer Same-Month Transaction Rate (%)","Ensure at least 20% of buyers onboarded during the month complete a transaction within the same month.","5.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","GMV","Monthly Target Achievement (%)","Achieve the defined monthly target for the KPI.","40.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Transaction Closure","Successfully Closed Transactions (Count)","Successfully close the targeted number of transactions through completion of POD, DNCN, and payment upload requirements.","10.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Process","DSO Days","Days Sales Outstanding (DSO)","Maintain DSO within the defined monthly target, calculated as (Average Receivables ÷ GMV) × Number of Days in the Month.","10.0","Monthly MIS Report","15.0","10.0","5.0","3.0","2.0"]]},{"team":"Metal","group":"","sheet":"Metal (Supply \u0026 Demand KRAKPI)","name":"ARGHYADEEP SAMANTA","designation":"Senior Executive - Business Development","extra":"","kpis":[["Process","Retention of Existing Transacted Sellers","Repeat Seller Transaction Rate (%)","Achieve repeat transactions from at least 50% of sellers who transacted in the previous month.","5.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Customer","New Buyer Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the KPI.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Customer","New Seller Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the KPI.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Process","Transaction from New Onboarded Buyers","New Buyer Same-Month Transaction Rate (%)","Ensure at least 20% of buyers onboarded during the month complete a transaction within the same month.","5.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","GMV","Monthly Target Achievement (%)","Achieve the defined monthly target for the KPI.","40.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Transaction Closure","Successfully Closed Transactions (Count)","Successfully close the targeted number of transactions through completion of POD, DNCN, and payment upload requirements.","10.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Process","DSO Days","Days Sales Outstanding (DSO)","Maintain DSO within the defined monthly target, calculated as (Average Receivables ÷ GMV) × Number of Days in the Month.","10.0","Monthly MIS Report","15.0","10.0","5.0","3.0","2.0"]]},{"team":"Metal","group":"","sheet":"Metal (Supply \u0026 Demand KRAKPI)","name":"AYUSH GOYAL","designation":"Assistant Manager - Business Development","extra":"","kpis":[["Process","Retention of Existing Transacted Sellers","Repeat Seller Transaction Rate (%)","Achieve repeat transactions from at least 50% of sellers who transacted in the previous month.","5.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Customer","New Buyer Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the KPI.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Customer","New Seller Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the KPI.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Process","Transaction from New Onboarded Buyers","New Buyer Same-Month Transaction Rate (%)","Ensure at least 20% of buyers onboarded during the month complete a transaction within the same month.","5.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","GMV","Monthly Target Achievement (%)","Achieve the defined monthly target for the KPI.","40.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Transaction Closure","Successfully Closed Transactions (Count)","Successfully close the targeted number of transactions through completion of POD, DNCN, and payment upload requirements.","10.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Process","DSO Days","Days Sales Outstanding (DSO)","Maintain DSO within the defined monthly target, calculated as (Average Receivables ÷ GMV) × Number of Days in the Month.","10.0","Monthly MIS Report","15.0","10.0","5.0","3.0","2.0"]]},{"team":"Plastic","group":"Supply","sheet":"Plastic (Supply KRAKPI)","name":"ASHISH KUMAR RAI","designation":"Senior Executive - Business Development","extra":"","kpis":[["Sales","Transaction from Existing Sellers","Seller Monthly Transaction Rate (%)","Ensure at least 50% of total onboarded sellers transact during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Transaction from New Onboarded Sellers","New Seller Same-Month Transaction Rate (%)","Ensure at least 20% of sellers onboarded during the current month complete a transaction within the same month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","New Seller Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","GMV","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","40.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Retention of Existing Transacted Sellers","Repeat Seller Transaction Rate (%)","Ensure at least 70% of sellers who transacted in the previous month transact again during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"]]},{"team":"Plastic","group":"Supply","sheet":"Plastic (Supply KRAKPI)","name":"RAJU B","designation":"Senior Executive - Business Development","extra":"","kpis":[["Sales","Transaction from Existing Sellers","Seller Monthly Transaction Rate (%)","Ensure at least 50% of total onboarded sellers transact during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Transaction from New Onboarded Sellers","New Seller Same-Month Transaction Rate (%)","Ensure at least 20% of sellers onboarded during the current month complete a transaction within the same month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","New Seller Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","GMV","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","40.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Retention of Existing Transacted Sellers","Repeat Seller Transaction Rate (%)","Ensure at least 70% of sellers who transacted in the previous month transact again during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"]]},{"team":"Plastic","group":"Supply","sheet":"Plastic (Supply KRAKPI)","name":"BRAJENDRA UPADHYAY","designation":"Assistant Manager - Business Development","extra":"","kpis":[["Sales","Transaction from Existing Sellers","Seller Monthly Transaction Rate (%)","Ensure at least 50% of total onboarded sellers transact during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Transaction from New Onboarded Sellers","New Seller Same-Month Transaction Rate (%)","Ensure at least 20% of sellers onboarded during the current month complete a transaction within the same month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","New Seller Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","GMV","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","40.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Retention of Existing Transacted Sellers","Repeat Seller Transaction Rate (%)","Ensure at least 70% of sellers who transacted in the previous month transact again during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"]]},{"team":"Plastic","group":"Supply","sheet":"Plastic (Supply KRAKPI)","name":"ATHARVA SUDHIR PATIL","designation":"Senior Executive - Business Development","extra":"","kpis":[["Sales","Transaction from Existing Sellers","Seller Monthly Transaction Rate (%)","Ensure at least 50% of total onboarded sellers transact during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Transaction from New Onboarded Sellers","New Seller Same-Month Transaction Rate (%)","Ensure at least 20% of sellers onboarded during the current month complete a transaction within the same month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","New Seller Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","GMV","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","40.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Retention of Existing Transacted Sellers","Repeat Seller Transaction Rate (%)","Ensure at least 70% of sellers who transacted in the previous month transact again during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"]]},{"team":"Plastic","group":"Supply","sheet":"Plastic (Supply KRAKPI)","name":"PRAVEEN RAJ P","designation":"Senior Executive - Business Development","extra":"","kpis":[["Sales","Transaction from Existing Sellers","Seller Monthly Transaction Rate (%)","Ensure at least 50% of total onboarded sellers transact during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Transaction from New Onboarded Sellers","New Seller Same-Month Transaction Rate (%)","Ensure at least 20% of sellers onboarded during the current month complete a transaction within the same month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","New Seller Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","GMV","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","40.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Retention of Existing Transacted Sellers","Repeat Seller Transaction Rate (%)","Ensure at least 70% of sellers who transacted in the previous month transact again during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"]]},{"team":"Plastic","group":"Supply","sheet":"Plastic (Supply KRAKPI)","name":"ASRAFUL HASAN","designation":"Assistant Manager - Business Development","extra":"","kpis":[["Sales","Transaction from Existing Sellers","Seller Monthly Transaction Rate (%)","Ensure at least 50% of total onboarded sellers transact during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Transaction from New Onboarded Sellers","New Seller Same-Month Transaction Rate (%)","Ensure at least 20% of sellers onboarded during the current month complete a transaction within the same month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","New Seller Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","GMV","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","40.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Retention of Existing Transacted Sellers","Repeat Seller Transaction Rate (%)","Ensure at least 70% of sellers who transacted in the previous month transact again during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"]]},{"team":"Plastic","group":"Supply","sheet":"Plastic (Supply KRAKPI)","name":"RUSTUMPET ASHWIN KUMAR","designation":"Assistant Manager - Business Development","extra":"","kpis":[["Sales","Transaction from Existing Sellers","Seller Monthly Transaction Rate (%)","Ensure at least 50% of total onboarded sellers transact during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Transaction from New Onboarded Sellers","New Seller Same-Month Transaction Rate (%)","Ensure at least 20% of sellers onboarded during the current month complete a transaction within the same month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","New Seller Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","GMV","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","40.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Retention of Existing Transacted Sellers","Repeat Seller Transaction Rate (%)","Ensure at least 70% of sellers who transacted in the previous month transact again during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"]]},{"team":"Plastic","group":"Supply","sheet":"Plastic (Supply KRAKPI)","name":"JOYDEEP DAS","designation":"Senior Executive - Business Development","extra":"","kpis":[["Sales","Transaction from Existing Sellers","Seller Monthly Transaction Rate (%)","Ensure at least 50% of total onboarded sellers transact during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Transaction from New Onboarded Sellers","New Seller Same-Month Transaction Rate (%)","Ensure at least 20% of sellers onboarded during the current month complete a transaction within the same month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","New Seller Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","GMV","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","40.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Retention of Existing Transacted Sellers","Repeat Seller Transaction Rate (%)","Ensure at least 70% of sellers who transacted in the previous month transact again during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"]]},{"team":"Plastic","group":"Supply","sheet":"Plastic (Supply KRAKPI)","name":"PARTH GAUTAM","designation":"Senior Manager - BusinessDevelopment","extra":"","kpis":[["Sales","Transaction from Existing Sellers","Seller Monthly Transaction Rate (%)","Ensure at least 50% of total onboarded sellers transact during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Transaction from New Onboarded Sellers","New Seller Same-Month Transaction Rate (%)","Ensure at least 20% of sellers onboarded during the current month complete a transaction within the same month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","New Seller Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","GMV","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","40.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Retention of Existing Transacted Sellers","Repeat Seller Transaction Rate (%)","Ensure at least 70% of sellers who transacted in the previous month transact again during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"]]},{"team":"Plastic","group":"Supply","sheet":"Plastic (Supply KRAKPI)","name":"UDAY KIRAN KUMAR THOTA","designation":"Senior Manager - Business Development","extra":"","kpis":[["Sales","Transaction from Existing Sellers","Seller Monthly Transaction Rate (%)","Ensure at least 50% of total onboarded sellers transact during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Transaction from New Onboarded Sellers","New Seller Same-Month Transaction Rate (%)","Ensure at least 20% of sellers onboarded during the current month complete a transaction within the same month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","New Seller Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","GMV","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","40.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Retention of Existing Transacted Sellers","Repeat Seller Transaction Rate (%)","Ensure at least 70% of sellers who transacted in the previous month transact again during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"]]},{"team":"Plastic","group":"Supply","sheet":"Plastic (Supply KRAKPI)","name":"TABESH MOHAMMAD","designation":"General Manager - Business Development","extra":"","kpis":[["Sales","Demand Activation","Existing Buyer Monthly Transaction Rate (%)","Ensure at least 50% of active/onboarded buyers transact during the current month, maintaining healthy demand utilisation across the category.","10.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Scale","New Demand Activation","New Buyer Same-Month Transaction Rate (%)","Ensure at least 20% of buyers onboarded during the current month complete a transaction within the same month.","10.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Supply Activation","Existing Seller Monthly Transaction Rate (%)","Ensure at least 50% of active/onboarded sellers transact during the current month, maintaining healthy supply utilisation.","10.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Scale","New Supply Activation","New Seller Same-Month Transaction Rate (%)","Ensure at least 20% of sellers onboarded during the current month complete a transaction within the same month.","10.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales / Profit","Category GMV Growth","GMV Target Achievement (%)","Achieve the approved monthly GMV target for the category, balancing demand and supply growth to drive sustainable category revenue.","30.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Customer","Transaction Quality","Debit Note Rate (%)","Ensure debit notes remain within the defined threshold as a percentage of current-month GMV, protecting transaction quality and commercial realisation.","10.0","Monthly MIS Report","0.013","0.012","0.01","0.008","0.006"],["Process / Profit","Working Capital Management","Days Sales Outstanding (DSO)","Maintain DSO within the defined threshold to ensure timely collections and healthy working capital for the category.","15.0","Monthly MIS Report","15.0","10.0","5.0","3.0","2.0"],["Sales / Profit","Category Growth \u0026 Balance","Demand–Supply Conversion Rate (%)","Ensure available category demand is effectively fulfilled through available supply, improving transaction conversion and reducing demand–supply imbalance.","5.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"]]},{"team":"Plastic","group":"Supply","sheet":"Plastic (Supply KRAKPI)","name":"NARESH","designation":"","extra":"","kpis":[["Process","Seller Onboarding","Seller Onboarding TAT Achievement (%)","Ensure seller onboarding cases are completed within the defined TAT through timely document validation, third-party verification, OSV coordination and closure of pending documentation.","30.0","COP / MIS","0.6","0.75","0.9","1.0","1.05"],["Process","Buyer Onboarding","Buyer Onboarding TAT Achievement (%)","Ensure buyer onboarding cases are completed within the defined TAT through timely document collection, KYC/business validation, document updation and closure of identified gaps.","20.0","COP / MIS","0.6","0.75","0.9","1.0","1.05"],["Process","Escalation Management \u0026 Issue Resolution","Issue Resolution TAT Achievement (%)","Ensure seller, buyer and transaction-related operational issues are logged, coordinated, followed up and resolved within the defined TAT, with timely communication to relevant stakeholders.","25.0","MIS","0.6","0.75","0.9","1.0","1.05"],["Customer","Sales \u0026 Relationship Team Coordination","Pending Action Closure Rate (%)","Ensure pending actions related to onboarding, inactive sellers/buyers, listing/requisition, matchmaking, transaction readiness, dispatch, QC/POD and payment are tracked and closed within the defined timeline.","10.0","MIS","0.6","0.75","0.9","1.0","1.05"],["Process","MIS \u0026 Operational Reporting","MIS Accuracy \u0026 Timeliness (%)","Maintain accurate and timely reporting of onboarding, pending cases, escalations, ageing, TAT and transaction-related operational metrics, ensuring critical gaps and dependencies are highlighted to stakeholders.","10.0","MIS / COP / Dashboard","0.6","0.75","0.9","1.0","1.05"],["Process","Process Improvement \u0026 SOP Adherence","SOP Compliance \u0026 Process Improvement Achievement (%)","Ensure adherence to defined SOPs and contribute to identifying and addressing recurring process gaps, bottlenecks and documentation issues to improve operational efficiency and reduce TAT.","5.0","SOP Audit / MIS / Process Tracker","0.6","0.75","0.9","1.0","1.05"]]},{"team":"Plastic","group":"Demand","sheet":"Plastic (Demand KRAKPI)","name":"NEELESH DIXIT","designation":"Senior Manager - Bsuiness Development","extra":"","kpis":[["Sales","Transaction from Existing Buyers","Buyer Monthly Transaction Rate (%)","Ensure at least 60% of total onboarded buyers transact during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Scale","Transaction from New Onboarded Buyers","New Buyer Same-Month Transaction Rate (%)","Ensure at least 20% of buyers onboarded during the current month complete a transaction within the same month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Customer","New Buyer Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Process","GMV","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","30.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Customer","DN % of GMV","Debit Note Rate (%)","Ensure debit notes do not exceed 1% of the buyer\u0027s current-month GMV.","10.0","Monthly MIS Report","0.013","0.012","0.01","0.008","0.006"],["Process","DSO Days","Days Sales Outstanding (DSO)","Calculate DSO as (Average Receivables ÷ GMV) × Number of Days in the Month.","15.0","Monthly MIS Report","15.0","10.0","5.0","3.0","2.0"]]},{"team":"Plastic","group":"Demand","sheet":"Plastic (Demand KRAKPI)","name":"RISHI PANCHAL","designation":"Senior Executive - Business Development","extra":"","kpis":[["Sales","Transaction from Existing Buyers","Buyer Monthly Transaction Rate (%)","Ensure at least 60% of total onboarded buyers transact during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Scale","Transaction from New Onboarded Buyers","New Buyer Same-Month Transaction Rate (%)","Ensure at least 20% of buyers onboarded during the current month complete a transaction within the same month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Customer","New Buyer Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Process","GMV","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","30.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Customer","DN % of GMV","Debit Note Rate (%)","Ensure debit notes do not exceed 1% of the buyer\u0027s current-month GMV.","10.0","Monthly MIS Report","0.013","0.012","0.01","0.008","0.006"],["Process","DSO Days","Days Sales Outstanding (DSO)","Maintain DSO as per the defined formula: (Average Receivables ÷ GMV) × Number of Days in the Month.","15.0","Monthly MIS Report","15.0","10.0","5.0","3.0","2.0"]]},{"team":"Onboarding","group":"","sheet":"Onboarding (Individual)","name":"VAMSI","designation":"Senior Executive - Onboarding","extra":"","kpis":[["Process","Open Marketplace – Buyer \u0026 Seller Onboarding","TAT ( 1 Day )","% of cases completed within TAT","0.35","COP (Data)","0.8","0.85","0.9","0.95","1.0"],["Process","Re-Commerce – Seller Onboarding","TAT ( 1 Day )","% of cases completed within TAT","0.1","COP (Data)","0.8","0.85","0.9","0.95","1.0"],["Process","Fall Back – AFR \u0026 INFRA (Seller \u0026 Buyer Onboarding)","TAT ( 3 Days)","% of cases completed within TAT","0.1","COP (Data)","0.8","0.85","0.9","0.95","1.0"],["Process","Audit \u0026 Monitoring of Onboarded Vendors","Document Completeness","% of audited vendors with complete and correctly validated documentation","0.2","Individual Work Sheet","0.8","0.85","0.9","0.95","1.0"],["Process","On-Site Verification","TAT ( 4 Days )","% of OSVs completed within TAT","0.15","Individual Work Sheet","0.8","0.85","0.9","0.95","1.0"],["Process","Vendor Payments – Third Party (Finoscale / Carma One)","Timely Validation of Bills \u0026 Vendor Payments","% of bills/payments validated within defined TAT","0.1","Individual Work Sheet","0.8","0.85","0.9","0.95","1.0"]]},{"team":"Onboarding","group":"","sheet":"Onboarding (Individual)","name":"HARSHITA","designation":"Executive - Onboarding","extra":"","kpis":[["Process","INFRA – Buyer \u0026 Seller Onboarding","TAT ( 3 Days )","% of cases completed within TAT","0.25","COP (Data)","0.8","0.85","0.9","0.95","1.0"],["Process","AFR – Buyer \u0026 Seller Onboarding","TAT ( 3 Days )","% of cases completed within TAT","0.25","COP (Data)","0.8","0.85","0.9","0.95","1.0"],["Process","Audit \u0026 Monitoring of Onboarded Vendors","Document Completeness","% of audited vendors with complete and correctly validated documentation","0.2","Individual Work Sheet","0.8","0.85","0.9","0.95","1.0"],["Process","Fall Back – EPR (Seller Onboarding)","TAT","% of cases completed within defined TAT","0.1","COP (Data)","0.8","0.85","0.9","0.95","1.0"],["Process","Vendor Payments – Third Party (Ongrid)","Timely Validation of Bills \u0026 Vendor Payments","% of bills/payments validated within defined TAT","0.1","Individual Work Sheet","0.8","0.85","0.9","0.95","1.0"],["Process","Vendor Payments – Third Party (Finoscale / Carma One)","Timely Validation of Bills \u0026 Vendor Payments","% of bills/payments validated within defined TAT","0.1","Individual Work Sheet","0.8","0.85","0.9","0.95","1.0"]]},{"team":"Onboarding","group":"","sheet":"Onboarding (Individual)","name":"NAVEEN RANGA","designation":"Senior Executive - Onboarding","extra":"","kpis":[["Process","EPR – Buyer \u0026 Seller Onboarding","TAT ( 3 Days)","% of cases completed within defined TAT","0.35","COP (Data)","0.8","0.85","0.9","0.95","1.0"],["Process","Audit \u0026 Monitoring of Onboarded Vendors","Document Completeness","% of audited vendors with complete and correctly validated documentation","0.2","Individual Work Sheet","0.8","0.85","0.9","0.95","1.0"],["Process","Transporter Onboarding","TAT","% of cases completed within defined TAT","0.15","COP (Data)","0.8","0.85","0.9","0.95","1.0"],["Process","Fall Back – Open Marketplace Onboarding","TAT ( 1 Day )","% of cases completed within defined TAT","0.1","COP (Data)","0.8","0.85","0.9","0.95","1.0"],["Process","Open Marketplace – NBFC Coordination","NBFC Coordination \u0026 Case Management","% of NBFC coordination activities completed within defined SLA","0.1","Emails / Dashboard","0.8","0.85","0.9","0.95","1.0"],["Process","GST Payments","Compliance Check","% of Third Party vendors paid within defined payment timeline","0.1","Documentation","0.8","0.85","0.9","0.95","1.0"]]},{"team":"Onboarding","group":"","sheet":"Onboarding (Individual)","name":"VISHWASH","designation":"Management Trainee","extra":"","kpis":[["Process","Fall Back for All Verticals – Vendor \u0026 Buyer Onboarding","TAT","% of onboarding cases completed within defined TAT as per SOP","0.1","COP (Data)","0.8","0.85","0.9","0.95","1.0"],["Process","Design Standard Operating Procedures for Onboarding","Approved SOPs","% of required SOPs validated, approved and implemented","0.2","COP (Data)","0.8","0.85","0.9","0.95","1.0"],["Process","Digitalization of the Onboarding Process","Automation of Process","% of identified onboarding processes automated","0.3","Process Flow","0.0","0.1","0.2","0.35","0.5"],["Process","Maintain Daily Reports for Buyer \u0026 Seller Onboarding Across Verticals","Accuracy \u0026 Timeliness of Reports / Dashboard Representation","% of reports accurately represented and delivered within defined timeline","0.3","Individual Work Sheet","0.8","0.85","0.9","0.95","1.0"],["Process","Audit Process for Entire Onboarding \u0026 Collections","Reporting \u0026 Escalations","% of audit findings reported and escalated within defined timeline","0.1","Meeting","More than (T+7 days)","T+7 days","On Time (Defined TAT)","T-1 day","T - 2 days"]]},{"team":"Onboarding","group":"","sheet":"Onboarding (Individual)","name":"AJAY","designation":"Manager - Onboarding","extra":"","kpis":[["Process","All Verticals – Vendor \u0026 Buyer Onboarding","TAT","% of onboarding cases completed within defined TAT as per SOP","0.4","COP (Data)","0.8","0.85","0.9","0.95","1.0"],["Process","Design Standard Operating Procedures for Onboarding","Approved SOPs","% of required SOPs validated, approved and implemented","0.2","COP (Data)","0.8","0.85","0.9","0.95","1.0"],["Process","Audit \u0026 Monitoring of Onboarded Vendors","Document Completeness","% of audited vendors with complete and correctly validated documentation","0.1","Monthly Reporting","0.8","0.85","0.9","0.95","1.0"],["Process","Digitalization of the Onboarding Process","Automation of Process","% of identified onboarding processes automated","0.2","Process Flow","0.0","0.15","0.3","0.5","0.7"],["Process","Vendor Payments","Timely Validation of Bills \u0026 Vendor Payments","% of bills/payments validated within defined payment timeline","0.1","Team Work Sheet","0.8","0.85","0.9","0.95","1.0"]]},{"team":"Collections","group":"","sheet":"Collections (Individual)","name":"SAI NITIN","designation":"Executive - Collections","extra":"","kpis":[["Customer","Due Date + 7 Days Collections – Marketplace \u0026 EPR","Collection % vs Target","Achieve the defined collection target within the evaluation period.","0.6","MIS Report","0.8","0.85","0.9","1.0","1.05"],["Process","Balance Confirmation","Confirmation Coverage %","Ensure at least the defined percentage of customers with dues exceeding ₹50K have their payments confirmed.","0.1","MIS Report","0.8","0.85","0.9","0.95","1.0"],["Process","Reminder Emails","Adherence to Reminder (Total)","Ensure adherence to the defined collections reminder process within the evaluation period.","0.1","MIS Report","As per Collections Process","—","—","—","—"],["Process","Payment Posting","TAT – Days","Ensure payment posting is completed within the defined TAT from the date of payment receipt.","0.1","MIS Report","12 Days","10 Days","8 Days","7 Days","5 Days"],["Process","Cross-Functional Coordination","Coordination Adherence %","Ensure adherence to the defined coordination requirements during each quarter.","0.1","MIS Report","75% in Quater","80% in Quater","85% in Quater","90% in Quater","100% in Quater"]]},{"team":"Collections","group":"","sheet":"Collections (Individual)","name":"RAVI NAIK","designation":"Manager - Collections","extra":"","kpis":[["Customer","Due Date + 7 Days Collections – Marketplace \u0026 EPR","Collection % vs Target","Achieve the defined collection target within the evaluation period.","0.3","MIS Report","0.8","0.85","0.9","1.0","1.05"],["Customer","DSO – Marketplace \u0026 EPR","DSO Days","Maintain DSO within the defined target during the evaluation period.","0.3","MIS Report","\u003e 28 Days","25–28 Days","21–24 Days","TGT-20 Days","≤ 19 Days"],["Collections","Legacy Collections","Legacy Collection % of LD","Ensure the defined percentage of Legacy Debt (LD) is collected within the evaluation period.","0.15","MIS Report","10% of LD","15% of LD","20% of LD","25% of LD","30% of LD"],["Collections","PDD (Past Due Debt)","PDD ₹ Cr Recovered","Recover the defined PDD amount in ₹ Cr within the evaluation period.","0.1","MIS Report","≥ ₹9 Cr","₹8 Cr","₹7 Cr","₹6 Cr","\u003c ₹5 Cr"],["Process","Legal Actions","Legal Action Coordination %","Achieve the defined cumulative percentage of the team target through effective coordination of legal actions.","0.05","MIS Report","80% Cumulative of Team Target","100% Cumulative of Team Target","120% Cumulative of Team Target","140% Cumulative of Team Target","160% Cumulative of Team Target"],["Collections","Collection of Previous Dues (Marketplace \u0026 EPR)","Collections of Overdue of Previous Financial prior to FY 25-26 (Marketplace \u0026 EPR)","Ensure the defined percentage of overdue collections from financial years prior to FY 25-26 is recovered during the evaluation period.","0.1","MIS Report","0.4","0.5","0.6","0.7","0.8"]]},{"team":"Collections","group":"","sheet":"Collections (Individual)","name":"ANKUR","designation":"Assistant Manager - Collections","extra":"","kpis":[["Customer","Due Date + 7 Days Collections – Marketplace \u0026 EPR","Collection % vs Target","Achieve the defined collection target within the evaluation period.","0.3","MIS Report","0.8","0.85","0.9","1.0","1.05"],["Customer","DSO – Marketplace \u0026 EPR","DSO Days","Maintain DSO within the defined target during the evaluation period.","0.3","MIS Report","\u003e 28 Days","25–28 Days","21–24 Days","TGT-20 Days","≤ 19 Days"],["Collections","Legacy Collections","Legacy Collection % of LD","Ensure the defined percentage of Legacy Debt (LD) is collected within the evaluation period.","0.15","MIS Report","10% of LD","15% of LD","20% of LD","25% of LD","30% of LD"],["Collections","PDD (Past Due Debt)","PDD ₹ Cr Recovered","Recover the defined PDD amount in ₹ Cr within the evaluation period.","0.1","MIS Report","≥ ₹9 Cr","₹8 Cr","₹7 Cr","₹6 Cr","\u003c ₹5 Cr"],["Process","Legal Actions","Legal Action Coordination %","Achieve the defined cumulative percentage of the team target through effective coordination of legal actions.","0.05","MIS Report","80% Cumulative of Team Target","100% Cumulative of Team Target","120% Cumulative of Team Target","140% Cumulative of Team Target","160% Cumulative of Team Target"],["Collections","Collection of Previous Dues (Marketplace)","Collections of Overdue of Previous Financial prior to FY 25-26 (Marketplace)","Ensure the defined percentage of overdue collections from financial years prior to FY 25-26 is recovered during the evaluation period.","0.1","MIS Report","0.4","0.5","0.6","0.7","0.8"]]},{"team":"Collections","group":"","sheet":"Collections (Individual)","name":"VENKAT","designation":"Assistant Manager - Collections","extra":"","kpis":[["Customer","Due Date + 7 Days Collections – Marketplace \u0026 EPR","Collection % vs Target","Achieve the defined collection target within the evaluation period.","0.3","MIS Report","0.8","0.85","0.9","1.0","1.05"],["Customer","DSO – Marketplace \u0026 EPR","DSO Days","Maintain DSO within the defined target during the evaluation period.","0.3","MIS Report","\u003e 28 Days","25–28 Days","21–24 Days","TGT-20 Days","≤ 19 Days"],["Collections","Legacy Collections","Legacy Collection % of LD","Ensure the defined percentage of Legacy Debt (LD) is collected within the evaluation period.","0.15","MIS Report","10% of LD","15% of LD","20% of LD","25% of LD","30% of LD"],["Collections","PDD (Past Due Debt)","PDD ₹ Cr Recovered","Recover the defined PDD amount in ₹ Cr within the evaluation period.","0.1","MIS Report","≥ ₹9 Cr","₹8 Cr","₹7 Cr","₹6 Cr","\u003c ₹5 Cr"],["Process","Legal Actions","Legal Action Coordination %","Achieve the defined cumulative percentage of the team target through effective coordination of legal actions.","0.05","MIS Report","80% Cumulative of Team Target","100% Cumulative of Team Target","120% Cumulative of Team Target","140% Cumulative of Team Target","160% Cumulative of Team Target"],["Collections","Collection of Previous Dues (EPR)","Collections of Overdue of Previous Financial prior to FY 25-26 (EPR)","Ensure the defined percentage of overdue collections from financial years prior to FY 25-26 is recovered during the evaluation period.","0.1","MIS Report","0.4","0.5","0.6","0.7","0.8"]]},{"team":"Collections","group":"","sheet":"Collections (Individual)","name":"SRINIVAS REDDY","designation":"Assistant Manager - Collections","extra":"","kpis":[["Collections","Collection of Previous Dues (Marketplace \u0026 EPR)","Collections of Overdue of Previous Financial prior to FY 25-26 (EPR)","Ensure the defined percentage of overdue collections from financial years prior to FY 25-26 is recovered during the evaluation period.","0.1","MIS Report","0.4","0.5","0.6","0.7","0.8"],["Customer","DSO – Marketplace \u0026 EPR","DSO Days","Maintain DSO within the defined target during the evaluation period.","0.1","MIS Report","\u003e 28 Days","25–28 Days","21–24 Days","TGT-20 Days","≤ 19 Days"],["Process","Transaction (Marketplace)","Coordination Adherence %","Ensure adherence to the defined coordination requirements during the evaluation period.","0.15","MIS Report / Email / Communication Channel","0.8","0.85","0.9","0.95","1.0"],["Process","Payment Posting \u0026 Reconciliation","TAT – Days","Ensure payment posting and reconciliation are completed within the defined TAT from the date of payment receipt.","0.15","MIS Report","12 Days","10 Days","8 Days","7 Days","5 Days"],["Process","Process Improvement \u0026 Automation","Process Automation (%)","Identify process gaps and leakages and implement solutions to improve operational efficiency, reduce manual intervention, and minimize errors.","0.3","Project Tracker / Process Improvement Tracker","0.8","0.85","0.9","0.95","1.0"],["Process","Compliance (Documentation) \u0026 Audit","Documentation Completion (%)","Ensure 100% completion of required documentation from both Buyers and Sellers for every transaction.","0.2","Dashboard / MIS","0.8","0.85","0.9","0.95","1.0"]]},{"team":"Open Marketplace - Control Tower","group":"","sheet":"Marketplace - Control Tower (In","name":"ASHWIN KUMAR SINGH","designation":"Manager","extra":"","kpis":[["Process","Compliance (Documentation)","Documentation Completion (%)","Ensure 100% completion of required documentation from both Buyers and Sellers for every transaction.","0.2","Dashboard / MIP","0.8","0.85","0.9","0.95","1.0"],["Process","Match Making","Demand \u0026 Listing Conversion Rate (%)","Achieve at least 80% conversion of demand requisitions and platform listings into successful transactions.","0.1","Dashboard / MIP","0.8","0.85","0.9","0.95","1.0"],["MIS","Transaction Tracking","Transaction Closure \u0026 Tracking (%)","Ensure 100% transaction closure, including completion of material movement, GST payment, and end-to-end transaction tracking with complete dashboard visibility.","0.2","Dashboard / MIP","0.8","0.85","0.9","0.95","1.0"],["Process","DN / CN Tracking","CN \u0026 DN Closure Rate (%)","Ensure 100% closure of all Credit Note (CN) and Debit Note (DN) transactions within the defined timeline.","0.2","Dashboard / MIP","0.8","0.85","0.9","0.95","1.0"],["Process","Process Improvement \u0026 Automation","Process Automation (%)","Identify process gaps and leakages and implement solutions to improve operational efficiency, reduce manual intervention, and minimize errors.","0.3","Project Tracker / Process Improvement Tracker","0.0","0.15","0.3","0.5","0.7"]]},{"team":"Open Marketplace - Control Tower","group":"","sheet":"Marketplace - Control Tower (In","name":"DIVYA BOPPURI","designation":"Executive","extra":"","kpis":[["Process","Dispatch Execution","Timely Dispatch Rate (%)","Ensure shipments are dispatched within 2 days of matchmaking in accordance with the defined SOP.","0.4","Dashboard / MIP","0.8","0.85","0.9","0.95","1.0"],["Process","Dispatch Documentation Management","Dispatch Documentation Accuracy (%)","Ensure 100% of dispatches have a complete and error-free 6-Document Pack.","0.35","Audit / Reconciliation","0.8","0.85","0.9","0.95","1.0"],["Process","Dispatch Coordination \u0026 Resolution","Dispatch Issue Resolution Rate (%)","Ensure seller follow-ups, gate-pass coordination, and dispatch-related queries are resolved within the defined SLA.","0.15","Email / MIP / Communication Channel","0.8","0.85","0.9","0.95","1.0"],["Process","SOP \u0026 Process Compliance","Dispatch SOP Compliance Rate (%)","Ensure 100% of transactions are executed in accordance with the defined dispatch and documentation guidelines.","0.1","Email / MIP / Training \u0026 Meetings","0.8","0.85","0.9","0.95","1.0"]]},{"team":"Open Marketplace - Control Tower","group":"","sheet":"Marketplace - Control Tower (In","name":"JITHENDER CHITAKODUR","designation":"Executive","extra":"","kpis":[["Process","Dispatch Execution","Timely Dispatch Rate (%)","Ensure shipments are dispatched within 2 days of matchmaking in accordance with the defined SOP.","0.4","Dashboard / MIP","0.8","0.85","0.9","0.95","1.0"],["Process","Dispatch Documentation Management","Dispatch Documentation Accuracy (%)","Ensure 100% of dispatches have a complete and error-free 6-Document Pack.","0.35","Audit / Reconciliation","0.8","0.85","0.9","0.95","1.0"],["Process","Dispatch Coordination \u0026 Resolution","Dispatch Issue Resolution Rate (%)","Ensure seller follow-ups, gate-pass coordination, and dispatch-related queries are resolved within the defined SLA.","0.15","MIP / Communication Channel","0.8","0.85","0.9","0.95","1.0"],["Process","SOP \u0026 Process Compliance","Dispatch SOP Compliance Rate (%)","Ensure 100% of transactions are executed in accordance with the defined dispatch and documentation guidelines.","0.1","Email /MIP / Training \u0026 Meetings","0.8","0.85","0.9","0.95","1.0"]]},{"team":"Open Marketplace - Control Tower","group":"","sheet":"Marketplace - Control Tower (In","name":"BHARATH KUMAR","designation":"Senior Executive","extra":"","kpis":[["Process","In-Transit Delivery Management","On-Time Transit Completion Rate (%)","Ensure shipments reach the buyer location within the planned transit window.","0.5","Dashboard / MIP","0.8","0.85","0.9","0.95","1.0"],["Process","Shipment Visibility \u0026 Monitoring","Tracking Accuracy Rate (%)","Ensure shipments are accurately monitored through Mobile SIM / FASTag without tracking blind spots.","0.3","Audit / Reconciliation","0.8","0.85","0.9","0.95","1.0"],["Process","Buyer Coordination \u0026 Delay Management","Pre-Arrival \u0026 Delay Resolution Rate (%)","Ensure buyer notifications and shipment-delay cases are handled within the defined SLA.","0.1","Email / MIP / Communication Channel","0.8","0.85","0.9","0.95","1.0"],["Process","In-Transit SOP Compliance","Transit Process Compliance Rate (%)","Ensure 100% of shipments are managed in accordance with the defined tracking and escalation SOPs.","0.1","Email / MIP / Training \u0026 Meetings","0.8","0.85","0.9","0.95","1.0"]]},{"team":"Open Marketplace - Control Tower","group":"","sheet":"Marketplace - Control Tower (In","name":"RAJESWARI","designation":"Executive","extra":"","kpis":[["Process","POD Closure Management","POD Collection TAT (%)","Ensure PODs are collected within 48 hours of delivery.","0.35","Dashboard / MIP","0.8","0.85","0.9","0.95","1.0"],["Process","POD Documentation Management","POD First-Time-Right Rate (%)","Ensure POD submissions are complete and accurate on the first submission.","0.4","Audit / Reconciliation","0.8","0.85","0.9","0.95","1.0"],["Process","Delivery Coordination \u0026 Exception Resolution","Delivery Exception Resolution Rate (%)","Ensure BR POC follow-ups and vehicle-rejection cases are resolved within the defined SLA.","0.15","Email / MIP / Communication Channel","0.8","0.85","0.9","0.95","1.0"],["Process","POD \u0026 Exception Compliance","POD Process Compliance Rate (%)","Ensure 100% of shipments are handled in accordance with the defined POD collection and rejection-handling SOPs.","0.1","Email / MIP / Training \u0026 Meetings","0.8","0.85","0.9","0.95","1.0"]]},{"team":"Open Marketplace - Control Tower","group":"","sheet":"Marketplace - Control Tower (In","name":"AISHWARYA KARANAM","designation":"Executive","extra":"","kpis":[["Process","Payment Release Management","Timely Payment Release Rate (%)","Ensure payments are released within 5 days of delivery in accordance with the defined SOP.","0.3","Dashboard / MIP","0.8","0.85","0.9","0.95","1.0"],["Process","QC \u0026 Settlement Management","QC \u0026 Settlement Accuracy Rate (%)","Ensure QC reports, debit notes, and settlements are processed accurately and within the defined timeline.","0.4","Audit / Reconciliation","0.8","0.85","0.9","0.95","1.0"],["Process","Dispute \u0026 Payment Resolution","Dispute \u0026 Follow-Up Resolution Rate (%)","Ensure disputes and payment reminders are managed and resolved within the defined SLA.","0.2","Email / MIP / Communication Channel","0.8","0.85","0.9","0.95","1.0"],["Process","Settlement Process Compliance","QC \u0026 Settlement SOP Compliance Rate (%)","Ensure 100% of transactions are executed in accordance with the defined QC, dispute, and settlement SOPs.","0.1","Email / MIP / Training \u0026 Meetings","0.8","0.85","0.9","0.95","1.0"]]},{"team":"Open Marketplace - Control Tower","group":"","sheet":"Marketplace - Control Tower (In","name":"MEGARAJ","designation":"Senior Executive","extra":"","kpis":[["Process","POD Closure Management","POD Collection TAT (%)","Ensure at least the defined percentage of PODs are collected within 48 hours of delivery.","0.35","Dashboard / MIP","0.8","0.85","0.9","0.95","1.0"],["Process","POD Documentation Management","POD First-Time-Right Rate (%)","Ensure at least the defined percentage of POD submissions are complete and accurate on the first submission.","0.4","Audit / Reconciliation","0.8","0.85","0.9","0.95","1.0"],["Process","Delivery Coordination \u0026 Exception Resolution","Delivery Exception Resolution Rate (%)","Ensure at least the defined percentage of BR POC follow-ups and vehicle-rejection cases are resolved within the defined SLA.","0.15","Email / MIP / Communication Channel","0.8","0.85","0.9","0.95","1.0"],["Process","POD \u0026 Exception Compliance","POD Process Compliance Rate (%)","Ensure 100% of shipments are handled in accordance with the defined POD collection and rejection-handling SOPs.","0.1","Email / MIP / Training \u0026 Meetings","0.8","0.85","0.9","0.95","1.0"]]},{"team":"Open Marketplace - Control Tower","group":"","sheet":"Marketplace - Control Tower (In","name":"ARVIND JAKKULA","designation":"Executive","extra":"","kpis":[["Process","In-Transit Delivery Management","On-Time Transit Completion Rate (%)","Ensure at least the defined percentage of shipments reach the buyer location within the planned transit window.","0.5","Dashboard / MIP","0.8","0.85","0.9","0.95","1.0"],["Process","Shipment Visibility \u0026 Monitoring","Tracking Accuracy Rate (%)","Ensure at least the defined percentage of shipments are accurately monitored through Mobile SIM / FASTag without tracking blind spots.","0.3","Audit / Reconciliation","0.8","0.85","0.9","0.95","1.0"],["Process","Buyer Coordination \u0026 Delay Management","Pre-Arrival \u0026 Delay Resolution Rate (%)","Ensure at least the defined percentage of buyer notifications and shipment-delay cases are handled within the defined SLA.","0.1","Email / MIP / Communication Channel","0.8","0.85","0.9","0.95","1.0"],["Process","In-Transit SOP Compliance","Transit Process Compliance Rate (%)","Ensure 100% of shipments are managed in accordance with the defined tracking and escalation SOPs.","0.1","Email / MIP / Training \u0026 Meetings","0.8","0.85","0.9","0.95","1.0"]]}]};

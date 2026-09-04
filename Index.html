@@ -3,1805 +3,881 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PerformOS — Employee Performance Management</title>
+<title>PerformOS — Individual KRA / KPI Performance</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-/* ============================================================================
- * PerformOS design system — calm, minimal, information-dense enterprise SaaS.
- * Light neutral canvas, white surfaces, hairline borders, one restrained
- * accent, four organisation-category colours, and the Target 1–5 language.
- * ========================================================================== */
 :root{
-  --bg:#f6f7f9; --surface:#fff; --surface-2:#f8fafc;
-  --ink:#0f172a; --ink-2:#334155; --muted:#64748b; --faint:#94a3b8;
-  --line:#e6e9ef; --line-2:#dde2ea; --hair:#eef1f6;
-  --accent:#2563eb; --accent-ink:#1d4ed8; --accent-soft:#eaf1ff;
-  --good:#16a34a; --good-soft:#e8f6ee; --warn:#c2820a; --warn-soft:#fbf1dd;
-  --bad:#dc2626; --bad-soft:#fdeaea;
-  --c-lead:#B8860B; --c-lead-soft:#fbf3dd; --c-bu:#2E7D52; --c-bu-soft:#e7f4ec;
-  --c-cf:#7C4DBC; --c-cf-soft:#f0eafb; --c-sf:#2F74D0; --c-sf-soft:#e8f1fc;
-  --t0:#cbd5e1; --t1:#f0a742; --t2:#eab308; --t3:#84b64c; --t4:#2f9e6f; --t5:#1f8a5b;
-  --sh-sm:0 1px 2px rgba(15,23,42,.06);
-  --sh:0 1px 3px rgba(15,23,42,.08),0 1px 2px rgba(15,23,42,.04);
-  --sh-md:0 4px 12px rgba(15,23,42,.08),0 2px 4px rgba(15,23,42,.04);
-  --sh-lg:0 16px 40px rgba(15,23,42,.16);
-  --r:9px; --r-md:12px; --r-lg:16px; --r-pill:999px;
-  --sbw:236px; --topbar-h:56px;
+  --bg:#f6f7f9;--surface:#fff;--surface-2:#f8fafc;
+  --ink:#0f172a;--ink-2:#334155;--muted:#64748b;--faint:#94a3b8;
+  --line:#e6e9ef;--line-2:#dde2ea;--hair:#eef1f6;
+  --accent:#2563eb;--accent-ink:#1d4ed8;--accent-soft:#eaf1ff;
+  --good:#16a34a;--good-soft:#e8f6ee;--warn:#c2820a;--warn-soft:#fbf1dd;--bad:#dc2626;--bad-soft:#fdeaea;
+  --t0:#cbd5e1;--t1:#f0a742;--t2:#eab308;--t3:#84b64c;--t4:#2f9e6f;--t5:#1f8a5b;
+  --sh-sm:0 1px 2px rgba(15,23,42,.06);--sh-md:0 4px 12px rgba(15,23,42,.08);--sh-lg:0 16px 40px rgba(15,23,42,.16);
+  --r:9px;--r-md:12px;--r-lg:16px;--pill:999px;--sbw:232px;--top:56px;
   --font:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
 }
-*{box-sizing:border-box}
-html,body{margin:0;padding:0;height:100%}
-body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.5;
-  -webkit-font-smoothing:antialiased;font-feature-settings:"cv11","ss01";overflow:hidden}
-a{color:inherit;text-decoration:none}
-button{font:inherit;cursor:pointer}
-.tnum{font-variant-numeric:tabular-nums}
-.muted{color:var(--muted)} .faint{color:var(--faint)}
-.row{display:flex;align-items:center;gap:8px} .grow{flex:1} .wrap{flex-wrap:wrap}
-
-/* shell */
-.app{display:grid;grid-template-columns:var(--sbw) 1fr;height:100vh;width:100vw}
-.app.collapsed{--sbw:64px}
-.sidebar{background:#0f1729;color:#c7d2e5;display:flex;flex-direction:column;overflow:hidden}
-.sb-brand{display:flex;align-items:center;gap:10px;padding:0 16px;height:var(--topbar-h);flex:0 0 auto;
-  border-bottom:1px solid rgba(255,255,255,.06)}
-.sb-logo{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,#3b82f6,#22c55e);
-  display:grid;place-items:center;color:#fff;font-weight:800;font-size:13px;flex:0 0 auto}
-.sb-name{font-weight:700;font-size:14.5px;color:#fff;letter-spacing:-.01em;white-space:nowrap}
+*{box-sizing:border-box}html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.5;overflow:hidden;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}button{font:inherit;cursor:pointer}
+.tnum{font-variant-numeric:tabular-nums}.muted{color:var(--muted)}.faint{color:var(--faint)}
+.row{display:flex;align-items:center;gap:8px}.grow{flex:1}.wrap{flex-wrap:wrap}
+/* minmax(0,1fr) not 1fr: a grid track sized 1fr refuses to go below its
+   min-content, so one long KPI name would push the whole page sideways */
+.app{display:grid;grid-template-columns:var(--sbw) minmax(0,1fr);height:100vh}
+.sb{background:#0f1729;color:#c7d2e5;display:flex;flex-direction:column;overflow:hidden}
+.sb-brand{display:flex;align-items:center;gap:10px;padding:0 16px;height:var(--top);border-bottom:1px solid rgba(255,255,255,.06)}
+.sb-logo{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,#3b82f6,#22c55e);display:grid;place-items:center;color:#fff;font-weight:800;font-size:13px}
+.sb-name{font-weight:700;font-size:14.5px;color:#fff;white-space:nowrap}
 .sb-name small{display:block;font-weight:500;font-size:10.5px;color:#8595b0}
-.sb-nav{flex:1;overflow-y:auto;padding:10px 10px 20px}
-.sb-group{margin-top:14px}
-.sb-glabel{font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#5f6f8c;padding:6px 10px 4px}
-.sb-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:#b6c2d9;
-  font-weight:500;font-size:13.5px;white-space:nowrap;position:relative;transition:.12s}
-.sb-item:hover{background:rgba(255,255,255,.06);color:#fff}
-.sb-item.on{background:rgba(59,130,246,.16);color:#fff}
-.sb-item.on::before{content:"";position:absolute;left:-10px;top:8px;bottom:8px;width:3px;border-radius:3px;background:var(--accent)}
-.sb-item svg{width:17px;height:17px;flex:0 0 auto;stroke-width:1.9}
-.sb-item .badge-n{margin-left:auto;background:var(--accent);color:#fff;font-size:10.5px;font-weight:700;
-  border-radius:999px;padding:1px 6px;min-width:18px;text-align:center}
-.app.collapsed .sb-name,.app.collapsed .sb-glabel,.app.collapsed .sb-item span,.app.collapsed .sb-item .badge-n{display:none}
-.app.collapsed .sb-item{justify-content:center;padding:9px 0}
-
+.sb-nav{flex:1;overflow-y:auto;padding:12px 10px}
+.sb-g{font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#5f6f8c;padding:12px 10px 4px}
+.sb-i{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:#b6c2d9;font-weight:500;font-size:13.5px;position:relative}
+.sb-i:hover{background:rgba(255,255,255,.06);color:#fff}
+.sb-i.on{background:rgba(59,130,246,.16);color:#fff}
+.sb-i.on::before{content:"";position:absolute;left:-10px;top:8px;bottom:8px;width:3px;border-radius:3px;background:var(--accent)}
+.sb-i svg{width:17px;height:17px;stroke-width:1.9;flex:0 0 auto}
 .main{display:flex;flex-direction:column;min-width:0;height:100vh}
-.topbar{height:var(--topbar-h);flex:0 0 auto;background:var(--surface);border-bottom:1px solid var(--line);
-  display:flex;align-items:center;gap:12px;padding:0 18px}
-.tb-btn{width:30px;height:30px;border-radius:7px;border:1px solid var(--line);background:var(--surface);
-  display:grid;place-items:center;color:var(--muted)}
-.tb-btn:hover{background:var(--surface-2);color:var(--ink)}
+.top{height:var(--top);background:var(--surface);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:0 18px}
 .crumbs{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);min-width:0;overflow:hidden}
-.crumbs a:hover{color:var(--ink)}
-.crumbs .sep{color:var(--faint)}
 .crumbs .cur{color:var(--ink);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tb-search{margin-left:auto;position:relative;width:270px}
-.tb-search input{width:100%;height:34px;border:1px solid var(--line);border-radius:8px;padding:0 10px 0 32px;
-  background:var(--surface-2);font-size:13px;color:var(--ink)}
+.crumbs .sep{color:var(--faint)}
+.tb-search{margin-left:auto;position:relative;width:250px}
+.tb-search input{width:100%;height:34px;border:1px solid var(--line);border-radius:8px;padding:0 10px 0 32px;background:var(--surface-2);font-size:13px;color:var(--ink)}
 .tb-search input:focus{outline:none;border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px var(--accent-soft)}
 .tb-search svg{position:absolute;left:9px;top:9px;width:16px;height:16px;color:var(--faint)}
-.tb-sel{height:34px;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:0 8px;
-  font-size:13px;font-weight:600;color:var(--ink-2)}
-.tb-icon{width:34px;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--surface);
-  display:grid;place-items:center;color:var(--muted);position:relative}
-.tb-icon:hover{background:var(--surface-2);color:var(--ink)}
-.tb-icon .dot{position:absolute;top:6px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--bad);
-  border:1.5px solid var(--surface)}
-.tb-user{display:flex;align-items:center;gap:8px;padding:3px 8px 3px 3px;border:1px solid var(--line);
-  border-radius:999px;background:var(--surface)}
-.tb-user:hover{background:var(--surface-2)}
-.tb-user .un{font-size:12.5px;font-weight:600;line-height:1.1;text-align:left}
-.tb-user .ur{font-size:10.5px;color:var(--muted);text-align:left}
-
-.content{flex:1;overflow-y:auto;padding:22px 26px 60px}
-.page-head{display:flex;align-items:flex-start;gap:16px;margin-bottom:18px}
-.page-title{font-size:22px;font-weight:750;letter-spacing:-.02em;margin:0;line-height:1.15}
-.page-sub{color:var(--muted);font-size:13.5px;margin-top:3px}
-.page-actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
-
-/* controls */
-.btn{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 13px;border-radius:8px;
-  border:1px solid var(--line-2);background:var(--surface);color:var(--ink-2);font-size:13px;font-weight:600;
-  box-shadow:var(--sh-sm);transition:.12s;white-space:nowrap}
-.btn:hover{border-color:var(--faint);color:var(--ink)}
-.btn svg{width:15px;height:15px}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-.btn.primary:hover{background:var(--accent-ink)}
+.sel{height:34px;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:0 8px;font-size:13px;font-weight:600;color:var(--ink-2)}
+.tb-user{display:flex;align-items:center;gap:8px;padding:3px 8px 3px 3px;border:1px solid var(--line);border-radius:999px;background:var(--surface)}
+.tb-user .un{font-size:12.5px;font-weight:600;line-height:1.1;text-align:left}.tb-user .ur{font-size:10.5px;color:var(--muted);text-align:left}
+.content{flex:1;overflow-y:auto;padding:22px 26px 70px}
+.ph{display:flex;align-items:flex-start;gap:16px;margin-bottom:18px}
+.pt{font-size:22px;font-weight:750;letter-spacing:-.02em;margin:0}
+.ps{color:var(--muted);font-size:13.5px;margin-top:3px}
+.pa{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 13px;border-radius:8px;border:1px solid var(--line-2);background:var(--surface);color:var(--ink-2);font-size:13px;font-weight:600;box-shadow:var(--sh-sm)}
+.btn:hover{border-color:var(--faint);color:var(--ink)}.btn svg{width:15px;height:15px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}.btn.primary:hover{background:var(--accent-ink)}
 .btn.sm{height:29px;padding:0 10px;font-size:12px}
-.btn.danger{color:var(--bad);border-color:var(--bad-soft)}
-.btn.danger:hover{background:var(--bad-soft)}
+.btn.danger{color:var(--bad);border-color:var(--bad-soft)}.btn.danger:hover{background:var(--bad-soft)}
 .btn:disabled{opacity:.5;cursor:not-allowed}
-.field{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
-.field label{font-size:12px;font-weight:600;color:var(--ink-2)}
-.field label .req{color:var(--bad)}
-.input,.select,textarea.input{width:100%;height:36px;border:1px solid var(--line-2);border-radius:8px;
-  padding:0 11px;font-size:13.5px;color:var(--ink);background:var(--surface);font-family:inherit}
-textarea.input{height:auto;min-height:70px;padding:9px 11px;resize:vertical;line-height:1.5}
-.input:focus,.select:focus,textarea.input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
-.err-msg{font-size:11.5px;color:var(--bad);font-weight:500}
-.help{font-size:11.5px;color:var(--muted)}
-.seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--line);border-radius:9px;padding:3px}
-.seg button{border:none;background:none;padding:5px 12px;border-radius:6px;font-size:12.5px;font-weight:600;color:var(--muted)}
-.seg button.on{background:var(--surface);color:var(--ink);box-shadow:var(--sh-sm)}
-.filterbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
-.filterbar .select{height:32px;width:auto;min-width:130px;font-size:12.5px;font-weight:500;padding:0 8px}
-.filterbar .sinput{height:32px;width:220px}
-
-/* cards */
-.cards{display:grid;gap:14px}
-.grid-4{grid-template-columns:repeat(4,minmax(0,1fr))}
-.grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}
-.grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:16px;box-shadow:var(--sh-sm)}
-.card.pad0{padding:0;overflow:hidden}
-.stat .l{font-size:12px;color:var(--muted);font-weight:600}
-.stat .v{font-size:26px;font-weight:750;letter-spacing:-.02em;margin-top:4px}
-.stat .s{font-size:11.5px;color:var(--muted);margin-top:2px}
-.sect-h{display:flex;align-items:center;gap:8px;margin:0 0 12px}
-.sect-h h3{font-size:14px;font-weight:700;margin:0;letter-spacing:-.01em}
-.sect-h .r{margin-left:auto;font-size:12px;color:var(--muted)}
-
-/* badges */
-.badge{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;border-radius:6px;
-  font-size:11.5px;font-weight:650;white-space:nowrap}
-.badge .d{width:6px;height:6px;border-radius:50%;background:currentColor}
-.badge.good{color:var(--good);background:var(--good-soft)}
-.badge.warn{color:var(--warn);background:var(--warn-soft)}
-.badge.bad{color:var(--bad);background:var(--bad-soft)}
-.badge.neutral{color:var(--muted);background:var(--surface-2);border:1px solid var(--line)}
-.badge.accent{color:var(--accent-ink);background:var(--accent-soft)}
-.otype{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px}
-
-/* tables */
-.tbl-wrap{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);
-  box-shadow:var(--sh-sm);overflow:hidden}
-.tbl-scroll{overflow-x:auto}
-table.tbl{width:100%;border-collapse:collapse;font-size:13px}
-table.tbl thead th{text-align:left;font-size:11px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;
-  color:var(--muted);padding:10px 14px;border-bottom:1px solid var(--line);background:var(--surface-2);white-space:nowrap}
-table.tbl thead th.sortable{cursor:pointer;user-select:none}
-table.tbl thead th.sortable:hover{color:var(--ink)}
-table.tbl thead th .ar{opacity:.55;font-size:10px}
-table.tbl tbody td{padding:10px 14px;border-bottom:1px solid var(--hair);vertical-align:middle}
-table.tbl tbody tr:last-child td{border-bottom:none}
-table.tbl tbody tr.click{cursor:pointer}
-table.tbl tbody tr.click:hover td{background:var(--surface-2)}
-table.tbl td.num,table.tbl th.num{text-align:right;font-variant-numeric:tabular-nums}
-.tbl-foot{display:flex;align-items:center;gap:10px;padding:9px 14px;border-top:1px solid var(--line);
-  background:var(--surface-2);font-size:12px;color:var(--muted)}
-.pager{margin-left:auto;display:flex;gap:4px}
-.pager button{width:28px;height:28px;border:1px solid var(--line);border-radius:6px;background:var(--surface);
-  color:var(--ink-2);font-size:12px}
-.pager button:disabled{opacity:.4}
-.pager button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
-.idcell{font-size:12px;color:var(--muted);font-weight:600;font-variant-numeric:tabular-nums}
-
+.card.p0{padding:0;overflow:hidden}
+.cards{display:grid;gap:14px}.g4{grid-template-columns:repeat(4,minmax(0,1fr))}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.stat .l{font-size:12px;color:var(--muted);font-weight:600}.stat .v{font-size:26px;font-weight:750;margin-top:4px}.stat .s{font-size:11.5px;color:var(--muted)}
+.sh{display:flex;align-items:center;gap:8px;margin:0 0 12px}.sh h3{font-size:14px;font-weight:700;margin:0}.sh .r{margin-left:auto;font-size:12px;color:var(--muted)}
+.badge{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;border-radius:6px;font-size:11.5px;font-weight:650;white-space:nowrap}
+.badge.good{color:var(--good);background:var(--good-soft)}.badge.warn{color:var(--warn);background:var(--warn-soft)}
+.badge.bad{color:var(--bad);background:var(--bad-soft)}.badge.n{color:var(--muted);background:var(--surface-2);border:1px solid var(--line)}
+.badge.acc{color:var(--accent-ink);background:var(--accent-soft)}
+.tblw{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--sh-sm);overflow:hidden}
+.tbls{overflow-x:auto}
+table.t{width:100%;border-collapse:collapse;font-size:13px}
+table.t thead th{text-align:left;font-size:11px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);padding:10px 14px;border-bottom:1px solid var(--line);background:var(--surface-2);white-space:nowrap}
+table.t tbody td{padding:10px 14px;border-bottom:1px solid var(--hair)}
+table.t tbody tr:last-child td{border-bottom:none}
+table.t tbody tr.cl{cursor:pointer}table.t tbody tr.cl:hover td{background:var(--surface-2)}
+table.t td.num,table.t th.num{text-align:right;font-variant-numeric:tabular-nums}
 .person{display:flex;align-items:center;gap:9px;min-width:0}
-.avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#dbeafe,#c7d2fe);
-  color:#3730a3;display:grid;place-items:center;font-size:11.5px;font-weight:700;flex:0 0 auto}
-.avatar.lg{width:52px;height:52px;font-size:18px} .avatar.sm{width:24px;height:24px;font-size:10px}
-.person .pn{min-width:0}
-.person .pn b{font-weight:600;font-size:13px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.person .pn span{font-size:11.5px;color:var(--muted)}
-
-/* ---------- TargetProgress: the core visual ---------- */
-.tp{--h:var(--t0)}
-.tp.l1{--h:var(--t1)}.tp.l2{--h:var(--t2)}.tp.l3{--h:var(--t3)}.tp.l4{--h:var(--t4)}.tp.l5{--h:var(--t5)}
-.tp-track{position:relative;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));margin:26px 4px 8px}
-.tp-line{position:absolute;left:10%;right:10%;top:11px;height:3px;background:var(--line-2);border-radius:3px}
-.tp-line i{position:absolute;left:0;top:0;bottom:0;background:var(--h);border-radius:3px;transition:width .4s}
-.tp-node{display:flex;flex-direction:column;align-items:center;position:relative;z-index:1;min-width:0}
-.tp-dot{width:24px;height:24px;border-radius:50%;background:var(--surface);border:2px solid var(--line-2);
-  display:grid;place-items:center;font-size:10px;font-weight:800;color:var(--faint)}
-.tp-node.done .tp-dot{background:var(--h);border-color:var(--h);color:#fff}
-.tp-node.cur .tp-dot{border-color:var(--h);color:var(--h);transform:scale(1.12);
-  box-shadow:0 0 0 4px rgba(37,99,235,.14)}
-.tp-lab{font-size:10.5px;font-weight:700;color:var(--muted);margin-top:7px}
-.tp-node.done .tp-lab,.tp-node.cur .tp-lab{color:var(--ink)}
-.tp-val{font-size:10.5px;color:var(--faint);margin-top:1px;font-variant-numeric:tabular-nums;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.tp-node.cur .tp-val{color:var(--h);font-weight:700}
-.tp-marker{position:absolute;top:-19px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;
-  align-items:center;color:var(--h);white-space:nowrap}
-.tp-marker b{font-size:10px;font-weight:800;letter-spacing:.03em}
-.tp-marker .tri{width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;
-  border-top:6px solid var(--h);margin-top:1px}
-.tp-foot{display:flex;align-items:baseline;gap:10px;margin-top:6px;flex-wrap:wrap}
-.tp-level{font-size:15px;font-weight:750;color:var(--h)}
-.tp-actual{font-size:12.5px;color:var(--ink-2)} .tp-actual b{color:var(--ink)}
-.tp-pct{font-size:11.5px;color:var(--muted);margin-left:auto}
-.tp-ticks{display:inline-flex;align-items:center;gap:3px}
-.tp-tick{width:15px;height:15px;border-radius:4px;display:grid;place-items:center;font-size:8px;font-weight:800;
-  background:var(--surface-2);color:var(--faint);border:1px solid var(--line)}
-.tp-tick.done{background:var(--h);color:#fff;border-color:var(--h)}
-.tp-tick.cur{border-color:var(--h);color:var(--h)}
-.lvl-pill{display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:6px;font-weight:750;
-  font-size:12px;color:#fff;background:var(--h)}
-.lvl-pill.none{background:var(--surface-2);color:var(--muted);border:1px solid var(--line)}
-.tp-hero{background:linear-gradient(135deg,var(--surface),var(--surface-2));border:1px solid var(--line);
-  border-radius:var(--r-lg);padding:18px 22px 14px}
-.tp-hero .cap{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-
-/* tabs */
+.av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#dbeafe,#c7d2fe);color:#3730a3;display:grid;place-items:center;font-size:11.5px;font-weight:700;flex:0 0 auto}
+.av.lg{width:52px;height:52px;font-size:18px}.av.sm{width:24px;height:24px;font-size:10px}
+.person .pn b{font-weight:600;font-size:13px;display:block}.person .pn span{font-size:11.5px;color:var(--muted)}
+/* Target ladder — bands shown as the workbook writes them */
+.tp{--h:var(--t0)}.tp.l1{--h:var(--t1)}.tp.l2{--h:var(--t2)}.tp.l3{--h:var(--t3)}.tp.l4{--h:var(--t4)}.tp.l5{--h:var(--t5)}
+.tp-tr{position:relative;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));margin:26px 4px 6px}
+.tp-ln{position:absolute;left:10%;right:10%;top:11px;height:3px;background:var(--line-2);border-radius:3px}
+.tp-ln i{position:absolute;left:0;top:0;bottom:0;background:var(--h);border-radius:3px}
+.tp-nd{display:flex;flex-direction:column;align-items:center;position:relative;z-index:1;min-width:0;padding:0 2px}
+.tp-dot{width:24px;height:24px;border-radius:50%;background:var(--surface);border:2px solid var(--line-2);display:grid;place-items:center;font-size:10px;font-weight:800;color:var(--faint)}
+.tp-nd.dn .tp-dot{background:var(--h);border-color:var(--h);color:#fff}
+.tp-nd.cu .tp-dot{border-color:var(--h);color:var(--h);transform:scale(1.12);box-shadow:0 0 0 4px rgba(37,99,235,.13)}
+.tp-lb{font-size:10.5px;font-weight:700;color:var(--muted);margin-top:7px}
+.tp-nd.dn .tp-lb,.tp-nd.cu .tp-lb{color:var(--ink)}
+.tp-vl{font-size:10.5px;color:var(--faint);margin-top:2px;text-align:center;line-height:1.25;word-break:break-word}
+.tp-nd.cu .tp-vl{color:var(--h);font-weight:700}
+.tp-mk{position:absolute;top:-19px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;color:var(--h);white-space:nowrap}
+.tp-mk b{font-size:10px;font-weight:800}.tp-mk .tri{width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid var(--h);margin-top:1px}
+.tp-ft{display:flex;align-items:baseline;gap:10px;margin-top:8px;flex-wrap:wrap}
+.tp-lv{font-size:15px;font-weight:750;color:var(--h)}
+/* the empty-track grey is a background tint, far too light to read as text */
+.tp.un .tp-lv{color:var(--muted);font-weight:650}
+.tp-ac{font-size:12.5px;color:var(--ink-2)}.tp-ac b{color:var(--ink)}
+.tks{display:inline-flex;gap:3px}
+.tk{width:15px;height:15px;border-radius:4px;display:grid;place-items:center;font-size:8px;font-weight:800;background:var(--surface-2);color:var(--faint);border:1px solid var(--line)}
+.tk.dn{background:var(--h);color:#fff;border-color:var(--h)}.tk.cu{border-color:var(--h);color:var(--h)}
+.pill{display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:6px;font-weight:750;font-size:12px;color:#fff;background:var(--h)}
+.pill.none{background:var(--surface-2);color:var(--muted);border:1px solid var(--line)}
+.hero{background:linear-gradient(135deg,var(--surface),var(--surface-2));border:1px solid var(--line);border-radius:var(--r-lg);padding:18px 22px 14px}
+.hero .cap{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:16px;overflow-x:auto}
-.tabs button{border:none;background:none;padding:9px 13px;font-size:13px;font-weight:600;color:var(--muted);
-  border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
-.tabs button:hover{color:var(--ink)}
+.tabs button{border:none;background:none;padding:9px 13px;font-size:13px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
 .tabs button.on{color:var(--accent);border-bottom-color:var(--accent)}
-
-/* overlays */
 .scrim{position:fixed;inset:0;background:rgba(15,23,42,.4);z-index:50}
-.drawer{position:fixed;top:0;right:0;bottom:0;width:min(560px,94vw);background:var(--surface);z-index:51;
-  box-shadow:var(--sh-lg);display:flex;flex-direction:column;animation:slidein .22s cubic-bezier(.2,.8,.2,1)}
-@keyframes slidein{from{transform:translateX(100%)}}
-.dw-head{flex:0 0 auto;padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:12px}
-.dw-head .t{font-size:16px;font-weight:700;letter-spacing:-.01em}
-.dw-head .s{font-size:12.5px;color:var(--muted);margin-top:2px}
-.dw-close{margin-left:auto;width:30px;height:30px;border-radius:7px;border:1px solid var(--line);
-  background:var(--surface);color:var(--muted);display:grid;place-items:center;flex:0 0 auto}
-.dw-body{flex:1;overflow-y:auto;padding:18px 20px}
-.dw-foot{flex:0 0 auto;padding:12px 20px;border-top:1px solid var(--line);display:flex;gap:8px;
-  justify-content:flex-end;background:var(--surface-2)}
-.modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(560px,94vw);max-height:88vh;
-  background:var(--surface);z-index:51;border-radius:var(--r-lg);box-shadow:var(--sh-lg);display:flex;flex-direction:column;
-  animation:pop .18s cubic-bezier(.2,.8,.2,1)}
-.modal.wide{width:min(760px,96vw)}
-@keyframes pop{from{opacity:0;transform:translate(-50%,-52%) scale(.98)}}
-.md-head{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
-.md-head .t{font-size:16px;font-weight:700}
-.md-body{flex:1;overflow-y:auto;padding:18px 20px}
-.md-foot{padding:12px 20px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;
-  background:var(--surface-2)}
-body.locked{overflow:hidden}
-
-.kv{display:grid;grid-template-columns:132px minmax(0,1fr);gap:6px 12px;font-size:13px;margin:0}
-.kv dt{color:var(--muted);font-weight:500}
-.kv dd{margin:0;color:var(--ink);font-weight:600;min-width:0}
-.drow{display:flex;align-items:center;gap:10px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;
-  margin-bottom:8px;background:var(--surface);transition:.12s}
-.drow.click{cursor:pointer}
-.drow.click:hover{border-color:var(--line-2);background:var(--surface-2);box-shadow:var(--sh-sm)}
-.drow .dn{flex:1;min-width:0}
-.drow .dn b{font-weight:600;font-size:13.5px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.drow .dn span{font-size:12px;color:var(--muted);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.drow .chev{color:var(--faint);flex:0 0 auto}
+.dw{position:fixed;top:0;right:0;bottom:0;width:min(600px,95vw);background:var(--surface);z-index:51;box-shadow:var(--sh-lg);display:flex;flex-direction:column;animation:si .22s cubic-bezier(.2,.8,.2,1)}
+@keyframes si{from{transform:translateX(100%)}}
+.dw-h{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:12px}
+.dw-h .t{font-size:16px;font-weight:700}.dw-h .s{font-size:12.5px;color:var(--muted);margin-top:2px}
+.x{margin-left:auto;width:30px;height:30px;border-radius:7px;border:1px solid var(--line);background:var(--surface);color:var(--muted);display:grid;place-items:center;flex:0 0 auto}
+.dw-b{flex:1;overflow-y:auto;padding:18px 20px}
+.dw-f{padding:12px 20px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;background:var(--surface-2)}
+.md{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(620px,95vw);max-height:88vh;background:var(--surface);z-index:51;border-radius:var(--r-lg);box-shadow:var(--sh-lg);display:flex;flex-direction:column;animation:pp .18s}
+@keyframes pp{from{opacity:0;transform:translate(-50%,-52%)}}
+.md-h{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center}
+.md-h .t{font-size:16px;font-weight:700}.md-b{flex:1;overflow-y:auto;padding:18px 20px}
+.md-f{padding:12px 20px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;background:var(--surface-2)}
+body.lock{overflow:hidden}
+.fld{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.fld label{font-size:12px;font-weight:600;color:var(--ink-2)}
+.in,textarea.in,select.in{width:100%;height:36px;border:1px solid var(--line-2);border-radius:8px;padding:0 11px;font-size:13.5px;color:var(--ink);background:var(--surface);font-family:inherit}
+textarea.in{height:auto;min-height:64px;padding:9px 11px;resize:vertical}
+.in:focus,textarea.in:focus,select.in:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.err{font-size:11.5px;color:var(--bad);font-weight:500}
+.help{font-size:11.5px;color:var(--muted)}
+.kv{display:grid;grid-template-columns:130px minmax(0,1fr);gap:6px 12px;font-size:13px;margin:0}
+.kv dt{color:var(--muted);font-weight:500}.kv dd{margin:0;font-weight:600;min-width:0}
+.drow{display:flex;align-items:center;gap:10px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:var(--surface)}
+.drow.cl{cursor:pointer}.drow.cl:hover{border-color:var(--line-2);background:var(--surface-2);box-shadow:var(--sh-sm)}
+.drow .dn{flex:1;min-width:0}.drow .dn b{font-weight:600;font-size:13.5px;display:block}
+.drow .dn span{font-size:12px;color:var(--muted);display:block}
 .subh{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:18px 0 9px}
-
-/* states */
-.state{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
-  padding:52px 20px;color:var(--muted)}
-.state .ic{width:44px;height:44px;border-radius:12px;background:var(--surface-2);display:grid;place-items:center;
-  color:var(--faint);margin-bottom:12px}
-.state .ic svg{width:22px;height:22px}
-.state h4{margin:0 0 4px;color:var(--ink);font-size:15px;font-weight:700}
-.state p{margin:0 0 14px;font-size:13px;max-width:360px}
-.skel{background:linear-gradient(90deg,#eef1f6 25%,#e4e8ef 37%,#eef1f6 63%);background-size:400% 100%;
-  animation:sh 1.3s infinite;border-radius:6px}
-@keyframes sh{0%{background-position:100% 0}100%{background-position:-100% 0}}
-
+.state{display:flex;flex-direction:column;align-items:center;text-align:center;padding:48px 20px;color:var(--muted)}
+.state h4{margin:0 0 4px;color:var(--ink);font-size:15px;font-weight:700}.state p{margin:0 0 14px;font-size:13px;max-width:380px}
+.sk{background:linear-gradient(90deg,#eef1f6 25%,#e4e8ef 37%,#eef1f6 63%);background-size:400% 100%;animation:s 1.3s infinite;border-radius:6px}
+@keyframes s{0%{background-position:100% 0}100%{background-position:-100% 0}}
 .toasts{position:fixed;right:18px;bottom:18px;z-index:80;display:flex;flex-direction:column;gap:8px}
-.toast{display:flex;align-items:center;gap:9px;background:#0f1729;color:#fff;padding:11px 14px;border-radius:10px;
-  box-shadow:var(--sh-lg);font-size:13px;font-weight:500;max-width:380px;animation:tin .2s}
-@keyframes tin{from{opacity:0;transform:translateY(8px)}}
-.toast.good{background:#0f5132} .toast.bad{background:#7f1d1d}
-.toast .tc{width:8px;height:8px;border-radius:50%;background:#4ade80;flex:0 0 auto}
-.toast.bad .tc{background:#f87171}
-
-.gsr{position:absolute;top:40px;left:0;right:0;background:var(--surface);border:1px solid var(--line);
-  border-radius:10px;box-shadow:var(--sh-lg);max-height:400px;overflow-y:auto;z-index:40;padding:6px}
-.gsr .grp{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:8px 8px 4px}
+.toast{display:flex;align-items:center;gap:9px;background:#0f1729;color:#fff;padding:11px 14px;border-radius:10px;box-shadow:var(--sh-lg);font-size:13px;max-width:400px}
+.toast.good{background:#0f5132}.toast.bad{background:#7f1d1d}
+.gsr{position:absolute;top:40px;left:0;right:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--sh-lg);max-height:380px;overflow-y:auto;z-index:40;padding:6px}
+.gsr .g{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:8px 8px 4px}
 .gsr .r{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:8px;cursor:pointer}
 .gsr .r:hover{background:var(--surface-2)}
-.gsr .r b{font-size:13px;font-weight:600} .gsr .r span{font-size:11.5px;color:var(--muted)}
-
-/* organisation structure */
-.org-cat{border-radius:var(--r-lg);padding:16px;margin-bottom:14px}
-.org-cat-h{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
-.org-cat-h .n{width:26px;height:26px;border-radius:8px;color:#fff;display:grid;place-items:center;font-size:12px;font-weight:800}
-.org-cat-h .t{font-size:13px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
-.org-cat-h .c{margin-left:auto;font-size:11px;font-weight:700;background:#fff;border-radius:999px;padding:2px 10px}
-.org-units{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:10px}
-.ou-card{background:#fff;border-radius:10px;padding:12px 14px;border-left:4px solid var(--oc,var(--accent));
-  box-shadow:var(--sh-sm);cursor:pointer;transition:.12s}
-.ou-card:hover{box-shadow:var(--sh-md);transform:translateY(-1px)}
-.ou-card .oc-code{font-size:14px;font-weight:750}
-.ou-card .oc-name{font-size:12px;color:var(--muted);margin-top:1px}
-.ou-card .oc-meta{display:flex;gap:12px;margin-top:9px;font-size:11px;color:var(--muted)}
-.ou-card .oc-meta b{color:var(--ink)}
-.leader-card{background:#fff;border-radius:10px;padding:12px 14px;box-shadow:var(--sh-sm);text-align:center}
-.leader-card .lr-role{display:inline-block;font-size:10px;font-weight:800;color:#fff;border-radius:999px;
-  padding:2px 10px;margin-bottom:6px}
-.leader-card b{display:block;font-size:13.5px}
-.leader-card span{font-size:11px;color:var(--muted)}
-
-/* hierarchy */
-.tnode{margin-left:18px;border-left:1.5px solid var(--line);padding-left:16px;position:relative}
-.tnode::before{content:"";position:absolute;left:0;top:20px;width:14px;height:1.5px;background:var(--line)}
-.tnode.root{margin-left:0;border-left:none;padding-left:0}
-.tnode.root::before{display:none}
-.tcard{display:flex;align-items:center;gap:9px;padding:8px 11px;border:1px solid var(--line);border-radius:9px;
-  background:var(--surface);margin:6px 0;cursor:pointer;transition:.12s}
-.tcard:hover{border-color:var(--line-2);box-shadow:var(--sh-sm)}
-.tcard .tn{flex:1;min-width:0}
-.tcard .tn b{font-size:13px;font-weight:600;display:block}
-.tcard .tn span{font-size:11px;color:var(--muted)}
-
-/* charts */
-.bars{display:flex;flex-direction:column;gap:9px}
-.bar-row{display:grid;grid-template-columns:minmax(0,130px) minmax(0,1fr) 46px;align-items:center;gap:10px;font-size:12.5px}
-.bar-row>span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.bar-track{height:22px;background:var(--surface-2);border-radius:6px;overflow:hidden}
-.bar-fill{height:100%;border-radius:6px;background:var(--h);transition:width .4s}
-.dist{display:flex;height:34px;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
-.dist .seg2{display:grid;place-items:center;color:#fff;font-size:11px;font-weight:700;min-width:0;cursor:pointer}
-.dist .seg2:hover{filter:brightness(1.06)}
-.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--muted)}
-.legend .li{display:flex;align-items:center;gap:6px}
-.legend .sw{width:10px;height:10px;border-radius:3px}
-
-@media(max-width:1100px){.grid-4{grid-template-columns:repeat(2,minmax(0,1fr))}.grid-3{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.bandbox{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.bandbox .fld{margin:0}
+@media(max-width:1100px){.g4{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:900px){.bandbox{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* The sidebar becomes position:fixed here, which takes it OUT of the grid flow,
+   so .main is then the only in-flow child and must own the single track. Two
+   tracks would put .main in the FIRST one (the collapsed sidebar) and leave the
+   real column empty — the app rendered zero-width. */
 @media(max-width:860px){
-  .app{grid-template-columns:0}
-  .sidebar{position:fixed;left:0;top:0;bottom:0;width:236px;z-index:60;transform:translateX(-100%);transition:transform .2s}
-  .app.mobile-open .sidebar{transform:translateX(0)}
-  .tb-search{width:auto;flex:1}
-  .grid-4,.grid-3,.grid-2{grid-template-columns:1fr}
-  .content{padding:16px}
+  .app{grid-template-columns:minmax(0,1fr)}
+  .sb{position:fixed;left:0;top:0;bottom:0;width:232px;z-index:60;transform:translateX(-100%);transition:transform .2s}
+  .app.mo .sb{transform:translateX(0)}
+  .g4,.g3,.g2{grid-template-columns:minmax(0,1fr)}
+  .content{padding:16px 14px 60px}
+  .top{padding:0 12px;gap:8px}
+  .tb-search{width:auto;flex:1 1 auto;min-width:0;margin-left:0}
+  .crumbs{flex:0 1 auto}
+}
+/* below this the toolbar cannot hold five controls at full size, so the ones
+   that repeat information already on the page give up their labels first */
+@media(max-width:620px){
+  .crumbs{display:none}
+  .tb-user .un,.tb-user .ur{display:none}
+  .tb-user{padding:3px}
+  .sel{max-width:118px;font-size:12px;padding:0 4px}
+  .ph{flex-wrap:wrap}
+  .pa{margin-left:0;width:100%}
+  .bandbox{grid-template-columns:minmax(0,1fr)}
+  .kv{grid-template-columns:minmax(0,1fr);gap:2px 0}
+  .kv dt{margin-top:8px}
+  .tp-vl{font-size:9.5px}
+  .dw,.md{width:100vw;max-width:100vw}
+  .md{top:0;left:0;transform:none;border-radius:0;max-height:100vh;height:100vh}
 }
 </style>
 </head>
 <body>
 <div id="root"><div style="padding:48px;color:#64748b;font-family:system-ui">Loading PerformOS…</div></div>
-<div id="overlays"></div>
-<div id="toasts" class="toasts"></div>
-
+<div id="ov"></div><div id="toasts" class="toasts"></div>
 <script>
 /* ============================================================================
- * PerformOS client. The server owns all business logic: this file receives the
- * whole model for a period in one round trip and renders it, then re-adopts a
- * freshly recomputed model after every write. Progressive disclosure: concise
- * lists → drawers for detail → modals for actions.
+ * PerformOS client — individual KRA/KPI performance.
+ * The server owns the structure and every rule; this renders the model it
+ * returns and sends edits back. Target bands are displayed exactly as the
+ * workbook writes them ("≥ ₹9 Cr", "TGT-20 Days") because that is what people
+ * recognise — the numeric interpretation stays on the server.
  * ========================================================================== */
 (function () {
 'use strict';
+var S = { model:null, session:null, users:[], loading:true, error:null,
+          route:'teams', params:[], period:null, viewAs:'', empTab:{}, saving:false, q:'' };
+var LV = {0:'Below T1',1:'Target 1',2:'Target 2',3:'Target 3',4:'Target 4',5:'Target 5'};
+var LS = {0:'—',1:'T1',2:'T2',3:'T3',4:'T4',5:'T5'};
 
-/* ------------------------------------------------------------------ state -- */
-var S = {
-  model: null, session: null, users: [], loading: true, error: null,
-  route: 'directory', params: [], period: null, viewAs: '',
-  collapsed: false, empTab: {}, teamTab: {}, lbView: 'overall',
-  dirFilter: {}, tables: {}, saving: false
-};
-var LEVEL_LABELS = { 0: 'Below T1', 1: 'Target 1', 2: 'Target 2', 3: 'Target 3', 4: 'Target 4', 5: 'Target 5' };
-var LEVEL_SHORT = { 0: '—', 1: 'T1', 2: 'T2', 3: 'T3', 4: 'T4', 5: 'T5' };
+function h(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function $(s,r){return (r||document).querySelector(s);}
+function $$(s,r){var l=(r||document).querySelectorAll(s),a=[];for(var i=0;i<l.length;i++)a.push(l[i]);return a;}
+function ini(n){return String(n||'?').split(/\s+/).slice(0,2).map(function(w){return w.charAt(0);}).join('').toUpperCase();}
+function vals(o){var a=[];Object.keys(o||{}).forEach(function(k){a.push(o[k]);});return a;}
+function num(v){if(v===null||v===undefined||v==='')return null;var n=Number(v);return isFinite(n)?n:null;}
 
-/* ---------------------------------------------------------------- helpers -- */
-function h(s) {
-  return String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, function (c) {
-    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-  });
-}
-function $(sel, root) { return (root || document).querySelector(sel); }
-function $$(sel, root) { var l = (root || document).querySelectorAll(sel), a = []; for (var i = 0; i < l.length; i++) a.push(l[i]); return a; }
-function initials(n) { return String(n || '?').split(/\s+/).slice(0, 2).map(function (w) { return w.charAt(0); }).join('').toUpperCase(); }
-function num(v) { if (v === null || v === undefined || v === '') return null; var n = Number(v); return isFinite(n) ? n : null; }
-function values(o) { var a = []; Object.keys(o || {}).forEach(function (k) { a.push(o[k]); }); return a; }
+/* ---- model accessors ---- */
+var M={teams:{},emps:{},kras:{},kpis:{},periods:{},
+  index:function(){var m=S.model;if(!m)return;
+    function ix(a){var o={};(a||[]).forEach(function(x){o[x.id]=x;});return o;}
+    M.teams=ix(m.teams);M.emps=ix(m.employees);M.kras=ix(m.kras);M.kpis=ix(m.kpis);M.periods=ix(m.periods);},
+  rows:function(){return (S.model&&S.model.rows)||[];},
+  rowsOf:function(e){return M.rows().filter(function(r){return r.employee_id===e;});},
+  row:function(e,k){return M.rows().filter(function(r){return r.employee_id===e&&r.kpi_id===k;})[0]||null;},
+  ov:function(e){return ((S.model&&S.model.overalls)||{})[e]||null;},
+  staff:function(){return vals(M.emps);},
+  team:function(t){return vals(M.emps).filter(function(e){return e.team_id===t;});},
+  period:function(id){return M.periods[id||S.period]||{};},
+  settings:function(){return (S.model&&S.model.settings)||{};}};
 
-/* value formatting by measurement type (₹ figures are stored in lakhs) */
-function fmtValue(v, mt, unit) {
-  if (v === null || v === undefined || v === '') return '—';
-  var n = Number(v); if (isNaN(n)) return String(v);
-  var t = function (x) { var r = Math.round(x * 100) / 100; return String(r); };
-  switch (mt) {
-    case 'currency': return Math.abs(n) >= 100 ? '₹' + t(n / 100) + ' Cr' : '₹' + t(n) + ' L';
-    case 'percentage': return t(n) + '%';
-    case 'time': return t(n) + ' ' + (unit || 'days');
-    case 'rating': return t(n) + ' / 5';
-    case 'boolean': return n ? 'Yes' : 'No';
-    default: return t(n) + (unit ? ' ' + unit : '');
-  }
-}
+var PERMS={super_admin:['*'],hr_admin:['view','edit_target','edit_framework','enter_actual','admin','export'],
+  business_head:['view','edit_target','edit_framework','enter_actual','export'],
+  team_leader:['view','edit_target','enter_actual','export'],manager:['view','enter_actual','export'],
+  employee:['view','enter_own'],auditor:['view','export']};
+function can(a){var s=S.session;if(!s)return false;var p=PERMS[s.role_id]||[];return p.indexOf('*')>=0||p.indexOf(a)>=0;}
+function scoped(empId){var s=S.session;if(!s||!empId)return false;
+  if(s.role_id==='super_admin'||s.role_id==='hr_admin'||s.role_id==='business_head')return true;
+  if(!s.employee_id)return false;
+  if(s.employee_id===empId)return true;
+  var me=M.emps[s.employee_id],them=M.emps[empId];
+  if(!me||!them)return false;
+  if(s.role_id==='team_leader'||s.role_id==='manager')return me.team_id===them.team_id;
+  return false;}
+function canTarget(e){return can('edit_target')&&scoped(e);}
+function canFramework(e){return can('edit_framework')&&scoped(e);}
+function canActual(e){return (can('enter_actual')||(S.session&&S.session.employee_id===e&&can('enter_own')))&&scoped(e);}
+function roleName(r){return ({super_admin:'Super Admin',hr_admin:'HR / Admin',business_head:'Business Head',team_leader:'Team Leader',manager:'Manager',employee:'Employee',auditor:'Auditor'})[r]||r||'';}
 
-/* ------------------------------------------------------- model accessors -- */
-var M = {
-  types: {}, units: {}, teams: {}, emps: {}, kras: {}, kpis: {}, periods: {},
-  index: function () {
-    var m = S.model; if (!m) return;
-    function ix(arr) { var o = {}; (arr || []).forEach(function (x) { o[x.id] = x; }); return o; }
-    M.types = ix(m.org_types); M.units = ix(m.org_units); M.teams = ix(m.teams);
-    M.emps = ix(m.employees); M.kras = ix(m.kras); M.kpis = ix(m.kpis); M.periods = ix(m.periods);
+var Api={live:function(){return !!(window.google&&window.google.script&&window.google.script.run);},
+  call:function(fn,args,ok,bad){ if(!Api.live()){bad({message:'Open this page through the deployed Apps Script URL.'});return;}
+    var r=google.script.run.withSuccessHandler(ok).withFailureHandler(bad); r[fn].apply(r,args||[]); }};
+
+function toast(m,k){var w=$('#toasts'),t=document.createElement('div');t.className='toast '+(k||'');
+  t.textContent=m;w.appendChild(t);
+  setTimeout(function(){t.style.transition='.3s';t.style.opacity='0';setTimeout(function(){if(t.parentNode)t.parentNode.removeChild(t);},320);},2900);}
+
+/* ---- the target ladder ---- */
+var TP={
+  fill:function(l){return l>=1?(l-1)/4*100:0;},
+  full:function(o){
+    var b=o.bands||[],lvl=o.level,nd='';
+    for(var i=1;i<=5;i++){
+      var dn=lvl!==null&&lvl!==undefined&&i<=lvl, cu=lvl!==null&&lvl!==undefined&&i===lvl;
+      nd+='<div class="tp-nd'+(dn?' dn':'')+(cu?' cu':'')+'">'+
+        (cu?'<div class="tp-mk"><b>'+LS[lvl]+'</b><span class="tri"></span></div>':'')+
+        '<div class="tp-dot">'+(dn?'✓':i)+'</div><div class="tp-lb">T'+i+'</div>'+
+        '<div class="tp-vl">'+h(b[i-1]||'—')+'</div></div>';
+    }
+    var ft=o.hideFoot?'':'<div class="tp-ft"><span class="tp-lv">'+
+      (lvl===null||lvl===undefined?'Not yet scored':LV[lvl])+'</span>'+
+      (o.actual!==null&&o.actual!==undefined?'<span class="tp-ac">Actual <b>'+h(o.actual)+'</b></span>':'')+
+      '</div>';
+    return '<div class="tp'+(lvl?' l'+lvl:' un')+'"><div class="tp-tr"><div class="tp-ln"><i style="width:'+TP.fill(lvl)+'%"></i></div>'+nd+'</div>'+ft+'</div>';
   },
-  months: function () { return ((S.model && S.model.periods) || []).filter(function (p) { return p.kind === 'month'; }); },
-  period: function (id) { return M.periods[id || S.period] || {}; },
-  emp: function (id) { return M.emps[id]; },
-  unitOf: function (e) { return e ? M.units[e.org_unit_id] : null; },
-  teamOf: function (e) { return e ? M.teams[e.team_id] : null; },
-  typeOf: function (e) { return e ? M.types[e.org_type_id] : null; },
-  staff: function () { return values(M.emps).filter(function (e) { return e.team_id; }); },
-  membersOf: function (teamId) { return values(M.emps).filter(function (e) { return e.team_id === teamId; }); },
-  empsInUnit: function (unitId) { return values(M.emps).filter(function (e) { return e.org_unit_id === unitId; }); },
-  teamsInUnit: function (unitId) { return values(M.teams).filter(function (t) { return t.org_unit_id === unitId; }); },
-  perf: function () { return (S.model && S.model.performance) || []; },
-  perfOf: function (empId) { return M.perf().filter(function (r) { return r.employee_id === empId; }); },
-  perfKpi: function (empId, kpiId) { return M.perf().filter(function (r) { return r.employee_id === empId && r.kpi_id === kpiId; })[0] || null; },
-  overall: function (empId) { return ((S.model && S.model.overalls) || {})[empId] || null; },
-  kraLevels: function (empId) {
-    var ov = M.overall(empId), out = {};
-    if (ov && ov.kra_results) ov.kra_results.forEach(function (k) { out[k.ref] = k.level; });
-    return out;
+  hero:function(o){
+    var lvl=o.level,nd='';
+    for(var i=1;i<=5;i++){var dn=lvl&&i<=lvl,cu=lvl&&i===lvl;
+      nd+='<div class="tp-nd'+(dn?' dn':'')+(cu?' cu':'')+'">'+(cu?'<div class="tp-mk"><b>Current</b><span class="tri"></span></div>':'')+
+      '<div class="tp-dot">'+(dn?'✓':i)+'</div><div class="tp-lb">T'+i+'</div></div>';}
+    return '<div class="tp'+(lvl?' l'+lvl:' un')+' hero"><div class="cap">'+h(o.cap||'Overall level')+'</div>'+
+      '<div class="tp-tr" style="margin-top:30px"><div class="tp-ln"><i style="width:'+TP.fill(lvl)+'%"></i></div>'+nd+'</div>'+
+      '<div class="tp-ft"><span class="tp-lv" style="font-size:20px">'+(lvl?LV[lvl]:'Not yet scored')+'</span>'+
+      (o.score!=null?'<span class="help">weighted '+o.score+' / 5 over '+o.measured+'% of the scorecard</span>':'')+'</div></div>';
   },
-  historyOf: function (empId) { return ((S.model && S.model.history) || {})[empId] || []; },
-  reviewOf: function (empId) { return ((S.model && S.model.reviews) || []).filter(function (r) { return r.employee_id === empId; })[0] || null; },
-  leaderboard: function () { return (S.model && S.model.leaderboard) || []; },
-  analytics: function () { return (S.model && S.model.analytics) || { scored: {}, count: 0 }; },
-  notifications: function () { return (S.model && S.model.notifications) || []; },
-  unread: function () {
-    return M.notifications().filter(function (n) { return String(n.read) !== '1'; }).length;
-  },
-  settings: function () { return (S.model && S.model.settings) || {}; }
-};
-
-/* --------------------------------------------------- permissions (mirror) --
- * The server enforces these authoritatively; this only decides what to show. */
-var ROLE_PERMS = {
-  super_admin: ['*'], hr_admin: ['view', 'create', 'edit', 'delete', 'approve', 'publish', 'export', 'lock', 'admin'],
-  business_head: ['view', 'create', 'edit', 'approve', 'publish', 'export'],
-  team_leader: ['view', 'create', 'edit', 'approve', 'export'],
-  manager: ['view', 'create', 'edit', 'export'], employee: ['view', 'edit_own'], auditor: ['view', 'export']
-};
-function can(action) {
-  var s = S.session; if (!s) return false;
-  var p = ROLE_PERMS[s.role_id] || [];
-  return p.indexOf('*') >= 0 || p.indexOf(action) >= 0;
-}
-function canScope(empId) {
-  var s = S.session; if (!s || !empId) return false;
-  if (s.role_id === 'super_admin' || s.role_id === 'hr_admin' || s.role_id === 'business_head') return true;
-  if (!s.employee_id) return false;
-  if (s.employee_id === empId) return true;
-  var e = M.emps[empId], guard = 0;
-  while (e && guard++ < 30) { if (e.manager_id === s.employee_id) return true; e = M.emps[e.manager_id]; }
-  return false;
-}
-function roleName(id) { return ({ super_admin: 'Super Admin', hr_admin: 'HR / Admin', business_head: 'Business Head', team_leader: 'Team Leader', manager: 'Manager', employee: 'Employee', auditor: 'Auditor' })[id] || id || ''; }
-
-/* ---------------------------------------------------------------- server -- */
-var Api = {
-  live: function () { return !!(window.google && window.google.script && window.google.script.run); },
-  call: function (fn, args, done, fail) {
-    if (!Api.live()) { fail({ message: 'Open this page through the deployed Apps Script URL to load live data.' }); return; }
-    var r = google.script.run.withSuccessHandler(done).withFailureHandler(fail);
-    r[fn].apply(r, args || []);
-  }
+  ticks:function(lvl){var o='<span class="tp'+(lvl?' l'+lvl:'')+' tks">';
+    for(var i=1;i<=5;i++){var dn=lvl&&i<=lvl,cu=lvl&&i===lvl;o+='<span class="tk'+(dn?' dn':'')+(cu?' cu':'')+'">'+(dn?'✓':i)+'</span>';}
+    return o+'</span>';},
+  pill:function(l){return l===null||l===undefined?'<span class="pill none">Not scored</span>':'<span class="tp l'+l+'"><span class="pill">'+LS[l]+'</span></span>';}
 };
 
-/* ------------------------------------------------------------------ toast -- */
-function toast(msg, kind) {
-  var w = $('#toasts'), t = document.createElement('div');
-  t.className = 'toast ' + (kind || '');
-  t.innerHTML = '<span class="tc"></span>' + h(msg);
-  w.appendChild(t);
-  setTimeout(function () { t.style.transition = '.3s'; t.style.opacity = '0'; setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 320); }, 2800);
-}
+function icon(n){var p={teams:'<circle cx="7" cy="8" r="2.4"/><circle cx="17" cy="8" r="2.4"/><path d="M3 19a4 4 0 0 1 8 0M13 19a4 4 0 0 1 8 0"/>',
+ dir:'<circle cx="9" cy="8" r="3.2"/><path d="M4 20a5 5 0 0 1 10 0"/><path d="M16 4.5a3 3 0 0 1 0 6M18 20a4.5 4.5 0 0 0-3-4.2"/>',
+ fw:'<path d="M4 6h16M4 12h16M4 18h10"/><circle cx="19" cy="18" r="2"/>',
+ tgt:'<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/>',
+ adm:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/>',
+ srch:'<circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/>',menu:'<path d="M4 6h16M4 12h16M4 18h16"/>',
+ chev:'<path d="M9 6l6 6-6 6"/>',plus:'<path d="M12 5v14M5 12h14"/>',ed:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+ dl:'<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>'};
+ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">'+(p[n]||'')+'</svg>';}
+function person(e,sub){if(!e)return '—';
+  return '<div class="person"><div class="av">'+h(ini(e.name))+'</div><div class="pn"><b>'+h(e.name)+'</b><span>'+h(sub===undefined?e.designation:sub)+'</span></div></div>';}
+function kindBadge(r){
+  if(r.kind==='ordinal')return '<span class="badge warn">ordinal · award</span>';
+  if(r.kind==='qualitative')return '<span class="badge warn">qualitative · award</span>';
+  return '<span class="badge n">'+(r.direction==='lower_is_better'?'lower is better':'higher is better')+'</span>';}
+function ph(o){return '<div class="ph"><div><h1 class="pt">'+h(o.title)+'</h1>'+(o.sub?'<div class="ps">'+h(o.sub)+'</div>':'')+'</div>'+(o.actions?'<div class="pa">'+o.actions+'</div>':'')+'</div>'+o.body;}
+function stat(l,v,s){return '<div class="card stat"><div class="l">'+h(l)+'</div><div class="v">'+h(v)+'</div><div class="s">'+h(s||'')+'</div></div>';}
+function fld(l,c){return '<div class="fld"><label>'+h(l)+'</label>'+c+'</div>';}
+function empty(o){return '<div class="state"><h4>'+h(o.title)+'</h4><p>'+h(o.msg||'')+'</p>'+(o.action||'')+'</div>';}
 
-/* ============================ TargetProgress ============================= */
-var TP = {
-  fill: function (l) { return l >= 1 ? (l - 1) / 4 * 100 : 0; },
-  full: function (o) {
-    var t = o.t || [], lvl = o.level, nodes = '';
-    for (var i = 1; i <= 5; i++) {
-      var done = lvl !== null && lvl !== undefined && i <= lvl, cur = lvl !== null && lvl !== undefined && i === lvl;
-      nodes += '<div class="tp-node' + (done ? ' done' : '') + (cur ? ' cur' : '') + '">' +
-        (cur ? '<div class="tp-marker"><b>' + LEVEL_SHORT[lvl] + '</b><span class="tri"></span></div>' : '') +
-        '<div class="tp-dot">' + (done ? '✓' : i) + '</div><div class="tp-lab">T' + i + '</div>' +
-        '<div class="tp-val">' + h(fmtValue(t[i - 1], o.mt, o.unit)) + '</div></div>';
-    }
-    var foot = o.hideFoot ? '' : '<div class="tp-foot"><span class="tp-level">' +
-      (lvl === null || lvl === undefined ? 'Pending Data' : LEVEL_LABELS[lvl]) + '</span>' +
-      (o.actual !== null && o.actual !== undefined ? '<span class="tp-actual">Actual <b>' + h(fmtValue(o.actual, o.mt, o.unit)) + '</b></span>' : '') +
-      (o.pct !== null && o.pct !== undefined ? '<span class="tp-pct">' + o.pct + '%</span>' : '') + '</div>';
-    return '<div class="tp' + (lvl ? ' l' + lvl : '') + '"><div class="tp-track"><div class="tp-line"><i style="width:' + TP.fill(lvl) + '%"></i></div>' + nodes + '</div>' + foot + '</div>';
-  },
-  hero: function (o) {
-    var lvl = o.level, nodes = '';
-    for (var i = 1; i <= 5; i++) {
-      var done = lvl !== null && lvl !== undefined && i <= lvl, cur = lvl !== null && lvl !== undefined && i === lvl;
-      nodes += '<div class="tp-node' + (done ? ' done' : '') + (cur ? ' cur' : '') + '">' +
-        (cur ? '<div class="tp-marker"><b>Current</b><span class="tri"></span></div>' : '') +
-        '<div class="tp-dot">' + (done ? '✓' : i) + '</div><div class="tp-lab">T' + i + '</div></div>';
-    }
-    return '<div class="tp' + (lvl ? ' l' + lvl : '') + ' tp-hero"><div class="cap">' + h(o.cap || 'Overall Level') + '</div>' +
-      '<div class="tp-track" style="margin-top:30px"><div class="tp-line"><i style="width:' + TP.fill(lvl) + '%"></i></div>' + nodes + '</div>' +
-      '<div class="tp-foot"><span class="tp-level" style="font-size:20px">' +
-      (lvl === null || lvl === undefined ? 'Pending Data' : LEVEL_LABELS[lvl]) + '</span>' +
-      (o.score !== null && o.score !== undefined ? '<span class="tp-pct">weighted score ' + o.score + ' / 5</span>' : '') + '</div></div>';
-  },
-  ticks: function (lvl) {
-    var out = '<span class="tp' + (lvl ? ' l' + lvl : '') + ' tp-ticks">';
-    for (var i = 1; i <= 5; i++) {
-      var done = lvl !== null && lvl !== undefined && i <= lvl, cur = lvl !== null && lvl !== undefined && i === lvl;
-      out += '<span class="tp-tick' + (done ? ' done' : '') + (cur ? ' cur' : '') + '">' + (done ? '✓' : i) + '</span>';
-    }
-    return out + '</span>';
-  },
-  pill: function (lvl) {
-    if (lvl === null || lvl === undefined) return '<span class="lvl-pill none">Pending</span>';
-    return '<span class="tp l' + lvl + '"><span class="lvl-pill">' + LEVEL_SHORT[lvl] + '</span></span>';
-  }
-};
-
-/* ============================== components ============================== */
-function icon(n) {
-  var p = {
-    directory: '<circle cx="9" cy="8" r="3.2"/><path d="M4 20a5 5 0 0 1 10 0"/><path d="M16 4.5a3 3 0 0 1 0 6M18 20a4.5 4.5 0 0 0-3-4.2"/>',
-    org: '<rect x="9" y="3" width="6" height="5" rx="1"/><rect x="3" y="15" width="6" height="5" rx="1"/><rect x="15" y="15" width="6" height="5" rx="1"/><path d="M12 8v4M6 15v-2h12v2"/>',
-    teams: '<circle cx="7" cy="8" r="2.4"/><circle cx="17" cy="8" r="2.4"/><path d="M3 19a4 4 0 0 1 8 0M13 19a4 4 0 0 1 8 0"/>',
-    krakpi: '<path d="M4 6h16M4 12h16M4 18h10"/><circle cx="19" cy="18" r="2"/>',
-    targets: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/>',
-    perf: '<path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 15l3-4 3 2 4-6"/>',
-    reviews: '<path d="M4 5a2 2 0 0 1 2-2h9l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M9 12l2 2 4-4"/>',
-    leaderboard: '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/>',
-    reports: '<path d="M6 3h9l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M9 13h6M9 17h6M9 9h2"/>',
-    analytics: '<path d="M4 19V5"/><rect x="7" y="11" width="3" height="8"/><rect x="12" y="6" width="3" height="13"/><rect x="17" y="14" width="3" height="5"/>',
-    notif: '<path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 20a2 2 0 0 0 4 0"/>',
-    admin: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/>',
-    search: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/>',
-    inbox: '<path d="M4 13h4l1 3h6l1-3h4"/><path d="M4 13V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v8"/>',
-    menu: '<path d="M4 6h16M4 12h16M4 18h16"/>', chev: '<path d="M9 6l6 6-6 6"/>',
-    plus: '<path d="M12 5v14M5 12h14"/>', edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
-    download: '<path d="M12 3v12M7 11l5 5 5-5M5 21h14"/>', refresh: '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>'
-  };
-  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">' + (p[n] || '') + '</svg>';
-}
-function badge(status) {
-  var map = { 'On Track': 'good', Completed: 'good', Approved: 'good', published: 'good', Active: 'good', open: 'good',
-    'At Risk': 'warn', Pending: 'warn', Submitted: 'warn', submitted: 'warn',
-    'Off Track': 'bad', Overdue: 'bad', Rejected: 'bad', Draft: 'neutral', locked: 'neutral', upcoming: 'neutral', Inactive: 'neutral' };
-  return '<span class="badge ' + (map[status] || 'neutral') + '"><span class="d"></span>' + h(status) + '</span>';
-}
-function person(e, sub) {
-  if (!e) return '—';
-  return '<div class="person"><div class="avatar">' + h(initials(e.name)) + '</div><div class="pn"><b>' + h(e.name) +
-    '</b><span>' + h(sub === undefined ? e.designation : sub) + '</span></div></div>';
-}
-function emptyState(o) {
-  return '<div class="state"><div class="ic">' + icon(o.icon || 'inbox') + '</div><h4>' + h(o.title) + '</h4><p>' + h(o.msg || '') + '</p>' + (o.action || '') + '</div>';
-}
-function skeleton() {
-  var r = '';
-  for (var i = 0; i < 6; i++) r += '<div class="skel" style="height:42px;margin-bottom:9px"></div>';
-  return '<div class="card">' + r + '</div>';
-}
-function pageHead(o) {
-  return '<div class="page-head"><div><h1 class="page-title">' + h(o.title) + '</h1>' +
-    (o.sub ? '<div class="page-sub">' + h(o.sub) + '</div>' : '') + '</div>' +
-    (o.actions ? '<div class="page-actions">' + o.actions + '</div>' : '') + '</div>' + o.body;
-}
-function stat(l, v, s) { return '<div class="card stat"><div class="l">' + h(l) + '</div><div class="v">' + h(v) + '</div><div class="s">' + h(s || '') + '</div></div>'; }
-function fld(label, ctl, req) { return '<div class="field"><label>' + h(label) + (req ? ' <span class="req">*</span>' : '') + '</label>' + ctl + '</div>'; }
-
-/* sortable, paginated table */
-function Table(o) {
-  var id = o.id, st = S.tables[id] || (S.tables[id] = { sort: o.sort || null, dir: o.dir || 'asc', page: 1 });
-  var per = o.perPage || 12, rows = o.rows.slice();
-  if (st.sort) {
-    var col = o.cols.filter(function (c) { return c.key === st.sort; })[0];
-    if (col && col.sortVal) {
-      rows.sort(function (a, b) {
-        var va = col.sortVal(a), vb = col.sortVal(b);
-        if (va === null || va === undefined) va = typeof vb === 'number' ? -Infinity : '';
-        if (vb === null || vb === undefined) vb = typeof va === 'number' ? -Infinity : '';
-        var r = typeof va === 'number' && typeof vb === 'number' ? va - vb : String(va).localeCompare(String(vb));
-        return st.dir === 'asc' ? r : -r;
-      });
-    }
-  }
-  var total = rows.length, pages = Math.max(1, Math.ceil(total / per));
-  if (st.page > pages) st.page = pages;
-  var slice = rows.slice((st.page - 1) * per, st.page * per);
-  var thead = o.cols.map(function (c) {
-    var s = c.sortVal ? ' sortable" data-tsort="' + id + '::' + c.key + '"' : '"';
-    return '<th class="' + (c.num ? 'num' : '') + s + '>' + h(c.label) +
-      (st.sort === c.key ? ' <span class="ar">' + (st.dir === 'asc' ? '▲' : '▼') + '</span>' : '') + '</th>';
-  }).join('');
-  var tbody = slice.length ? slice.map(function (row) {
-    return '<tr class="' + (o.rowAttr ? 'click' : '') + '"' + (o.rowAttr ? ' ' + o.rowAttr(row) : '') + '>' +
-      o.cols.map(function (c) { return '<td class="' + (c.num ? 'num' : '') + '">' + c.render(row) + '</td>'; }).join('') + '</tr>';
-  }).join('') : '<tr><td colspan="' + o.cols.length + '">' + emptyState({ title: o.emptyTitle || 'No results', msg: o.emptyMsg || 'Nothing matches the current filters.' }) + '</td></tr>';
-  var pager = '';
-  if (pages > 1) {
-    pager = '<div class="pager"><button data-tpage="' + id + '::' + (st.page - 1) + '"' + (st.page === 1 ? ' disabled' : '') + '>‹</button>';
-    for (var p = 1; p <= pages; p++) {
-      if (p === 1 || p === pages || Math.abs(p - st.page) <= 1) pager += '<button data-tpage="' + id + '::' + p + '"' + (p === st.page ? ' class="on"' : '') + '>' + p + '</button>';
-    }
-    pager += '<button data-tpage="' + id + '::' + (st.page + 1) + '"' + (st.page === pages ? ' disabled' : '') + '>›</button></div>';
-  }
-  return '<div class="tbl-wrap"><div class="tbl-scroll"><table class="tbl"><thead><tr>' + thead + '</tr></thead><tbody>' + tbody + '</tbody></table></div>' +
-    '<div class="tbl-foot"><span>' + total + ' ' + h(o.noun || 'rows') + '</span>' + pager + '</div></div>';
-}
-
-/* overlay stack: drawers for detail, modals for actions */
-var Overlay = {
-  stack: [],
-  render: function () {
-    var host = $('#overlays');
-    if (!Overlay.stack.length) { host.innerHTML = ''; document.body.classList.remove('locked'); return; }
-    document.body.classList.add('locked');
-    host.innerHTML = Overlay.stack.map(function (o) {
-      var scrim = '<div class="scrim" data-ovclose="1"></div>';
-      if (o.kind === 'modal') {
-        return scrim + '<div class="modal' + (o.wide ? ' wide' : '') + '" role="dialog" aria-modal="true">' +
-          '<div class="md-head"><div class="t">' + h(o.title) + '</div><button class="dw-close" data-ovclose="1" aria-label="Close">✕</button></div>' +
-          '<div class="md-body">' + o.body + '</div>' + (o.foot ? '<div class="md-foot">' + o.foot + '</div>' : '') + '</div>';
-      }
-      return scrim + '<div class="drawer" role="dialog" aria-modal="true">' +
-        '<div class="dw-head"><div style="min-width:0"><div class="t">' + h(o.title) + '</div>' +
-        (o.sub ? '<div class="s">' + h(o.sub) + '</div>' : '') + '</div>' +
-        '<button class="dw-close" data-ovclose="1" aria-label="Close">✕</button></div>' +
-        '<div class="dw-body">' + o.body + '</div>' + (o.foot ? '<div class="dw-foot">' + o.foot + '</div>' : '') + '</div>';
+/* ---- overlays ---- */
+var OV={st:[],
+  render:function(){var host=$('#ov');
+    if(!OV.st.length){host.innerHTML='';document.body.classList.remove('lock');return;}
+    document.body.classList.add('lock');
+    host.innerHTML=OV.st.map(function(o){
+      var sc='<div class="scrim" data-x="1"></div>';
+      if(o.kind==='modal')return sc+'<div class="md" role="dialog" aria-modal="true"><div class="md-h"><div class="t">'+h(o.title)+'</div><button class="x" data-x="1" aria-label="Close">✕</button></div><div class="md-b">'+o.body+'</div>'+(o.foot?'<div class="md-f">'+o.foot+'</div>':'')+'</div>';
+      return sc+'<div class="dw" role="dialog" aria-modal="true"><div class="dw-h"><div style="min-width:0"><div class="t">'+h(o.title)+'</div>'+(o.sub?'<div class="s">'+h(o.sub)+'</div>':'')+'</div><button class="x" data-x="1" aria-label="Close">✕</button></div><div class="dw-b">'+o.body+'</div>'+(o.foot?'<div class="dw-f">'+o.foot+'</div>':'')+'</div>';
     }).join('');
-    var top = Overlay.stack[Overlay.stack.length - 1];
-    if (top.mount) setTimeout(function () { top.mount(host); }, 0);
-  },
-  open: function (o) { Overlay.stack.push(o); Overlay.render(); },
-  close: function () { Overlay.stack.pop(); Overlay.render(); },
-  closeAll: function () { Overlay.stack = []; Overlay.render(); }
-};
-function Drawer(o) { o.kind = 'drawer'; Overlay.open(o); }
-function Modal(o) { o.kind = 'modal'; Overlay.open(o); }
+    var top=OV.st[OV.st.length-1]; if(top.mount) setTimeout(function(){top.mount(host);},0);},
+  open:function(o){OV.st.push(o);OV.render();},close:function(){OV.st.pop();OV.render();},all:function(){OV.st=[];OV.render();}};
+function Drawer(o){o.kind='drawer';OV.open(o);}
+function Modal(o){o.kind='modal';OV.open(o);}
 
-/* ============================ write plumbing ============================= */
-function doWrite(fn, payload, opts) {
-  opts = opts || {};
-  if (S.saving) return;
-  S.saving = true;
-  payload = payload || {};
-  payload.view_as = S.viewAs;
-  payload.period_id = payload.period_id || S.period;
-  Api.call(fn, [payload], function (res) {
-    S.saving = false;
-    if (!res || !res.ok) { toast((res && res.error) || 'Could not save.', 'bad'); if (opts.onError) opts.onError(); return; }
-    if (res.model) { S.model = res.model; M.index(); }
-    if (opts.close !== false) Overlay.closeAll();
-    render();
-    toast(opts.success || 'Saved', 'good');
-    if (opts.after) opts.after(res);
-  }, function (e) {
-    S.saving = false;
-    toast((e && e.message) || 'Could not save.', 'bad');
-    if (opts.onError) opts.onError();
-  });
+function write(fn,p,opt){
+  opt=opt||{}; if(S.saving)return; S.saving=true;
+  p=p||{}; p.view_as=S.viewAs; p.period_id=p.period_id||S.period;
+  Api.call(fn,[p],function(res){
+    S.saving=false;
+    if(!res||!res.ok){toast((res&&res.error)||'Could not save.','bad');if(opt.bad)opt.bad();return;}
+    if(res.model){S.model=res.model;M.index();}
+    if(opt.close!==false)OV.all();
+    render(); toast(opt.ok||'Saved','good'); if(opt.then)opt.then(res);
+  },function(e){S.saving=false;toast((e&&e.message)||'Could not save.','bad');if(opt.bad)opt.bad();});
 }
 
-/* ============================== drill-downs ============================== */
-function openKra(empId, kraId) {
-  var kra = M.kras[kraId], recs = M.perfOf(empId).filter(function (r) { return r.kra_id === kraId; });
-  var lvl = M.kraLevels(empId)[kraId];
-  var body = '<dl class="kv"><dt>KRA</dt><dd>' + h(kra.name) + '</dd><dt>Code</dt><dd>' + h(kra.code) + '</dd>' +
-    '<dt>Weight</dt><dd>' + h(kra.weight) + '%</dd><dt>KRA Level</dt><dd>' + TP.pill(lvl) + '</dd></dl>' +
-    (kra.description ? '<p class="help" style="margin-top:10px">' + h(kra.description) + '</p>' : '') +
-    '<div class="subh">KPIs</div>' +
-    (recs.length ? recs.map(function (r) {
-      var kpi = M.kpis[r.kpi_id] || {};
-      return '<div class="drow click" data-kpi="' + h(empId) + '::' + h(r.kpi_id) + '"><div class="dn"><b>' + h(kpi.name) +
-        '</b><span>' + h(kpi.description || '') + '</span></div>' + TP.pill(r.highest_level) +
-        '<span class="chev">' + icon('chev') + '</span></div>';
-    }).join('') : '<p class="help">No KPIs under this KRA for this period.</p>');
-  Drawer({ title: kra.name, sub: 'KRA · ' + (M.emp(empId) || {}).name + ' · ' + M.period().name, body: body });
-}
-
-function openKpi(empId, kpiId) {
-  var rec = M.perfKpi(empId, kpiId), kpi = M.kpis[kpiId] || {}, emp = M.emp(empId) || {}, per = M.period();
-  if (!rec) {
-    Drawer({ title: kpi.name || 'KPI', sub: 'KPI', body: emptyState({ title: 'Not assigned', msg: (kpi.name || 'This KPI') + ' is not assigned to ' + emp.name + ' for this period.' }) });
-    return;
+/* ================= KPI drawer: the ladder, the actual, the edits ========= */
+function openKpi(empId,kpiId){
+  var r=M.row(empId,kpiId); if(!r)return;
+  var emp=M.emps[empId]||{}, kra=M.kras[r.kra_id]||{}, per=M.period();
+  var manualKind=(r.kind==='ordinal'||r.kind==='qualitative');
+  var body='<dl class="kv">'+
+    '<dt>KRA</dt><dd>'+h(kra.name||'—')+(kra.perspective?' <span class="badge n">'+h(kra.perspective)+'</span>':'')+'</dd>'+
+    '<dt>Goal</dt><dd style="font-weight:500">'+h(r.goal||'—')+'</dd>'+
+    '<dt>Source</dt><dd>'+h(r.source||'—')+'</dd>'+
+    '<dt>Weightage</dt><dd>'+h(r.weightage)+'%</dd>'+
+    '<dt>Ladder</dt><dd>'+kindBadge(r)+'</dd></dl>'+
+    (r.band_note?'<p class="help" style="color:var(--warn);margin-top:8px">'+h(r.band_note)+'</p>':'')+
+    '<div class="subh">Target 1 → 5</div>'+
+    TP.full({bands:r.bands,level:r.level,actual:r.actual});
+  if(manualKind){
+    body+='<div class="card" style="margin-top:14px"><div class="help">This ladder has no measurable scale, so the level is awarded rather than calculated.</div>'+
+      (canActual(empId)?'<div class="fld" style="margin-top:10px"><label>Award a level</label><select class="in" id="ml">'+
+        '<option value="">— not awarded —</option>'+[1,2,3,4,5].map(function(i){
+          return '<option value="'+i+'"'+(r.manual_level===i?' selected':'')+'>'+LV[i]+'</option>';}).join('')+
+        '</select></div>':'')+'</div>';
+  } else if(canActual(empId)){
+    body+='<div class="subh">Record the actual</div>'+
+      fld('Actual value'+(r.unit?' ('+r.unit+')':''),'<input class="in" id="ac" inputmode="decimal" value="'+(r.actual===null?'':h(r.actual))+'">')+
+      '<div class="help" id="pv"></div>';
   }
-  var dirLabel = { higher_is_better: 'Higher is better', lower_is_better: 'Lower is better', range: 'Target range' }[rec.direction] || rec.direction;
-  var locked = String(per.status) === 'locked' && S.session.role_id !== 'super_admin' && S.session.role_id !== 'hr_admin';
-  var editable = canScope(empId) && !locked;
-  var canTgt = canScope(empId) && can('edit') && !locked;
-  var body = '<dl class="kv"><dt>Definition</dt><dd style="font-weight:500">' + h(kpi.description || '—') + '</dd>' +
-    '<dt>Unit</dt><dd>' + h(kpi.unit || '—') + '</dd><dt>Frequency</dt><dd>' + h(kpi.frequency || '—') + '</dd>' +
-    '<dt>Direction</dt><dd>' + h(dirLabel) + '</dd><dt>Weight</dt><dd>' + h(kpi.weight) + '%</dd></dl>' +
-    '<div class="subh">Target Progress</div>' +
-    TP.full({ t: [rec.t1, rec.t2, rec.t3, rec.t4, rec.t5], level: rec.highest_level, actual: rec.actual, pct: rec.pct, mt: kpi.measurement_type, unit: kpi.unit }) +
-    '<div class="card" style="margin-top:14px;padding:12px 14px"><div class="row">' +
-    '<div><div class="muted" style="font-size:11px;font-weight:600">HIGHEST TARGET</div>' +
-    '<div class="tp' + (rec.highest_level ? ' l' + rec.highest_level : '') + '" style="font-size:16px;font-weight:750;color:var(--h)">' +
-    (rec.highest_level === null ? 'Pending' : LEVEL_LABELS[rec.highest_level]) + '</div></div>' +
-    '<div style="margin-left:auto;text-align:right"><div class="muted" style="font-size:11px;font-weight:600">ACHIEVEMENT</div>' +
-    '<div style="font-size:16px;font-weight:750">' + (rec.pct === null ? '—' : rec.pct + '%') + '</div></div></div></div>';
-  if (locked) body += '<p class="help" style="margin-top:10px">' + h(per.name) + ' is locked — values cannot be edited.</p>';
-  if (editable) {
-    body += '<div class="subh">Enter / update actual</div>' +
-      fld('Actual value' + (kpi.unit ? ' (' + kpi.unit + ')' : ''), '<input class="input" id="kpi-actual" inputmode="decimal" value="' + (rec.actual === null ? '' : h(rec.actual)) + '">') +
-      '<div class="help" id="kpi-preview"></div>';
-  }
-  var foot = '';
-  if (canTgt) foot += '<button class="btn" data-edittarget="' + h(empId) + '::' + h(kpiId) + '">Edit targets</button>';
-  if (editable) foot += '<button class="btn primary" id="kpi-save">Save actual</button>';
-  Drawer({
-    title: kpi.name, sub: emp.name + ' · ' + per.name, body: body, foot: foot || null,
-    mount: function (root) {
-      if (!editable) return;
-      var inp = $('#kpi-actual', root), prev = $('#kpi-preview', root);
-      function upd() {
-        var r = levelForClient([rec.t1, rec.t2, rec.t3, rec.t4, rec.t5], inp.value, rec.direction);
-        prev.innerHTML = 'Current level → <b class="tp' + (r.level ? ' l' + r.level : '') + '" style="color:var(--h)">' +
-          (r.level === null ? 'Pending' : LEVEL_LABELS[r.level]) + '</b>' + (r.pct !== null ? ' · ' + r.pct + '%' : '');
-      }
-      inp.addEventListener('input', upd); upd();
-      $('#kpi-save', root).addEventListener('click', function () {
-        var b = this; b.disabled = true; b.textContent = 'Saving…';
-        doWrite('apiSaveActual', { employee_id: empId, kpi_id: kpiId, value: inp.value },
-          { success: 'Actual saved · levels recomputed', onError: function () { b.disabled = false; b.textContent = 'Save actual'; },
-            after: function () { openKpi(empId, kpiId); } });
-      });
+  var foot='';
+  if(canTarget(empId)) foot+='<button class="btn" data-edt="'+h(empId)+'::'+h(kpiId)+'">Edit targets</button>';
+  if(canFramework(empId)) foot+='<button class="btn" data-eda="'+h(empId)+'::'+h(kpiId)+'">Edit KRA / KPI</button>';
+  if(canActual(empId)) foot+='<button class="btn primary" id="sv">Save</button>';
+  Drawer({title:r.kpi,sub:emp.name+' · '+per.name,body:body,foot:foot||null,mount:function(root){
+    var ac=$('#ac',root), pv=$('#pv',root);
+    if(ac&&pv){
+      var upd=function(){ pv.innerHTML=previewText(r,ac.value); };
+      ac.addEventListener('input',upd); upd();
     }
-  });
-}
-
-/* client-side preview of the server's engine — display only; the server
-   recomputes authoritatively on save (kept in step deliberately). */
-function levelForClient(t, actual, dir) {
-  t = (t || []).map(function (x) { return (x === null || x === undefined || x === '') ? null : Number(x); });
-  if (actual === null || actual === undefined || actual === '' || isNaN(Number(actual))) return { level: null, pct: null };
-  var a = Number(actual), ach = [false, false, false, false, false], level = 0;
-  dir = dir || 'higher_is_better';
-  if (dir === 'lower_is_better') { for (var i = 0; i < 5; i++) ach[i] = t[i] !== null && a <= t[i]; }
-  else if (dir === 'range') {
-    var lo = t[0], hi = t[4], mid = t[2];
-    if (lo !== null && hi !== null && a >= lo && a <= hi) {
-      var half = Math.max(Math.abs(mid - lo), Math.abs(hi - mid)) || 1;
-      var rl = Math.max(1, Math.min(5, Math.round(1 + (1 - Math.abs(a - mid) / half) * 4)));
-      for (var r = 0; r < rl; r++) ach[r] = true;
-    }
-  } else { for (var k = 0; k < 5; k++) ach[k] = t[k] !== null && a >= t[k]; }
-  for (var j = 0; j < 5; j++) { if (ach[j]) level = j + 1; else break; }
-  var pct = null, top = t[4] !== null ? t[4] : t[2];
-  if (top !== null && top !== 0) {
-    pct = dir === 'lower_is_better' ? (a === 0 ? 100 : top / a * 100) : a / top * 100;
-    pct = Math.round(Math.min(pct, 999) * 10) / 10;
-  }
-  return { level: level, pct: pct };
-}
-
-function openTargetEdit(empId, kpiId) {
-  var rec = M.perfKpi(empId, kpiId), kpi = M.kpis[kpiId] || {}, emp = M.emp(empId) || {};
-  if (!rec) return;
-  var body = '<div class="muted" style="margin-bottom:12px">' + h(emp.name) + ' · ' + h(kpi.name) + ' · ' + h(M.period().name) + '</div>' +
-    '<div class="cards grid-2">' + [1, 2, 3, 4, 5].map(function (i) {
-      return fld('Target ' + i, '<input class="input tgt-in" data-i="' + i + '" inputmode="decimal" value="' + h(rec['t' + i] === null ? '' : rec['t' + i]) + '">');
-    }).join('') + '</div>' +
-    '<p class="help">' + h({ higher_is_better: 'Higher is better — each target must be ≥ the previous one.',
-      lower_is_better: 'Lower is better — each target must be ≤ the previous one.',
-      range: 'Target range — T1 is the minimum acceptable, T5 the maximum, T3 the ideal.' }[kpi.direction] || '') + '</p>' +
-    '<div class="err-msg" id="tgt-err"></div>';
-  Modal({
-    title: 'Edit targets', body: body,
-    foot: '<button class="btn" data-ovclose="1">Cancel</button><button class="btn primary" id="tgt-save">Save targets</button>',
-    mount: function (root) {
-      $('#tgt-save', root).addEventListener('click', function () {
-        var p = { employee_id: empId, kpi_id: kpiId };
-        $$('.tgt-in', root).forEach(function (i) { p['t' + i.getAttribute('data-i')] = i.value; });
-        var err = '';
-        var t = [num(p.t1), num(p.t2), num(p.t3), num(p.t4), num(p.t5)];
-        for (var i = 1; i < 5; i++) {
-          if (t[i] === null || t[i - 1] === null) continue;
-          if (kpi.direction === 'higher_is_better' && t[i] < t[i - 1]) err = 'For higher-is-better, T' + (i + 1) + ' must be ≥ T' + i + '.';
-          if (kpi.direction === 'lower_is_better' && t[i] > t[i - 1]) err = 'For lower-is-better, T' + (i + 1) + ' must be ≤ T' + i + '.';
-        }
-        if (err) { $('#tgt-err', root).textContent = err; return; }
-        var b = this; b.disabled = true; b.textContent = 'Saving…';
-        doWrite('apiSaveTarget', p, { success: 'Targets saved · levels recomputed',
-          onError: function () { b.disabled = false; b.textContent = 'Save targets'; } });
-      });
-    }
-  });
-}
-
-function openPerfEntry(empId) {
-  var emp = M.emp(empId) || {}, recs = M.perfOf(empId), per = M.period();
-  var body = '<div class="muted" style="margin-bottom:12px">' + h(emp.name) + ' · <span class="idcell">' + h(emp.id) +
-    '</span> · ' + h((M.teamOf(emp) || {}).name || '') + ' · ' + h(per.name) + '</div>' +
-    recs.map(function (r) {
-      var kpi = M.kpis[r.kpi_id] || {};
-      return '<div class="card" style="margin-bottom:10px"><div class="row"><b>' + h(kpi.name) + '</b>' +
-        '<span class="badge neutral" style="margin-left:auto">' + h((M.kras[r.kra_id] || {}).name) + '</span></div>' +
-        '<div class="muted tnum" style="font-size:11.5px;margin:5px 0 8px">' +
-        [1, 2, 3, 4, 5].map(function (i) { return 'T' + i + ' ' + fmtValue(r['t' + i], kpi.measurement_type, kpi.unit); }).join(' · ') + '</div>' +
-        '<div class="row"><input class="input pe-in" data-kpi="' + h(r.kpi_id) + '" style="max-width:190px" inputmode="decimal" placeholder="Actual' +
-        (kpi.unit ? ' (' + h(kpi.unit) + ')' : '') + '" value="' + (r.actual === null ? '' : h(r.actual)) + '">' +
-        '<span class="pe-prev" style="margin-left:12px">' + previewPill(r, r.actual) + '</span></div></div>';
-    }).join('');
-  Modal({
-    title: 'Enter performance', wide: true, body: body,
-    foot: '<button class="btn" data-ovclose="1">Cancel</button><button class="btn primary" id="pe-save">Save all &amp; recompute</button>',
-    mount: function (root) {
-      $$('.pe-in', root).forEach(function (inp) {
-        inp.addEventListener('input', function () {
-          var rec = recs.filter(function (x) { return x.kpi_id === inp.getAttribute('data-kpi'); })[0];
-          inp.parentNode.querySelector('.pe-prev').innerHTML = previewPill(rec, inp.value);
-        });
-      });
-      $('#pe-save', root).addEventListener('click', function () {
-        var entries = [];
-        $$('.pe-in', root).forEach(function (i) { if (String(i.value).trim() !== '') entries.push({ kpi_id: i.getAttribute('data-kpi'), value: i.value }); });
-        if (!entries.length) { toast('Enter at least one actual.', 'bad'); return; }
-        var b = this; b.disabled = true; b.textContent = 'Saving…';
-        doWrite('apiSavePerformance', { employee_id: empId, entries: entries },
-          { success: 'Performance saved · levels recomputed', onError: function () { b.disabled = false; b.textContent = 'Save all & recompute'; } });
-      });
-    }
-  });
-}
-function previewPill(rec, val) {
-  if (!rec) return '';
-  var r = levelForClient([rec.t1, rec.t2, rec.t3, rec.t4, rec.t5], val, rec.direction);
-  return TP.pill(r.level) + (r.pct !== null ? ' <span class="muted" style="font-size:12px">' + r.pct + '%</span>' : '');
-}
-
-function openReview(empId) {
-  var emp = M.emp(empId) || {}, rev = M.reviewOf(empId), ov = M.overall(empId), per = M.period();
-  function block(label, v) {
-    return '<div style="margin-bottom:10px"><div class="muted" style="font-size:11.5px;font-weight:600">' + h(label) + '</div>' +
-      '<div style="font-size:13px">' + (v ? h(v) : '<span class="faint">Not provided</span>') + '</div></div>';
-  }
-  var body = TP.hero({ cap: 'Overall Level · ' + per.name, level: ov ? ov.overall_level : null, score: ov ? ov.overall_score : null }) +
-    '<dl class="kv" style="margin-top:14px"><dt>Employee</dt><dd>' + h(emp.name) + '</dd>' +
-    '<dt>Status</dt><dd>' + badge(rev ? rev.status : 'Draft') + '</dd></dl>' +
-    '<div class="subh">Manager review</div>' + block('Achievements', rev && rev.mgr_achievements) +
-    block('Strengths', rev && rev.mgr_strengths) + block('Areas for improvement', rev && rev.mgr_improvements) +
-    '<div class="subh">Employee self-assessment</div>' + block('Self assessment', rev && rev.emp_self) +
-    block('Support required', rev && rev.emp_support);
-  var foot = canScope(empId) ? '<button class="btn primary" data-editreview="' + h(empId) + '">' + (rev ? 'Edit review' : 'Create review') + '</button>' : null;
-  Drawer({ title: 'Performance Review', sub: emp.name + ' · ' + per.name, body: body, foot: foot });
-}
-
-function openReviewEdit(empId) {
-  var rev = M.reviewOf(empId) || {}, emp = M.emp(empId) || {};
-  var body = fld('Achievements', '<textarea class="input" id="r-ach">' + h(rev.mgr_achievements || '') + '</textarea>') +
-    fld('Strengths', '<textarea class="input" id="r-str">' + h(rev.mgr_strengths || '') + '</textarea>') +
-    fld('Areas for improvement', '<textarea class="input" id="r-imp">' + h(rev.mgr_improvements || '') + '</textarea>') +
-    '<div class="subh">Employee self-assessment</div>' +
-    fld('Self assessment', '<textarea class="input" id="r-self">' + h(rev.emp_self || '') + '</textarea>') +
-    fld('Support required', '<textarea class="input" id="r-sup">' + h(rev.emp_support || '') + '</textarea>') +
-    fld('Status', '<select class="select" id="r-status">' + ['Draft', 'Pending', 'Submitted', 'Completed'].map(function (s) {
-      return '<option' + (rev.status === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>');
-  Modal({
-    title: 'Review — ' + emp.name, wide: true, body: body,
-    foot: '<button class="btn" data-ovclose="1">Cancel</button><button class="btn primary" id="r-save">Save review</button>',
-    mount: function (root) {
-      $('#r-save', root).addEventListener('click', function () {
-        var b = this; b.disabled = true; b.textContent = 'Saving…';
-        doWrite('apiSaveReview', {
-          employee_id: empId, status: $('#r-status', root).value,
-          mgr_achievements: $('#r-ach', root).value, mgr_strengths: $('#r-str', root).value,
-          mgr_improvements: $('#r-imp', root).value, emp_self: $('#r-self', root).value, emp_support: $('#r-sup', root).value
-        }, { success: 'Review saved', onError: function () { b.disabled = false; b.textContent = 'Save review'; } });
-      });
-    }
-  });
-}
-
-function openUnit(unitId) {
-  var unit = M.units[unitId], type = M.types[unit.org_type_id] || {}, teams = M.teamsInUnit(unitId);
-  var emps = M.empsInUnit(unitId), head = M.emps[unit.head_id];
-  var levels = emps.map(function (e) { var o = M.overall(e.id); return o ? o.overall_level : null; }).filter(function (x) { return x !== null; });
-  var avg = levels.length ? Math.round(levels.reduce(function (a, b) { return a + b; }, 0) / levels.length) : null;
-  var body = '<dl class="kv"><dt>Type</dt><dd><span class="otype" style="color:' + h(type.color) + ';background:' + h(type.color) + '18">' + h(type.name) + '</span></dd>' +
-    '<dt>Code</dt><dd>' + h(unit.code) + '</dd><dt>Head</dt><dd>' + h(head ? head.name : '—') + '</dd>' +
-    '<dt>Teams</dt><dd>' + teams.length + '</dd><dt>Employees</dt><dd>' + emps.length + '</dd>' +
-    '<dt>Overall Level</dt><dd>' + TP.pill(avg) + '</dd></dl>' +
-    '<div class="subh">Teams</div>' +
-    (teams.length ? teams.map(function (t) {
-      return '<div class="drow click" data-team="' + h(t.id) + '"><div class="dn"><b>' + h(t.name) + '</b><span>' +
-        M.membersOf(t.id).length + ' members · led by ' + h((M.emps[t.leader_id] || {}).name || '—') + '</span></div>' +
-        '<span class="chev">' + icon('chev') + '</span></div>';
-    }).join('') : '<p class="help">No teams are defined for this unit yet.</p>');
-  Drawer({ title: unit.name, sub: unit.code + ' · ' + type.name, body: body });
-}
-
-function openNotifications() {
-  var ns = M.notifications();
-  var body = ns.length ? ns.map(function (n) {
-    return '<div class="drow click" data-notif="' + h(n.id) + '::' + h(n.entity_type) + '::' + h(n.entity_id) + '">' +
-      '<div class="dn"><b>' + h(n.title) + '</b><span>' + h(n.message) + '</span></div>' +
-      (String(n.read) === '1' ? '' : '<span class="badge accent">new</span>') + '</div>';
-  }).join('') : emptyState({ title: 'No notifications', msg: 'Published targets, submitted performance and Target 5 achievements appear here.' });
-  Drawer({ title: 'Notifications', sub: M.unread() + ' unread', body: body,
-    foot: '<button class="btn" data-markall="1">Mark all read</button>' });
-}
-
-/* ================================ pages ================================= */
-var PAGES = {};
-
-/* ---- Employee Directory ---- */
-PAGES.directory = function () {
-  var f = S.dirFilter;
-  var rows = M.staff().filter(function (e) {
-    if (f.q) {
-      var q = f.q.toLowerCase();
-      if ((e.name + ' ' + e.id + ' ' + e.designation).toLowerCase().indexOf(q) < 0) return false;
-    }
-    if (f.type && e.org_type_id !== f.type) return false;
-    if (f.unit && e.org_unit_id !== f.unit) return false;
-    if (f.team && e.team_id !== f.team) return false;
-    return true;
-  }).map(function (e) { var o = M.overall(e.id); return { e: e, level: o ? o.overall_level : null }; });
-
-  function opts(list, cur) {
-    return '<option value="">All</option>' + list.map(function (x) {
-      return '<option value="' + h(x.v) + '"' + (cur === x.v ? ' selected' : '') + '>' + h(x.l) + '</option>'; }).join('');
-  }
-  var filters = '<div class="filterbar">' +
-    '<input class="input sinput" id="dir-q" placeholder="Search ID, name, designation…" value="' + h(f.q || '') + '">' +
-    '<select class="select" id="dir-type">' + opts(values(M.types).map(function (t) { return { v: t.id, l: t.name }; }), f.type) + '</select>' +
-    '<select class="select" id="dir-unit">' + opts(values(M.units).map(function (u) { return { v: u.id, l: u.name }; }), f.unit) + '</select>' +
-    '<select class="select" id="dir-team">' + opts(values(M.teams).map(function (t) { return { v: t.id, l: t.name }; }), f.team) + '</select>' +
-    (f.q || f.type || f.unit || f.team ? '<button class="btn sm" data-dirclear="1">Clear</button>' : '') + '</div>';
-
-  var table = Table({
-    id: 'dir', noun: 'employees', sort: 'name', rows: rows,
-    emptyTitle: 'No employees match', emptyMsg: 'Adjust the search or filters to widen the result.',
-    cols: [
-      { key: 'id', label: 'Employee ID', sortVal: function (r) { return r.e.id; }, render: function (r) { return '<span class="idcell">' + h(r.e.id) + '</span>'; } },
-      { key: 'name', label: 'Employee', sortVal: function (r) { return r.e.name; }, render: function (r) { return person(r.e); } },
-      { key: 'desig', label: 'Designation', sortVal: function (r) { return r.e.designation; }, render: function (r) { return h(r.e.designation); } },
-      { key: 'unit', label: 'Organisation Unit', sortVal: function (r) { return (M.unitOf(r.e) || {}).name || ''; }, render: function (r) { return h((M.unitOf(r.e) || {}).name || '—'); } },
-      { key: 'team', label: 'Team', sortVal: function (r) { return (M.teamOf(r.e) || {}).name || ''; }, render: function (r) { return h((M.teamOf(r.e) || {}).name || '—'); } },
-      { key: 'mgr', label: 'Manager', sortVal: function (r) { return (M.emps[r.e.manager_id] || {}).name || ''; }, render: function (r) { return h((M.emps[r.e.manager_id] || {}).name || '—'); } },
-      { key: 'level', label: 'Overall Level', sortVal: function (r) { return r.level || 0; }, render: function (r) { return TP.ticks(r.level); } },
-      { key: 'status', label: 'Status', sortVal: function (r) { return r.e.employment_status; }, render: function (r) { return badge(r.e.employment_status); } }
-    ],
-    rowAttr: function (r) { return 'data-emp="' + h(r.e.id) + '"'; }
-  });
-  return pageHead({
-    title: 'Employee Directory', sub: 'The master employee database · ' + M.staff().length + ' people',
-    actions: (can('create') ? '<button class="btn primary" data-addemp="1">' + icon('plus') + 'Add Employee</button>' : ''),
-    body: filters + table
-  });
-};
-
-/* ---- Employee Profile (contextual workspace) ---- */
-PAGES.emp = function (params) {
-  var emp = M.emp(params[0]);
-  if (!emp) return emptyState({ title: 'Employee not found', msg: 'No employee with id ' + (params[0] || '') + '.' });
-  var unit = M.unitOf(emp), team = M.teamOf(emp), type = M.typeOf(emp);
-  var mgr = M.emps[emp.manager_id], fh = M.emps[emp.functional_head_id];
-  var ov = M.overall(emp.id), recs = M.perfOf(emp.id), kmap = M.kraLevels(emp.id);
-  var tab = S.empTab[emp.id] || 'overview';
-
-  var header = '<div class="card" style="display:flex;gap:16px;align-items:center;margin-bottom:16px;flex-wrap:wrap">' +
-    '<div class="avatar lg">' + h(initials(emp.name)) + '</div>' +
-    '<div style="min-width:0"><div style="font-size:19px;font-weight:750">' + h(emp.name) + '</div>' +
-    '<div class="muted" style="font-size:13px">' + h(emp.designation) + ' · <span class="idcell">' + h(emp.id) + '</span></div>' +
-    '<div class="row wrap" style="gap:6px;margin-top:8px">' +
-      '<span class="badge neutral"><span class="d"></span>' + h(type ? type.name : '—') + '</span>' +
-      '<span class="badge neutral"><span class="d"></span>' + h(unit ? unit.name : '—') + '</span>' +
-      '<span class="badge neutral"><span class="d"></span>' + h(team ? team.name : '—') + '</span>' +
-      badge(emp.employment_status) + '</div></div>' +
-    '<div style="margin-left:auto;text-align:right">' +
-      '<div class="muted" style="font-size:11px;font-weight:600">REPORTS TO</div><div style="font-weight:650">' + h(mgr ? mgr.name : '—') + '</div>' +
-      '<div class="muted" style="font-size:11px;font-weight:600;margin-top:6px">FUNCTIONAL HEAD</div><div style="font-weight:650">' + h(fh ? fh.name : '—') + '</div>' +
-    '</div></div>';
-
-  var TABS = [['overview', 'Overview'], ['krakpi', 'KRA / KPI'], ['targets', 'Targets'], ['performance', 'Performance'], ['reviews', 'Reviews'], ['history', 'History']];
-  var tabs = '<div class="tabs">' + TABS.map(function (t) {
-    return '<button data-emptab="' + h(emp.id) + '::' + t[0] + '"' + (tab === t[0] ? ' class="on"' : '') + '>' + h(t[1]) + '</button>';
-  }).join('') + '</div>';
-
-  var body = '';
-  if (tab === 'overview') {
-    var groups = {}, order = [];
-    recs.forEach(function (r) { if (!groups[r.kra_id]) { groups[r.kra_id] = []; order.push(r.kra_id); } groups[r.kra_id].push(r); });
-    var kraRows = order.map(function (kraId) {
-      var kra = M.kras[kraId] || {};
-      return '<div class="drow click" data-kra="' + h(emp.id) + '::' + h(kraId) + '"><div class="dn"><b>' + h(kra.name) +
-        '</b><span>' + groups[kraId].length + ' KPIs · weight ' + h(kra.weight) + '%</span></div>' +
-        TP.pill(kmap[kraId]) + '<span class="chev">' + icon('chev') + '</span></div>';
-    }).join('');
-    body = '<div class="cards grid-2" style="align-items:start">' +
-      '<div>' + TP.hero({ cap: 'Overall Level · ' + M.period().name, level: ov ? ov.overall_level : null, score: ov ? ov.overall_score : null }) + '</div>' +
-      '<div class="card"><div class="sect-h"><h3>KRA summary</h3><span class="r">click to open</span></div>' +
-      (kraRows || '<p class="help">No KRAs assigned for this period.</p>') + '</div></div>' +
-      '<div class="card" style="margin-top:14px"><div class="sect-h"><h3>KPI performance</h3><span class="r">' + recs.length + ' KPIs</span></div>' +
-      kpiList(emp.id, recs) + '</div>';
-  } else if (tab === 'krakpi') {
-    var g2 = {}, o2 = [];
-    recs.forEach(function (r) { if (!g2[r.kra_id]) { g2[r.kra_id] = []; o2.push(r.kra_id); } g2[r.kra_id].push(r); });
-    body = o2.length ? o2.map(function (kraId) {
-      var kra = M.kras[kraId] || {};
-      return '<div class="card" style="margin-bottom:12px"><div class="sect-h"><h3>' + h(kra.name) + '</h3>' +
-        '<span class="badge accent">weight ' + h(kra.weight) + '%</span><span class="r">' + TP.pill(kmap[kraId]) + '</span></div>' +
-        g2[kraId].map(function (r) {
-          var kpi = M.kpis[r.kpi_id] || {};
-          return '<div class="drow click" data-kpi="' + h(emp.id) + '::' + h(r.kpi_id) + '"><div class="dn"><b>' + h(kpi.name) +
-            '</b><span>' + h(kpi.description || '') + '</span></div>' + TP.ticks(r.highest_level) +
-            '<span class="chev">' + icon('chev') + '</span></div>';
-        }).join('') + '</div>';
-    }).join('') : emptyState({ title: 'No KPIs assigned', msg: 'No KPIs have been assigned to this employee for this period.' });
-  } else if (tab === 'targets') {
-    body = '<div class="card pad0">' + Table({
-      id: 'emptgt', noun: 'targets', sort: 'kpi', rows: recs,
-      cols: [
-        { key: 'kra', label: 'KRA', sortVal: function (r) { return (M.kras[r.kra_id] || {}).name; }, render: function (r) { return h((M.kras[r.kra_id] || {}).name); } },
-        { key: 'kpi', label: 'KPI', sortVal: function (r) { return (M.kpis[r.kpi_id] || {}).name; }, render: function (r) { return h((M.kpis[r.kpi_id] || {}).name); } },
-        { key: 't', label: 'T1 – T5', render: function (r) {
-            var k = M.kpis[r.kpi_id] || {};
-            return '<span class="muted tnum" style="font-size:12px">' + [1, 2, 3, 4, 5].map(function (i) { return fmtValue(r['t' + i], k.measurement_type, k.unit); }).join(' · ') + '</span>';
-          } },
-        { key: 'actual', label: 'Actual', num: true, sortVal: function (r) { return r.actual; }, render: function (r) { var k = M.kpis[r.kpi_id] || {}; return r.actual === null ? '<span class="muted">Pending</span>' : h(fmtValue(r.actual, k.measurement_type, k.unit)); } },
-        { key: 'lvl', label: 'Level', sortVal: function (r) { return r.highest_level || 0; }, render: function (r) { return TP.pill(r.highest_level); } }
-      ],
-      rowAttr: function (r) { return 'data-kpi="' + h(emp.id) + '::' + h(r.kpi_id) + '"'; }
-    }) + '</div>';
-  } else if (tab === 'performance') {
-    body = '<div class="row" style="margin-bottom:12px"><div class="muted">Enter or update actuals for ' + h(M.period().name) + '.</div>' +
-      (canScope(emp.id) ? '<button class="btn primary" style="margin-left:auto" data-perfentry="' + h(emp.id) + '">' + icon('edit') + 'Enter performance</button>' : '') + '</div>' +
-      '<div class="card">' + kpiList(emp.id, recs, true) + '</div>';
-  } else if (tab === 'reviews') {
-    var rev = M.reviewOf(emp.id);
-    body = '<div class="card"><div class="sect-h"><h3>Reviews</h3>' +
-      (canScope(emp.id) ? '<button class="btn sm primary" style="margin-left:auto" data-editreview="' + h(emp.id) + '">Open review editor</button>' : '') + '</div>' +
-      '<div class="drow click" data-review="' + h(emp.id) + '"><div class="dn"><b>' + h(M.period().name) + ' review</b>' +
-      '<span>Overall ' + (ov ? LEVEL_SHORT[ov.overall_level] : '—') + ' · ' + h(rev ? rev.status : 'Not started') + '</span></div>' +
-      '<span class="chev">' + icon('chev') + '</span></div></div>';
-  } else if (tab === 'history') {
-    var hist = M.historyOf(emp.id);
-    body = '<div class="card"><div class="sect-h"><h3>Performance history</h3><span class="r">' + hist.length + ' periods</span></div>' +
-      (hist.length ? hist.slice().reverse().map(function (x) {
-        return '<div class="drow click" data-gomonth="' + h(x.period_id) + '::' + h(emp.id) + '"><div class="dn"><b>' +
-          h((M.periods[x.period_id] || {}).name || x.period_id) + '</b><span>Weighted score ' + h(x.score === null ? '—' : x.score) + ' / 5</span></div>' +
-          TP.pill(x.level) + '<span class="chev">' + icon('chev') + '</span></div>';
-      }).join('') : '<p class="help">No history recorded yet.</p>') + '</div>';
-  }
-  return header + tabs + body;
-};
-function kpiList(empId, recs, wide) {
-  if (!recs.length) return '<p class="help">No KPIs assigned.</p>';
-  return recs.map(function (r) {
-    var kpi = M.kpis[r.kpi_id] || {};
-    return '<div class="drow click" data-kpi="' + h(empId) + '::' + h(r.kpi_id) + '"><div class="dn"><b>' + h(kpi.name) +
-      '</b><span>Actual ' + h(fmtValue(r.actual, kpi.measurement_type, kpi.unit)) + (r.pct !== null ? ' · ' + r.pct + '%' : '') + '</span></div>' +
-      (wide ? '<div style="width:210px;flex:0 0 auto">' + TP.full({ t: [r.t1, r.t2, r.t3, r.t4, r.t5], level: r.highest_level, hideFoot: true, mt: kpi.measurement_type, unit: kpi.unit }) + '</div>' : '') +
-      TP.pill(r.highest_level) + '<span class="chev">' + icon('chev') + '</span></div>';
-  }).join('');
-}
-
-/* ---- Organization ---- */
-PAGES.organization = function () {
-  var lead = values(M.emps).filter(function (e) { return e.org_type_id === 'ot_lead'; });
-  var ceo = lead.filter(function (e) { return !e.manager_id; })[0] || lead[0];
-  var others = lead.filter(function (e) { return e !== ceo; });
-  var CODES = { 'EMP-00002': 'CBIO', 'EMP-00003': 'COO', 'EMP-00004': 'CFO', 'EMP-00005': 'CPTO', 'EMP-00006': 'CSO', 'EMP-00007': 'CIO' };
-  var body = '<div class="org-cat" style="background:var(--c-lead-soft)">' +
-    '<div class="org-cat-h"><span class="n" style="background:var(--c-lead)">01</span>' +
-    '<span class="t" style="color:var(--c-lead)">Leadership</span></div>' +
-    (ceo ? '<div style="display:grid;place-items:center;margin-bottom:12px"><div class="leader-card" style="min-width:270px">' +
-      '<span class="lr-role" style="background:var(--c-lead)">CEO</span><b>' + h(ceo.name) + '</b><span>' + h(ceo.designation) + '</span></div></div>' : '') +
-    '<div class="org-units" style="grid-template-columns:repeat(auto-fill,minmax(195px,1fr))">' +
-    others.map(function (e) {
-      return '<div class="leader-card"><span class="lr-role" style="background:var(--c-lead)">' + h(CODES[e.id] || '') + '</span>' +
-        '<b>' + h(e.name) + '</b><span>' + h(e.designation) + '</span></div>';
-    }).join('') + '</div></div>';
-
-  var SOFT = { ot_bu: 'var(--c-bu-soft)', ot_cf: 'var(--c-cf-soft)', ot_sf: 'var(--c-sf-soft)' };
-  values(M.types).filter(function (t) { return t.id !== 'ot_lead'; })
-    .sort(function (a, b) { return num(a.sort) - num(b.sort); })
-    .forEach(function (t, i) {
-      var units = values(M.units).filter(function (u) { return u.org_type_id === t.id; });
-      body += '<div class="org-cat" style="background:' + (SOFT[t.id] || 'var(--surface-2)') + '">' +
-        '<div class="org-cat-h"><span class="n" style="background:' + h(t.color) + '">0' + (i + 2) + '</span>' +
-        '<span class="t" style="color:' + h(t.color) + '">' + h(t.name) + 's</span>' +
-        '<span class="c" style="color:' + h(t.color) + '">' + units.length + ' units</span></div><div class="org-units">' +
-        units.map(function (u) {
-          return '<div class="ou-card" style="--oc:' + h(t.color) + '" data-unit="' + h(u.id) + '">' +
-            '<div class="oc-code">' + h(u.code) + '</div><div class="oc-name">' + h(u.name) + '</div>' +
-            '<div class="oc-meta"><span><b>' + M.teamsInUnit(u.id).length + '</b> teams</span>' +
-            '<span><b>' + M.empsInUnit(u.id).length + '</b> people</span></div></div>';
-        }).join('') + '</div></div>';
+    var sv=$('#sv',root);
+    if(sv) sv.addEventListener('click',function(){
+      var b=this;b.disabled=true;b.textContent='Saving…';
+      var p={employee_id:empId,kpi_id:kpiId};
+      if(manualKind){ p.manual_level=$('#ml',root)?$('#ml',root).value:''; p.actual=''; }
+      else { p.actual=ac?ac.value:''; p.manual_level=''; }
+      write('apiSaveActual',p,{ok:'Recorded · level resolved',bad:function(){b.disabled=false;b.textContent='Save';},
+        then:function(){openKpi(empId,kpiId);}});
     });
-  return pageHead({ title: 'Organization', sub: 'Company structure · click any unit for detail', body: body });
-};
-
-/* ---- Teams ---- */
-PAGES.teams = function () {
-  var rows = values(M.teams).map(function (t) {
-    var members = M.membersOf(t.id);
-    var levels = [], t5 = 0;
-    members.forEach(function (m) {
-      var o = M.overall(m.id);
-      if (o && o.overall_level !== null) levels.push(o.overall_level);
-      M.perfOf(m.id).forEach(function (r) { if (r.highest_level === 5) t5++; });
-    });
-    return { t: t, members: members.length, t5: t5,
-      level: levels.length ? Math.round(levels.reduce(function (a, b) { return a + b; }, 0) / levels.length) : null };
-  });
-  return pageHead({
-    title: 'Teams', sub: rows.length + ' operational teams',
-    body: Table({
-      id: 'teams', noun: 'teams', sort: 'name', rows: rows,
-      cols: [
-        { key: 'name', label: 'Team', sortVal: function (r) { return r.t.name; }, render: function (r) { return '<b>' + h(r.t.name) + '</b>'; } },
-        { key: 'unit', label: 'Organisation Unit', sortVal: function (r) { return (M.units[r.t.org_unit_id] || {}).name; }, render: function (r) { return h((M.units[r.t.org_unit_id] || {}).name); } },
-        { key: 'leader', label: 'Team Leader', sortVal: function (r) { return (M.emps[r.t.leader_id] || {}).name; }, render: function (r) { return h((M.emps[r.t.leader_id] || {}).name || '—'); } },
-        { key: 'members', label: 'Employees', num: true, sortVal: function (r) { return r.members; }, render: function (r) { return r.members; } },
-        { key: 'level', label: 'Team Level', sortVal: function (r) { return r.level || 0; }, render: function (r) { return TP.ticks(r.level); } },
-        { key: 't5', label: 'Target 5 Hits', num: true, sortVal: function (r) { return r.t5; }, render: function (r) { return '<b>' + r.t5 + '</b>'; } },
-        { key: 'status', label: 'Status', sortVal: function (r) { return r.t.status; }, render: function (r) { return badge(r.t.status); } }
-      ],
-      rowAttr: function (r) { return 'data-team="' + h(r.t.id) + '"'; }
-    })
-  });
-};
-
-/* ---- Team detail ---- */
-PAGES.team = function (params) {
-  var team = M.teams[params[0]];
-  if (!team) return emptyState({ title: 'Team not found', msg: 'No team with id ' + (params[0] || '') + '.' });
-  var unit = M.units[team.org_unit_id] || {}, leader = M.emps[team.leader_id];
-  var members = M.membersOf(team.id);
-  var levels = members.map(function (m) { var o = M.overall(m.id); return o ? o.overall_level : null; }).filter(function (x) { return x !== null; });
-  var teamLevel = levels.length ? Math.round(levels.reduce(function (a, b) { return a + b; }, 0) / levels.length) : null;
-  var tab = S.teamTab[team.id] || 'members';
-
-  var header = '<div class="card" style="display:flex;gap:16px;align-items:center;margin-bottom:16px;flex-wrap:wrap">' +
-    '<div class="avatar lg" style="border-radius:12px;background:linear-gradient(135deg,#c7d2fe,#bfdbfe)">' + h(String(team.code).slice(0, 2)) + '</div>' +
-    '<div><div style="font-size:19px;font-weight:750">' + h(team.name) + '</div>' +
-    '<div class="muted">' + h(unit.name) + ' · led by ' + h((leader || {}).name || '—') + ' · ' + members.length + ' people</div></div>' +
-    '<div style="margin-left:auto;min-width:260px">' + TP.hero({ cap: 'Team Level · ' + M.period().name, level: teamLevel }) + '</div></div>';
-
-  var tabs = '<div class="tabs">' + [['members', 'Employees'], ['hierarchy', 'Hierarchy']].map(function (t) {
-    return '<button data-teamtab="' + h(team.id) + '::' + t[0] + '"' + (tab === t[0] ? ' class="on"' : '') + '>' + h(t[1]) + '</button>';
-  }).join('') + '</div>';
-
-  var body;
-  if (tab === 'hierarchy') {
-    body = '<div class="card"><div class="tnode root">' + tcard(leader) + '<div style="margin-top:4px">' +
-      members.filter(function (m) { return m.id !== team.leader_id; }).map(function (m) {
-        return '<div class="tnode">' + tcard(m) + '</div>'; }).join('') + '</div></div></div>';
-  } else {
-    body = '<div class="card pad0">' + Table({
-      id: 'teamm', noun: 'members', sort: 'level', dir: 'desc',
-      rows: members.map(function (m) { return { m: m, o: M.overall(m.id) }; }),
-      cols: [
-        { key: 'name', label: 'Employee', sortVal: function (r) { return r.m.name; }, render: function (r) { return person(r.m); } },
-        { key: 'desig', label: 'Designation', sortVal: function (r) { return r.m.designation; }, render: function (r) { return h(r.m.designation); } },
-        { key: 'level', label: 'Overall Level', sortVal: function (r) { return (r.o && r.o.overall_level) || 0; }, render: function (r) { return TP.ticks(r.o && r.o.overall_level); } },
-        { key: 'score', label: 'Score', num: true, sortVal: function (r) { return (r.o && r.o.overall_score) || 0; }, render: function (r) { return h((r.o && r.o.overall_score) || '—'); } }
-      ],
-      rowAttr: function (r) { return 'data-emp="' + h(r.m.id) + '"'; }
-    }) + '</div>';
-  }
-  return header + tabs + body;
-};
-function tcard(e) {
-  if (!e) return '';
-  var o = M.overall(e.id);
-  return '<div class="tcard" data-emp="' + h(e.id) + '"><div class="avatar sm">' + h(initials(e.name)) + '</div>' +
-    '<div class="tn"><b>' + h(e.name) + '</b><span>' + h(e.designation) + '</span></div>' +
-    TP.ticks(o ? o.overall_level : null) + '</div>';
+  }});
+}
+/* client-side preview only; the server resolves the level authoritatively */
+function previewText(r,v){
+  if(v===''||v===null||isNaN(Number(v)))return 'Enter a number to see the level it reaches.';
+  var a=Number(v),lvl=0;
+  for(var i=0;i<5;i++){ var t=r.values[i]; if(t===null||t===undefined)break;
+    var ok=r.direction==='lower_is_better'?(a<=t):(a>=t); if(ok)lvl=i+1; else break; }
+  return 'Reaches '+(lvl?LV[lvl]:'below Target 1');
 }
 
-/* ---- KRA / KPI framework ---- */
-PAGES['kra-kpi'] = function () {
-  var body = values(M.kras).map(function (kra) {
-    var kpis = values(M.kpis).filter(function (k) { return k.kra_id === kra.id; });
-    var DIR = { higher_is_better: 'Higher', lower_is_better: 'Lower', range: 'Range' };
-    return '<div class="card" style="margin-bottom:12px"><div class="sect-h"><h3>' + h(kra.name) + '</h3>' +
-      '<span class="badge neutral">' + h(kra.code) + '</span><span class="badge accent">weight ' + h(kra.weight) + '%</span>' +
-      '<span class="r">' + kpis.length + ' KPIs</span></div>' +
-      (kra.description ? '<p class="help" style="margin:-4px 0 10px">' + h(kra.description) + '</p>' : '') +
-      kpis.map(function (k) {
-        return '<div class="drow"><div class="dn"><b>' + h(k.name) + '</b><span>' + h(k.description || '') + '</span></div>' +
-          '<span class="badge neutral">' + h(DIR[k.direction] || k.direction) + '</span>' +
-          '<span class="badge neutral">' + h(k.measurement_type) + '</span>' +
-          '<span class="badge accent">' + h(k.weight) + '%</span></div>';
-      }).join('') + '</div>';
-  }).join('');
-  return pageHead({
-    title: 'KRA / KPI', sub: values(M.kras).length + ' KRAs · ' + values(M.kpis).length + ' KPIs · the performance framework',
-    actions: can('create') ? '<button class="btn primary" data-addkra="1">' + icon('plus') + 'Create KRA</button>' +
-      '<button class="btn" data-addkpi="1">' + icon('plus') + 'Create KPI</button>' : '',
-    body: body
-  });
-};
-
-/* ---- Targets ---- */
-PAGES.targets = function () {
-  return pageHead({
-    title: 'Targets', sub: 'Period-specific target levels · ' + M.period().name,
-    body: Table({
-      id: 'tgts', noun: 'target rows', sort: 'emp', perPage: 15, rows: M.perf(),
-      cols: [
-        { key: 'emp', label: 'Employee', sortVal: function (r) { return (M.emps[r.employee_id] || {}).name; }, render: function (r) { return person(M.emps[r.employee_id], (M.emps[r.employee_id] || {}).id); } },
-        { key: 'kra', label: 'KRA', sortVal: function (r) { return (M.kras[r.kra_id] || {}).name; }, render: function (r) { return h((M.kras[r.kra_id] || {}).name); } },
-        { key: 'kpi', label: 'KPI', sortVal: function (r) { return (M.kpis[r.kpi_id] || {}).name; }, render: function (r) { return h((M.kpis[r.kpi_id] || {}).name); } },
-        { key: 'lvl', label: 'Current Level', sortVal: function (r) { return r.highest_level || 0; }, render: function (r) { return TP.pill(r.highest_level); } },
-        { key: 'status', label: 'Status', sortVal: function (r) { return r.status; }, render: function (r) { return badge(r.status); } }
-      ],
-      rowAttr: function (r) { return 'data-kpi="' + h(r.employee_id) + '::' + h(r.kpi_id) + '"'; }
-    })
-  });
-};
-
-/* ---- Performance ---- */
-PAGES.performance = function () {
-  var rows = M.staff().map(function (e) {
-    var recs = M.perfOf(e.id), done = recs.filter(function (r) { return r.actual !== null; }).length;
-    return { e: e, o: M.overall(e.id), done: done, total: recs.length };
-  });
-  return pageHead({
-    title: 'Performance', sub: 'Actual entry & review · ' + M.period().name,
-    body: Table({
-      id: 'perf', noun: 'employees', sort: 'level', dir: 'desc', rows: rows,
-      cols: [
-        { key: 'emp', label: 'Employee', sortVal: function (r) { return r.e.name; }, render: function (r) { return person(r.e); } },
-        { key: 'team', label: 'Team', sortVal: function (r) { return (M.teamOf(r.e) || {}).name || ''; }, render: function (r) { return h((M.teamOf(r.e) || {}).name || '—'); } },
-        { key: 'level', label: 'Overall Level', sortVal: function (r) { return (r.o && r.o.overall_level) || 0; }, render: function (r) { return TP.ticks(r.o && r.o.overall_level); } },
-        { key: 'done', label: 'Completion', num: true, sortVal: function (r) { return r.total ? r.done / r.total : 0; },
-          render: function (r) { return '<span class="tnum">' + r.done + ' / ' + r.total + '</span>'; } },
-        { key: 'act', label: '', render: function (r) { return canScope(r.e.id) ? '<button class="btn sm" data-perfentry="' + h(r.e.id) + '">Enter</button>' : ''; } }
-      ],
-      rowAttr: function (r) { return 'data-emp="' + h(r.e.id) + '"'; }
-    })
-  });
-};
-
-/* ---- Reviews ---- */
-PAGES.reviews = function () {
-  var rows = M.staff().map(function (e) { return { e: e, o: M.overall(e.id), rev: M.reviewOf(e.id) }; });
-  return pageHead({
-    title: 'Reviews', sub: 'Quantitative results + qualitative assessment · ' + M.period().name,
-    body: Table({
-      id: 'revs', noun: 'reviews', sort: 'emp', rows: rows,
-      cols: [
-        { key: 'emp', label: 'Employee', sortVal: function (r) { return r.e.name; }, render: function (r) { return person(r.e); } },
-        { key: 'team', label: 'Team', sortVal: function (r) { return (M.teamOf(r.e) || {}).name || ''; }, render: function (r) { return h((M.teamOf(r.e) || {}).name || '—'); } },
-        { key: 'level', label: 'Overall Level', sortVal: function (r) { return (r.o && r.o.overall_level) || 0; }, render: function (r) { return TP.pill(r.o && r.o.overall_level); } },
-        { key: 'status', label: 'Review Status', sortVal: function (r) { return (r.rev && r.rev.status) || 'Not started'; }, render: function (r) { return badge((r.rev && r.rev.status) || 'Draft'); } }
-      ],
-      rowAttr: function (r) { return 'data-review="' + h(r.e.id) + '"'; }
-    })
-  });
-};
-
-/* ---- Leaderboard ---- */
-PAGES.leaderboard = function () {
-  var view = S.lbView, rows = M.leaderboard().slice();
-  if (view === 't5') rows.sort(function (a, b) { return b.t5 - a.t5 || (b.overall_score || 0) - (a.overall_score || 0); });
-  else if (view === 't4plus') rows.sort(function (a, b) { return b.t4plus - a.t4plus || (b.overall_score || 0) - (a.overall_score || 0); });
-  rows.forEach(function (r, i) { r._rank = i + 1; });
-
-  var cols = [
-    { key: 'rank', label: '#', render: function (r) { return '<b>' + r._rank + '</b>'; } },
-    { key: 'emp', label: 'Employee', render: function (r) { return person(M.emps[r.employee_id], r.employee_id); } },
-    { key: 'team', label: 'Team', render: function (r) { return h((M.teams[r.team_id] || {}).name || '—'); } },
-    { key: 'level', label: 'Overall Level', render: function (r) { return TP.ticks(r.overall_level); } },
-    { key: 'score', label: 'Score', num: true, render: function (r) { return h(r.overall_score === null ? '—' : r.overall_score); } },
-    { key: 't5', label: 'Target 5 Hits', num: true, render: function (r) { return '<b>' + r.t5 + '</b> <span class="muted">/ ' + r.eligible + '</span>'; } }
-  ];
-  if (view === 't5') cols.push({ key: 'rate', label: 'T5 Rate', num: true, render: function (r) { return r.t5rate + '%'; } });
-  else cols.push({ key: 't4', label: 'Target 4+ Hits', num: true, render: function (r) { return '<b>' + r.t4plus + '</b>'; } });
-
-  var seg = '<div class="seg">' + [['overall', 'Overall'], ['t5', 'Target 5'], ['t4plus', 'Target 4+']].map(function (v) {
-    return '<button data-lbview="' + v[0] + '"' + (view === v[0] ? ' class="on"' : '') + '>' + v[1] + '</button>'; }).join('') + '</div>';
-  var rank = M.settings().ranking || {};
-  return pageHead({
-    title: 'Leaderboard', sub: (rank.description || 'Ranked by overall score, then Target 5, then Target 4+') + ' · ' + M.period().name,
-    actions: seg,
-    body: Table({ id: 'lb', noun: 'people', perPage: 15, rows: rows, cols: cols,
-      rowAttr: function (r) { return 'data-emp="' + h(r.employee_id) + '"'; } })
-  });
-};
-
-/* ---- Reports ---- */
-PAGES.reports = function () {
-  var cats = [
-    ['employee', 'Employee performance', 'Per-employee target levels across every KRA and KPI.'],
-    ['team', 'Team performance', 'Team rollups, average level and Target 5 hits.'],
-    ['kra', 'KRA / KPI', 'Level distribution by KRA and by KPI.'],
-    ['leaderboard', 'Leaderboard', 'Ranked performance for the period.'],
-    ['summary', 'Summary', 'Organisation-wide level distribution.']
-  ];
-  return pageHead({
-    title: 'Reports', sub: 'Structured output from live performance records · ' + M.period().name,
-    body: '<div class="cards grid-3">' + cats.map(function (c) {
-      return '<div class="card" style="cursor:pointer" data-report="' + c[0] + '"><div class="sect-h"><h3>' + h(c[1]) + '</h3>' +
-        '<span class="r">' + icon('chev') + '</span></div><p class="help">' + h(c[2]) + '</p></div>';
-    }).join('') + '</div>'
-  });
-};
-
-/* ---- Performance Analytics ---- */
-PAGES.analytics = function () {
-  var a = M.analytics(), lb = M.leaderboard();
-  var COLORS = ['var(--t0)', 'var(--t1)', 'var(--t2)', 'var(--t3)', 'var(--t4)', 'var(--t5)'];
-  var LABELS = ['Below T1', 'T1', 'T2', 'T3', 'T4', 'T5'];
-  var total = a.count || 1;
-  var dist = '<div class="dist">' + [0, 1, 2, 3, 4, 5].map(function (l) {
-    var n = a.scored[l] || 0;
-    if (!n) return '';
-    return '<div class="seg2" data-drill="' + l + '" style="background:' + COLORS[l] + ';flex:' + n + '" title="' + LABELS[l] + ': ' + n + '">' +
-      (n / total > 0.06 ? n : '') + '</div>';
-  }).join('') + '</div><div class="legend">' + [0, 1, 2, 3, 4, 5].map(function (l) {
-    return '<span class="li"><span class="sw" style="background:' + COLORS[l] + '"></span>' + LABELS[l] + ' <b>' + (a.scored[l] || 0) + '</b></span>';
-  }).join('') + '</div>';
-
-  var teamRows = values(M.teams).map(function (t) {
-    var lv = M.membersOf(t.id).map(function (m) { var o = M.overall(m.id); return o ? o.overall_level : null; }).filter(function (x) { return x !== null; });
-    return { name: t.name, avg: lv.length ? lv.reduce(function (x, y) { return x + y; }, 0) / lv.length : null };
-  }).sort(function (x, y) { return (y.avg || 0) - (x.avg || 0); });
-  var teamBars = '<div class="bars">' + teamRows.map(function (t) {
-    var lvl = t.avg === null ? 0 : Math.round(t.avg);
-    return '<div class="bar-row"><span>' + h(t.name) + '</span><div class="bar-track">' +
-      '<div class="bar-fill tp' + (lvl ? ' l' + lvl : '') + '" style="width:' + ((t.avg || 0) / 5 * 100) + '%"></div></div>' +
-      '<b class="tnum">' + (t.avg === null ? '—' : LEVEL_SHORT[lvl]) + '</b></div>';
-  }).join('') + '</div>';
-
-  var t5rows = lb.slice().sort(function (x, y) { return y.t5 - x.t5; }).slice(0, 6);
-  return pageHead({
-    title: 'Performance Analytics', sub: 'Target-level distribution & comparisons · ' + M.period().name,
-    body: '<div class="cards grid-4" style="margin-bottom:16px">' +
-      stat('Target 5 rate', a.t5rate + '%', (a.scored[5] || 0) + ' records at T5') +
-      stat('Target 4+ rate', a.t4plus + '%', ((a.scored[4] || 0) + (a.scored[5] || 0)) + ' records at T4+') +
-      stat('Scored records', a.count, 'of ' + a.total + ' this period') +
-      stat('Top performer', lb[0] ? String(lb[0].name).split(' ')[0] : '—', lb[0] ? lb[0].t5 + ' Target 5 hits' : '') + '</div>' +
-      '<div class="card" style="margin-bottom:16px"><div class="sect-h"><h3>Level distribution</h3>' +
-      '<span class="r">click a segment to list those records</span></div>' + dist + '</div>' +
-      '<div class="cards grid-2"><div class="card"><div class="sect-h"><h3>Team comparison</h3></div>' + teamBars + '</div>' +
-      '<div class="card"><div class="sect-h"><h3>Target 5 leaders</h3></div>' +
-      (t5rows.length ? t5rows.map(function (r, i) {
-        return '<div class="drow click" data-emp="' + h(r.employee_id) + '"><span class="idcell">#' + (i + 1) + '</span>' +
-          '<div class="dn" style="margin-left:8px"><b>' + h(r.name) + '</b><span>' + h((M.teams[r.team_id] || {}).name || '') + '</span></div>' +
-          '<b>' + r.t5 + '</b> <span class="muted">T5</span></div>';
-      }).join('') : '<p class="help">No Target 5 achievements this period.</p>') + '</div></div>'
-  });
-};
-
-/* ---- Notifications ---- */
-PAGES.notifications = function () {
-  var ns = M.notifications();
-  return pageHead({
-    title: 'Notifications', sub: M.unread() + ' unread',
-    actions: '<button class="btn" data-markall="1">Mark all read</button>',
-    body: ns.length ? '<div class="card" style="padding:8px">' + ns.map(function (n) {
-      return '<div class="drow click" data-notif="' + h(n.id) + '::' + h(n.entity_type) + '::' + h(n.entity_id) + '">' +
-        '<div class="dn"><b>' + h(n.title) + '</b><span>' + h(n.message) + '</span></div>' +
-        '<span class="badge ' + (String(n.read) === '1' ? 'neutral' : 'accent') + '">' + (String(n.read) === '1' ? 'read' : 'new') + '</span></div>';
-    }).join('') + '</div>' : emptyState({ title: 'No notifications', msg: 'Published targets, submitted performance and Target 5 achievements appear here.' })
-  });
-};
-
-/* ---- Administration ---- */
-PAGES.administration = function () {
-  if (!can('admin')) {
-    return pageHead({ title: 'Administration', sub: 'Configuration & governance',
-      body: emptyState({ title: 'No permission', msg: 'Administration is available to HR / Admin and Super Admin. Switch role from the user menu to preview it.' }) });
-  }
-  var s = M.settings(), audit = (S.model && S.model.audit) || [];
-  var sections = [
-    ['User Management', values(M.emps).length + ' employees · ' + S.users.length + ' demo users'],
-    ['Roles & Permissions', '7 roles, enforced server-side'],
-    ['Scoring Rules', (s.aggregation && s.aggregation.method) || 'weighted mean'],
-    ['Performance Cycles', M.months().length + ' months · FY 2026–27'],
-    ['Target Settings', 'Thresholds are configurable per KPI, employee and period'],
-    ['Audit Logs', audit.length + ' recent entries']
-  ];
-  return pageHead({
-    title: 'Administration', sub: 'Configuration & governance',
-    actions: '<button class="btn" data-recompute="1">' + icon('refresh') + 'Recompute period</button>' +
-      '<button class="btn danger" data-reset="1">Reset demo data</button>',
-    body: '<div class="cards grid-3">' + sections.map(function (x) {
-        return '<div class="card"><div class="sect-h"><h3>' + h(x[0]) + '</h3></div><p class="help">' + h(x[1]) + '</p></div>';
-      }).join('') + '</div>' +
-      '<div class="card" style="margin-top:16px"><div class="sect-h"><h3>Scoring &amp; ranking rules</h3><span class="r">configurable</span></div>' +
-      '<dl class="kv"><dt>Aggregation</dt><dd>' + h((s.aggregation && s.aggregation.description) || '—') + '</dd>' +
-      '<dt>Ranking</dt><dd>' + h((s.ranking && s.ranking.description) || '—') + '</dd>' +
-      '<dt>Consistency</dt><dd>' + h((s.consistency && s.consistency.description) || '—') + '</dd></dl></div>' +
-      '<div class="card" style="margin-top:16px"><div class="sect-h"><h3>Audit log</h3><span class="r">' + audit.length + ' entries</span></div>' +
-      (audit.length ? audit.slice(0, 14).map(function (a) {
-        return '<div class="drow"><div class="dn"><b>' + h(String(a.action).replace(/_/g, ' ')) + ' · ' + h(a.entity_type) + '</b>' +
-          '<span>' + h(a.entity_id) + ' · ' + h((M.emps[a.actor_id] || {}).name || a.actor_id) + '</span></div>' +
-          '<span class="muted" style="font-size:11px">' + h(String(a.ts).slice(0, 16).replace('T', ' ')) + '</span></div>';
-      }).join('') : '<p class="help">No changes recorded yet.</p>') + '</div>'
-  });
-};
-
-/* ============================ report / drill ============================= */
-function openReport(kind) {
-  var recs = M.perf(), title = { employee: 'Employee performance', team: 'Team performance', kra: 'KRA / KPI', leaderboard: 'Leaderboard', summary: 'Summary' }[kind] || 'Report';
-  var body;
-  if (kind === 'summary') {
-    var a = M.analytics();
-    body = '<dl class="kv">' + [0, 1, 2, 3, 4, 5].map(function (l) {
-      return '<dt>' + LEVEL_LABELS[l] + '</dt><dd>' + (a.scored[l] || 0) + ' records</dd>'; }).join('') +
-      '<dt>Target 5 rate</dt><dd>' + a.t5rate + '%</dd><dt>Target 4+ rate</dt><dd>' + a.t4plus + '%</dd></dl>';
-  } else if (kind === 'team') {
-    body = '<div class="tbl-scroll"><table class="tbl"><thead><tr><th>Team</th><th class="num">People</th><th class="num">Avg level</th><th class="num">T5 hits</th></tr></thead><tbody>' +
-      values(M.teams).map(function (t) {
-        var ms = M.membersOf(t.id), lv = [], t5 = 0;
-        ms.forEach(function (m) {
-          var o = M.overall(m.id); if (o && o.overall_level !== null) lv.push(o.overall_level);
-          M.perfOf(m.id).forEach(function (r) { if (r.highest_level === 5) t5++; });
-        });
-        var avg = lv.length ? Math.round(lv.reduce(function (x, y) { return x + y; }, 0) / lv.length) : null;
-        return '<tr><td>' + h(t.name) + '</td><td class="num">' + ms.length + '</td><td class="num">' + (avg === null ? '—' : LEVEL_SHORT[avg]) + '</td><td class="num">' + t5 + '</td></tr>';
-      }).join('') + '</tbody></table></div>';
-  } else if (kind === 'leaderboard') {
-    body = '<div class="tbl-scroll"><table class="tbl"><thead><tr><th>#</th><th>Employee</th><th class="num">Level</th><th class="num">T5</th><th class="num">T4+</th></tr></thead><tbody>' +
-      M.leaderboard().slice(0, 40).map(function (r) {
-        return '<tr><td>' + r.rank + '</td><td>' + h(r.name) + '</td><td class="num">' + (r.overall_level === null ? '—' : LEVEL_SHORT[r.overall_level]) +
-          '</td><td class="num">' + r.t5 + '</td><td class="num">' + r.t4plus + '</td></tr>';
-      }).join('') + '</tbody></table></div>';
-  } else if (kind === 'kra') {
-    body = '<div class="tbl-scroll"><table class="tbl"><thead><tr><th>KRA / KPI</th><th class="num">Records</th><th class="num">Avg level</th></tr></thead><tbody>' +
-      values(M.kpis).map(function (k) {
-        var rs = recs.filter(function (r) { return r.kpi_id === k.id && r.highest_level !== null; });
-        var avg = rs.length ? Math.round(rs.reduce(function (x, r) { return x + r.highest_level; }, 0) / rs.length) : null;
-        return '<tr><td>' + h((M.kras[k.kra_id] || {}).name) + ' · <b>' + h(k.name) + '</b></td><td class="num">' + rs.length +
-          '</td><td class="num">' + (avg === null ? '—' : LEVEL_SHORT[avg]) + '</td></tr>';
-      }).join('') + '</tbody></table></div>';
-  } else {
-    body = '<div class="tbl-scroll"><table class="tbl"><thead><tr><th>Employee</th><th>KPI</th><th class="num">Actual</th><th class="num">Level</th></tr></thead><tbody>' +
-      recs.slice(0, 60).map(function (r) {
-        var k = M.kpis[r.kpi_id] || {};
-        return '<tr><td>' + h((M.emps[r.employee_id] || {}).name) + '</td><td>' + h(k.name) + '</td><td class="num">' +
-          h(fmtValue(r.actual, k.measurement_type, k.unit)) + '</td><td class="num">' +
-          (r.highest_level === null ? '—' : LEVEL_SHORT[r.highest_level]) + '</td></tr>';
-      }).join('') + '</tbody></table></div>' +
-      (recs.length > 60 ? '<p class="help" style="margin-top:8px">Showing the first 60 of ' + recs.length + ' records.</p>' : '');
-  }
-  Modal({ title: title + ' — ' + M.period().name, wide: true,
-    body: '<div class="muted" style="margin-bottom:10px">Live data from performance records.</div>' + body,
-    foot: '<button class="btn" data-ovclose="1">Close</button>' });
-}
-
-function openDrill(level) {
-  var hits = M.perf().filter(function (r) { return r.highest_level === level; });
-  var body = hits.length ? hits.slice(0, 60).map(function (r) {
-    var k = M.kpis[r.kpi_id] || {};
-    return '<div class="drow click" data-emp="' + h(r.employee_id) + '"><div class="dn"><b>' + h((M.emps[r.employee_id] || {}).name) +
-      '</b><span>' + h(k.name) + ' · actual ' + h(fmtValue(r.actual, k.measurement_type, k.unit)) + '</span></div>' +
-      TP.pill(level) + '<span class="chev">' + icon('chev') + '</span></div>';
-  }).join('') + (hits.length > 60 ? '<p class="help">Showing 60 of ' + hits.length + '.</p>' : '')
-    : emptyState({ title: 'Nothing at this level', msg: 'No records reached ' + LEVEL_LABELS[level] + ' this period.' });
-  Drawer({ title: LEVEL_LABELS[level] + ' — ' + hits.length + ' records', sub: M.period().name, body: body });
-}
-
-/* ============================ create modals ============================= */
-function openAddEmployee() {
-  var teamOpts = values(M.teams).map(function (t) { return '<option value="' + h(t.id) + '">' + h(t.name) + '</option>'; }).join('');
-  var body = fld('Employee ID', '<input class="input" id="e-id" placeholder="EMP-00300">', true) +
-    fld('Full name', '<input class="input" id="e-name">', true) +
-    fld('Designation', '<input class="input" id="e-desig" value="Executive">') +
-    fld('Team', '<select class="select" id="e-team">' + teamOpts + '</select>', true) +
-    '<p class="help">Organisation type, unit, manager and functional head are resolved automatically from the team.</p>';
-  Modal({ title: 'Add Employee', body: body,
-    foot: '<button class="btn" data-ovclose="1">Cancel</button><button class="btn primary" id="e-save">Add employee</button>',
-    mount: function (root) {
-      $('#e-save', root).addEventListener('click', function () {
-        var b = this; b.disabled = true; b.textContent = 'Saving…';
-        doWrite('apiSaveEmployee', { id: $('#e-id', root).value, name: $('#e-name', root).value,
-          designation: $('#e-desig', root).value, team_id: $('#e-team', root).value },
-          { success: 'Employee added', onError: function () { b.disabled = false; b.textContent = 'Add employee'; } });
+/* ---- edit the five bands (free text by design) ---- */
+function openTargets(empId,kpiId){
+  var r=M.row(empId,kpiId); if(!r)return;
+  var emp=M.emps[empId]||{};
+  var body='<div class="help" style="margin-bottom:12px">Bands are free text on purpose — the workbook holds values like '+
+    '<b>&gt; 28 Days</b>, <b>≥ ₹9 Cr</b> and <b>10% of LD</b>. Direction is worked out from the ladder, so entering it '+
+    'descending makes it a lower-is-better KPI.</div>'+
+    '<div class="bandbox">'+[1,2,3,4,5].map(function(i){
+      return fld('Target '+i,'<input class="in bd" data-i="'+i+'" value="'+h(r.bands[i-1]||'')+'">');}).join('')+'</div>'+
+    '<div class="err" id="be" style="margin-top:8px"></div>'+
+    '<div class="help" id="bp" style="margin-top:6px"></div>';
+  Modal({title:'Targets — '+r.kpi,body:body,
+    foot:'<button class="btn" data-x="1">Cancel</button><button class="btn primary" id="bs">Save targets</button>',
+    mount:function(root){
+      /* mirrors parseBands_ on the server so the hint can never contradict the
+         save — an earlier version compared only the first and last band and
+         called a ladder that swung up then down "higher-is-better" */
+      function preview(){
+        var b=$$('.bd',root).map(function(i){return i.value;});
+        var L=readLadder(b), msg='';
+        if(L.kind==='ordinal') msg='Ordinal ladder — Target 5 is best. The level will be awarded, not measured.';
+        else if(L.kind==='qualitative') msg=(L.defined<=1?'Fewer than two bands carry a value':'No measurable scale')+
+          ' — the level will have to be awarded manually.';
+        else if(!L.monotonic) msg='Target 1 → 5 go up and then down. They must move in one direction or no level can be resolved.';
+        else msg='Reads as '+(L.direction==='lower_is_better'?'lower-is-better':'higher-is-better')+
+          ' — a level is cleared at '+(L.direction==='lower_is_better'?'or below':'or above')+' each band.';
+        $('#bp',root).textContent=msg;
+        $('#bp',root).style.color=(L.kind==='numeric'&&!L.monotonic)?'var(--bad)':'var(--muted)';
+      }
+      $$('.bd',root).forEach(function(i){i.addEventListener('input',preview);}); preview();
+      $('#bs',root).addEventListener('click',function(){
+        var p={employee_id:empId,kpi_id:kpiId};
+        $$('.bd',root).forEach(function(i){p['t'+i.getAttribute('data-i')]=i.value;});
+        var b=this;b.disabled=true;b.textContent='Saving…';
+        write('apiSaveTargets',p,{ok:'Targets saved · level re-resolved',
+          bad:function(){b.disabled=false;b.textContent='Save targets';},
+          then:function(){openKpi(empId,kpiId);}});
       });
-    } });
+    }});
 }
-function openAddKra() {
-  var body = fld('Name', '<input class="input" id="k-name">', true) +
-    fld('Code', '<input class="input" id="k-code" placeholder="e.g. QLTY">') +
-    fld('Weight (%)', '<input class="input" id="k-weight" inputmode="numeric" value="20">') +
-    fld('Description', '<textarea class="input" id="k-desc"></textarea>');
-  Modal({ title: 'Create KRA', body: body,
-    foot: '<button class="btn" data-ovclose="1">Cancel</button><button class="btn primary" id="k-save">Create KRA</button>',
-    mount: function (root) {
-      $('#k-save', root).addEventListener('click', function () {
-        var b = this; b.disabled = true; b.textContent = 'Saving…';
-        doWrite('apiSaveKra', { name: $('#k-name', root).value, code: $('#k-code', root).value,
-          weight: $('#k-weight', root).value, description: $('#k-desc', root).value },
-          { success: 'KRA created', onError: function () { b.disabled = false; b.textContent = 'Create KRA'; } });
-      });
-    } });
+/* mirrors the server's band reader closely enough for a live hint */
+function bandNum(raw){
+  var s=String(raw==null?'':raw).trim();
+  if(/^(|-|--|—|–|n\/?a|na|nil|tbd)$/i.test(s))return null;
+  if(/(^|[^A-Za-z])T\s*[+\-]\s*\d/i.test(s)||/on\s*time/i.test(s)||/as\s+per\b/i.test(s))return null;
+  s=s.replace(/[₹$,]/g,' ').replace(/([A-Za-z])\s*-\s*/g,'$1 ');
+  var r=s.match(/(\d+(?:\.\d+)?)\s*[–—]\s*(\d+(?:\.\d+)?)/)||s.match(/(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)/);
+  if(r)return (parseFloat(r[1])+parseFloat(r[2]))/2;
+  var m=s.match(/-?\d+(?:\.\d+)?/); if(!m)return null;
+  var n=parseFloat(m[0]); return isFinite(n)?n:null;
 }
-function openAddKpi() {
-  var kraOpts = values(M.kras).map(function (k) { return '<option value="' + h(k.id) + '">' + h(k.name) + '</option>'; }).join('');
-  var MT = ['number', 'currency', 'percentage', 'quantity', 'count', 'ratio', 'time', 'boolean', 'rating'];
-  var body = fld('KRA', '<select class="select" id="p-kra">' + kraOpts + '</select>', true) +
-    fld('Name', '<input class="input" id="p-name">', true) +
-    fld('Measurement type', '<select class="select" id="p-mt">' + MT.map(function (m) { return '<option value="' + m + '">' + m + '</option>'; }).join('') + '</select>') +
-    fld('Unit', '<input class="input" id="p-unit" placeholder="e.g. %, days, L">') +
-    fld('Direction', '<select class="select" id="p-dir">' +
-      '<option value="higher_is_better">Higher is better</option><option value="lower_is_better">Lower is better</option><option value="range">Target range</option></select>') +
-    fld('Weight (%)', '<input class="input" id="p-weight" inputmode="numeric" value="20">') +
-    fld('Definition', '<textarea class="input" id="p-desc"></textarea>');
-  Modal({ title: 'Create KPI', body: body,
-    foot: '<button class="btn" data-ovclose="1">Cancel</button><button class="btn primary" id="p-save">Create KPI</button>',
-    mount: function (root) {
-      $('#p-save', root).addEventListener('click', function () {
-        var b = this; b.disabled = true; b.textContent = 'Saving…';
-        doWrite('apiSaveKpi', { kra_id: $('#p-kra', root).value, name: $('#p-name', root).value,
-          measurement_type: $('#p-mt', root).value, unit: $('#p-unit', root).value,
-          direction: $('#p-dir', root).value, weight: $('#p-weight', root).value, description: $('#p-desc', root).value },
-          { success: 'KPI created', onError: function () { b.disabled = false; b.textContent = 'Create KPI'; } });
-      });
-    } });
+function bandRelative(raw){
+  var s=String(raw==null?'':raw).trim();
+  return /(^|[^A-Za-z])T\s*[+\-]\s*\d/i.test(s)||/on\s*time/i.test(s)||/as\s+per\b/i.test(s);
 }
-function openSession() {
-  var body = fld('View the product as', '<select class="select" id="u-sel">' +
-    S.users.map(function (u) {
-      return '<option value="' + h(u.id) + '"' + (S.viewAs === u.id ? ' selected' : '') + '>' + h(u.name) + ' — ' + h(roleName(u.role_id)) + '</option>';
-    }).join('') + '</select>') +
-    '<p class="help">Permissions are enforced by the server, not just hidden in the interface — switching genuinely changes what can be read and written.</p>' +
-    '<dl class="kv" style="margin-top:14px"><dt>Signed in as</dt><dd>' + h((S.session || {}).email || '—') + '</dd>' +
-    '<dt>Effective role</dt><dd>' + h(roleName((S.session || {}).role_id)) + '</dd>' +
-    '<dt>Employee record</dt><dd>' + h((S.session || {}).employee_id || 'none') + '</dd></dl>';
-  Modal({ title: 'Session', body: body,
-    foot: '<button class="btn" data-ovclose="1">Close</button><button class="btn primary" id="u-apply">Switch role</button>',
-    mount: function (root) {
-      $('#u-apply', root).addEventListener('click', function () {
-        S.viewAs = $('#u-sel', root).value;
-        Overlay.closeAll();
-        boot(true);
-      });
-    } });
-}
-
-/* ================================ shell ================================= */
-var NAV = [
-  ['People', [['directory', 'Employee Directory', 'directory'], ['organization', 'Organization', 'org'], ['teams', 'Teams', 'teams']]],
-  ['Performance', [['kra-kpi', 'KRA / KPI', 'krakpi'], ['targets', 'Targets', 'targets'], ['performance', 'Performance', 'perf'],
-    ['reviews', 'Reviews', 'reviews'], ['leaderboard', 'Leaderboard', 'leaderboard']]],
-  ['Analytics', [['reports', 'Reports', 'reports'], ['analytics', 'Performance Analytics', 'analytics']]],
-  ['System', [['notifications', 'Notifications', 'notif'], ['administration', 'Administration', 'admin']]]
-];
-var CRUMBS = {
-  directory: ['People', 'Employee Directory'], organization: ['People', 'Organization'], teams: ['People', 'Teams'],
-  'kra-kpi': ['Performance', 'KRA / KPI'], targets: ['Performance', 'Targets'], performance: ['Performance', 'Performance'],
-  reviews: ['Performance', 'Reviews'], leaderboard: ['Performance', 'Leaderboard'],
-  reports: ['Analytics', 'Reports'], analytics: ['Analytics', 'Performance Analytics'],
-  notifications: ['System', 'Notifications'], administration: ['System', 'Administration']
-};
-
-function render() {
-  var root = $('#root');
-  if (S.loading) {
-    root.innerHTML = '<div class="app"><aside class="sidebar"></aside><div class="main">' +
-      '<header class="topbar"></header><main class="content">' + skeleton() + '</main></div></div>';
-    return;
+/* the same three-way read the server does: an ordinal ladder ("T+1", "On time")
+   carries no magnitudes, so it must be recognised before the "nothing numeric"
+   fallback or it is mistaken for a qualitative one */
+function readLadder(bands){
+  var vals=[],defined=0,relative=0,i;
+  for(i=0;i<5;i++){
+    var b=bands[i]==null?'':String(bands[i]).trim();
+    if(!/^(|-|--|—|–|n\/?a|na|nil|tbd)$/i.test(b))defined++;
+    if(b&&bandRelative(b))relative++;
+    vals.push(bandNum(b));
   }
-  if (S.error) {
-    root.innerHTML = '<div style="padding:48px;font-family:var(--font);max-width:640px">' +
-      '<h2 style="margin:0 0 8px">Could not load PerformOS</h2><p style="color:#64748b">' + h(S.error) + '</p>' +
-      '<button class="btn primary" data-retry="1">Try again</button></div>';
-    return;
-  }
-  var unread = M.unread();
-  var nav = NAV.map(function (g) {
-    return '<div class="sb-group"><div class="sb-glabel">' + h(g[0]) + '</div>' + g[1].map(function (it) {
-      return '<a class="sb-item' + (S.route === it[0] ? ' on' : '') + '" href="#/' + it[0] + '" title="' + h(it[1]) + '">' +
-        icon(it[2]) + '<span>' + h(it[1]) + '</span>' +
-        (it[0] === 'notifications' && unread ? '<span class="badge-n">' + unread + '</span>' : '') + '</a>';
-    }).join('') + '</div>';
-  }).join('');
-
-  var crumb = CRUMBS[S.route] ? CRUMBS[S.route].slice() : [];
-  if (S.route === 'emp') { var e = M.emp(S.params[0]); crumb = ['People', 'Employee Directory', e ? e.name : 'Employee']; }
-  if (S.route === 'team') { var t = M.teams[S.params[0]]; crumb = ['People', 'Teams', t ? t.name : 'Team']; }
-  var crumbs = crumb.map(function (c, i) {
-    var last = i === crumb.length - 1;
-    var href = i === 1 && crumb.length > 2 ? (S.route === 'emp' ? '#/directory' : '#/teams') : null;
-    return (i ? '<span class="sep">/</span>' : '') +
-      (last ? '<span class="cur">' + h(c) + '</span>' : (href ? '<a href="' + href + '">' + h(c) + '</a>' : '<span>' + h(c) + '</span>'));
-  }).join('');
-
-  var periodOpts = M.months().map(function (p) {
-    return '<option value="' + h(p.id) + '"' + (p.id === S.period ? ' selected' : '') + '>' + h(p.name) + '</option>'; }).join('');
-  var u = S.session || {};
-  var topbar = '<button class="tb-btn" data-collapse="1" title="Toggle sidebar" aria-label="Toggle sidebar">' + icon('menu') + '</button>' +
-    '<div class="crumbs">' + crumbs + '</div>' +
-    '<div class="tb-search"><span>' + icon('search') + '</span>' +
-    '<input id="gs" placeholder="Search employees, teams, KRAs…" autocomplete="off" aria-label="Global search"><div id="gsr"></div></div>' +
-    '<select class="tb-sel" id="periodsel" aria-label="Performance period">' + periodOpts + '</select>' +
-    '<button class="tb-icon" data-notifopen="1" title="Notifications" aria-label="Notifications">' + icon('notif') +
-    (unread ? '<span class="dot"></span>' : '') + '</button>' +
-    '<button class="tb-user" data-session="1" title="Session &amp; role"><div class="avatar sm">' + h(initials(u.name)) + '</div>' +
-    '<div><div class="un">' + h(u.name || 'User') + '</div><div class="ur">' + h(roleName(u.role_id)) + '</div></div></button>';
-
-  var page = PAGES[S.route];
-  var content;
-  try { content = page ? page(S.params) : emptyState({ title: 'Page not found', msg: 'No module named “' + S.route + '”.' }); }
-  catch (err) {
-    content = emptyState({ title: 'This page could not be rendered', msg: (err && err.message) || String(err) });
-    if (window.console) console.error(err);
-  }
-  root.innerHTML = '<div class="app' + (S.collapsed ? ' collapsed' : '') + '" id="app">' +
-    '<aside class="sidebar"><div class="sb-brand"><div class="sb-logo">P</div>' +
-    '<div class="sb-name">PerformOS<small>Performance Platform</small></div></div><nav class="sb-nav">' + nav + '</nav></aside>' +
-    '<div class="main"><header class="topbar">' + topbar + '</header>' +
-    '<main class="content" id="content">' + content + '</main></div></div>';
-}
-
-/* ------------------------------------------------------------ navigation -- */
-function parseHash() {
-  var raw = String(location.hash || '').replace(/^#\/?/, '');
-  var parts = raw.split('/').filter(function (x) { return x !== ''; });
-  return { route: parts[0] || 'directory', params: parts.slice(1) };
-}
-function routeNow() {
-  var p = parseHash();
-  S.route = p.route; S.params = p.params;
-  /* A drawer or modal belongs to the screen that opened it: navigating away
-     must not leave it hanging over the new page (and showing stale figures). */
-  if (Overlay.stack.length) Overlay.closeAll();
-  render();
-  var c = $('#content'); if (c) c.scrollTop = 0;
-}
-function go(hash) { location.hash = '#/' + hash; }
-
-/* ------------------------------------------------------- global search --- */
-function search(q) {
-  var box = $('#gsr'); if (!box) return;
-  q = String(q || '').trim().toLowerCase();
-  if (!q) { box.innerHTML = ''; return; }
-  function hit(s) { return String(s || '').toLowerCase().indexOf(q) >= 0; }
-  var emps = M.staff().filter(function (e) { return hit(e.name) || hit(e.id) || hit(e.designation); }).slice(0, 6);
-  var teams = values(M.teams).filter(function (t) { return hit(t.name) || hit(t.code); }).slice(0, 4);
-  var units = values(M.units).filter(function (x) { return hit(x.name) || hit(x.code); }).slice(0, 4);
-  var kras = values(M.kras).filter(function (k) { return hit(k.name); }).slice(0, 3);
-  var kpis = values(M.kpis).filter(function (k) { return hit(k.name); }).slice(0, 4);
-  var out = '';
-  if (emps.length) out += '<div class="grp">Employees</div>' + emps.map(function (e) {
-    return '<div class="r" data-gs="emp::' + h(e.id) + '"><div class="avatar sm">' + h(initials(e.name)) + '</div>' +
-      '<div><b>' + h(e.name) + '</b> <span>' + h(e.id) + ' · ' + h((M.teamOf(e) || {}).name || '') + '</span></div></div>'; }).join('');
-  if (teams.length) out += '<div class="grp">Teams</div>' + teams.map(function (t) {
-    return '<div class="r" data-gs="team::' + h(t.id) + '"><div><b>' + h(t.name) + '</b> <span>' + h((M.units[t.org_unit_id] || {}).name || '') + '</span></div></div>'; }).join('');
-  if (units.length) out += '<div class="grp">Organisation Units</div>' + units.map(function (x) {
-    return '<div class="r" data-gs="unit::' + h(x.id) + '"><div><b>' + h(x.name) + '</b> <span>' + h(x.code) + '</span></div></div>'; }).join('');
-  if (kras.length) out += '<div class="grp">KRAs</div>' + kras.map(function (k) {
-    return '<div class="r" data-gs="kra::' + h(k.id) + '"><div><b>' + h(k.name) + '</b> <span>weight ' + h(k.weight) + '%</span></div></div>'; }).join('');
-  if (kpis.length) out += '<div class="grp">KPIs</div>' + kpis.map(function (k) {
-    return '<div class="r" data-gs="kpi::' + h(k.id) + '"><div><b>' + h(k.name) + '</b> <span>' + h((M.kras[k.kra_id] || {}).name || '') + '</span></div></div>'; }).join('');
-  box.innerHTML = out || '<div class="grp">No matches</div>';
-}
-
-/* --------------------------------------------------------------- events --- */
-document.addEventListener('click', function (ev) {
-  var t = ev.target, el;
-  function near(sel) { return t.closest ? t.closest(sel) : null; }
-
-  if ((el = near('[data-ovclose]'))) { Overlay.close(); return; }
-  if ((el = near('[data-collapse]'))) {
-    if (window.innerWidth <= 860) { var a = $('#app'); if (a) a.classList.toggle('mobile-open'); }
-    else { S.collapsed = !S.collapsed; render(); }
-    return;
-  }
-  if ((el = near('[data-retry]'))) { boot(); return; }
-  if ((el = near('[data-session]'))) { openSession(); return; }
-  if ((el = near('[data-notifopen]'))) { openNotifications(); return; }
-  if ((el = near('[data-markall]'))) { doWrite('apiMarkNotifications', {}, { success: 'All notifications marked read' }); return; }
-  if ((el = near('[data-notif]'))) {
-    var n = el.getAttribute('data-notif').split('::');
-    doWrite('apiMarkNotifications', { id: n[0] }, { success: 'Marked read', close: true, after: function () {
-      if (n[1] === 'employee' && n[2]) go('emp/' + n[2]);
-      else if (n[1] === 'review' && n[2]) { var m = String(n[2]).match(/^rev_(EMP-\d+)_/); if (m) go('emp/' + m[1]); }
-    } });
-    return;
-  }
-  if ((el = near('[data-tsort]'))) {
-    var kv = el.getAttribute('data-tsort').split('::'), st = S.tables[kv[0]];
-    if (st) { if (st.sort === kv[1]) st.dir = st.dir === 'asc' ? 'desc' : 'asc'; else { st.sort = kv[1]; st.dir = 'asc'; } render(); }
-    return;
-  }
-  if ((el = near('[data-tpage]'))) {
-    var pv = el.getAttribute('data-tpage').split('::'), st2 = S.tables[pv[0]];
-    if (st2) { st2.page = Number(pv[1]); render(); }
-    return;
-  }
-  if ((el = near('[data-gs]'))) {
-    var g = el.getAttribute('data-gs').split('::');
-    var box = $('#gsr'); if (box) box.innerHTML = '';
-    var gi = $('#gs'); if (gi) gi.value = '';
-    if (g[0] === 'emp') go('emp/' + g[1]);
-    else if (g[0] === 'team') go('team/' + g[1]);
-    else if (g[0] === 'unit') { go('organization'); setTimeout(function () { openUnit(g[1]); }, 60); }
-    else if (g[0] === 'kra' || g[0] === 'kpi') go('kra-kpi');
-    return;
-  }
-  if ((el = near('[data-emptab]'))) { var et = el.getAttribute('data-emptab').split('::'); S.empTab[et[0]] = et[1]; render(); return; }
-  if ((el = near('[data-teamtab]'))) { var tt = el.getAttribute('data-teamtab').split('::'); S.teamTab[tt[0]] = tt[1]; render(); return; }
-  if ((el = near('[data-lbview]'))) { S.lbView = el.getAttribute('data-lbview'); render(); return; }
-  if ((el = near('[data-gomonth]'))) {
-    var gm = el.getAttribute('data-gomonth').split('::');
-    S.period = gm[0]; Overlay.closeAll(); boot(true, 'emp/' + gm[1]); return;
-  }
-  if ((el = near('[data-kpi]'))) { var k = el.getAttribute('data-kpi').split('::'); openKpi(k[0], k[1]); return; }
-  if ((el = near('[data-kra]'))) { var kr = el.getAttribute('data-kra').split('::'); openKra(kr[0], kr[1]); return; }
-  if ((el = near('[data-edittarget]'))) { var ed = el.getAttribute('data-edittarget').split('::'); Overlay.close(); openTargetEdit(ed[0], ed[1]); return; }
-  if ((el = near('[data-perfentry]'))) { openPerfEntry(el.getAttribute('data-perfentry')); return; }
-  if ((el = near('[data-review]'))) { openReview(el.getAttribute('data-review')); return; }
-  if ((el = near('[data-editreview]'))) { Overlay.closeAll(); openReviewEdit(el.getAttribute('data-editreview')); return; }
-  if ((el = near('[data-unit]'))) { openUnit(el.getAttribute('data-unit')); return; }
-  if ((el = near('[data-team]'))) { go('team/' + el.getAttribute('data-team')); return; }
-  if ((el = near('[data-emp]'))) { go('emp/' + el.getAttribute('data-emp')); return; }
-  if ((el = near('[data-report]'))) { openReport(el.getAttribute('data-report')); return; }
-  if ((el = near('[data-drill]'))) { openDrill(Number(el.getAttribute('data-drill'))); return; }
-  if ((el = near('[data-addemp]'))) { openAddEmployee(); return; }
-  if ((el = near('[data-addkra]'))) { openAddKra(); return; }
-  if ((el = near('[data-addkpi]'))) { openAddKpi(); return; }
-  if ((el = near('[data-dirclear]'))) { S.dirFilter = {}; render(); return; }
-  if ((el = near('[data-recompute]'))) { doWrite('apiRecomputeAll', {}, { success: 'Period recomputed' }); return; }
-  if ((el = near('[data-reset]'))) {
-    Modal({ title: 'Reset demo data?', body: '<p>This clears every record and re-seeds the demo organisation, targets and performance. Any values you entered will be lost.</p>',
-      foot: '<button class="btn" data-ovclose="1">Cancel</button><button class="btn danger" id="rs-go">Reset everything</button>',
-      mount: function (root) { $('#rs-go', root).addEventListener('click', function () {
-        var b = this; b.disabled = true; b.textContent = 'Resetting…';
-        doWrite('apiResetDemo', {}, { success: 'Demo data reset', onError: function () { b.disabled = false; b.textContent = 'Reset everything'; } });
-      }); } });
-    return;
-  }
-  if (!near('.tb-search')) { var b2 = $('#gsr'); if (b2) b2.innerHTML = ''; }
-});
-
-document.addEventListener('input', function (ev) {
-  if (ev.target.id === 'gs') { search(ev.target.value); return; }
-  if (ev.target.id === 'dir-q') {
-    S.dirFilter.q = ev.target.value;
-    var st = S.tables.dir; if (st) st.page = 1;
-    var host = $('#content');
-    /* re-render only the page body so the input keeps focus and caret */
-    var scroll = host.scrollTop;
-    host.innerHTML = PAGES.directory();
-    host.scrollTop = scroll;
-    var inp = $('#dir-q'); if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
-    return;
-  }
-});
-
-document.addEventListener('change', function (ev) {
-  var id = ev.target.id;
-  if (id === 'periodsel') { S.period = ev.target.value; boot(true); return; }
-  if (id === 'dir-type') { S.dirFilter.type = ev.target.value; render(); return; }
-  if (id === 'dir-unit') { S.dirFilter.unit = ev.target.value; render(); return; }
-  if (id === 'dir-team') { S.dirFilter.team = ev.target.value; render(); return; }
-});
-
-document.addEventListener('keydown', function (ev) {
-  if (ev.key === 'Escape' && Overlay.stack.length) { Overlay.close(); return; }
-  if (ev.key === '/' && document.activeElement && ['INPUT', 'TEXTAREA', 'SELECT'].indexOf(document.activeElement.tagName) < 0) {
-    var gi = $('#gs'); if (gi) { ev.preventDefault(); gi.focus(); }
-  }
-});
-
-window.addEventListener('hashchange', routeNow);
-
-/* ---------------------------------------------------------------- boot --- */
-function boot(quiet, thenHash) {
-  if (!quiet) { S.loading = true; render(); }
-  Api.call('apiBootstrap', [S.period, S.viewAs], function (res) {
-    S.loading = false;
-    if (!res || !res.ok) {
-      S.error = (res && res.error) || 'The server returned nothing. If this persists, redeploy the web app (Deploy → Manage deployments → New version).';
-      render(); return;
+  var nums=vals.filter(function(v){return v!==null;});
+  if(relative>=2)return {kind:'ordinal',direction:'ordinal',values:[1,2,3,4,5],defined:defined,monotonic:true};
+  if(defined<=1||!nums.length)return {kind:'qualitative',direction:'manual',values:vals,defined:defined,monotonic:true};
+  var first=null,last=null;
+  for(i=0;i<5;i++)if(vals[i]!==null){first=vals[i];break;}
+  for(i=4;i>=0;i--)if(vals[i]!==null){last=vals[i];break;}
+  var dir=last>=first?'higher_is_better':'lower_is_better',mono=true,prev=null;
+  for(i=0;i<5;i++){
+    var v=vals[i];if(v===null)continue;
+    if(prev!==null){
+      if(dir==='higher_is_better'&&v<prev)mono=false;
+      if(dir==='lower_is_better'&&v>prev)mono=false;
     }
-    S.error = null;
-    S.session = res.session; S.users = res.users || []; S.model = res.model;
-    S.period = res.model.period_id;
+    prev=v;
+  }
+  return {kind:'numeric',direction:dir,values:vals,defined:defined,monotonic:mono};
+}
+
+/* ---- edit / add / remove an assignment (the KRA & KPI themselves) ---- */
+function openAssign(empId,kpiId){
+  var r=kpiId?M.row(empId,kpiId):null, emp=M.emps[empId]||{};
+  var kra=r?(M.kras[r.kra_id]||{}):{};
+  var others=M.rowsOf(empId).filter(function(x){return !r||x.kpi_id!==r.kpi_id;});
+  var used=others.reduce(function(a,x){return a+x.weightage;},0);
+  var body='<div class="help" style="margin-bottom:12px">Editing '+h(emp.name)+'’s scorecard. Their other KPIs account for '+
+    '<b>'+Math.round(used*100)/100+'%</b>, so this one should be <b>'+Math.round((100-used)*100)/100+'%</b> for the total to reach 100.</div>'+
+    fld('Perspective','<input class="in" id="a-p" value="'+h(kra.perspective||'')+'" placeholder="e.g. Process, Customer, Sales">')+
+    fld('KRA','<input class="in" id="a-kra" value="'+h(kra.name||'')+'">')+
+    fld('KPI','<input class="in" id="a-kpi" value="'+h(r?r.kpi:'')+'">')+
+    fld('Goal description','<textarea class="in" id="a-goal">'+h(r?r.goal:'')+'</textarea>')+
+    fld('Source of tracking','<input class="in" id="a-src" value="'+h(r?r.source:'')+'" placeholder="e.g. MIS Report, COP (Data)">')+
+    fld('Weightage (%)','<input class="in" id="a-wt" inputmode="decimal" value="'+h(r?r.weightage:Math.round((100-used)*100)/100)+'">')+
+    '<div class="err" id="a-e"></div>';
+  var foot='<button class="btn" data-x="1">Cancel</button>';
+  if(r) foot+='<button class="btn danger" id="a-rm">Remove KPI</button>';
+  foot+='<button class="btn primary" id="a-sv">'+(r?'Save':'Add KPI')+'</button>';
+  Modal({title:(r?'Edit':'Add')+' KRA / KPI — '+emp.name,body:body,foot:foot,mount:function(root){
+    $('#a-sv',root).addEventListener('click',function(){
+      var wt=Number($('#a-wt',root).value);
+      if(!isFinite(wt)||wt<0||wt>100){$('#a-e',root).textContent='Weightage must be between 0 and 100.';return;}
+      if(!$('#a-kra',root).value.trim()||!$('#a-kpi',root).value.trim()){
+        $('#a-e',root).textContent='Both the KRA and the KPI need a name.';return;}
+      var b=this;b.disabled=true;b.textContent='Saving…';
+      write('apiSaveAssignment',{employee_id:empId,assignment_id:r?r.assignment_id:'',
+        perspective:$('#a-p',root).value,kra_name:$('#a-kra',root).value,kpi_name:$('#a-kpi',root).value,
+        goal:$('#a-goal',root).value,source:$('#a-src',root).value,weightage:wt},
+        {ok:r?'KRA / KPI updated':'KPI added',bad:function(){b.disabled=false;b.textContent=r?'Save':'Add KPI';}});
+    });
+    var rm=$('#a-rm',root);
+    if(rm) rm.addEventListener('click',function(){
+      Modal({title:'Remove this KPI?',body:'<p>'+h(r.kpi)+' will be taken off '+h(emp.name)+
+        '’s scorecard. The definition stays in the catalogue and the change is recorded in the audit log.</p>'+
+        fld('Reason (optional)','<input class="in" id="rr">'),
+        foot:'<button class="btn" data-x="1">Cancel</button><button class="btn danger" id="rg">Remove</button>',
+        mount:function(r2){ $('#rg',r2).addEventListener('click',function(){
+          write('apiRemoveAssignment',{employee_id:empId,assignment_id:r.assignment_id,reason:$('#rr',r2)?$('#rr',r2).value:''},
+            {ok:'KPI removed'}); }); }});
+    });
+  }});
+}
+
+/* ============================== pages ================================== */
+var P={};
+
+P.teams=function(){
+  var rows=vals(M.teams).map(function(t){
+    var mem=M.team(t.id), lv=[], scored=0, kpis=0;
+    mem.forEach(function(e){var o=M.ov(e.id); if(o){kpis+=o.kpi_count;scored+=o.scored_count; if(o.level!==null)lv.push(o.level);}});
+    return {t:t,mem:mem.length,kpis:kpis,scored:scored,
+      lvl:lv.length?Math.round(lv.reduce(function(a,b){return a+b;},0)/lv.length):null};
+  });
+  var tot=rows.reduce(function(a,r){return a+r.mem;},0), totK=rows.reduce(function(a,r){return a+r.kpis;},0);
+  var body='<div class="cards g4" style="margin-bottom:16px">'+
+    stat('Teams',rows.length,'from the KRA/KPI workbook')+
+    stat('People',tot,'each with their own scorecard')+
+    stat('KPI assignments',totK,'individually weighted')+
+    stat('Scored',rows.reduce(function(a,r){return a+r.scored;},0),'actuals recorded so far')+'</div>'+
+    '<div class="tblw"><div class="tbls"><table class="t"><thead><tr><th>Team</th><th>Lead</th><th class="num">People</th>'+
+    '<th class="num">KPIs</th><th>Avg level</th><th class="num">Scored</th></tr></thead><tbody>'+
+    rows.map(function(r){
+      return '<tr class="cl" data-team="'+h(r.t.id)+'"><td><b>'+h(r.t.name)+'</b></td>'+
+        '<td>'+h((M.emps[r.t.lead_id]||{}).name||'—')+'</td><td class="num">'+r.mem+'</td>'+
+        '<td class="num">'+r.kpis+'</td><td>'+TP.ticks(r.lvl)+'</td>'+
+        '<td class="num">'+r.scored+' / '+r.kpis+'</td></tr>';}).join('')+
+    '</tbody></table></div></div>';
+  return ph({title:'Teams',sub:'Structure imported from the KRA / KPI workbook · '+M.period().name,body:body});
+};
+
+P.team=function(pr){
+  var t=M.teams[pr[0]]; if(!t)return empty({title:'Team not found'});
+  var mem=M.team(t.id);
+  var rows=mem.map(function(e){return {e:e,o:M.ov(e.id)};});
+  var body='<div class="tblw"><div class="tbls"><table class="t"><thead><tr><th>Employee</th><th>Designation</th>'+
+    '<th>Region / group</th><th class="num">KPIs</th><th>Overall</th><th class="num">Weighted</th></tr></thead><tbody>'+
+    rows.map(function(r){
+      return '<tr class="cl" data-emp="'+h(r.e.id)+'"><td>'+person(r.e,r.e.id)+'</td><td>'+h(r.e.designation||'—')+'</td>'+
+        '<td>'+h(r.e.region||r.e.sub_group||'—')+'</td><td class="num">'+(r.o?r.o.kpi_count:0)+'</td>'+
+        '<td>'+TP.ticks(r.o?r.o.level:null)+'</td><td class="num">'+(r.o&&r.o.score!=null?r.o.score:'—')+'</td></tr>';}).join('')+
+    '</tbody></table></div></div>';
+  return ph({title:t.name,sub:mem.length+' people · led by '+((M.emps[t.lead_id]||{}).name||'—'),body:body});
+};
+
+P.directory=function(){
+  var q=S.q.toLowerCase();
+  var rows=M.staff().filter(function(e){
+    if(!q)return true;
+    return (e.name+' '+e.id+' '+(e.designation||'')).toLowerCase().indexOf(q)>=0;
+  }).map(function(e){return {e:e,o:M.ov(e.id)};});
+  var body='<div class="row" style="margin-bottom:12px"><input class="in" id="dq" style="max-width:280px" placeholder="Search name, ID, designation…" value="'+h(S.q)+'"><span class="help" style="margin-left:auto">'+rows.length+' of '+M.staff().length+'</span></div>'+
+    '<div class="tblw"><div class="tbls"><table class="t"><thead><tr><th>Employee</th><th>Team</th><th>Designation</th>'+
+    '<th class="num">KPIs</th><th>Overall level</th></tr></thead><tbody>'+
+    (rows.length?rows.map(function(r){
+      return '<tr class="cl" data-emp="'+h(r.e.id)+'"><td>'+person(r.e,r.e.id)+'</td>'+
+        '<td>'+h((M.teams[r.e.team_id]||{}).name||'—')+'</td><td>'+h(r.e.designation||'—')+'</td>'+
+        '<td class="num">'+(r.o?r.o.kpi_count:0)+'</td><td>'+TP.ticks(r.o?r.o.level:null)+'</td></tr>';}).join('')
+     :'<tr><td colspan="5">'+empty({title:'No one matches',msg:'Try a different search.'})+'</td></tr>')+
+    '</tbody></table></div></div>';
+  return ph({title:'Employee Directory',sub:M.staff().length+' people across '+vals(M.teams).length+' teams',body:body});
+};
+
+/* the centrepiece: one person's own KRAs, KPIs and ladders */
+P.emp=function(pr){
+  var e=M.emps[pr[0]]; if(!e)return empty({title:'Employee not found'});
+  var o=M.ov(e.id), rows=M.rowsOf(e.id), t=M.teams[e.team_id]||{};
+  var tab=S.empTab[e.id]||'scorecard';
+  var hdr='<div class="card" style="display:flex;gap:16px;align-items:center;margin-bottom:16px;flex-wrap:wrap">'+
+    '<div class="av lg">'+h(ini(e.name))+'</div><div style="min-width:0">'+
+    '<div style="font-size:19px;font-weight:750">'+h(e.name)+'</div>'+
+    '<div class="muted" style="font-size:13px">'+h(e.designation||'—')+' · '+h(e.id)+'</div>'+
+    '<div class="row wrap" style="gap:6px;margin-top:8px"><span class="badge n">'+h(t.name||'—')+'</span>'+
+    (e.sub_group?'<span class="badge n">'+h(e.sub_group)+'</span>':'')+
+    (e.region?'<span class="badge n">'+h(e.region)+'</span>':'')+
+    (M.emps[e.manager_id]?'<span class="badge n">reports to '+h(M.emps[e.manager_id].name)+'</span>':'')+'</div></div>'+
+    '<div style="margin-left:auto;min-width:270px">'+TP.hero({cap:'Overall level · '+M.period().name,
+      level:o?o.level:null,score:o?o.score:null,measured:o?o.measured_weightage:0})+'</div></div>';
+  var tabs='<div class="tabs">'+[['scorecard','Scorecard'],['bykra','By KRA'],['detail','Definitions']].map(function(x){
+      return '<button data-etab="'+h(e.id)+'::'+x[0]+'"'+(tab===x[0]?' class="on"':'')+'>'+h(x[1])+'</button>';}).join('')+'</div>';
+  var body='';
+  if(!rows.length){
+    body=empty({title:'No KPIs assigned',msg:'Nothing has been assigned to '+e.name+' for this period.',
+      action:canFramework(e.id)?'<button class="btn primary" data-adda="'+h(e.id)+'">Add the first KPI</button>':''});
+  } else if(tab==='scorecard'){
+    body='<div class="row" style="margin-bottom:10px"><div class="help">'+rows.length+' KPIs · '+
+      (o?o.measured_weightage:0)+'% of the scorecard scored so far</div>'+
+      (canFramework(e.id)?'<button class="btn sm" style="margin-left:auto" data-adda="'+h(e.id)+'">'+icon('plus')+'Add KPI</button>':'')+'</div>'+
+      rows.map(function(r){
+        return '<div class="card" style="margin-bottom:12px"><div class="row wrap" style="gap:8px">'+
+          '<div style="min-width:0"><b style="font-size:14px">'+h(r.kpi)+'</b>'+
+          '<div class="help">'+h((M.kras[r.kra_id]||{}).name||'')+' · weightage '+h(r.weightage)+'%'+
+          (r.source?' · '+h(r.source):'')+'</div></div>'+
+          '<span style="margin-left:auto">'+kindBadge(r)+'</span>'+TP.pill(r.level)+'</div>'+
+          '<div style="max-width:640px">'+TP.full({bands:r.bands,level:r.level,actual:r.actual})+'</div>'+
+          '<div class="row" style="margin-top:6px"><button class="btn sm" data-kpi="'+h(e.id)+'::'+h(r.kpi_id)+'">Open</button>'+
+          (canTarget(e.id)?'<button class="btn sm" data-edt="'+h(e.id)+'::'+h(r.kpi_id)+'">Edit targets</button>':'')+
+          (canFramework(e.id)?'<button class="btn sm" data-eda="'+h(e.id)+'::'+h(r.kpi_id)+'">Edit KRA / KPI</button>':'')+
+          '</div></div>';
+      }).join('');
+  } else if(tab==='bykra'){
+    var g={},ord=[];
+    rows.forEach(function(r){if(!g[r.kra_id]){g[r.kra_id]=[];ord.push(r.kra_id);}g[r.kra_id].push(r);});
+    body=ord.map(function(k){
+      var kra=M.kras[k]||{}, list=g[k];
+      var lv=(o&&o.kra_levels&&o.kra_levels[k]!=null)?o.kra_levels[k]:null;
+      var wt=list.reduce(function(a,r){return a+r.weightage;},0);
+      return '<div class="card" style="margin-bottom:12px"><div class="sh"><h3>'+h(kra.name)+'</h3>'+
+        (kra.perspective?'<span class="badge n">'+h(kra.perspective)+'</span>':'')+
+        '<span class="badge acc">'+Math.round(wt*100)/100+'%</span>'+
+        '<span class="r">'+(lv!==null?'KRA level '+Math.round(lv*100)/100:'not scored')+'</span></div>'+
+        list.map(function(r){
+          return '<div class="drow cl" data-kpi="'+h(e.id)+'::'+h(r.kpi_id)+'"><div class="dn"><b>'+h(r.kpi)+'</b>'+
+            '<span>'+h(r.weightage)+'% · '+h(r.bands.filter(function(b){return b;}).join('  ·  ')||'no ladder set')+'</span></div>'+
+            TP.pill(r.level)+'<span class="faint">'+icon('chev')+'</span></div>';}).join('')+'</div>';
+    }).join('');
+  } else {
+    body='<div class="tblw"><div class="tbls"><table class="t"><thead><tr><th>KRA</th><th>KPI</th><th>Goal</th>'+
+      '<th>Source</th><th class="num">Wt</th></tr></thead><tbody>'+
+      rows.map(function(r){
+        return '<tr class="cl" data-kpi="'+h(e.id)+'::'+h(r.kpi_id)+'"><td>'+h((M.kras[r.kra_id]||{}).name||'')+'</td>'+
+          '<td><b>'+h(r.kpi)+'</b></td><td class="muted" style="max-width:340px">'+h(r.goal||'—')+'</td>'+
+          '<td>'+h(r.source||'—')+'</td><td class="num">'+h(r.weightage)+'%</td></tr>';}).join('')+
+      '</tbody></table></div></div>';
+  }
+  return hdr+tabs+body;
+};
+
+/* ---------------------------------------------------------------------------
+ * Structure review. Every finding here is a question for a human, never an
+ * automatic correction: these ladders and weightages decide people's ratings,
+ * so the platform states plainly what looks wrong and leaves the change to the
+ * KRA owner. "Reads the wrong way round" is the important one — the workbook
+ * has ladders that descend on a KPI whose goal is to increase, which would
+ * quietly reward the opposite of the intent.
+ * ------------------------------------------------------------------------- */
+var UPWARD=/recover|collect|revenue|achiev|growth|sales|volume|onboard|closure|conversion|margin|resolution/i;
+var DOWNWARD=/dso|day|tat|ageing|aging|overdue|delay|leak|loss|rejection|deviation|error|complaint|pendenc/i;
+function review(){
+  var f=[];
+  M.staff().forEach(function(e){
+    var rs=M.rowsOf(e.id);
+    if(!rs.length){f.push({sev:'high',emp:e,what:'No KPIs assigned',
+      detail:'Nothing can be scored for this person until KPIs are assigned.'});return;}
+    var tot=Math.round(rs.reduce(function(a,r){return a+r.weightage;},0)*100)/100;
+    if(Math.abs(tot-100)>0.01)f.push({sev:'high',emp:e,what:'Weightage totals '+tot+'%',
+      detail:'Per-KPI weightage should total 100% for the overall level to be a true weighted mean. '+
+             (tot>100?'It is over by ':'It is short by ')+Math.round(Math.abs(tot-100)*100)/100+'%.'});
+    rs.forEach(function(r){
+      if(r.kind==='numeric'&&r.direction==='lower_is_better'&&UPWARD.test(r.kpi)&&!DOWNWARD.test(r.kpi))
+        f.push({sev:'high',emp:e,row:r,what:'Ladder reads the wrong way round',
+          detail:'“'+r.kpi+'” descends from '+(r.bands[0]||'—')+' at Target 1 to '+(r.bands[4]||'—')+
+                 ' at Target 5, so a smaller number scores higher — although the KPI reads as something to increase. '+
+                 'Reverse the bands if that is not intended.'});
+      else if(r.kind!=='numeric')
+        f.push({sev:'info',emp:e,row:r,what:'Level must be awarded by hand',
+          detail:'“'+r.kpi+'” has '+(r.kind==='ordinal'?'an ordinal ladder with no measurable scale':
+                 'no measurable ladder')+', so no actual can resolve it. A reviewer awards Target 1–5.'});
+      else if(r.bands.filter(function(b){return String(b).trim()!=='';}).length<5)
+        f.push({sev:'warn',emp:e,row:r,what:'Ladder is incomplete',
+          detail:'“'+r.kpi+'” has only '+r.bands.filter(function(b){return String(b).trim()!=='';}).length+
+                 ' of 5 bands filled. Levels above the last filled band can never be reached.'});
+    });
+  });
+  var rank={high:0,warn:1,info:2};
+  return f.sort(function(a,b){return rank[a.sev]-rank[b.sev];});
+}
+P.review=function(){
+  var f=review(), by={high:0,warn:0,info:0};
+  f.forEach(function(x){by[x.sev]++;});
+  var body='<div class="cards g3" style="margin-bottom:16px">'+
+    stat('Needs a decision',by.high,'weightage or ladder direction')+
+    stat('Incomplete ladders',by.warn,'fewer than five bands')+
+    stat('Awarded by hand',by.info,'no measurable scale')+'</div>'+
+    (f.length?f.map(function(x){
+      var cls=x.sev==='high'?'bad':(x.sev==='warn'?'warn':'n');
+      return '<div class="card" style="margin-bottom:10px"><div class="row wrap" style="gap:8px;align-items:flex-start">'+
+        '<span class="badge '+cls+'">'+h(x.what)+'</span>'+
+        '<div class="grow" style="min-width:220px"><b>'+h(x.emp.name)+'</b> '+
+        '<span class="help">'+h((M.teams[x.emp.team_id]||{}).name||'')+'</span>'+
+        '<div class="muted" style="font-size:12.5px;margin-top:3px">'+h(x.detail)+'</div></div>'+
+        '<button class="btn sm" data-emp="'+h(x.emp.id)+'">Open scorecard</button></div></div>';}).join('')
+     :empty({title:'Nothing to review',msg:'Every scorecard totals 100% and every ladder resolves.'}));
+  return ph({title:'Structure Review',
+    sub:'Findings are stated, not corrected — these ladders decide ratings, so the change stays with the KRA owner',body:body});
+};
+P.framework=function(){
+  var byTeam={};
+  M.rows().forEach(function(r){
+    var e=M.emps[r.employee_id]; if(!e)return;
+    var t=e.team_id, kra=M.kras[r.kra_id]||{};
+    var b=byTeam[t]||(byTeam[t]={});
+    var k=b[r.kra_id]||(b[r.kra_id]={kra:kra,kpis:{},people:{}});
+    k.kpis[r.kpi_id]={name:r.kpi,goal:r.goal,source:r.source};
+    k.people[r.employee_id]=1;
+  });
+  var body=vals(M.teams).map(function(t){
+    var kras=byTeam[t.id]||{};
+    var keys=Object.keys(kras);
+    if(!keys.length)return '';
+    return '<div class="card" style="margin-bottom:14px"><div class="sh"><h3>'+h(t.name)+'</h3>'+
+      '<span class="r">'+keys.length+' KRAs</span></div>'+
+      keys.map(function(k){
+        var x=kras[k], kpiList=vals(x.kpis);
+        return '<div class="drow"><div class="dn"><b>'+h(x.kra.name)+'</b><span>'+
+          (x.kra.perspective?h(x.kra.perspective)+' · ':'')+kpiList.length+' KPI'+(kpiList.length===1?'':'s')+
+          ' · '+Object.keys(x.people).length+' people · '+h(kpiList.map(function(y){return y.name;}).join(', '))+
+          '</span></div></div>';}).join('')+'</div>';
+  }).join('');
+  return ph({title:'KRA / KPI Framework',sub:vals(M.kras).length+' KRAs · '+vals(M.kpis).length+' KPIs · edit from a person’s scorecard',body:body});
+};
+
+P.admin=function(){
+  if(!can('admin'))return ph({title:'Administration',sub:'Configuration',
+    body:empty({title:'No permission',msg:'Administration is available to HR / Admin and Super Admin. Switch role from the user menu to preview it.'})});
+  var a=(S.model&&S.model.audit)||[], st=M.settings();
+  var body='<div class="cards g2" style="margin-bottom:16px">'+
+    '<div class="card"><div class="sh"><h3>Import from the workbook</h3></div>'+
+    '<p class="help">Re-read the definitions from the KRA / KPI sheet. Identity is derived from the names, so importing '+
+    'twice is safe — it updates rather than duplicating.</p>'+
+    fld('Source sheet ID','<input class="in" id="imp-id" value="'+h((S.model&&S.model.source_sheet_id)||'')+'">')+
+    '<label class="help"><input type="checkbox" id="imp-rep"> Replace existing assignments and targets</label>'+
+    '<div class="row" style="margin-top:10px"><button class="btn primary" id="imp-go">'+icon('dl')+'Import now</button></div>'+
+    '<p class="help" style="margin-top:8px">The sheet must be shared with the account this web app runs as.</p></div>'+
+    '<div class="card"><div class="sh"><h3>Rollup rule</h3></div><p class="help">'+h((st.rollup&&st.rollup.description)||'—')+'</p>'+
+    '<div class="row" style="margin-top:10px"><button class="btn" id="rc">Recompute this period</button></div></div></div>'+
+    '<div class="card"><div class="sh"><h3>Audit log</h3><span class="r">'+a.length+' recent entries</span></div>'+
+    (a.length?a.slice(0,15).map(function(x){
+      return '<div class="drow"><div class="dn"><b>'+h(String(x.action).replace(/_/g,' '))+' · '+h(x.entity_type)+'</b>'+
+        '<span>'+h(x.entity_id)+' · '+h(x.actor)+(x.reason?' · '+h(x.reason):'')+'</span></div>'+
+        '<span class="help">'+h(String(x.ts).slice(0,16).replace('T',' '))+'</span></div>';}).join('')
+     :'<p class="help">No changes recorded yet.</p>')+'</div>';
+  return ph({title:'Administration',sub:'Import, recompute, audit',body:body});
+};
+
+/* ============================== shell ================================== */
+var NAV=[['People',[['teams','Teams','teams'],['directory','Employee Directory','dir']]],
+         ['Framework',[['framework','KRA / KPI','fw'],['review','Structure Review','adm']]],
+         ['System',[['admin','Administration','adm']]]];
+function render(){
+  var root=$('#root');
+  if(S.loading){root.innerHTML='<div class="app"><aside class="sb"></aside><div class="main"><header class="top"></header>'+
+    '<main class="content"><div class="card"><div class="sk" style="height:40px;margin-bottom:8px"></div>'+
+    '<div class="sk" style="height:40px;margin-bottom:8px"></div><div class="sk" style="height:40px"></div></div></main></div></div>';return;}
+  if(S.error){root.innerHTML='<div style="padding:44px;font-family:var(--font);max-width:680px">'+
+    '<h2 style="margin:0 0 8px">Could not load PerformOS</h2><p class="muted">'+h(S.error)+'</p>'+
+    '<button class="btn primary" data-retry="1">Try again</button></div>';return;}
+  var nav=NAV.map(function(g){return '<div><div class="sb-g">'+h(g[0])+'</div>'+g[1].map(function(i){
+      return '<a class="sb-i'+(S.route===i[0]?' on':'')+'" href="#/'+i[0]+'">'+icon(i[2])+'<span>'+h(i[1])+'</span></a>';}).join('')+'</div>';}).join('');
+  var cr=[];
+  if(S.route==='teams')cr=['People','Teams'];
+  else if(S.route==='directory')cr=['People','Employee Directory'];
+  else if(S.route==='framework')cr=['Framework','KRA / KPI'];
+  else if(S.route==='review')cr=['Framework','Structure Review'];
+  else if(S.route==='admin')cr=['System','Administration'];
+  else if(S.route==='team'){var t=M.teams[S.params[0]];cr=['People','Teams',t?t.name:'Team'];}
+  else if(S.route==='emp'){var e=M.emps[S.params[0]];cr=['People','Directory',e?e.name:'Employee'];}
+  else cr=['Not found'];
+  var crumbs=cr.map(function(c,i){var last=i===cr.length-1;
+    return (i?'<span class="sep">/</span>':'')+(last?'<span class="cur">'+h(c)+'</span>':'<span>'+h(c)+'</span>');}).join('');
+  var per=((S.model&&S.model.periods)||[]).map(function(p){
+    return '<option value="'+h(p.id)+'"'+(p.id===S.period?' selected':'')+'>'+h(p.name)+'</option>';}).join('');
+  var u=S.session||{};
+  var top='<button class="btn sm" data-mo="1" title="Menu" style="padding:0 9px">'+icon('menu')+'</button>'+
+    '<div class="crumbs">'+crumbs+'</div>'+
+    '<div class="tb-search"><span>'+icon('srch')+'</span><input id="gs" placeholder="Search people, KRAs, KPIs…" autocomplete="off"><div id="gsr"></div></div>'+
+    '<select class="sel" id="psel">'+per+'</select>'+
+    '<button class="tb-user" data-sess="1"><div class="av sm">'+h(ini(u.name))+'</div>'+
+    '<div><div class="un">'+h(u.name||'User')+'</div><div class="ur">'+h(roleName(u.role_id))+'</div></div></button>';
+  var page=P[S.route], content;
+  try{content=page?page(S.params):empty({title:'Not found',msg:'No page “'+S.route+'”.'});}
+  catch(err){content=empty({title:'This page could not be rendered',msg:(err&&err.message)||String(err)});
+    if(window.console)console.error(err);}
+  root.innerHTML='<div class="app" id="app"><aside class="sb"><div class="sb-brand"><div class="sb-logo">P</div>'+
+    '<div class="sb-name">PerformOS<small>Individual KRA / KPI</small></div></div><nav class="sb-nav">'+nav+'</nav></aside>'+
+    '<div class="main"><header class="top">'+top+'</header><main class="content" id="content">'+content+'</main></div></div>';
+}
+function parseHash(){var r=String(location.hash||'').replace(/^#\/?/,'').split('/').filter(function(x){return x!=='';});
+  return {route:r[0]||'teams',params:r.slice(1)};}
+function route(){var p=parseHash();S.route=p.route;S.params=p.params;
+  if(OV.st.length)OV.all();
+  render();var c=$('#content');if(c)c.scrollTop=0;}
+function go(hh){location.hash='#/'+hh;}
+
+function search(q){
+  var box=$('#gsr');if(!box)return;q=String(q||'').trim().toLowerCase();
+  if(!q){box.innerHTML='';return;}
+  function hit(s){return String(s||'').toLowerCase().indexOf(q)>=0;}
+  var emps=M.staff().filter(function(e){return hit(e.name)||hit(e.id)||hit(e.designation);}).slice(0,6);
+  var kras=vals(M.kras).filter(function(k){return hit(k.name);}).slice(0,4);
+  var kpis=vals(M.kpis).filter(function(k){return hit(k.name);}).slice(0,5);
+  var out='';
+  if(emps.length)out+='<div class="g">People</div>'+emps.map(function(e){
+    return '<div class="r" data-gs="emp::'+h(e.id)+'"><div class="av sm">'+h(ini(e.name))+'</div><div><b>'+h(e.name)+
+      '</b> <span class="help">'+h((M.teams[e.team_id]||{}).name||'')+'</span></div></div>';}).join('');
+  if(kras.length)out+='<div class="g">KRAs</div>'+kras.map(function(k){
+    return '<div class="r" data-gs="fw::x"><div><b>'+h(k.name)+'</b> <span class="help">'+h(k.perspective||'')+'</span></div></div>';}).join('');
+  if(kpis.length)out+='<div class="g">KPIs</div>'+kpis.map(function(k){
+    return '<div class="r" data-gs="fw::x"><div><b>'+h(k.name)+'</b> <span class="help">'+h((M.kras[k.kra_id]||{}).name||'')+'</span></div></div>';}).join('');
+  box.innerHTML=out||'<div class="g">No matches</div>';
+}
+function openSession(){
+  var body=fld('View as','<select class="in" id="us">'+S.users.map(function(u){
+      return '<option value="'+h(u.id)+'"'+(S.viewAs===u.id?' selected':'')+'>'+h(u.name)+' — '+h(roleName(u.role_id))+'</option>';}).join('')+'</select>')+
+    '<p class="help">Permissions are enforced by the server, not just hidden here — switching genuinely changes what can be read and written.</p>'+
+    '<dl class="kv" style="margin-top:14px"><dt>Signed in</dt><dd>'+h((S.session||{}).email||'—')+'</dd>'+
+    '<dt>Role</dt><dd>'+h(roleName((S.session||{}).role_id))+'</dd>'+
+    '<dt>Employee</dt><dd>'+h((S.session||{}).employee_id||'none')+'</dd></dl>';
+  Modal({title:'Session',body:body,foot:'<button class="btn" data-x="1">Close</button><button class="btn primary" id="ua">Switch</button>',
+    mount:function(r){$('#ua',r).addEventListener('click',function(){S.viewAs=$('#us',r).value;OV.all();boot(true);});}});
+}
+
+document.addEventListener('click',function(ev){
+  var t=ev.target,el; function near(s){return t.closest?t.closest(s):null;}
+  if((el=near('[data-x]'))){OV.close();return;}
+  if((el=near('[data-mo]'))){var a=$('#app');if(a)a.classList.toggle('mo');return;}
+  if((el=near('[data-retry]'))){boot();return;}
+  if((el=near('[data-sess]'))){openSession();return;}
+  if((el=near('[data-gs]'))){var g=el.getAttribute('data-gs').split('::');
+    $('#gsr').innerHTML='';var gi=$('#gs');if(gi)gi.value='';
+    if(g[0]==='emp')go('emp/'+g[1]); else go('framework'); return;}
+  if((el=near('[data-etab]'))){var x=el.getAttribute('data-etab').split('::');S.empTab[x[0]]=x[1];render();return;}
+  if((el=near('[data-edt]'))){var a1=el.getAttribute('data-edt').split('::');OV.all();openTargets(a1[0],a1[1]);return;}
+  if((el=near('[data-eda]'))){var a2=el.getAttribute('data-eda').split('::');OV.all();openAssign(a2[0],a2[1]);return;}
+  if((el=near('[data-adda]'))){openAssign(el.getAttribute('data-adda'),null);return;}
+  if((el=near('[data-kpi]'))){var k=el.getAttribute('data-kpi').split('::');openKpi(k[0],k[1]);return;}
+  if((el=near('[data-emp]'))){go('emp/'+el.getAttribute('data-emp'));return;}
+  if((el=near('[data-team]'))){go('team/'+el.getAttribute('data-team'));return;}
+  if((el=near('#imp-go'))){
+    var id=$('#imp-id')?$('#imp-id').value:'', rep=$('#imp-rep')&&$('#imp-rep').checked;
+    el.disabled=true;el.textContent='Importing…';
+    write('apiImportFromSource',{sheet_id:id,replace:!!rep},{ok:'Imported from the workbook',close:false,
+      bad:function(){el.disabled=false;el.textContent='Import now';}});
+    return;}
+  if((el=near('#rc'))){write('apiRecomputeAll',{},{ok:'Period recomputed',close:false});return;}
+  if(!near('.tb-search')){var b=$('#gsr');if(b)b.innerHTML='';}
+});
+document.addEventListener('input',function(ev){
+  if(ev.target.id==='gs'){search(ev.target.value);return;}
+  if(ev.target.id==='dq'){
+    S.q=ev.target.value;
+    var c=$('#content'),sc=c.scrollTop;c.innerHTML=P.directory();c.scrollTop=sc;
+    var i=$('#dq');if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length);}
+    return;}
+});
+document.addEventListener('change',function(ev){
+  if(ev.target.id==='psel'){S.period=ev.target.value;boot(true);}
+});
+document.addEventListener('keydown',function(ev){
+  if(ev.key==='Escape'&&OV.st.length){OV.close();return;}
+  if(ev.key==='/'&&document.activeElement&&['INPUT','TEXTAREA','SELECT'].indexOf(document.activeElement.tagName)<0){
+    var g=$('#gs');if(g){ev.preventDefault();g.focus();}}
+});
+window.addEventListener('hashchange',route);
+
+function boot(quiet){
+  if(!quiet){S.loading=true;render();}
+  Api.call('apiBootstrap',[S.period,S.viewAs],function(res){
+    S.loading=false;
+    if(!res||!res.ok){S.error=(res&&res.error)||'The server returned nothing. Redeploy the web app (Deploy → Manage deployments → New version).';render();return;}
+    S.error=null;S.session=res.session;S.users=res.users||[];S.model=res.model;S.period=res.model.period_id;
     M.index();
-    if (thenHash) { go(thenHash); routeNow(); }
-    else if (!location.hash) { location.hash = '#/directory'; }
-    else routeNow();
-  }, function (err) {
-    S.loading = false;
-    S.error = (err && err.message) || 'Could not reach the server.';
-    render();
-  });
+    if(!location.hash)location.hash='#/teams'; else route();
+  },function(e){S.loading=false;S.error=(e&&e.message)||'Could not reach the server.';render();});
 }
-
-/* expose a couple of internals for the verification harness only */
-window.__PerformOS = { S: S, M: M, TP: TP, boot: boot, render: render, levelForClient: levelForClient, PAGES: PAGES };
-
+window.__PerformOS={S:S,M:M,TP:TP,P:P,boot:boot,render:render,openKpi:openKpi,openTargets:openTargets,openAssign:openAssign};
 boot();
 })();
 </script>
