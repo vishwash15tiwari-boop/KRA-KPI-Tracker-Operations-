@@ -1,0 +1,6 @@
+# clasp pushes from the repo root. Push only what the Apps Script project is:
+# the two source files and the manifest. Everything else stays in GitHub.
+**/**
+!Code.gs
+!Index.html
+!appsscript.json

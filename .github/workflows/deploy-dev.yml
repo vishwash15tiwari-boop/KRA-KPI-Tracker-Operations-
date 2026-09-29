@@ -1,0 +1,57 @@
+name: Deploy to dev
+
+# Automatic. Every push to this branch that changes the app replaces the Apps
+# Script project's code with it. Only the TEST deployment (the /dev link, open
+# to editors) runs that code. The production web app (/exec) keeps its
+# deployed version until "Promote to production" is run by hand.
+# One-time setup: DEPLOYMENT.md.
+on:
+  push:
+    branches: [claude/operations-kra-kpi-tracker-4c02x4]
+    paths: [Code.gs, Index.html, appsscript.json]
+  workflow_dispatch: {}
+
+concurrency:
+  group: apps-script
+  cancel-in-progress: false
+
+jobs:
+  dev:
+    runs-on: ubuntu-latest
+    env:
+      SCRIPT_ID: ${{ secrets.CLASP_SCRIPT_ID || '1BYfLvwrBaKQUnFw3tXd4RMeZxkwM4urwORHIw4kWxaOrDoyD-kaVjeiO' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Pinned: the credential in CLASP_CREDENTIALS must come from the same version.
+      - name: Install clasp
+        run: npm install -g @google/clasp@2.4.2
+
+      - name: Sign in to Apps Script
+        env:
+          CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
+        run: |
+          if [ -z "$CLASP_CREDENTIALS" ]; then
+            echo "::error::Secret CLASP_CREDENTIALS is not set. See DEPLOYMENT.md."
+            exit 1
+          fi
+          printf '%s' "$CLASP_CREDENTIALS" > "$HOME/.clasprc.json"
+
+      - name: Point clasp at the project
+        run: printf '{"scriptId":"%s","rootDir":"."}\n' "$SCRIPT_ID" > .clasp.json
+
+      - name: Push the code to dev
+        run: clasp push -f
+
+      - name: Summary
+        run: |
+          {
+            echo "### Deployed to dev"
+            echo "Commit \`${GITHUB_SHA::7}\` is now the Apps Script project's code."
+            echo "Check it on the **test deployment** (the /dev link)."
+            echo "Production (/exec) is unchanged until **Promote to production** is run."
+          } >> "$GITHUB_STEP_SUMMARY"

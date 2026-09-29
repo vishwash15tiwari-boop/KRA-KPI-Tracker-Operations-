@@ -1,0 +1,4 @@
+# clasp: .clasp.json is written by the workflows; .clasprc.json is a login
+# credential and must never be committed.
+.clasp.json
+.clasprc.json

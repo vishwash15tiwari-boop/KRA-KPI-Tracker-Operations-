@@ -1,0 +1,78 @@
+name: Promote to production
+
+# Manual only, and only after the change has been checked on the /dev link.
+# Pushes this branch's code to the Apps Script project and moves the
+# production web app deployment (CLASP_DEPLOYMENT_ID) to a new version of it.
+# One-time setup: DEPLOYMENT.md.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type promote to deploy this branch to the production web app'
+        required: true
+      note:
+        description: 'What changed (becomes the version description in Apps Script)'
+        required: false
+
+concurrency:
+  group: apps-script
+  cancel-in-progress: false
+
+jobs:
+  production:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      SCRIPT_ID: ${{ secrets.CLASP_SCRIPT_ID || '1BYfLvwrBaKQUnFw3tXd4RMeZxkwM4urwORHIw4kWxaOrDoyD-kaVjeiO' }}
+      DEPLOYMENT_ID: ${{ secrets.CLASP_DEPLOYMENT_ID }}
+    steps:
+      - name: Confirm
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          if [ "$CONFIRM" != "promote" ]; then
+            echo "::error::Not deployed. Type promote in the confirm box to deploy to production."
+            exit 1
+          fi
+          if [ -z "$DEPLOYMENT_ID" ]; then
+            echo "::error::Secret CLASP_DEPLOYMENT_ID is not set. See DEPLOYMENT.md."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install clasp
+        run: npm install -g @google/clasp@2.4.2
+
+      - name: Sign in to Apps Script
+        env:
+          CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
+        run: |
+          if [ -z "$CLASP_CREDENTIALS" ]; then
+            echo "::error::Secret CLASP_CREDENTIALS is not set. See DEPLOYMENT.md."
+            exit 1
+          fi
+          printf '%s' "$CLASP_CREDENTIALS" > "$HOME/.clasprc.json"
+
+      - name: Point clasp at the project
+        run: printf '{"scriptId":"%s","rootDir":"."}\n' "$SCRIPT_ID" > .clasp.json
+
+      # The same code dev shows: this branch's latest commit.
+      - name: Push the code
+        run: clasp push -f
+
+      - name: Deploy a new version to production
+        env:
+          NOTE: ${{ inputs.note }}
+        run: clasp deploy -i "$DEPLOYMENT_ID" -d "${NOTE:-Promoted from GitHub} (${GITHUB_SHA::7})"
+
+      - name: Summary
+        run: |
+          {
+            echo "### Promoted to production"
+            echo "The production web app now runs commit \`${GITHUB_SHA::7}\`."
+          } >> "$GITHUB_STEP_SUMMARY"
