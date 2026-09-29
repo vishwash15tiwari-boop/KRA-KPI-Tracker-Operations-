@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Performance Tracker — Individual KRA / KPI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -414,6 +417,69 @@ td.r,th.r{text-align:right}
   .r-5,.r-4,.r-3,.filters,.bands{grid-template-columns:1fr}
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.tm{font-family:Poppins,var(--font)}
+.tm .hdr{margin-bottom:14px}
+.tm-date{min-width:180px}
+.tm-sel{display:flex;flex-wrap:wrap;gap:4px;padding:4px;background:var(--raised);border-radius:12px;
+  width:max-content;max-width:100%;margin-bottom:16px}
+.tm-sel button{border:0;background:transparent;padding:9px 20px;border-radius:9px;font:inherit;
+  font-size:13.5px;font-weight:500;color:var(--ink-2);cursor:pointer;
+  transition:background .15s,color .15s,box-shadow .15s}
+.tm-sel button:hover{color:var(--ink)}
+.tm-sel button.on{background:var(--surface);color:var(--ink);font-weight:600;
+  box-shadow:0 1px 2px rgba(17,17,17,.08),0 0 0 1px var(--line-soft)}
+.tm-ov{display:flex;flex-wrap:wrap;align-items:center;gap:14px 28px;padding:16px 20px;margin-bottom:18px;
+  background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r-lg);
+  box-shadow:0 1px 2px rgba(17,17,17,.04)}
+.tm-ov h2{margin:0;font-size:20px;font-weight:600;letter-spacing:-.2px;color:var(--head)}
+.tm-ov .s{font-size:12.5px;color:var(--ink-3);margin-top:2px}
+.tm-ov .c{font-size:11.5px;color:var(--ink-3);margin-top:6px}
+.tm-ms{display:flex;flex-wrap:wrap;gap:10px;margin-left:auto}
+.tm-m{min-width:112px;padding:8px 14px;border-radius:10px;background:var(--sunken)}
+.tm-m .l,.tm-k .l,.tm-r .l,.tm-tier{font-size:10px;font-weight:600;letter-spacing:.06em;white-space:nowrap;
+  text-transform:uppercase;color:var(--ink-3)}
+.tm-m .v{font-size:18px;font-weight:600;color:var(--ink);white-space:nowrap;margin-top:1px}
+.tm-m .v small{font-size:11.5px;font-weight:500;color:var(--ink-3);margin-left:6px}
+.tm .na{font-size:12px;font-weight:500;color:var(--ink-3)}
+.tm-chart{position:relative;padding:4px 10px 26px;background:var(--surface);
+  border:1px solid var(--line-soft);border-radius:var(--r-lg);box-shadow:0 1px 2px rgba(17,17,17,.04)}
+.tm-links{position:absolute;left:0;top:0;pointer-events:none;overflow:visible}
+.tm-links path{fill:none;stroke:#c3c8d0;stroke-width:1.25}
+.tm-tier{text-align:center;margin:18px 0 10px}
+.tm-lead{position:relative;width:420px;max-width:100%;margin:0 auto;padding:16px 18px;cursor:pointer;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+  box-shadow:0 2px 10px rgba(17,17,17,.07);transition:box-shadow .15s}
+.tm-members{display:flex;flex-wrap:wrap;justify-content:center;gap:44px 14px;margin-top:46px}
+.tm-members.rows{flex-direction:column;align-items:center;flex-wrap:nowrap}
+.tm-row{display:flex;gap:14px;justify-content:center}
+.tm-card{position:relative;display:flex;flex-direction:column;width:204px;height:276px;padding:14px 13px;
+  overflow:hidden;cursor:pointer;background:var(--surface);border:1px solid var(--line-soft);
+  border-radius:var(--r);box-shadow:0 1px 3px rgba(17,17,17,.06);transition:box-shadow .15s,border-color .15s}
+.tm-card:hover,.tm-lead:hover{border-color:var(--line);box-shadow:0 4px 14px rgba(17,17,17,.10)}
+.tm-badge{display:inline-block;margin-bottom:8px;padding:3px 9px;border-radius:999px;font-size:10px;
+  font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--head);background:rgba(31,58,95,.08)}
+.tm-n{font-size:14px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tm-lead .tm-n{font-size:16px}
+.tm-d{height:34px;margin-top:1px;overflow:hidden;font-size:12px;line-height:1.4;color:var(--ink-3);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.tm-lead .tm-d{height:auto}
+.tm-k{display:grid;grid-template-columns:repeat(3,1fr);gap:8px 6px;margin-top:10px;padding-top:10px;
+  border-top:1px solid var(--line-soft)}
+.tm-lead .tm-k{grid-template-columns:repeat(4,1fr)}
+.tm-card .tm-k{grid-template-columns:1fr 1fr 1.3fr}
+.tm-k .v{font-size:14px;font-weight:600;color:var(--ink);white-space:nowrap}
+.tm-k .v small{font-size:10.5px;font-weight:500;color:var(--ink-3)}
+.tm-k .w2{grid-column:span 2}
+.tm-lv{display:inline-flex;align-items:center;gap:5px}
+.tm-lv i{display:flex;gap:2px}
+.tm-lv i b{width:7px;height:6px;border-radius:2px}
+.tm-lv span{font-size:12px;font-weight:600;white-space:nowrap}
+.tm-r{margin-top:auto;padding-top:9px;border-top:1px solid var(--line-soft)}
+.tm-r ul{margin:3px 0 0;padding-left:14px;list-style:disc}
+.tm-r li::marker{color:var(--ink-3)}
+.tm-r li{font-size:11.5px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tm-r .more{font-size:11px;color:var(--ink-3);padding-left:14px}
+.tm-empty{margin-top:18px;text-align:center;font-size:12.5px;color:var(--ink-3)}
 </style>
 </head>
 <body>
@@ -1190,35 +1256,6 @@ function chartMonthly(id,rows){
       backgroundColor:tok('--accent'),borderRadius:4,borderSkipped:'bottom',
       maxBarThickness:46}]},options:o});
 }
-function chartTeams(id,mode){
-  var m=S.model||{}, labels=[], vals=[];
-  var keep={}; filteredEmployees().forEach(function(e){ keep[e.id]=1; });
-  (m.teams||[]).forEach(function(t){
-    var people=(M.byTeam[t.id]||[]).filter(function(e){ return keep[e.id]; });
-    if(!people.length) return;
-    labels.push(teamLabel(t));
-    if(mode==='kpis'){
-      var rs=[]; people.forEach(function(e){ rs=rs.concat(M.byEmp[e.id]||[]); });
-      vals.push(distinctKpiCountIn(rs));
-    } else {
-      var acc=0,c=0;
-      people.forEach(function(e){ var o=M.overalls[e.id];
-        if(o&&o.score!==null&&o.score!==undefined){ acc+=o.score; c++; } });
-      vals.push(c?Math.round(acc/c*10)/10:0);
-    }
-  });
-  var o=baseOpts();
-  o.indexAxis='y';
-  o.scales.x.grid={color:tok('--line-soft')};
-  o.scales.y.grid={display:false};
-  if(mode!=='kpis'){ o.scales.x.min=0; o.scales.x.max=5; o.scales.x.ticks.stepSize=1; }
-  o.plugins.tooltip.callbacks={label:function(c){
-    return mode==='kpis'? c.parsed.x+(c.parsed.x===1?' KPI':' KPIs')
-                        : 'average level '+f1(c.parsed.x)+' of 5'; }};
-  mkChart(id,{type:'bar',data:{labels:labels,datasets:[{data:vals,
-    backgroundColor:tok('--accent'),borderRadius:4,borderSkipped:'start',
-    maxBarThickness:24}]},options:o});
-}
 
 // ===== views =====
 var V={};
@@ -1443,69 +1480,171 @@ function peopleTable(list){
   return out+'</tbody></table>';
 }
 
-V.teams=function(){
-  var m=S.model||{};
-  var out='<div class="hdr"><div><h1>Teams</h1><div class="sub">'+
-    (m.teams||[]).length+' business functions imported from the KRA / KPI workbook</div></div></div>';
-  out+=periodBar();
-  out+='<div class="row r-2">'+
-    panel({title:'Average level by team',cap:'Scored KPIs only',
-      body:'<div class="chartbox">'+(stats().scored?
-        '<canvas id="tAvg"></canvas>':
-        emptyBox('Awaiting actuals','Team averages appear once actuals are recorded.'))+
-      '</div>'})+
-    panel({title:'KPIs by team',cap:'Structural load · each KPI counted once',
-      body:'<div class="chartbox"><canvas id="tKpi"></canvas></div>'})+
-    '</div>';
-  var body='<table><thead><tr><th>Team</th><th>Lead</th><th class="r">People</th>'+
-    '<th class="r">KPIs</th><th class="r">Scored</th><th>Average level</th></tr></thead><tbody>';
-  (m.teams||[]).forEach(function(t){
-    var people=M.byTeam[t.id]||[], all=[], acc=0, c=0, sc=0;
-    people.forEach(function(e){
-      all=all.concat(M.byEmp[e.id]||[]);
-      var o=M.overalls[e.id]; if(o){ sc+=o.scored_count||0;
-        if(o.score!==null&&o.score!==undefined){ acc+=o.score; c++; } }
-    });
-    var n=distinctKpiCountIn(all);
-    var lead=M.emps[t.lead_id];
-    body+='<tr class="clk" data-go="team/'+h(t.id)+'">'+
-      '<td><div class="n" style="font-weight:650">'+h(teamLabel(t))+'</div>'+
-        (teamShortened(t)?'<div class="d" style="font-size:11.5px;'+
-          'color:var(--ink-3)">'+h(t.name)+'</div>':'')+'</td>'+
-      '<td>'+(lead?person(lead):'<span class="lv-na">unassigned</span>')+'</td>'+
-      '<td class="r num">'+people.length+'</td><td class="r num">'+n+'</td>'+
-      '<td class="r num">'+sc+' / '+n+'</td>'+
-      '<td>'+(c?levelMeter(Math.round(acc/c),f1(acc/c)+' avg'):levelMeter(null))+'</td></tr>';
+// ===== TEAM MODULE =====
+// One team at a time: selector, overview, team lead, members. Every figure is the one the Teams
+// table and the per-team page showed, computed the same way (teamFigures and tmPerson).
+var TEAM_TABS=[['Metal','METAL'],['Plastic','PLASTIC'],['Onboarding','ONBOARDING'],
+  ['Collections','COLLECTIONS'],['Control Tower','CONTROL TOWER']];
+function teamKey(t){
+  return String((t&&t.name)||'').toUpperCase().replace(/[^A-Z0-9 ]+/g,' ').replace(/\s+/g,' ').trim();
+}
+function teamTabs(){
+  var left=((S.model||{}).teams||[]).slice(), out=[];
+  TEAM_TABS.forEach(function(tab){
+    for(var i=0;i<left.length;i++){
+      if(teamKey(left[i]).indexOf(tab[1])>=0){ out.push({t:left[i],label:tab[0]}); left.splice(i,1); return; }
+    }
   });
-  out+='<div class="mt">'+panel({flush:true,title:'All teams',
-    body:'<div class="tw">'+body+'</tbody></table></div>'})+'</div>';
-  setTimeout(function(){ if(stats().scored) chartTeams('tAvg','avg');
-    chartTeams('tKpi','kpis'); },0);
+  left.forEach(function(t){ out.push({t:t,label:teamLabel(t)}); });
+  return out;
+}
+function teamFigures(t){
+  var people=M.byTeam[t.id]||[], all=[], acc=0, c=0, sc=0;
+  people.forEach(function(e){
+    all=all.concat(M.byEmp[e.id]||[]);
+    var o=M.overalls[e.id]; if(o){ sc+=o.scored_count||0;
+      if(o.score!==null&&o.score!==undefined){ acc+=o.score; c++; } }
+  });
+  return {people:people, n:distinctKpiCountIn(all), sc:sc, avg:c?acc/c:null, st:stats(all),
+          lead:M.emps[t.lead_id]||null};
+}
+function bandText(level){ var w=Math.round(Number(level)); return w===0?'Below T1':'Target '+w; }
+function tmLevel(level){
+  if(level===null||level===undefined||level==='') return '<span class="na">not scored</span>';
+  var w=Math.round(Number(level)), bars='';
+  for(var i=1;i<=5;i++) bars+='<b style="background:'+(i<=w?lvColor(i):'var(--lvna)')+'"></b>';
+  return '<span class="tm-lv"><i>'+bars+'</i><span>'+bandText(level)+'</span></span>';
+}
+function tmScore(o){
+  return (o.score===null||o.score===undefined)?'<span class="na">not scored</span>'
+    :f1(o.score)+'<small> / 5</small>';
+}
+function tmKv(label,value,wide){
+  return '<div'+(wide?' class="w2"':'')+'><div class="l">'+h(label)+'</div>'+
+    '<div class="v">'+value+'</div></div>';
+}
+// The same five figures as a row of the per-team people table.
+function tmPerson(e){
+  var o=M.overalls[e.id]||{}, rs=M.byEmp[e.id]||[];
+  return tmKv('KPIs',String(rs.length))+tmKv('Scored',String(o.scored_count||0))+
+    tmKv('Weightage',(o.assigned_weightage===undefined||o.assigned_weightage===null)?'—'
+      :f1(o.assigned_weightage)+'%')+
+    tmKv('Target',tmLevel(o.level),true)+tmKv('Avg level',tmScore(o));
+}
+function tmLeadCard(e,teamSize){
+  if(!e) return '<div class="tm-lead"><span class="tm-badge">Team lead</span>'+
+    '<div class="tm-n">Not assigned</div><div class="tm-d">No team lead is recorded for this team.</div></div>';
+  return '<div class="tm-lead" data-go="emp/'+h(e.id)+'" title="Open the scorecard">'+
+    '<span class="tm-badge">Team lead</span><div class="tm-n">'+h(e.name)+'</div>'+
+    '<div class="tm-d">'+h(e.designation||'')+'</div>'+
+    '<div class="tm-k">'+tmKv('Team members',String(teamSize))+tmPerson(e)+'</div></div>';
+}
+function tmMemberCard(e){
+  var kr=[], seen={};
+  (M.byEmp[e.id]||[]).forEach(function(r){
+    var k=(M.kras[r.kra_id]||{}).name; if(k&&!seen[k]){ seen[k]=1; kr.push(k); } });
+  return '<div class="tm-card" data-go="emp/'+h(e.id)+'" title="Open the scorecard">'+
+    '<div class="tm-n" title="'+h(e.name)+'">'+h(e.name)+'</div>'+
+    '<div class="tm-d" title="'+h(e.designation||'')+'">'+h(e.designation||'')+'</div>'+
+    '<div class="tm-k">'+tmPerson(e)+'</div>'+
+    '<div class="tm-r"><div class="l">Key responsibilities</div>'+
+    (kr.length?'<ul>'+kr.slice(0,3).map(function(k){
+        return '<li title="'+h(k)+'">'+h(k)+'</li>'; }).join('')+'</ul>'+
+      (kr.length>3?'<div class="more">+'+(kr.length-3)+' more</div>':'')
+      :'<div class="more">No KRAs assigned</div>')+'</div></div>';
+}
+V.teams=function(){
+  var tabs=teamTabs();
+  if(!tabs.length) return emptyBox('No teams','No team is visible to you.');
+  var cur=tabs[0];
+  tabs.forEach(function(x){ if(String(x.t.id)===String(S.teamSel)) cur=x; });
+  S.teamSel=cur.t.id;
+  var t=cur.t, F=teamFigures(t), lead=F.lead;
+  var members=F.people.filter(function(e){ return !lead||String(e.id)!==String(lead.id); });
+  var out='<div class="tm"><div class="hdr"><div><h1>Teams</h1><div class="sub">'+
+    ((S.model||{}).teams||[]).length+' business functions imported from the KRA / KPI workbook</div></div>'+
+    '<div class="spacer"></div><div class="tm-date">'+periodCell()+'</div></div>';
+  out+='<div class="tm-sel" role="tablist">'+tabs.map(function(x){
+    var on=x===cur;
+    return '<button type="button" role="tab" aria-selected="'+on+'"'+(on?' class="on"':'')+
+      ' data-team="'+h(x.t.id)+'">'+h(x.label)+'</button>'; }).join('')+'</div>';
+  out+='<section class="tm-ov"><div><h2>'+h(cur.label)+' Team</h2>'+
+    '<div class="s">Team structure, KRA &amp; KPI performance'+
+      (t.name&&t.name!==cur.label?' · '+h(t.name):'')+'</div>'+
+    '<div class="c">'+F.st.n+' KPI assignments · '+F.st.scored+' scored · '+
+      (F.st.kinds.numeric||0)+' numeric ladders · '+h(periodName(S.period))+'</div></div>'+
+    '<div class="tm-ms">'+
+      '<div class="tm-m"><div class="l">Team members</div><div class="v">'+F.people.length+'</div></div>'+
+      '<div class="tm-m"><div class="l">Total KPIs</div><div class="v">'+F.n+'</div></div>'+
+      '<div class="tm-m"><div class="l">KPI score</div><div class="v">'+F.sc+' / '+F.n+'</div></div>'+
+      '<div class="tm-m"><div class="l">Average level</div><div class="v">'+
+        (F.avg===null?'<span class="na">not scored</span>'
+          :f1(F.avg)+'<small>'+bandText(Math.round(F.avg))+'</small>')+'</div></div>'+
+    '</div></section>';
+  out+='<section class="tm-chart"><svg class="tm-links" aria-hidden="true"></svg>'+
+    '<div class="tm-tier">Team lead</div>'+tmLeadCard(lead,F.people.length)+
+    (members.length?'<div class="tm-members">'+members.map(tmMemberCard).join('')+'</div>'
+      :'<div class="tm-empty">No other members in this team.</div>')+
+    '</section></div>';
+  setTimeout(drawTeamLinks,0);
+  if(document.fonts&&document.fonts.ready) document.fonts.ready.then(drawTeamLinks);
   return out;
 };
-
 V.team=function(p){
-  var t=M.teams[p[0]];
-  if(!t) return emptyBox('Team not found','No team with id '+h(p[0])+'.');
-  var people=(M.byTeam[t.id]||[]).slice();
-  var list=[]; people.forEach(function(e){ list=list.concat(M.byEmp[e.id]||[]); });
-  var st=stats(list);
-  var out='<div class="hdr"><div><h1>'+h(teamLabel(t))+'</h1><div class="sub">'+
-    (teamShortened(t)?h(t.name)+' · ':'')+
-    people.length+' people · '+st.n+' KPI assignments · '+h(periodName(S.period))+
-    '</div></div><div class="spacer"></div>'+
-    '<button class="btn" data-go="teams">'+svg('back')+' All teams</button></div>';
-  out+=periodBar();
-  out+='<div class="row r-3">'+
-    tile('People',String(people.length))+
-    tile('KPI assignments',String(st.n),'<b>'+st.scored+'</b> scored')+
-    tile('Numeric ladders',String(st.kinds.numeric||0),'of '+st.n+' assignments')+
-    '</div>';
-  out+='<div class="mt">'+panel({flush:true,title:'People in '+teamLabel(t),
-    body:'<div class="tw">'+peopleTable(people)+'</div>'})+'</div>';
-  return out;
+  if(!M.teams[p[0]]) return emptyBox('Team not found','No team with id '+h(p[0])+'.');
+  S.teamSel=p[0];
+  return V.teams();
 };
-
+// Connector lines, measured from where the cards actually landed, so they stay precise when the
+// member cards wrap onto more rows. With more than one row, a rail on the left joins the rows.
+// Even rows: 13 members at four a row become 4,3,3,3 rather than 4,4,4,1. Redone on resize.
+function arrangeTeamRows(box){
+  var wrap=box.querySelector('.tm-members'); if(!wrap) return;
+  var cards=Array.prototype.slice.call(wrap.querySelectorAll('.tm-card')); if(!cards.length) return;
+  var gap=14, cw=cards[0].offsetWidth||204;
+  var per=Math.max(1,Math.floor((wrap.clientWidth+gap)/(cw+gap)));
+  var nRows=Math.ceil(cards.length/per), base=Math.floor(cards.length/nRows), extra=cards.length%nRows;
+  var frag=document.createDocumentFragment(), k=0;
+  for(var r=0;r<nRows;r++){
+    var row=document.createElement('div'); row.className='tm-row';
+    for(var i=0;i<base+(r<extra?1:0);i++) row.appendChild(cards[k++]);
+    frag.appendChild(row);
+  }
+  wrap.innerHTML=''; wrap.appendChild(frag); wrap.classList.add('rows');
+}
+function drawTeamLinks(){
+  var box=$('.tm-chart'); if(!box) return;
+  arrangeTeamRows(box);
+  var svgEl=box.querySelector('.tm-links'), lead=box.querySelector('.tm-lead');
+  var els=Array.prototype.slice.call(box.querySelectorAll('.tm-card'));
+  if(!svgEl) return;
+  svgEl.style.width=box.scrollWidth+'px'; svgEl.style.height=box.scrollHeight+'px';
+  if(!lead||!els.length){ svgEl.innerHTML=''; return; }
+  var B=svgEl.getBoundingClientRect();
+  function at(el){ var r=el.getBoundingClientRect();
+    return {l:r.left-B.left, t:r.top-B.top, b:r.bottom-B.top, cx:r.left-B.left+r.width/2}; }
+  function px(v){ return Math.round(v)+0.5; }
+  var L=at(lead), cards=els.map(at), rows=[];
+  cards.forEach(function(c){
+    var row=rows[rows.length-1];
+    if(!row||Math.abs(row.t-c.t)>2){ row={t:c.t,b:c.b,cards:[]}; rows.push(row); }
+    row.cards.push(c); if(c.b>row.b) row.b=c.b;
+  });
+  var multi=rows.length>1, tx=px(L.cx), d='';
+  var rail=px(Math.min.apply(null,cards.map(function(c){ return c.l; }))-12);
+  rows.forEach(function(row,i){
+    var y=px(((i?rows[i-1].b:L.b)+row.t)/2);
+    var xs=row.cards.map(function(c){ return px(c.cx); });
+    var lo=Math.min.apply(null,xs), hi=Math.max.apply(null,xs);
+    if(i===0){ d+='M'+tx+' '+Math.round(L.b)+'V'+y; lo=Math.min(lo,tx); hi=Math.max(hi,tx); }
+    if(multi) lo=Math.min(lo,rail);
+    d+='M'+lo+' '+y+'H'+hi;
+    xs.forEach(function(x,j){ d+='M'+x+' '+y+'V'+Math.round(row.cards[j].t); });
+    if(multi&&i<rows.length-1) d+='M'+rail+' '+y+'V'+px((row.b+rows[i+1].t)/2);
+  });
+  svgEl.innerHTML='<path d="'+d+'"/>';
+}
+window.addEventListener('resize',debounce(drawTeamLinks,100));
 V.people=function(){
   var m=S.model||{};
   var list=filteredEmployees();
@@ -2840,6 +2979,9 @@ function wire(){
       location.hash='#/'+go;
     });
   });
+  $$('[data-team]').forEach(function(el){ el.onclick=function(){
+    S.teamSel=el.getAttribute('data-team');
+    if(S.route==='team') location.hash='#/teams'; else render(); }; });
   $$('[data-f]').forEach(function(el){
     el.onchange=function(){ S[el.getAttribute('data-f')]=el.value; render(); }; });
   $$('[data-clear]').forEach(function(el){
