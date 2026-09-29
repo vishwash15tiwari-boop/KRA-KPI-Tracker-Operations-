@@ -832,9 +832,14 @@ function aggKind_(unit, kpiName, parsed, hasTarget) {
     var ovr = weightOverride_((empById_[a.employee_id] || {}).name,
                               (kraById_[a.kra_id] || {}).name);
     // Same condition as the scoring: a never-planned ratio KPI is a rate, shown as %.
-    if (!planEver[String(a.employee_id) + '|' + String(a.kpi_id)] &&
-        parsed && parsed.kind === 'numeric' && isRatioLadder_(parsed.values).ok) {
-      planUnit = 'ratio';
+    var isRate = !planEver[String(a.employee_id) + '|' + String(a.kpi_id)] &&
+                 parsed && parsed.kind === 'numeric' && isRatioLadder_(parsed.values).ok;
+    if (isRate) planUnit = 'ratio';
+    // A rate KPI's target is its ladder's Target 4 rung: display only, kept apart from plan_target, never divided by.
+    var ladderTarget = null;
+    if (isRate) {
+      var rung = parsed.values[RATING_ON_TARGET_ - 1];
+      if (rung !== null && rung !== undefined && isFinite(rung)) ladderTarget = rung;
     }
     var row = {
       employee_id: a.employee_id, kra_id: a.kra_id, kpi_id: a.kpi_id,
@@ -848,6 +853,7 @@ function aggKind_(unit, kpiName, parsed, hasTarget) {
       // Rounded at 1e10, not 1e4: the Target Sheet holds 8 decimals of a crore.
       plan_target: planAgg === null ? null : Math.round(planAgg * 1e10) / 1e10,
       plan_agg: agg,
+      ladder_target: ladderTarget,
       plan_unit: planUnit,
       plan_source: planSrc,
       plan_rule: planRule,
@@ -6431,6 +6437,169 @@ function repointToBackendWithData() {
   Logger.log(txt);
   return txt;
 }
+// ===== BACKEND ACCESS AND SANDBOX =====
+// The real backend, by id. useKnownBackend() points the app at it; shareBackendWithAdmins() gives every admin edit access.
+var KNOWN_BACKEND_ID_ = '1IxJPhwKnNIS_WxstqgwflRjfPBsuwm3LQVyvRUXDAzE';
+function useKnownBackend() {
+  var nl = String.fromCharCode(10), out = [];
+  var props = PropertiesService.getScriptProperties();
+  out.push('before : ' + (props.getProperty(PROP_DB) || '(not set)'));
+
+  props.setProperty(PROP_DB, KNOWN_BACKEND_ID_);
+  _SS = null;
+  _CACHE = {}; _DIRTY = {};
+
+  out.push('set to : ' + KNOWN_BACKEND_ID_);
+  out.push('reads  : ' + props.getProperty(PROP_DB));
+  out.push('');
+  try {
+    var ss = SpreadsheetApp.openById(KNOWN_BACKEND_ID_);
+    out.push('opened : ' + ss.getName());
+    ['EMPLOYEES', 'ASSIGNMENTS', 'TARGETS', 'PERFORMANCE', 'PERIODS'].forEach(function (t) {
+      var sh = ss.getSheetByName(t);
+      out.push('  ' + pad_(t, 14) + (sh ? Math.max(0, sh.getLastRow() - 1) + ' rows'
+                                        : '(no such tab)'));
+    });
+    out.push('');
+    out.push('The app can reach the database. Reload the dashboard.');
+  } catch (e) {
+    out.push('!! CANNOT OPEN IT: ' + (e && e.message || e));
+    out.push('');
+    out.push('The property is set correctly and the file still will not open,');
+    out.push('so the fault is access to that file, not the pointer.');
+  }
+  var txt = out.join(nl);
+  Logger.log(txt);
+  return txt;
+}
+function shareBackendWithAdmins() {
+  var nl = String.fromCharCode(10), out = [];
+  var id = PropertiesService.getScriptProperties().getProperty(PROP_DB);
+  if (!id) { var no = 'PERFORMOS_DB_ID is not set. Run useKnownBackend() first.';
+             Logger.log(no); return no; }
+
+  var file;
+  try { file = DriveApp.getFileById(id); }
+  catch (e) {
+    var bad = 'Cannot open the backend ' + id + ' — ' + (e && e.message || e) + nl +
+      'Run useKnownBackend(), then this.';
+    Logger.log(bad); return bad;
+  }
+  out.push('backend : ' + file.getName());
+  out.push('          ' + id);
+  out.push('owner   : ' + (function () {
+    try { return file.getOwner().getEmail(); } catch (e) { return '(unknown)'; }
+  })());
+  out.push('');
+
+  var admins = bootstrapAdmins_();
+  if (!admins.length) {
+    out.push('PERFORMOS_ADMINS is empty, so there is nobody to share it with.');
+    var none = out.join(nl); Logger.log(none); return none;
+  }
+
+  var already = {};
+  try {
+    file.getEditors().forEach(function (u) { already[email_(u.getEmail())] = true; });
+    already[email_(file.getOwner().getEmail())] = true;
+  } catch (e) {   }
+
+  var added = [], kept = [], failed = [];
+  admins.forEach(function (a) {
+    if (already[a]) { kept.push(a); return; }
+    try { file.addEditor(a); added.push(a); }
+    catch (e) { failed.push(a + '  (' + (e && e.message || e) + ')'); }
+  });
+
+  out.push('=== EDIT ACCESS ===');
+  added.forEach(function (a) { out.push('  ADDED   ' + a); });
+  kept.forEach(function (a) { out.push('  already ' + a); });
+  failed.forEach(function (a) { out.push('  FAILED  ' + a); });
+  out.push('');
+  if (failed.length) {
+    out.push(failed.length + ' could not be added. Share it by hand from Drive.');
+  } else {
+    out.push('Every admin can now open the backend, so no run of theirs will be');
+    out.push('refused — and with the v67 guard none of them can mint a rival one.');
+  }
+  var txt = out.join(nl);
+  Logger.log(txt);
+  return txt;
+}
+// setUpSandbox() copies the production backend for a sandbox project, and refuses to run in production (checked by script id).
+var PROD_SCRIPT_ID_ = '1BYfLvwrBaKQUnFw3tXd4RMeZxkwM4urwORHIw4kWxaOrDoyD-kaVjeiO';
+function setUpSandbox() {
+  var nl = String.fromCharCode(10), out = [];
+  var me = '';
+  try { me = ScriptApp.getScriptId(); } catch (e) { me = ''; }
+
+  if (me === PROD_SCRIPT_ID_) {
+    var no = 'REFUSING: this is the PRODUCTION project.' + nl +
+      'setUpSandbox() repoints the app at a copy of the backend. Run in' + nl +
+      'production it would leave the live dashboard reading a copy while' + nl +
+      'everybody kept editing the original. Run it in the sandbox project.';
+    Logger.log(no); return no;
+  }
+  out.push('script  : ' + (me || '(unknown)') + '   (not production, good)');
+
+  var props = PropertiesService.getScriptProperties();
+  var existing = props.getProperty(PROD_DB_PROP_NAME_());
+  if (existing) {
+    out.push('');
+    out.push('This sandbox already points at ' + existing + '.');
+    out.push('Nothing changed. Delete PERFORMOS_DB_ID first if you want a fresh copy.');
+    var same = out.join(nl); Logger.log(same); return same;
+  }
+
+  var copy;
+  try {
+    var src = DriveApp.getFileById(KNOWN_BACKEND_ID_);
+    copy = src.makeCopy('PerformOS — Backend (SANDBOX ' +
+      Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd') + ')');
+  } catch (e) {
+    out.push('');
+    out.push('Could not copy production’s backend: ' + (e && e.message || e));
+    out.push('That is not fatal. Leave PERFORMOS_DB_ID unset and the first run');
+    out.push('will create an empty backend and seed it from SRC_SEED instead —');
+    out.push('38 people and the framework, but no targets or achievements.');
+    var nocopy = out.join(nl); Logger.log(nocopy); return nocopy;
+  }
+  props.setProperty(PROD_DB_PROP_NAME_(), copy.getId());
+  props.setProperty('PERFORMOS_SEEDED', '3');
+
+  out.push('backend : ' + copy.getName());
+  out.push('          ' + copy.getId());
+  out.push('          https://docs.google.com/spreadsheets/d/' + copy.getId() + '/edit');
+
+  var admins = '';
+  try {
+    var ss = SpreadsheetApp.openById(copy.getId());
+    var sh = ss.getSheetByName('SETTINGS');
+    if (sh) {   }
+  } catch (e) {   }
+  admins = props.getProperty(PROD_ADMINS_PROP_NAME_()) || '';
+  if (!admins) {
+    props.setProperty(PROD_ADMINS_PROP_NAME_(),
+      'srinivasareddy.dundi@recykal.com, vishwash.tiwari@recykal.com');
+    out.push('admins  : set to the same two people as production');
+  } else {
+    out.push('admins  : already set (' + admins + ')');
+  }
+
+  out.push('');
+  out.push('Sandbox ready. Nothing here touches production:');
+  out.push('  · its own script, its own versions, its own deployments');
+  out.push('  · its own backend — a copy taken just now');
+  out.push('  · reseed, break or delete it freely');
+  out.push('');
+  out.push('Deploy it with clasp deploy from the sandbox folder, and use its own');
+  out.push('/dev and /exec. Production is a different project entirely.');
+  var txt = out.join(nl);
+  Logger.log(txt);
+  return txt;
+}
+function PROD_DB_PROP_NAME_() { return 'PERFORMOS_DB_ID'; }
+function PROD_ADMINS_PROP_NAME_() { return 'PERFORMOS_ADMINS'; }
 
 // Seeding fills the cache and stamps PERFORMOS_SEEDED; only commit_() writes the rows.
 function ensureSeeded_() {

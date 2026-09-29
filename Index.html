@@ -480,6 +480,7 @@ td.r,th.r{text-align:right}
 .tm-r li{font-size:11.5px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tm-r .more{font-size:11px;color:var(--ink-3);padding-left:14px}
 .tm-empty{margin-top:18px;text-align:center;font-size:12.5px;color:var(--ink-3)}
+.derived{border-bottom:1px dotted var(--ink-3);cursor:help}
 </style>
 </head>
 <body>
@@ -743,7 +744,7 @@ function ovStats(){
 }
 function targetedRows(){
   return filteredRows().filter(function(r){
-    return r.plan_target!==null&&r.plan_target!==undefined; });
+    return targetOf(r).v!==null; });
 }
 function pctOfTarget(r){
   if(r.ratio===null||r.ratio===undefined) return null;
@@ -759,10 +760,45 @@ function achievedPct(c){
   return c.a/c.t*100;
 }
 function rowSlice(r,month){
-  if(!month) return {t:r.plan_target,a:r.actual};
+  if(!month) return {t:targetOf(r).v,a:r.actual};
   var m=(r.monthly||{})[month];
   return m?{t:m.target,a:m.actual}:{t:null,a:null};
 }
+// Seniority for ordering people: lead first, then grade (most senior first), then name.
+var GRADES=[
+  /general\s*manager/i,
+  /senior\s*manager/i,
+  /assistant\s*manager/i,
+  /\bmanager\b/i,
+  /team\s*lead/i,
+  /senior\s*executive/i,
+  /\bexecutive\b/i,
+  /management\s*trainee/i
+];
+var GRADE_ORDER=[0,1,3,2,4,5,6,7];
+function grade(e){
+  var d=String((e||{}).designation||'');
+  for(var i=0;i<GRADES.length;i++){
+    if(GRADES[i].test(d)) return GRADE_ORDER[i];
+  }
+  return 99;
+}
+function bySeniority(a,b){
+  var la=((a||{}).status==='lead')?0:1, lb=((b||{}).status==='lead')?0:1;
+  if(la!==lb) return la-lb;
+  var ga=grade(a), gb=grade(b);
+  if(ga!==gb) return ga-gb;
+  return String((a||{}).name||'').localeCompare(String((b||{}).name||''));
+}
+// A rate KPI with no typed target shows its ladder's Target 4 rung, marked as derived (dotted).
+function targetOf(r){
+  if(r.plan_target!==null&&r.plan_target!==undefined)
+    return {v:r.plan_target,derived:false};
+  if(r.ladder_target!==null&&r.ladder_target!==undefined)
+    return {v:r.ladder_target,derived:true};
+  return {v:null,derived:false};
+}
+var RATING_ON_TARGET=4;
 function verticalTable(tid,rs,month){
   var kraIds=[], seenK={}, cell={}, seenP={}, people=[];
   rs.forEach(function(r){
@@ -780,7 +816,7 @@ function verticalTable(tid,rs,month){
   });
   kraIds.sort(function(a,b){
     return String((M.kras[a]||{}).name||'').localeCompare(String((M.kras[b]||{}).name||'')); });
-  people.sort(function(a,b){ return String(a.name).localeCompare(String(b.name)); });
+  people.sort(bySeniority);
 
   var head='<table class="pv"><thead><tr><th rowspan="2" class="pvname">POC</th>'+
     kraIds.map(function(kid){
@@ -825,7 +861,8 @@ function verticalSummary(){
     byV[v].people[e.id]=1;
     var k=byV[v].kra[r.kra_id]||(byV[v].kra[r.kra_id]=
       {ts:[],as:[],unit:'',dir:'',agg:'',pagg:''});
-    if(r.plan_target!==null&&r.plan_target!==undefined) k.ts.push(Number(r.plan_target));
+    var _tt=targetOf(r);
+    if(_tt.v!==null) k.ts.push(Number(_tt.v));
     if(r.actual!==null&&r.actual!==undefined) k.as.push(Number(r.actual));
     k.unit=r.plan_unit||k.unit;
     k.dir=r.direction||k.dir;
@@ -970,15 +1007,20 @@ function achievedCell(r,month){
     ' · '+h(mo)+'</div>'+work;
 }
 function targetCell(r){
-  if(r.plan_target===null||r.plan_target===undefined) return '<span class="lv-na">\u2014</span>';
-  var why=r.plan_rule||'';
+  var t=targetOf(r);
+  if(t.v===null) return '<span class="lv-na">\u2014</span>';
+  var why=t.derived
+    ?'No target is set for this KPI, so the target shown is Target '+
+     RATING_ON_TARGET+' of its own ladder \u2014 the rung that counts as on target.'
+    :(r.plan_rule||'');
   var part=(r.months_total&&r.plan_months&&r.plan_months<r.months_total)
     ? '<div style="font-size:11px;color:var(--ink-3)">'+r.plan_months+' of '+
       r.months_total+' mo</div>' : '';
   var drv=r.plan_source==='derived'
     ? '<div style="font-size:11px;color:var(--ink-3)">auto</div>' : '';
-  return '<span'+(why?' title="'+h(why)+'"':'')+'>'+
-    h(fmtTarget(r.plan_target,r.plan_unit))+'</span>'+part+drv;
+  return '<span'+(why?' title="'+h(why)+'"':'')+(t.derived?' class="derived"':'')+'>'+
+    h(fmtTarget(t.v,r.plan_unit))+'</span>'+part+
+    (t.derived?'<div style="font-size:11px;color:var(--ink-3)">from the ladder</div>':drv);
 }
 function mayActual(id){ return editable()&&(can('enter_actual')||(can('enter_own')&&
   String((S.session||{}).employee_id)===String(id)))&&inScope(id); }
@@ -1454,6 +1496,7 @@ function peopleTable(list){
   });
   order.forEach(function(tid){
     var group=byDept[tid]; if(!group||!group.length) return;
+    group=group.slice().sort(bySeniority);
     var t=M.teams[tid];
     var gr=[], acc=0, c=0;
     group.forEach(function(e){
@@ -1560,7 +1603,7 @@ V.teams=function(){
   tabs.forEach(function(x){ if(String(x.t.id)===String(S.teamSel)) cur=x; });
   S.teamSel=cur.t.id;
   var t=cur.t, F=teamFigures(t), lead=F.lead;
-  var members=F.people.filter(function(e){ return !lead||String(e.id)!==String(lead.id); });
+  var members=F.people.filter(function(e){ return !lead||String(e.id)!==String(lead.id); }).sort(bySeniority);
   var out='<div class="tm"><div class="hdr"><div><h1>Teams</h1><div class="sub">'+
     ((S.model||{}).teams||[]).length+' business functions imported from the KRA / KPI workbook</div></div>'+
     '<div class="spacer"></div><div class="tm-date">'+periodCell()+'</div></div>';
@@ -2146,8 +2189,7 @@ function modalWorking(empId,kpiId,month){
     'What it was rated against</b></div>'+
     '<div class="calc">'+lad+
     '<div class="cl"><span>Target set</span><b>'+
-    (r.plan_target===null||r.plan_target===undefined?'—'
-      :h(fmtTarget(r.plan_target,r.plan_unit)))+'</b></div>'+
+    targetCell(r)+'</b></div>'+
     '<div class="cl"><span>Rating earned</span><b>'+
     (r.level===null||r.level===undefined||r.level===''?'—':'Target '+f1(r.level))+
     '</b></div></div>'+
@@ -2234,8 +2276,7 @@ function kpiTable(rows,showPct){
       var p=pctOfTarget(r);
       return '<tr><td>'+h((M.emps[r.employee_id]||{}).name||'—')+'</td>'+
         '<td>'+h(r.kpi)+'</td>'+
-        '<td class="r num">'+(r.plan_target===null||r.plan_target===undefined
-          ?'<span class="lv-na">—</span>':h(fmtTarget(r.plan_target,r.plan_unit)))+'</td>'+
+        '<td class="r num">'+targetCell(r)+'</td>'+
         '<td class="r num">'+(r.actual===null||r.actual===undefined
           ?'<span class="lv-na">—</span>':h(fmtTarget(r.actual,r.plan_unit)))+'</td>'+
         (showPct?'<td class="r num">'+(p===null?'<span class="lv-na">—</span>':pc(p))+'</td>':'')+
@@ -2387,7 +2428,7 @@ function cardDetail(key){
                  var p=pctOfTarget(r);
                  return '<tr><td>'+h((M.emps[r.employee_id]||{}).name||'—')+'</td>'+
                    '<td>'+h(r.kpi)+'</td>'+
-                   '<td class="r num">'+h(fmtTarget(r.plan_target,r.plan_unit))+'</td>'+
+                   '<td class="r num">'+targetCell(r)+'</td>'+
                    '<td class="r num">'+(r.actual===null||r.actual===undefined
                      ?'<span class="lv-na">—</span>'
                      :h(fmtTarget(r.actual,r.plan_unit)))+'</td>'+
@@ -2418,7 +2459,7 @@ function cardDetail(key){
                  miss.map(function(r){
                    return '<tr><td>'+h((M.emps[r.employee_id]||{}).name||'—')+'</td>'+
                      '<td>'+h(r.kpi)+'</td>'+
-                     '<td class="r num">'+h(fmtTarget(r.plan_target,r.plan_unit))+
+                     '<td class="r num">'+targetCell(r)+
                      '</td></tr>';
                  }))
               :'<div class="cap" style="padding:12px 13px">every targeted KPI has '+

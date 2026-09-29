@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     env:
-      SCRIPT_ID: ${{ secrets.CLASP_SCRIPT_ID || '1BYfLvwrBaKQUnFw3tXd4RMeZxkwM4urwORHIw4kWxaOrDoyD-kaVjeiO' }}
+      SCRIPT_ID: ${{ secrets.CLASP_SCRIPT_ID || '1A8yLFO8sJm1sj7xBelT6MD4G-MO2AuSVBxP_d5prqZxD0rY9P1_lZEDy' }}
       DEPLOYMENT_ID: ${{ secrets.CLASP_DEPLOYMENT_ID }}
     steps:
       - name: Confirm
