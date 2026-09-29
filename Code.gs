@@ -329,6 +329,11 @@ function doGet(e) {
     (e.parameter.arg === undefined ? '' : String(e.parameter.arg)));
   var url = '';
   try { url = ScriptApp.getService().getUrl() || ''; } catch (err) {}
+  // Keep the account that loaded this page. A plain /macros/s/ link goes to the browser's
+  // DEFAULT Google account, which may be a personal one this domain-only app refuses.
+  var me = currentEmail_(), dom = me.indexOf('@') > 0 ? me.split('@')[1] : '';
+  if (url && dom) url = url.replace('://script.google.com/macros/s/', '://script.google.com/a/macros/' + dom + '/s/');
+  if (url && me) url += (url.indexOf('?') < 0 ? '?' : '&') + 'authuser=' + encodeURIComponent(me);
   var inject = 'window.__APP_URL__=' + inlineJson_(url) + ';';
   // ?inline=1: the page's own data call was refused (usually two Google accounts in one
   // browser). doGet runs as the right account, so the first model travels inside the page.

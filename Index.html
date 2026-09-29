@@ -523,8 +523,9 @@ var Api={
     if(!/requested document|PERMISSION_DENIED/i.test(m)) return e;
     return {refused:true,message:m+' Google refused this request before it reached the app. This usually '+
       'means the browser is signed in to more than one Google account and the request went out '+
-      'under one that cannot use this app. Open the link in a private window and sign in only '+
-      'with your @recykal.com account.'};
+      'under one that cannot use this app. Fix: sign out of every Google account, then sign in '+
+      'with your @recykal.com account FIRST so it becomes the default. Or open the link in a '+
+      'private window signed in only with your @recykal.com account.'};
   }
 };
 function write(fn,payload,okMsg){
@@ -2687,7 +2688,8 @@ function render(){
         h(window.__APP_URL__+(window.__APP_URL__.indexOf('?')<0?'?':'&')+'inline=1')+
         '">Open it anyway</a><div class="m" style="margin-top:10px">Open it anyway loads '+
         'the dashboard with its data included in the page. Changing the month or saving '+
-        'can still fail until this browser uses only your @recykal.com account.</div>':'')+
+        'can still fail until your @recykal.com account is the first one signed in to this '+
+        'browser.</div>':'')+
       '</div></div></div>';
     var rt=$('#retry'); if(rt) rt.onclick=function(){ boot(); };
     return;
