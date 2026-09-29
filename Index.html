@@ -521,7 +521,7 @@ var Api={
   explain:function(e){
     var m=String((e&&e.message)||e||'');
     if(!/requested document|PERMISSION_DENIED/i.test(m)) return e;
-    return {message:m+' Google refused this request before it reached the app. This usually '+
+    return {refused:true,message:m+' Google refused this request before it reached the app. This usually '+
       'means the browser is signed in to more than one Google account and the request went out '+
       'under one that cannot use this app. Open the link in a private window and sign in only '+
       'with your @recykal.com account.'};
@@ -2682,6 +2682,12 @@ function render(){
       (S.denied?'This dashboard is not open to you':'Could not load Performance Tracker')+'</div>'+
       '<div class="m" style="margin-top:6px">'+h(S.error)+'</div>'+
       '<button class="btn" id="retry" style="margin-top:14px">Try again</button>'+
+      (S.refused&&window.__APP_URL__?'<a class="btn p" target="_top" '+
+        'style="margin:14px 0 0 8px;text-decoration:none" href="'+
+        h(window.__APP_URL__+(window.__APP_URL__.indexOf('?')<0?'?':'&')+'inline=1')+
+        '">Open it anyway</a><div class="m" style="margin-top:10px">Open it anyway loads '+
+        'the dashboard with its data included in the page. Changing the month or saving '+
+        'can still fail until this browser uses only your @recykal.com account.</div>':'')+
       '</div></div></div>';
     var rt=$('#retry'); if(rt) rt.onclick=function(){ boot(); };
     return;
@@ -2966,7 +2972,16 @@ function reload(){
 }
 function boot(quiet){
   if(!quiet){ S.loading=true; startBoot(); render(); }
-  Api.call('apiBootstrap',[S.period,S.viewAs],function(res){
+  // A ?inline=1 page arrives with its first model already inside (see doGet).
+  var pre=window.__BOOT_INLINE__; window.__BOOT_INLINE__=null;
+  if(pre&&!quiet){ setTimeout(function(){ bootLoaded(pre); },0); return; }
+  Api.call('apiBootstrap',[S.period,S.viewAs],bootLoaded,function(e){
+    S.loading=false; finishBoot(true);
+    S.refused=!!(e&&e.refused);
+    S.error=(e&&e.message)||'Could not reach the server.'; render();
+  });
+}
+function bootLoaded(res){
     S.loading=false;
     if(!res||!res.ok){
       finishBoot(true);
@@ -2974,16 +2989,12 @@ function boot(quiet){
       S.error=(res&&res.error)||'The server returned nothing.';
       render(); return;
     }
-    S.error=null; S.denied=false;
+    S.error=null; S.denied=false; S.refused=false;
     S.reveal=true;
     S.session=res.session; S.users=res.users||[]; S.model=res.model;
     S.period=res.model.period_id;
     index();
     if(!location.hash){ location.hash='#/overview'; } else { route(); }
-  },function(e){
-    S.loading=false; finishBoot(true);
-    S.error=(e&&e.message)||'Could not reach the server.'; render();
-  });
 }
 
 window.__PerfTracker={S:S,M:M,V:V,boot:boot,render:render,index:index};

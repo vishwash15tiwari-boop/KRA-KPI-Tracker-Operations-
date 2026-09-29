@@ -283,6 +283,13 @@ var DIAG_FUNCTIONS_ = {
   previewOmpTracking: previewOmpTracking
 };
 
+// JSON that is safe inside a <script> element.
+function inlineJson_(v) {
+  return JSON.stringify(v).replace(/</g, '\\u003c')
+    .split(String.fromCharCode(8232)).join('\\u2028')
+    .split(String.fromCharCode(8233)).join('\\u2029');
+}
+
 function diagText_(body) {
   return ContentService.createTextOutput(body)
     .setMimeType(ContentService.MimeType.TEXT);
@@ -320,7 +327,18 @@ function doGet(e) {
   var diag = e && e.parameter && e.parameter.diag;
   if (diag) return runDiag_(String(diag),
     (e.parameter.arg === undefined ? '' : String(e.parameter.arg)));
-  return HtmlService.createHtmlOutputFromFile('Index')
+  var url = '';
+  try { url = ScriptApp.getService().getUrl() || ''; } catch (err) {}
+  var inject = 'window.__APP_URL__=' + inlineJson_(url) + ';';
+  // ?inline=1: the page's own data call was refused (usually two Google accounts in one
+  // browser). doGet runs as the right account, so the first model travels inside the page.
+  if (e && e.parameter && e.parameter.inline) {
+    inject += 'window.__BOOT_INLINE__=' + inlineJson_(apiBootstrap(PERIOD_YTD, null)) + ';';
+  }
+  // Function form: a replacement string would treat $& and $' in the data as patterns.
+  var html = HtmlService.createHtmlOutputFromFile('Index').getContent()
+    .replace('<script>', function () { return '<script>' + inject + '\n'; });
+  return HtmlService.createHtmlOutput(html)
     .setTitle(APP_NAME + ' — Individual KRA / KPI Performance')
     .setFaviconUrl(FAVICON_URL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
