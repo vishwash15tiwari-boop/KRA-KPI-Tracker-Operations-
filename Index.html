@@ -512,8 +512,19 @@ var Api={
   call:function(fn,args,ok,bad){
     if(!Api.live()){ bad({message:'Open this page through the deployed Apps Script URL — '+
       'google.script.run is not available here.'}); return; }
-    var r=google.script.run.withSuccessHandler(ok).withFailureHandler(bad);
+    var r=google.script.run.withSuccessHandler(ok)
+      .withFailureHandler(function(e){ if(bad) bad(Api.explain(e)); });
     r[fn].apply(r,args||[]);
+  },
+  // Google refused the call before the app's code ran: nearly always a browser signed in
+  // to more than one Google account, with the call going out under the wrong one.
+  explain:function(e){
+    var m=String((e&&e.message)||e||'');
+    if(!/requested document|PERMISSION_DENIED/i.test(m)) return e;
+    return {message:m+' Google refused this request before it reached the app. This usually '+
+      'means the browser is signed in to more than one Google account and the request went out '+
+      'under one that cannot use this app. Open the link in a private window and sign in only '+
+      'with your @recykal.com account.'};
   }
 };
 function write(fn,payload,okMsg){

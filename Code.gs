@@ -924,6 +924,8 @@ function scopeModel_(m, s) {
 // ===== API =====
 function apiBootstrap(periodId, viewAs) {
   try {
+    // Open the database first: read_() would otherwise hide a failure as empty tables.
+    ss_();
     var s = resolveSession_(viewAs);
     if (!can_(s, 'view')) {
       commit_();
@@ -942,6 +944,7 @@ function apiBootstrap(periodId, viewAs) {
 }
 function apiModel(periodId) {
   try {
+    ss_();
     var s = resolveSession_();
     if (!can_(s, 'view')) {
       commit_();
