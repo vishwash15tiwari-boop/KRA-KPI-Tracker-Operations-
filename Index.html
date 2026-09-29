@@ -1672,29 +1672,6 @@ function chartTeams(id,mode){
     backgroundColor:tok('--accent'),borderRadius:4,borderSkipped:'start',
     maxBarThickness:24}]},options:o});
 }
-function chartTrend(id){
-  var m=S.model||{}, labels=[], vals=[], any=false;
-  (m.periods||[]).forEach(function(p){
-    labels.push(p.name);
-    /* only the loaded period has rows; other periods are unknown, not zero */
-    if(String(p.id)===String(S.period)){
-      var o=[],k;
-      for(k in M.overalls){ if(M.overalls[k].score!==null&&M.overalls[k].score!==undefined)
-        o.push(M.overalls[k].score); }
-      if(o.length){ any=true;
-        vals.push(Math.round(o.reduce(function(a,b){return a+b;},0)/o.length*10)/10); }
-      else vals.push(null);
-    } else vals.push(null);
-  });
-  if(!any) return false;
-  var o=baseOpts();
-  o.scales.y.min=0; o.scales.y.max=5; o.scales.y.ticks.stepSize=1;
-  o.plugins.tooltip.callbacks={label:function(c){ return 'average level '+f1(c.parsed.y); }};
-  mkChart(id,{type:'line',data:{labels:labels,datasets:[{data:vals,
-    borderColor:tok('--accent'),backgroundColor:tok('--accent'),borderWidth:2,
-    pointRadius:4,pointHoverRadius:6,tension:.3,spanGaps:false}]},options:o});
-  return true;
-}
 
 /* ================================= views ================================== */
 var V={};
@@ -3253,9 +3230,6 @@ var NAV=[
   ['System',[['method','How it is calculated','info'],
              ['admin','Administration','cog']]]
 ];
-var TITLE={overview:'Overview',teams:'Teams',team:'Team',people:'People',emp:'Scorecard',
-  framework:'KRA / KPI',review:'Structure review',admin:'Administration',
-  method:'How it is calculated'};
 
 function crumbs(){
   var c=[];

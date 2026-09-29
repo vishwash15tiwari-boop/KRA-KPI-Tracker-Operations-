@@ -100,11 +100,6 @@ var TARGETS_SHEET_ID = '1AWHM6Cmtf0hFkdQtzlryVw0pRTzehiJ-u-yNjQbTFTc';
 var OMP_TRACKER_SHEET_ID = '15hAyV4C2DQEkGPOTcTmXfAuyQ2Y8Wvlu7yb5Fzar8Xw';
 var OMP_TRACKER_TAB = 'OMP_TRACKER';
 var SHIPMENTS_TAB = 'Raw_Shipments';
-/* TARGET SHEET — "Target Sheet", owned by vishwash.tiwari@recykal.com. Holds the
- * per-individual monthly targets that are TYPED IN (New Seller Acquisition,
- * GMV in Cr). The three share-of-a-count KRAs are not in here; those are
- * derived — see DERIVED_BASE below. */
-var TARGET_SHEET_ID = '1AWHM6Cmtf0hFkdQtzlryVw0pRTzehiJ-u-yNjQbTFTc';
 /* A cancelled shipment did not happen, so counting it would credit or penalise
  * work nobody did. Kept as a named list so the rule is visible and editable
  * rather than buried in a filter expression. */
@@ -289,16 +284,15 @@ function readTargetTab_(sh) {
 }
 
 /* ==========================================================================
- * DERIVED TARGETS — three KRAs whose target is not typed by anyone, but is a
+ * DERIVED TARGETS — six KRAs whose target is not typed by anyone, but is a
  * percentage of something that happened in the source data. Stated by the KRA
- * owner and effective from June 2026 onward:
+ * owner and effective from June 2026 onward. DERIVED_RULES below lists all six
+ * with their team and percentage.
  *
- *   Transaction from Existing Sellers        50% of the sellers onboarded up
- *                                            to the END OF LAST MONTH
- *   Transaction from New Onboarded Sellers   20% of the sellers onboarded
- *                                            DURING THIS MONTH
- *   Retention of Existing Transacted Sellers 70% of the sellers who
- *                                            TRANSACTED LAST MONTH
+ * NOT WIRED UP YET: nothing supplies the basis counts (sellers onboarded,
+ * sellers transacted last month, buyers onboarded), so derivedTarget_ has no
+ * caller and no derived PLAN row is written. The Target Sheet importer does
+ * use derivedRuleFor_ to drop rule percentages typed where a count belongs.
  *
  * Two decisions worth stating, because they move people's ratings:
  *
@@ -364,7 +358,7 @@ function periodAtOrAfter_(periodId, fromId) {
   return String(periodId) >= String(fromId);
 }
 /** The target for one derived KRA in one month.
- *  basis: { onboarded_this_month, onboarded_cumulative_prev, transacted_prev_month }
+ *  basis: an object keyed by DERIVED_RULES[].basis, e.g. sellers_transacted_prev_month
  *  Returns null when the rule does not apply or the basis is not known yet. */
 function derivedTarget_(kraName, periodId, basis, teamName) {
   var r = derivedRuleFor_(kraName, teamName);
@@ -379,19 +373,18 @@ function derivedTarget_(kraName, periodId, basis, teamName) {
 }
 
 /* YEAR TO DATE — a pseudo-period id.  Selecting it spans every month of the
- * financial year that has actually opened and reports, per KPI, the MEAN of
- * the monthly levels that were awarded.
+ * financial year that has actually opened. How a KPI is rated across that
+ * span is decided in buildModel_:
  *
- * Why a mean of levels rather than a re-resolve against summed actuals: the
- * ladders are MONTHLY targets — "≤ 19 Days", "≥ ₹9 Cr" — so adding twelve
- * months of actuals and testing that against a one-month ladder would be
- * nonsense.  Averaging the ratings a person actually earned each month is the
- * only reading that survives ladders like "TGT-20 Days" and the ordinal ones.
+ *   - a RATIO ladder with a target is rated once, on the year's own achieved
+ *     against the year's own target (ytd_basis 'year_ratio');
+ *   - everything else — absolute ladders like "TGT-20 Days", ordinal and
+ *     hand-awarded KPIs — is rated on the MEAN of the monthly levels
+ *     (ytd_basis 'mean_of_monthly_levels'), because a monthly ladder cannot be
+ *     tested against twelve months of summed actuals.
  *
  * Months with no recorded actual are LEFT OUT of the mean rather than counted
- * as zero, for the same reason unscored KPIs leave the rollup denominator —
- * so a row also reports months_scored / months_total and the reader can see
- * how thin the average is. */
+ * as zero, so a row also reports months_scored / months_total. */
 var PERIOD_YTD = 'ytd';
 function ytdPeriodIds_(periods) {
   return periods.filter(function (p) { return String(p.status) !== 'upcoming'; })
@@ -463,7 +456,6 @@ var DIAG_FUNCTIONS_ = {
   previewTargetImport: previewTargetImport,
   previewRatingScale: previewRatingScale,
   previewAchievementJoin: previewAchievementJoin,
-  previewDSO: previewDSO,
   peekTimeline: peekTimeline,
   previewCollectionDays: previewCollectionDays,
   previewFrameworkRefresh: previewFrameworkRefresh,
@@ -848,8 +840,6 @@ function normaliseWeights_(list) {
   return out;
 }
 
-var LEVEL_LABELS = { 0: 'Below T1', 1: 'Target 1', 2: 'Target 2', 3: 'Target 3', 4: 'Target 4', 5: 'Target 5' };
-
 /* ==========================================================================
  * SESSION & AUTHORIZATION — enforced here, not merely hidden in the UI.
  * ======================================================================== */
@@ -1170,8 +1160,8 @@ function aggKind_(unit, kpiName, parsed, hasTarget) {
       var act = p ? num_(p.actual) : null;
       var man = p ? num_(p.manual_level) : null;
       /* A RATIO LADDER is scored on actual / target, not on the raw actual.
-         The ladder now reads 0.8 | 0.9 | 1.0 | 1.1 | 1.2 — percentages of
-         target — so comparing 7.19 (crore) against 1.2 would score every GMV
+         The ladder reads 0.6 | 0.75 | 0.9 | 1.0 | 1.05 — percentages of
+         target — so comparing 7.19 (crore) against 1.05 would score every GMV
          KPI a 5 regardless of the target. The raw actual is what gets stored
          and shown; only the comparison uses the quotient.
          An absolute ladder (DSO days, PDD crore) is compared directly. */
@@ -1190,7 +1180,7 @@ function aggKind_(unit, kpiName, parsed, hasTarget) {
        *
        * The Target Sheet carries achievements in months where nobody typed a
        * target — 26 achievements against 19 targets on New Buyer Acquisition.
-       * Comparing those raw against 0.8 | 0.9 | 1.0 | 1.1 | 1.2 clears every
+       * Comparing those raw against 0.6 | 0.75 | 0.9 | 1.0 | 1.05 clears every
        * band, so "5 new buyers" scored a PERFECT 5 in a month with no target
        * at all. Silent, and generous in the worst possible direction.
        *
@@ -1486,7 +1476,6 @@ function apiModel(periodId) {
     var m = buildModel_(periodId); commit_(); return jsonSafe_({ ok: true, model: scopeModel_(m, s) }); }
   catch (e) { return { ok: false, error: String(e && e.message || e), where: 'apiModel' }; }
 }
-function apiPing() { return { ok: true, app: APP_NAME, at: nowIso_() }; }
 
 /* What each header looks like it carries.  Only used to point a human at the
  * right tab — nothing downstream keys off these guesses. */
@@ -2508,55 +2497,7 @@ function readShipments_(sh) {
 
 /* A shipment counts only if it is not cancelled. SHIPMENTS_EXCLUDE_STATUS is
    the KRA owner's rule, kept as data so it can be widened without a code change. */
-function shipmentCounts_(sh) {
-  var st = String(sh.status || '').trim().toLowerCase();
-  for (var i = 0; i < SHIPMENTS_EXCLUDE_STATUS.length; i++) {
-    if (st === String(SHIPMENTS_EXCLUDE_STATUS[i]).toLowerCase()) return false;
-  }
-  return true;
-}
-
-/* ==========================================================================
- * GMV, RECEIVABLES AND DSO FROM MM_CT
- *
- * DSO — days sales outstanding — is the standard receivables measure:
- *
- *     DSO = (receivables at period end / credit sales in the period)
- *           x days in the period
- *
- * From Raw_Shipments: shipment_value is the sale, paid_amount is what has come
- * back, and the difference is the receivable.
- *
- * FOUR JUDGEMENTS ARE BAKED IN HERE AND EVERY ONE OF THEM MOVES THE NUMBER.
- * They are reported at the top of the run rather than buried, because a DSO is
- * a rating input and a silent assumption in it is worse than no DSO at all.
- *
- *  1. A BLANK paid_amount MEANS NOTHING PAID. Only 105 of 300 rows carry one,
- *     and the column fills when money arrives. Read the other way — blank as
- *     "fully settled" — DSO would collapse toward zero and flatter everybody.
- *
- *  2. ONLY INVOICED SHIPMENTS COUNT. A receivable begins at the invoice, not
- *     at dispatch. A shipment with no invoice_date is excluded from both sides
- *     of the ratio, so it neither inflates the numerator nor pads the
- *     denominator.
- *
- *  3. CANCELLED SHIPMENTS ARE EXCLUDED, as everywhere else in this app.
- *
- *  4. THE MONTH IS THE SHIPMENT CREATED DATE, matching every other figure
- *     here. Using invoice_date instead would shift some shipments a month and
- *     is arguably more correct for a receivables measure — it is offered as a
- *     second column rather than chosen silently.
- *
- * WHOSE DSO IS IT? Receivables are owed by the BUYER, so the buyer POC is the
- * natural owner. But the KRA sits on people who run the seller relationship.
- * Both attributions are printed side by side; the KRA owner picks, and until
- * they do nothing is written.
- * ======================================================================== */
-function daysInMonth_(periodId) {
-  var m = String(periodId || '').match(/(\d{4})-(\d{2})$/);
-  if (!m) return 30;
-  return new Date(Number(m[1]), Number(m[2]), 0).getDate();
-}
+function shipmentCounts_(sh) { return !shipmentExcluded_(sh.status); }
 
 /* ==========================================================================
  * HOW LONG COLLECTION ACTUALLY TAKES
@@ -2574,7 +2515,7 @@ function daysInMonth_(periodId) {
  *     value, by up to 95 lakh. It cannot be used per shipment at all.
  *
  * AND invoice_date is BLANK on the paid example. Excluding rows without one —
- * which previewDSO does — would drop the very shipments that got paid. That
+ * which the first DSO attempt did — would drop the very shipments that got paid. That
  * assumption has to go too.
  *
  * So this measures ELAPSED DAYS TO COMPLETED from four candidate starts and
@@ -2709,8 +2650,9 @@ function previewCollectionDays() {
 /** READ-ONLY — the status_timeline column in full, plus how paid_amount
  *  compares with shipment_value.
  *
- *  previewDSO() returned NEGATIVE days for several people and capped at the
- *  length of the month for everyone else. Both are symptoms, not noise:
+ *  The first DSO attempt (receivables from paid_amount, since removed)
+ *  returned NEGATIVE days for several people and capped at the length of the
+ *  month for everyone else. Both are symptoms, not noise:
  *
  *    negative  -> paid_amount on a row EXCEEDS that row's shipment_value, so
  *                 the two are not describing the same thing. A payment that
@@ -2801,115 +2743,6 @@ function peekTimeline() {
     out.push('  largest overshoot  : ' + Math.round(worst) + ' on ' + worstId);
     out.push('  => paid_amount is NOT a payment against this one shipment.');
   }
-  var txt = out.join(nl);
-  Logger.log(txt);
-  return txt;
-}
-/** DRY RUN — GMV, receivables and DSO per person per month. Writes nothing. */
-function previewDSO() {
-  ensureSeeded_();
-  var nl = String.fromCharCode(10), out = [], src;
-  try { src = SpreadsheetApp.openById(SHIPMENTS_SHEET_ID); }
-  catch (e) { return 'Cannot open MM_CT  (' + (e && e.message || e) + ')'; }
-  var shipSh = findSheet_(src, SHIPMENTS_TAB), pocSh = findSheet_(src, POC_TAB);
-  if (!shipSh) return 'no tab matching "' + SHIPMENTS_TAB + '"';
-  var poc = pocSh ? readPocMap_(pocSh) : { sellerPoc: {}, buyerPoc: {} };
-  var shp = readShipments_(shipSh);
-  if (shp.missing.length) return 'Raw_Shipments is missing: ' + shp.missing.join(', ');
-
-  var sellSh = findSheet_(src, 'Raw_Sellers'), buySh = findSheet_(src, 'Raw_Buyers');
-  var accS = sellSh ? readAccountPoc_(sellSh) : { map: {} };
-  var accB = buySh ? readAccountPoc_(buySh) : { map: {} };
-  var sellerMaps = [poc.sellerPoc, accS.map], buyerMaps = [poc.buyerPoc, accB.map];
-
-  var emps = read_(T.EMPLOYEES), empByName = {}, teamById = idx_(read_(T.TEAMS));
-  emps.forEach(function (e) { empByName[normName_(e.name)] = e; });
-
-  out.push('=== assumptions (every one moves the number) ===');
-  out.push('  blank paid_amount        = NOTHING paid, so fully receivable');
-  out.push('  no invoice_date          = excluded from BOTH sides of the ratio');
-  out.push('  cancelled                = excluded');
-  out.push('  month                    = shipment_created_date');
-  out.push('  DSO = receivable / GMV x days in month');
-  if (shp.optMissing) out.push('  !! columns not found: ' + shp.optMissing.join(', '));
-  out.push('');
-
-  /* [sellerOrBuyer][empId][period] = {gmv, paid, n} */
-  var acc = { seller: {}, buyer: {} };
-  var tot = 0, counted = 0, noInvoice = 0, noPeriod = 0, unattr = 0;
-  var gGmv = 0, gPaid = 0;
-  shp.rows.forEach(function (r) {
-    tot++;
-    if (!shipmentCounts_(r)) return;
-    if (!r.invoiced) { noInvoice++; return; }
-    if (!r.period_id) { noPeriod++; return; }
-    var v = r.value; if (v === null) return;
-    counted++;
-    var paid = r.paid === null ? 0 : r.paid;
-    gGmv += v; gPaid += paid;
-    var sides = [
-      { k: 'seller', poc: pocForChain_(sellerMaps, r.sellerName, r.sellerCat), cat: r.sellerCat },
-      { k: 'buyer', poc: pocForChain_(buyerMaps, r.buyerName, r.buyerCat), cat: r.buyerCat }
-    ];
-    var any = false;
-    sides.forEach(function (sd) {
-      if (!sd.poc) return;
-      var res = resolvePocEmployee_(sd.poc, sd.cat, empByName, teamById);
-      if (!res.emp) return;
-      any = true;
-      var byE = acc[sd.k][res.emp.id] || (acc[sd.k][res.emp.id] = {});
-      var cell = byE[r.period_id] || (byE[r.period_id] = { gmv: 0, paid: 0, n: 0 });
-      cell.gmv += v; cell.paid += paid; cell.n++;
-    });
-    if (!any) unattr++;
-  });
-
-  out.push('=== Raw_Shipments ===');
-  out.push('  ' + tot + ' rows;  ' + counted + ' counted');
-  out.push('  ' + noInvoice + ' skipped: no invoice_date');
-  out.push('  ' + noPeriod + ' skipped: unreadable created date');
-  out.push('  ' + unattr + ' counted but attributable to nobody');
-  out.push('  GMV ' + (Math.round(gGmv / RUPEES_PER_CRORE * 100) / 100) + ' Cr,  ' +
-    'received ' + (Math.round(gPaid / RUPEES_PER_CRORE * 100) / 100) + ' Cr,  ' +
-    'outstanding ' + (Math.round((gGmv - gPaid) / RUPEES_PER_CRORE * 100) / 100) + ' Cr');
-  out.push('');
-
-  ['seller', 'buyer'].forEach(function (side) {
-    out.push('=== DSO attributed to the ' + side.toUpperCase() + ' POC ===');
-    var ids = Object.keys(acc[side]);
-    if (!ids.length) { out.push('  (nothing attributable)'); out.push(''); return; }
-    ids.sort(function (a, b) {
-      return String((idx_(emps)[a] || {}).name || a)
-        .localeCompare(String((idx_(emps)[b] || {}).name || b)); });
-    var byId = idx_(emps);
-    ids.forEach(function (id) {
-      var e = byId[id] || { name: id };
-      out.push('  ' + e.name);
-      var pers = Object.keys(acc[side][id]).sort();
-      pers.forEach(function (pid) {
-        var c = acc[side][id][pid];
-        var recv = c.gmv - c.paid;
-        var dso = c.gmv > 0 ? recv / c.gmv * daysInMonth_(pid) : null;
-        out.push('    ' + pid.replace('per_', '') +
-          '  txns ' + c.n +
-          '  GMV ' + (Math.round(c.gmv / RUPEES_PER_CRORE * 100) / 100) + ' Cr' +
-          '  recd ' + (Math.round(c.paid / RUPEES_PER_CRORE * 100) / 100) + ' Cr' +
-          '  outstanding ' + (Math.round(recv / RUPEES_PER_CRORE * 100) / 100) + ' Cr' +
-          '  DSO ' + (dso === null ? '-' : Math.round(dso * 10) / 10) + ' days');
-      });
-    });
-    out.push('');
-  });
-
-  out.push('NOTHING WAS WRITTEN. This is a dry run.');
-  out.push('');
-  out.push('!! DO NOT WRITE THESE NUMBERS YET. The first run produced NEGATIVE');
-  out.push('   days for several people, which means paid_amount exceeds the');
-  out.push('   shipment value it is being subtracted from — the two are not');
-  out.push('   describing the same thing. And this formula cannot exceed the');
-  out.push('   length of the month, so a 45-day DSO is unrepresentable, while');
-  out.push('   the ladder here runs 15|10|5|3|2 with a target of 3 — a measure');
-  out.push('   of DAYS TO COLLECT, not a balance ratio. Run peekTimeline.');
   var txt = out.join(nl);
   Logger.log(txt);
   return txt;
@@ -3144,10 +2977,10 @@ function isRatioLadder_(bands) {
 
 /* Is this row ALREADY on the rating scale?
  *
- * This has to be a NUMERIC comparison. The scale is written as the strings
- * '0.8','0.9','1.0','1.1','1.2', but Sheets stores '1.0' as a number and hands
- * it back as 1, which stringifies to "1" — so a text comparison against
- * "0.8 | 0.9 | 1.0 | 1.1 | 1.2" never matches a row that was already
+ * This has to be a NUMERIC comparison. The scale is written as strings
+ * (RATING_SCALE), but Sheets stores '1.0' as a number and hands it back as 1,
+ * which stringifies to "1" — so a text comparison against the joined scale
+ * never matches a row that was already
  * migrated. The first live run of applyRatingScale() therefore rewrote all 166
  * rows a second time, bumped every version and wrote 166 more audit entries,
  * and would have done so on every run forever. The in-memory test suite could
@@ -3171,7 +3004,7 @@ function ladderKey_(t) {
 function previewRatingScale() { return applyRatingScale_(true); }
 
 /** THE REAL CHANGE — rewrite the percentage-of-target ladders to
- *  80/90/100/110/120. Re-rates every affected scorecard, so run
+ *  RATING_SCALE (on target = Target 4). Re-rates every affected scorecard, so run
  *  previewRatingScale() first. Idempotent: a row already on the scale is
  *  left alone. */
 function applyRatingScale() { return applyRatingScale_(false); }
@@ -3203,12 +3036,11 @@ function applyRatingScale_(dryRun, quiet) {
     /* A target with NO usable ladder can never produce a rating. That is worse
        than a missing target: the number is on screen, so it reads as scored,
        and nothing says why the level stays blank. Named individually below. */
-    var pb = parseBands_([t.t1, t.t2, t.t3, t.t4, t.t5]);
     var defined = 0;
     [t.t1, t.t2, t.t3, t.t4, t.t5].forEach(function (b) {
       if (String(b == null ? '' : b).trim() !== '') defined++;
     });
-    if (!defined || pb.kind === 'none') {
+    if (!defined) {
       unscoreable.push(((emps[t.employee_id] || {}).name || t.employee_id) + '  |  ' +
         ((kpis[t.kpi_id] || {}).name || t.kpi_id) + '  |  ' + t.period_id +
         '  |  ladder is ' + (defined ? 'unusable' : 'EMPTY'));
@@ -3713,8 +3545,8 @@ function previewPlasticDSO() {
  * but only if both halves move together, which they do not when one POC has
  * other accounts and the other does not.
  *
- * SCOPED TO PLASTIC. Metal also holds a DSO Days KRA; no ruling has been given
- * on it and its buyers are different accounts, so it is left alone.
+ * BOTH TEAMS, per DSO_TEAMS_. Plastic gets the KRA owner's 5-day target
+ * written; Metal keeps the 3 days the Target Sheet already holds.
  *
  * A HAND-ENTERED ACTUAL IS NEVER OVERWRITTEN. Only rows this function wrote
  * before — identified by their note — are refreshed, the same rule the Target
@@ -3850,14 +3682,7 @@ function dsoAchievements_(dryRun) {
   var acc = {}, vert = {}, unattributed = 0, unattribWhy = {};
   for (var r = 1; r < lastR; r++) {
     var row = g[r];
-    if (cStat >= 0) {
-      var st = String(row[cStat] || '').trim().toLowerCase();
-      var skip = false;
-      for (var i = 0; i < SHIPMENTS_EXCLUDE_STATUS.length; i++) {
-        if (st === String(SHIPMENTS_EXCLUDE_STATUS[i]).toLowerCase()) skip = true;
-      }
-      if (skip) continue;
-    }
+    if (cStat >= 0 && shipmentExcluded_(row[cStat])) continue;
     var cat = String(row[cCat] || '');
     var shipTeam = dsoTeamOfCategory_(cat);
     if (!shipTeam) continue;
@@ -4106,10 +3931,10 @@ function dsoAchievements_(dryRun) {
   return txt;
 }
 
-/** DRY RUN — what the Plastic DSO import would write. Writes nothing. */
+/** DRY RUN — what the DSO import would write, both teams. Writes nothing. */
 function previewDsoAchievements() { return dsoAchievements_(true); }
 
-/** THE REAL WRITE — Plastic DSO actuals and the 5-day target. Run the preview
+/** THE REAL WRITE — DSO actuals for both teams, and Plastic's 5-day target. Run the preview
  *  first. Re-running is safe: it refreshes its own rows and never touches a
  *  hand-entered actual. */
 function importDsoAchievements() { return dsoAchievements_(false); }
@@ -4411,8 +4236,8 @@ var ONBOARD_FROM_ = '2026-04-01';
 /* ---------------------------------------------------------------------------
  * WHO OWNS A VERTICAL.
  *
- * FIRST MATCH WINS, and the order is the KRA owner's: Open Marketplace is
- * checked before EPR so that a vertical naming both lands with Vamsi.
+ * FIRST MATCH WINS, in the order of ONBOARDING_OWNERS_. EPR is tested first —
+ * see the ruling of 21 Sep below.
  *
  * AFR AND INFRA ARE NOT ONE BUCKET. Harshita holds them as two separate KRAs
  * weighted 0.25 each, so a merged "AFR & Infra" figure could not be written to
@@ -4437,13 +4262,7 @@ var ONBOARD_FROM_ = '2026-04-01';
  * category, which is the only column that can make them score. Vamsi's and
  * Naveen's match on vertical, as given.
  *
- * ORDER IS THE KRA OWNER'S, AND IT HAS A CONSEQUENCE. Open Marketplace, then
- * AFR & Infra, then EPR — so an EPR row whose category is Metal goes to
- * HARSHITA, not to Naveen. previewOnboardingAttribution() cross-tabs vertical
- * against category so exactly how many rows that moves is visible rather than
- * buried. Swap the EPR rule above the two category rules to reverse it.
- *
- * Re-Commerce is last: Vamsi holds a Re-Commerce KRA, so those rows have a
+ * Re-Commerce: Vamsi holds a Re-Commerce KRA, so those rows have a
  * home, but it was not in the stated rule and must not outrank anything in it. */
 /* A RULE MAY REQUIRE BOTH COLUMNS, and Harshita's two do.
  *
@@ -8257,79 +8076,6 @@ function ensureKpi_(kraId, name, goal, source, unit) {
   upsert_(T.KPIS, { id: id, kra_id: kraId, name: name, goal: goal || '', source: source || '',
                     unit: unit || '', status: 'Active' });
   return id;
-}
-
-/* ==========================================================================
- * DERIVED MONTHLY TARGETS
- *
- * A few KRAs get no target typed into the Target Sheet, because the target is
- * a PERCENTAGE OF A COUNT that is only known once the month has run:
- *
- *   Transaction from Existing Sellers        rate x sellers onboarded BEFORE this month
- *   Transaction from New Onboarded Sellers   rate x sellers onboarded DURING this month
- *   Retention of Existing Transacted Sellers rate x sellers who TRANSACTED last month
- *   Transaction from New Onboarded Buyers    rate x buyers onboarded DURING this month
- *
- * THE RATE IS NOT HARDCODED.  Each KPI's own goal text already states it, and
- * the two teams do not agree: Metal asks for 50% retention while Plastic asks
- * for 70%, and the seller-side rules do not exist on Metal at all (its
- * equivalent is buyer-based).  Reading the rate off the goal keeps every team
- * correct without a second table to maintain, and it means editing the
- * workbook's wording changes the target — which is where that decision belongs.
- *
- * Rounding is UP.  "At least 70% of 7 sellers" is 4.9 sellers, and you cannot
- * hit 70% with 4 — so the target is 5.  Rounding down would hand out a target
- * that is below the stated threshold.
- * ======================================================================== */
-
-/* Which count each KRA's target is a share of.  Keyed by the KRA name reduced
- * to lowercase words, so trailing spaces and case in the workbook do not
- * decide whether a rule fires. */
-var DERIVED_BASE = {
-  'transaction from existing sellers':        'sellers_onboarded_before_month',
-  'transaction from new onboarded sellers':   'sellers_onboarded_in_month',
-  'retention of existing transacted sellers': 'sellers_transacted_prev_month',
-  'transaction from new onboarded buyers':    'buyers_onboarded_in_month'
-};
-function derivedBaseKey_(kraName) {
-  var k = String(kraName == null ? '' : kraName).toLowerCase()
-    .replace(/[^a-z]+/g, ' ').trim();
-  return DERIVED_BASE[k] || null;
-}
-
-/* The rate stated in a KPI's goal text: "at least 70% of sellers ..." -> 0.7.
- * Returns null when the goal states no percentage, which is the signal that a
- * target has to be typed in rather than derived. */
-function goalRate_(goal) {
-  var m = String(goal == null ? '' : goal).match(/(\d+(?:\.\d+)?)\s*%/);
-  if (!m) return null;
-  var pct = parseFloat(m[1]);
-  if (!isFinite(pct) || pct <= 0 || pct > 100) return null;
-  return pct / 100;
-}
-
-/* rate x base, rounded up, never negative */
-function derivedTarget_(base, rate) {
-  var b = num_(base), r = num_(rate);
-  if (b === null || r === null || b < 0) return null;
-  return Math.ceil(b * r - 1e-9);   /* the epsilon keeps 10 x 0.5 at 5, not 6 */
-}
-
-/* The whole rule for one assignment: which count, what rate, what target.
- * `counts` is the per-person, per-month bundle that the achievements workbook
- * will supply. Returns null when this KRA is not one of the derived ones, or
- * when the count it needs is missing — a missing count must leave the target
- * blank rather than silently become zero. */
-function derivedTargetFor_(kraName, goal, counts) {
-  var key = derivedBaseKey_(kraName);
-  if (!key) return null;
-  var rate = goalRate_(goal);
-  if (rate === null) return null;
-  var base = counts ? counts[key] : null;
-  if (base === null || base === undefined || base === '') return null;
-  var target = derivedTarget_(base, rate);
-  if (target === null) return null;
-  return { base_key: key, base: num_(base), rate: rate, target: target };
 }
 
 /* ==========================================================================
