@@ -1,0 +1,4 @@
+.git/**
+Code.js
+**/*.md
+tests/**
