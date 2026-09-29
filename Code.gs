@@ -601,10 +601,13 @@ function openAccessState_() {
   if (isNaN(t)) return { on: false, raw: raw, bad: true };
   return { on: Date.now() < t, until: raw, raw: raw, expired: Date.now() >= t };
 }
+// Always super_admin, whatever PERFORMOS_ADMINS or the USERS tab say.
+var SUPER_ADMINS_ = ['vishwash.tiwari@recykal.com'];
 function bootstrapAdmins_() {
   var raw = '';
   try { raw = PropertiesService.getScriptProperties().getProperty(PROP_ADMINS) || ''; } catch (e) {}
-  return String(raw).split(/[,;\s]+/).map(email_).filter(function (x) { return x !== ''; });
+  return String(raw).split(/[,;\s]+/).concat(SUPER_ADMINS_).map(email_)
+    .filter(function (x) { return x !== ''; });
 }
 function currentEmail_() {
   try { return email_(Session.getActiveUser().getEmail() || Session.getEffectiveUser().getEmail() || ''); }
@@ -5737,7 +5740,7 @@ function whoAmI() {
   out.push('Session email : "' + email + '"');
   out.push('Backend DB    : ' + ss_().getUrl());
   var boot = bootstrapAdmins_();
-  out.push('PERFORMOS_ADMINS property: ' + (boot.length ? boot.join(', ') : '(not set)') +
+  out.push('Super admins (PERFORMOS_ADMINS + SUPER_ADMINS_): ' + (boot.length ? boot.join(', ') : '(none)') +
            (email && boot.indexOf(email) >= 0 ? '   <== YOU ARE LISTED' : ''));
   var oa = openAccessState_();
   out.push('PERFORMOS_OPEN_ACCESS      : ' + (oa.raw || '(not set)') +
@@ -6495,6 +6498,8 @@ function seedFromEmbedded_() {
   write_(T.USERS, [
     { id: 'u_admin', name: 'Platform Admin', email: 'srinivasareddy.dundi@recykal.com',
       role_id: 'super_admin', employee_id: '' },
+    { id: 'u_admin_vt', name: 'Vishwash Tiwari', email: 'vishwash.tiwari@recykal.com',
+      role_id: 'super_admin', employee_id: find(/^VISHWASH$/i) },
     { id: 'u_hr', name: 'HR / Admin', email: '', role_id: 'hr_admin', employee_id: '' },
     { id: 'u_lead_col', name: 'Ravi Naik (Collections lead)', email: '', role_id: 'team_leader', employee_id: find(/^RAVI NAIK$/i) },
     { id: 'u_lead_met', name: 'Amit Jha (Metal lead)', email: '', role_id: 'team_leader', employee_id: find(/^AMIT JHA$/i) },
