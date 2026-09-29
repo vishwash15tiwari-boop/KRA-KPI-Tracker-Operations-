@@ -8,48 +8,18 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <style>
-/* ============================================================================
-   TOKENS.  White surface #ffffff is the surface every chart value below was
-   validated against — changing it means re-running the palette validator, not
-   just eyeballing the result.
-   ========================================================================== */
 :root{
-  /* BLACK & WHITE, on white.  Every value here is achromatic — no hue anywhere,
-     so the page survives greyscale printing and forced-colors mode unchanged. */
   --bg:#ffffff; --surface:#ffffff; --raised:#f4f4f4; --sunken:#f8f8f8;
   --line:#dcdcdc; --line-soft:#ebebeb;
   --ink:#111111; --ink-2:#5a5a5a; --ink-3:#8a8a8a;
   --accent:#111111; --accent-soft:#d8d8d8;
   --accent-weak:rgba(0,0,0,.07);
-  /* Ordinal ramp, Target 1..5 — RE-SELECTED for a white ground, not inverted
-     from the dark set.  On light, "more" reads as MORE INK, so Target 5 is the
-     DARKEST step.  Validated in light mode against #ffffff: monotone lightness,
-     every adjacent gap >= 0.06 L, light end 2.17:1, single hue (spread 0°).
-     A first attempt starting at #c6c6c6 failed the light-end floor at 1.71:1,
-     which would have left Target 1 all but invisible on white. */
   --lv1:#b0b0b0; --lv2:#8c8c8c; --lv3:#6a6a6a; --lv4:#464646; --lv5:#1a1a1a;
-  --lv0:#d8d8d8;            /* below Target 1 — faintest, deliberately outside the ramp */
-  --lvna:#ededed;           /* not scored — an empty track, not data */
-  /* Ladder-kind classes.  In black & white these CANNOT carry identity by
-     colour — greys have zero chroma, so the categorical chroma-floor check
-     fails by definition.  Separation is by lightness (all-pairs dE 18.5) and
-     all three clear 3:1 against white, plus the legend's name+count labels and
-     the 2px gaps between segments.  Never use these without those labels. */
+  --lv0:#d8d8d8;
+  --lvna:#ededed;
   --cat1:#1a1a1a; --cat2:#5e5e5e; --cat3:#949494; --cat-rest:#d0d0d0;
-  /* Status.  Monochrome too, so severity is carried by the icon, the label and
-     the left rule weight on .note — never by hue alone. */
   --good:#1a1a1a; --warn:#5a5a5a; --crit:#0d0d0d;
-  /* HEADINGS ONLY, and never anything that carries meaning. The palette is
-     monochrome so the page survives greyscale printing and forced-colors mode;
-     confining this to heading TEXT means those lose decoration and nothing
-     else. 8.9:1 on white. */
   --head:#1f3a5f;
-  /* THE ONE PLACE HUE IS USED. Performance Health is a triage strip, and a
-     reader scanning it wants the red one without reading three labels first.
-     Hue is ADDITIVE here, never the only encoding: each dot sits beside its
-     own word (On track / Needs attention / Critical), so greyscale printing
-     and forced-colors mode lose nothing but the shortcut. Contrast on white:
-     4.6:1, 4.5:1, 4.8:1. */
   --st-ok:#1a7f37; --st-warn:#a86400; --st-crit:#b42318;
   --r-lg:14px; --r:10px; --r-sm:7px;
   --font:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
@@ -61,105 +31,44 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);
   font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
-/* An inline <svg> with no intrinsic size fills its container. Default every
-   icon to a sane box here; the specific rules below override where needed.
-   Without this, any bare icon dropped into a cell renders 90px tall. */
 svg{width:16px;height:16px;flex:none}
-/* the vertical pivot: KRAs across the top, Target/Achieved beneath each.
-   The name column is sticky because the table scrolls sideways and a row of
-   numbers with the person scrolled out of sight is unreadable. */
-/* The page-load reveal. `both` holds the from-state before the delay elapses,
-   otherwise every element would flash at full opacity and then restart. */
 @keyframes revIn{from{opacity:0;transform:translateY(5px)}
                  to{opacity:1;transform:none}}
 .rev{animation:revIn .3s ease both}
-/* Someone who has asked the system for less motion gets the data immediately
-   and in full. Nothing is lost: the stagger is decoration, not information. */
 @media (prefers-reduced-motion: reduce){
   .rev{animation:none!important}
 }
 
-/* ================================ THE BOOT SCREEN =========================
- *
- * The Recykal mark, turning, held over the page while the first server call is
- * in flight — then it flies onto the sidebar logo and the dashboard opens out
- * from underneath it.
- *
- * It has been three things now. The desk figure that briefly stood here was
- * replaced by the mark on request; what survived from it is the part that was
- * never about the picture — the minimum hold, the staged exit, the sentence
- * underneath, and the tests. Only the visual changed.
- *
- * WHY THE MARK AND NOT A LOCKUP. The AR & Collections dashboard cuts its SVG
- * into mark and wordmark at runtime so only the mark turns: a spinning wordmark
- * is upside down for half of every revolution and reads as a broken asset. Ours
- * is a PNG, which cannot be split — but it is also a near-square MARK (182x163)
- * rather than a horizontal lockup, so there is no wordmark to turn over and the
- * spin is safe as it stands.
- *
- * The page is shrunk and hidden by a CLASS the script adds and the teardown
- * removes — that way round on purpose. If the script never runs or throws
- * before finishing, the reader gets the dashboard rather than a blank page
- * held down by a style nothing ever clears. */
 .boot{position:fixed;inset:0;z-index:200;overflow:hidden;
-  /* white in the middle, a breath of grey at the corners: depth without a
-     colour, and it falls back to flat white if the gradient is unsupported. */
   background:var(--bg);
   background-image:radial-gradient(ellipse 72% 62% at 50% 44%,
     rgba(0,0,0,0) 0%, rgba(17,17,17,.04) 100%);
   display:flex;align-items:center;justify-content:center;
-  /* Last of the three to go — see .boot.gone below. */
   transition:opacity .42s ease .28s}
 .boot-inner{display:flex;flex-direction:column;align-items:center;gap:18px;
   padding:0 16px}
-/* Square, and larger than the image inside it, so a full turn never clips the
-   corners. Sized against the viewport too, so it cannot force a scrollbar. */
 .boot-mark{width:min(96px,26vw);height:min(96px,26vw);
   display:grid;place-items:center;
-  /* Eased rather than linear, and slow: it should read as a mark turning over,
-     not as a busy-spinner. */
   animation:bootspin 2.8s cubic-bezier(.62,0,.38,1) infinite;
-  /* The flight to the sidebar runs on THIS element. .72s — at .6s the travel
-     was over before the eye caught it. */
   transition:transform .72s cubic-bezier(.5,0,.2,1)}
-/* 68%, not more. The PNG is 182x163, so at width w its diagonal is
-   w*sqrt(1+(163/182)^2) = 1.343w — and that diagonal is what sweeps the
-   box as the mark turns. At 78% the diagonal was 1.047 of the box and the
-   corners swung outside it on every quarter turn. */
 .boot-mark img{width:68%;height:auto;display:block}
 @keyframes bootspin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-/* Stops on completion, so the mark is still when it flies. animation:none is
-   required — a running loop would keep overwriting the flight's transform. */
 .boot.done .boot-mark{animation:none}
 .boot-say{font-size:13.5px;color:var(--ink-3);letter-spacing:.015em;
   text-align:center;
   animation:wtSay .8s ease-out .3s both}
 @keyframes wtSay{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
-/* The ellipsis is three elements rather than three characters so they can
-   arrive one at a time — and it is padded to its own full width, so the line
-   does not jog left and right as they come and go. */
 .boot-dots{display:inline-block;width:1.6em;text-align:left}
 .boot-dots i{font-style:normal;opacity:0;animation:wtDot 1.5s ease-in-out infinite}
 .boot-dots i::before{content:"."}
 .boot-dots i:nth-child(2){animation-delay:.22s}
 .boot-dots i:nth-child(3){animation-delay:.44s}
 @keyframes wtDot{0%,70%,100%{opacity:0}16%,54%{opacity:1}}
-/* Leaving, in order: the sentence goes first, then the mark flies while the
-   white fades out around it. The mark is deliberately NOT faded — it is
-   handed over to the sidebar, and a handover you cannot see is just a
-   disappearance. Staged with transition-delay rather than with three timers,
-   so the sequence cannot come apart if a frame is dropped. */
 .boot.gone{opacity:0;pointer-events:none}
 .boot.gone .boot-say{opacity:0;transition:opacity .22s ease}
-/* The dashboard opens out from the centre as the mark flies up. */
 .app.revealing{transform:scale(.94);opacity:0}
 .app{transform-origin:center center;
   transition:transform .6s cubic-bezier(.16,.84,.30,1), opacity .5s ease-out}
-/* Someone who asked for less motion gets the data immediately and in full: no
-   spin, no flight, no minimum hold, no scale. The mark still shows — a still
-   image is not motion — but nothing in here moves and nothing in here waits.
-   Belt and braces with the JS check: even if the class were applied, the page
-   must not be scaled or hidden. */
 @media (prefers-reduced-motion: reduce){
   .boot-mark,.boot-say,.boot-dots i{animation:none!important}
   .boot-mark{transition:none}
@@ -169,7 +78,6 @@ svg{width:16px;height:16px;flex:none}
   .app.revealing{transform:none;opacity:1}
 }
 
-/* the calculation notes: a definition list that stays readable at width */
 .defs{display:grid;grid-template-columns:minmax(150px,210px) 1fr;gap:10px 20px;margin:0}
 .defs dt{font-weight:700;font-size:12.5px;color:var(--ink)}
 .defs dd{margin:0;font-size:12.5px;color:var(--ink-2);line-height:1.55}
@@ -178,12 +86,10 @@ svg{width:16px;height:16px;flex:none}
 table.mini{width:auto;min-width:280px}
 table.mini th{position:static}
 
-/* the vertical x KRA roll-up */
 .sum td{padding:9px 14px}
 .sum .vname{white-space:nowrap;vertical-align:top;font-weight:800;
   background:var(--sunken);border-right:1px solid var(--line);
   letter-spacing:.01em;min-width:118px;font-size:14.5px;color:var(--head)}
-/* the KRA is the other heading in this table, so it reads as one */
 .sum .kname{font-weight:700;font-size:13.5px;color:var(--head)}
 .sum .kname .cap{font-weight:500;color:var(--ink-3);margin-top:2px}
 .sum thead th{font-size:11.5px;font-weight:800;color:var(--head)}
@@ -191,14 +97,8 @@ table.mini th{position:static}
 .sum tr.vtot td{background:var(--sunken);font-weight:700;
   border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
 .sum tr.gtot td{background:var(--ink);color:var(--bg);border:0;font-weight:700}
-/* A DELIBERATE BLANK, NOT MISSING DATA.
-   Muted by COLOUR, never by opacity: these classes sit on the <td> itself, and
-   opacity fades an element background along with its text. On the Grand total
-   row — which is painted var(--ink) — that turned two black cells 35% grey and
-   left a silver band across the middle of the row. */
 .sum .na{color:#d6d6d6}
 .sum tr.gtot .na{color:rgba(255,255,255,.45)}
-/* under target reads quieter than at or above it */
 .sum .miss{color:var(--ink-3)}
 .sum .pill{display:inline-block;margin-left:9px;padding:1px 9px;border-radius:999px;
   border:1px solid var(--line);font-size:10.5px;font-weight:600;color:var(--ink-3);
@@ -208,70 +108,36 @@ table.mini th{position:static}
 .sum .sub2{font-size:9.5px;font-weight:600;color:var(--ink-3);letter-spacing:.04em;
   text-transform:none;margin-top:2px}
 
-/* the month selector as a filter cell */
 .filters .f select#pSel{width:100%}
 select#pSel.busy{opacity:.55}
 
-/* a flush panel header with a control on the right */
 .ph.phrow{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
 .sel.sm{padding:5px 8px;font-size:12px;flex:none}
-/* numbers never break across lines; headers always wrap */
 .pv td{white-space:nowrap}
 .pv th{white-space:normal}
-/* the same two headings in the per-vertical pivot */
 .pv .pvkra{font-size:13px;font-weight:800;color:var(--head)}
 .pv .pvname{font-size:13px;font-weight:800;color:var(--head)}
 .pv .pvkra{text-align:center;border-left:1px solid var(--line);
   font-size:11px;letter-spacing:.02em;line-height:1.3;
-  /* min-width, not max-width: a KRA name is now allowed as many lines as it
-     needs, but the column still has to be wide enough for its three numbers */
   min-width:180px;max-width:230px;padding-bottom:7px}
-/* Target / Achieved / Achieved % are short and read as a unit — wrapping
-   "Achieved %" onto two lines would misalign it against its neighbours */
 .pv .pvsub{font-size:10.5px;font-weight:600;color:var(--ink-3);
   letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
-/* a KRA group is now three columns wide, starting at column 2 */
 .pv td:nth-child(3n+2){border-left:1px solid var(--line)}
-/* The frozen POC column.
- *
- * The background MUST be an opaque colour that EXISTS. This rule previously
- * named a token that is not in this palette (the tokens are --bg, --surface,
- * --raised, --sunken), so it resolved to transparent and every scrolled number
- * slid visibly through the names. A sticky cell with no background is just a
- * cell that does not move. CSS gives no warning for this, so shapetest asserts
- * that every var() without a fallback names a token that is defined — do not
- * write an undefined token here even inside a comment, it fails that check.
- *
- * The separator is a box-shadow, not border-right: with border-collapse the
- * table owns the borders, and a collapsed border does not travel with a cell
- * that is offset from its column. */
 .pv .pvname{position:sticky;left:0;background:var(--surface);z-index:1;
   min-width:168px;max-width:230px;white-space:normal;
   box-shadow:1px 0 0 var(--line)}
-/* the top-left corner is sticky in BOTH directions, so it has to outrank the
-   other sticky headers (z-index 2) as well as the body cells */
 .pv thead .pvname{background:var(--raised);z-index:3}
-/* same reason as .sum .na: no opacity on a cell that may be given a background */
 .pv .pvna{color:#cacaca}
-/* .pwrap / .pspin were the top-bar month select and its loading marker. The
-   select moved into the filter row, where the "loading…" state rides on the
-   cell's own label instead, so both rules and the pulse keyframes are gone
-   rather than left behind for someone to wonder about. */
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
 ::-webkit-scrollbar{width:10px;height:10px}
 ::-webkit-scrollbar-thumb{background:#c9c9c9;border-radius:6px;border:2px solid var(--bg)}
 ::-webkit-scrollbar-track{background:transparent}
 .num{font-variant-numeric:tabular-nums}
 
-/* ------------------------------------------------------------------ shell -- */
 .app{display:grid;grid-template-columns:236px 1fr;min-height:100vh}
 .sb{background:#ffffff;border-right:1px solid var(--line);display:flex;flex-direction:column;
   position:sticky;top:0;height:100vh}
 .sb-brand{display:flex;gap:11px;align-items:center;padding:20px 18px 22px}
-/* Holds the Recykal mark, inlined as a data URI further down so the dashboard
-   does not depend on the marketing site's CDN staying put.  The mark is solid
-   black, which IS the ink colour on this white theme — if the theme ever goes
-   dark again, add  .sb-logo img{filter:invert(1)}  and it works there too. */
 .sb-logo{width:32px;height:32px;display:grid;place-items:center;flex:none}
 .sb-logo img{max-width:100%;max-height:100%;width:auto;height:auto;
   object-fit:contain;display:block}
@@ -284,7 +150,7 @@ select#pSel.busy{opacity:.55}
   color:var(--ink-2);text-decoration:none;font-weight:500;transition:background .12s,color .12s}
 .sb-i:hover{background:#f2f2f2;color:var(--ink)}
 .sb-i.on{background:var(--accent-weak);color:var(--ink)}
-.sb-i.on{box-shadow:inset 2px 0 0 var(--ink)}   /* a rule, not a hue, marks the page */
+.sb-i.on{box-shadow:inset 2px 0 0 var(--ink)}
 .sb-i.on svg{color:var(--accent)}
 .sb-i svg{width:17px;height:17px;flex:none;color:var(--ink-3)}
 .sb-foot{padding:12px 18px;border-top:1px solid var(--line);font-size:11px;color:var(--ink-3)}
@@ -324,7 +190,6 @@ select#pSel.busy{opacity:.55}
 .who .r{font-size:10.5px;color:var(--ink-3);line-height:1.15}
 .content{padding:24px 26px 60px;max-width:1560px;width:100%}
 
-/* --------------------------------------------------------------- surfaces -- */
 .hdr{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;margin-bottom:20px}
 .hdr h1{margin:0;font-size:24px;font-weight:700;letter-spacing:-.4px}
 .hdr .sub{color:var(--ink-3);font-size:13px;margin-top:3px}
@@ -342,7 +207,6 @@ select#pSel.busy{opacity:.55}
 .r-21{grid-template-columns:1.45fr 1fr}
 .mt{margin-top:14px}
 
-/* stat tile — a headline number is a tile, never a one-bar chart */
 .tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:15px 17px}
 .tile.clk{cursor:pointer;transition:border-color .12s ease,background .12s ease}
 .tile.clk:hover{border-color:var(--ink-3);background:var(--sunken)}
@@ -352,12 +216,10 @@ select#pSel.busy{opacity:.55}
 .tile .v.sm{font-size:17px;letter-spacing:-.3px;font-weight:650}
 .tile .h{font-size:11.5px;color:var(--ink-3);margin-top:6px}
 .tile .h b{color:var(--ink-2);font-weight:600}
-/* the arithmetic, written out: the point of opening a card */
 .sumline{background:var(--sunken);border:1px solid var(--line);border-radius:var(--r);
   padding:13px 15px;font-size:14px;line-height:1.6}
 .sumline b{font-weight:700}
 .sumline .dot{margin-right:7px}
-/* the derivation printed under a figure nobody typed */
 .working{font-size:10.5px;color:var(--ink-3);margin-top:3px;line-height:1.5;
   white-space:normal;max-width:260px;text-align:right;margin-left:auto}
 button.worklink{display:block;background:transparent;border:0;padding:0;
@@ -365,7 +227,6 @@ button.worklink{display:block;background:transparent;border:0;padding:0;
   text-decoration-style:dotted;text-underline-offset:2px}
 button.worklink:hover{color:var(--ink)}
 button.worklink:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-/* the calculation, laid out one step per line */
 .calc{font-size:14px;line-height:2.1}
 .calc .cl{display:flex;gap:10px;align-items:baseline;
   border-bottom:1px dashed var(--line-soft);padding:5px 0}
@@ -373,7 +234,6 @@ button.worklink:focus-visible{outline:2px solid var(--accent);outline-offset:2px
 .calc .cl b{margin-left:auto;font-variant-numeric:tabular-nums}
 .calc .eq{background:var(--sunken);border:1px solid var(--line);
   border-radius:var(--r);padding:12px 14px;margin-top:14px;font-size:14px}
-/* one card per vertical, side by side while there is room for them */
 .sbs{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
   gap:13px;margin-top:13px}
 .vcard{border:1px solid var(--line);border-radius:var(--r);overflow:hidden;
@@ -396,13 +256,10 @@ button.worklink:focus-visible{outline:2px solid var(--accent);outline-offset:2px
 .dot.warn{background:var(--st-warn)}
 .dot.crit{background:var(--st-crit)}
 
-/* meter — a single ratio against a limit, same-ramp track (not a 2-slice pie) */
 .meter{height:7px;border-radius:99px;background:#e9e9e9;overflow:hidden;display:flex}
 .meter i{display:block;height:100%}
 .meter i+i{box-shadow:-2px 0 0 var(--surface)}
 
-/* level meter — 5 discrete bands.  The engine resolves a LEVEL, not a
-   percentage, so the mark has to be discrete or it misrepresents the score. */
 .lv{display:flex;gap:2px;align-items:center}
 .lv b{width:15px;height:7px;border-radius:2px;background:var(--lvna);display:block}
 .lv.r4 b{border-radius:2px}
@@ -418,38 +275,29 @@ button.worklink:focus-visible{outline:2px solid var(--accent);outline-offset:2px
 .legend i{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:6px;
   vertical-align:-1px}
 
-/* ----------------------------------------------------------------- tables -- */
 .tw{overflow:auto;max-height:none}
 table{width:100%;border-collapse:collapse}
 th{position:sticky;top:0;z-index:2;background:var(--raised);text-align:left;
   font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
   color:var(--ink-3);padding:10px 14px;border-bottom:1px solid var(--line);
-  /* Headers WRAP. They were nowrap, which on the pivot meant "TRANSACTION FROM
-     EXISTING BUYE…" — a truncated KRA name is unreadable and, worse, two
-     different KRAs can truncate to the same string. Data cells stay nowrap so
-     a figure never breaks across lines. */
   white-space:normal;vertical-align:bottom;line-height:1.3}
 td{padding:11px 14px;border-bottom:1px solid var(--line-soft);vertical-align:middle}
 tbody tr:last-child td{border-bottom:0}
 tbody tr{transition:background .1s}
 tbody tr:hover{background:#f7f7f7}
 tr.clk{cursor:pointer}
-/* department band inside the people table — one table keeps the columns
-   aligned across groups, which separate tables per department would not */
 tr.grp td{background:var(--raised);font-size:11px;font-weight:800;letter-spacing:.07em;
   text-transform:uppercase;color:var(--ink-2);padding:8px 14px;
   border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
 tr.grp:first-child td{border-top:0}
 tr.grp .n{color:var(--ink-3);font-weight:700;letter-spacing:0;text-transform:none}
 tbody tr.grp:hover td{background:var(--raised)}
-/* the row's own actions stay reachable however far the table scrolls */
 td.act,th.act{position:sticky;right:0;z-index:3;background:var(--surface);
   box-shadow:-9px 0 13px -7px rgba(0,0,0,.12)}
 th.act{background:var(--raised);z-index:4}
 tbody tr:hover td.act{background:#f7f7f7}
 td.act .btn+.btn{margin-left:5px}
 td.r,th.r{text-align:right}
-/* dropped first when the table runs out of room */
 @media(max-width:1120px){.opt2{display:none}}
 @media(max-width:960px){.opt1{display:none}}
 .who2{display:flex;gap:10px;align-items:center;min-width:0}
@@ -458,14 +306,12 @@ td.r,th.r{text-align:right}
 .who2 .d{font-size:11.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tag{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:999px;
   font-size:11px;font-weight:600;background:#f1f1f1;color:var(--ink-2);white-space:nowrap}
-/* the three ladder kinds, distinguished by lightness and by their own words */
 .tag.b{background:#1a1a1a;color:#ffffff}
 .tag.o{background:#949494;color:#ffffff}
 .tag.a{background:transparent;color:var(--ink-2);box-shadow:inset 0 0 0 1px #c4c4c4}
 .tag.g{background:#f1f1f1;color:var(--ink-3)}
 .tag svg{width:12px;height:12px}
 
-/* ---------------------------------------------------------------- controls -- */
 .bar{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
 .btn{display:inline-flex;align-items:center;gap:7px;padding:8px 13px;
   border:1px solid var(--line);background:var(--raised);border-radius:var(--r-sm);
@@ -486,13 +332,11 @@ td.r,th.r{text-align:right}
 .f select,.f input{width:100%;padding:8px 10px;background:var(--sunken);
   border:1px solid var(--line);border-radius:var(--r-sm)}
 
-/* notices — status colour always with an icon and a label, never colour alone */
 .note{display:flex;gap:11px;padding:13px 15px;border-radius:var(--r);
   border:1px solid var(--line);background:var(--surface);margin-bottom:16px}
 .note svg{width:17px;height:17px;flex:none;margin-top:2px}
 .note .t{font-weight:650;margin-bottom:2px}
 .note .m{font-size:12.5px;color:var(--ink-2)}
-/* No hue to spend, so severity is the weight of the left rule plus the icon */
 .note.w{border-left:3px solid var(--ink-2);background:rgba(0,0,0,.028)}
 .note.w svg{color:var(--ink-2)}
 .note.c{border-left:3px solid var(--ink);background:rgba(0,0,0,.05)}
@@ -500,17 +344,12 @@ td.r,th.r{text-align:right}
 .note.i{border-left:3px solid var(--ink-3)}
 .note.i svg{color:var(--ink-3)}
 
-/* ---------------------------------------------------------------- overlays -- */
 .scrim{position:fixed;inset:0;background:rgba(28,28,28,.40);z-index:60;display:flex;
   align-items:center;justify-content:center;padding:14px}
 .modal{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
   width:min(620px,100%);max-height:88vh;display:flex;flex-direction:column;
   box-shadow:0 24px 64px rgba(0,0,0,.20)}
 .modal.wide{width:min(900px,100%)}
-/* A CARD BREAKDOWN CARRIES TABLES, not a form. At 900px the vertical cards
-   were ~300px each and every one of them scrolled inside its own box while the
-   modal scrolled too — two scrollbars for one list. Wider, taller, and the
-   inner tables no longer get their own scroller. */
 .modal.cards{width:min(1320px,100%);max-height:94vh}
 .modal.cards .m-b{padding:18px}
 .modal.cards .sbs{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -531,8 +370,6 @@ td.r,th.r{text-align:right}
   border:1px solid var(--line);border-radius:var(--r-sm)}
 .fld .hint{font-size:11.5px;color:var(--ink-3);margin-top:5px}
 .bands{display:grid;grid-template-columns:repeat(5,1fr);gap:9px}
-/* these inputs live outside .fld, so they were unstyled and used their default
-   intrinsic width — five of them overflowed the modal body */
 .bands .b label{display:block;font-size:10.5px;font-weight:700;letter-spacing:.06em;
   text-transform:uppercase;color:var(--ink-3);margin-bottom:6px;text-align:center}
 .bands .b input{width:100%;min-width:0;padding:9px 8px;background:var(--sunken);
@@ -553,16 +390,12 @@ td.r,th.r{text-align:right}
   animation:sh 1.3s linear infinite;border-radius:var(--r-sm)}
 @keyframes sh{to{background-position:-200% 0}}
 .hide{display:none!important}
-/* Standing banner while UAT mode is on. Deliberately hard to ignore: full
-   width, inverted, above the content, on every page. */
 .uat{display:flex;gap:10px;align-items:center;padding:9px 26px;background:var(--ink);
   color:var(--bg);font-size:12.5px;font-weight:600;position:sticky;top:0;z-index:29}
 .uat svg{width:15px;height:15px;flex:none}
 .uat b{font-weight:800}
 @media(max-width:900px){.uat{padding:8px 14px;font-size:12px}}
 
-/* the breadcrumb yields first, then the identity text — the search and the
-   period selector are the two controls that must survive every width */
 @media(max-width:1200px){.crumbs{display:none}}
 @media(max-width:1180px){.r-5,.r-4{grid-template-columns:repeat(3,minmax(0,1fr))}
   .r-21,.r-2{grid-template-columns:1fr}}
@@ -590,43 +423,16 @@ td.r,th.r{text-align:right}
 (function(){
 'use strict';
 
-/* ============================================================================
- * Performance Tracker front end.
- *
- * No sign-in screen by design.  The web app is published to the domain and the
- * server resolves identity from the Google session, so a username/password card
- * would be theatre — it would collect credentials the app never uses and cannot
- * check.  The user chip in the top bar shows who the server decided you are.
- *
- * The one rule that shapes every mark on this page: the engine resolves a
- * LEVEL (Target 1..5, highest band cleared counting consecutively from 1), not
- * a percentage.  Ladders are text — "> 28 Days", "TGT-20 Days", "≥ ₹9 Cr",
- * "As per Collections Process" — and several are ordinal or qualitative with no
- * measurable magnitude at all.  So levels are drawn as five discrete bands and
- * a weighted mean is quoted to one decimal; nothing here invents a percentage,
- * and nothing fabricates an actual that has not been recorded.
- * ========================================================================== */
+// ===== Performance Tracker front end =====
 
 var S = { loading:true, error:null, denied:false, model:null, session:null, users:[],
-          /* Year to date is the landing view: a single month is a slice, and
-             the year is what a review is actually held against. The app opens
-             read-only because of it — editable() is false under YTD — which is
-             the safer default too. Pick a month to record anything. */
           period:'ytd', viewAs:null, route:'overview', params:[], q:'',
           fDept:'', fMgr:'', fSub:'', fLadder:'', periodBusy:false,
-          /* per Overview table: '' = the whole span (Year to date), otherwise
-             a period id. Keyed by department||sub-group. Client-side only —
-             the row already carries every month, so switching costs nothing. */
           tblMonth:{},
-          /* Set once, by the initial load, and consumed by the next render.
-             Deliberately NOT set by a month change: an animation on every
-             filter click is noise, and it delays numbers somebody is actively
-             comparing. */
           reveal:false };
-var M = {};                 /* indexes rebuilt whenever the model changes */
-var CH = {};                /* live Chart.js instances, keyed by canvas id */
+var M = {};
+var CH = {};
 
-/* --------------------------------------------------------------- plumbing -- */
 function $(s,r){ return (r||document).querySelector(s); }
 function $$(s,r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)); }
 function h(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){
@@ -639,7 +445,6 @@ function ini(n){ return String(n||'?').trim().split(/\s+/).slice(0,2)
 function f1(v){ return v===null||v===undefined?'—':Number(v).toFixed(1); }
 function pc(v){ return v===null||v===undefined?'—':Math.round(Number(v))+'%'; }
 
-/* Recykal mark, 182x163 PNG, inlined (2.3 KB) rather than hotlinked. */
 var LOGO = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALYAAACjCAMAAAAQNRQeAAAAIVBMVEVMaXEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC+JJ50AAAACnRSTlMAFthHaPGHujGfd3eNNAAAAAlwSFlzAAAsSgAALEoBd3p0TQAABkZJREFUeNrNXeuC8yoIjIqgvv8Dn+/sdrfZ5sYQ1Pg7bSYjDIgkLsv9EdLXCMrrlgeMwpLbzxAKJ9f9XhZPrhsxAsf2MWSXzCSf18VpyLdYvgZv8ITdC3OdATzUdjDiB5ySDy7MPBw4HWHZ4C5nV6aHUP1t4OtL4+mlPFI+zqG0tiKRLy6V8AQD2dB9eW0uY1Bf8ff/+KUwKS6mEWYtCiBvK9E84wADD1GD402gCnbrLeElq2C8+dPB3mi9c2BUokbZ7oubmnYkFHZHQdGjxpSkL24AdXy7cJuMG0C9VjSZixtB3YLtd/64IdTrVGqJM3EjN2/J/MDOuANy73rjiX1xJ+TOwf5bZ9wM3Jju/Hj71GYDwWRMrOmXb5wvAtnn3k21CZgj7hD/jx03TRMz71WQvZFfEyIkyUH2N1pk0usEsHW4vqpDcdfvSJ3wXORzCIabbuuefo7l/mrOA/cX2qxW3nMFCHlQ2Cm/FLLHjUobEnZeaquGTa5ZpFW+f4xRC5t1Dt7uxFvFkAbBju7pr6nsww2CrbNE0C1xOaGGwU7+CbBBTlbJj2juxl0Wd6hbrmODBnbEXaaHW0qDYCMSG/q5JW2YdDFsU9TR//kHt5d7ArXfAg+Yyk+VulqUwdFMuiwaZGeWzhiCcx5UvdkkUXSuW9y3fKE077KLK/mu+9zNe0ef5FRKSscdIL168wGf4rvJhZoJGf4uHE+ruTTgaib7Pp6Og0TpvFGoMxM5NoTsvA/qaCbpxBLEu+rlZiaHYSAcKPetbhA06Aj8/LRfmJdlGVUzPzGTdJ4rRfdCtLiYybFv59254KE7K0ezyxdJQXGv5qJeuedLpx6yZyUO3VmoV0aw9LJjJbIsg3c797wyXU9P8SYbr/dsvFIUZfLoWe+30c2YhubPdCrM2F3e3DdqrKq4k43TXbEfx78P59cidIduxW/L+ulkWR5Ad1JeHnxlxKTdK7pFqz3iFiDtobJi5S16T4trdydaXPvV7qqPrNGzB8HolIQlYvQzo3WZ18/0NlEC8sbg7JCW/PW17o5I3lhfedVMK2HsYV8FevGGXS1WAraARv8ucbJYiWCSSc397Q10LfxFXAYjlH/LMuyTYujw6/AmgaARB52hPs3hsJUEMCWoXWDDEpjQTCbMbg23wX4G3TDsZ9CNw+Yn0J1gL85PoDvAWXoHuhOhTfVI++q6sObLdATpFkOIah2CZMHoJmv+5eyOIN3FsAT1T1y/ZVVfeYimyOodcQrSI/kWBeMS1Df/Q/LXcmcJ6jbyj+VVjDaZqtzlV1YD5ltpqnJHcH34DtOxV7OYUkfUXZJ/FYHagFbfq2qDlr/gtRXhQfb3FBImvzRNuumPQASQsWl057+5TsUIm0U3qTvg9vmaRHc+3tVS0ZWm0M2bjJjBpZXMoHsbfQsYn8sE7ZbTvU9dbxYPD5Vhb93E4C0dmjvuFhkurERcCoh3E8F0tUOuLHX4tFyZxE9jJdy7M8+8Y5NOJj06Fj6dtxDkJC8pfm8NBOeiXz42bh791gAysYfGHZ3r4767THRk3MX35ZLgWxc+Mm527kqpvmXhvK+MMuPlEmQjcnfGNRGC+wedeM4Cm6qOsXfQ4QujY5Mhls5vvgZFF4XF7alvTTBfVbyS8cXa2lMF5bJQF6yT2dG8k2KLxaqw/V7svvznD9jYTKZe5h01ccAur51e7K6qibsRzLp8byE1DDZ3f1eNnVxmDbsOaPVNPgK1gm1LL4v39xakQbCtS2xnt0wNg10GtVaLR9vcL2wa1sZZHVyFXtbJA3uY6P4/vb5iVUd82/daTgRo+6D79Vynr0FVpFuFHb5RBy4a9lUrQTvM4tGP5fAxv4JtjMcyoUePwfXMVkTLpN7CGyUjmtakd+vLomVecyGbTcS77Y3sm391ZkNTNQf5uS2d1Ug3T26zrjY9yLObw01fO1/mt7Rbvi1P01GbvuQvs/vZIdwEw05POO+BUdjpEadrgGzn8IyzTDDbjuEhJ8dASiLL8oxzegTR7WHHOV06JumT7Tzw8KwLAxd9VSeOPaqM1bqQnnLe1+tL+YcEFu0TxhnH2aWoPHjswBUyLXNGqsrj6XaS3jjznMlAdcV55MMV7J8jHXPkZf5Iif+Ny+M8C1X5N8jDNv4DPo8e7diwfhMAAAAASUVORK5CYII=';
 
 var ICON = {
@@ -681,7 +486,6 @@ var Api={
     r[fn].apply(r,args||[]);
   }
 };
-/* every write returns the rebuilt model, so the page never guesses at new state */
 function write(fn,payload,okMsg){
   payload=payload||{}; payload.period_id=S.period; payload.view_as=S.viewAs;
   var busy=$$('.modal .btn'); busy.forEach(function(b){ b.disabled=true; });
@@ -689,8 +493,6 @@ function write(fn,payload,okMsg){
     busy.forEach(function(b){ b.disabled=false; });
     if(!res||!res.ok){ toast((res&&res.error)||'The server rejected that.','err'); return; }
     closeModal();
-    /* the saved value changes what every period would return, so nothing
-       cached is trustworthy any more */
     invalidateModelCache();
     if(res.model){ S.model=res.model; _modelCache[String(S.period)]=res.model; index(); }
     render();
@@ -699,7 +501,6 @@ function write(fn,payload,okMsg){
     toast((e&&e.message)||'Could not reach the server.','err'); });
 }
 
-/* ---------------------------------------------------------------- indexes -- */
 function index(){
   var m=S.model||{};
   M.teams={}; (m.teams||[]).forEach(function(t){ M.teams[t.id]=t; });
@@ -720,140 +521,50 @@ function inScope(empId){
   if(sc.kind==='self') return String(S.session.employee_id)===String(empId);
   return false;
 }
-/* Year to date spans months, so there is no month to write to — the server
-   refuses it, and offering the button anyway would just produce an error. */
 function editable(){ return String(S.period)!=='ytd'; }
 function mayTargets(id){ return editable()&&can('edit_target')&&inScope(id); }
 function mayFramework(id){ return editable()&&can('edit_framework')&&inScope(id); }
-/* The numeric target, which is a DENOMINATOR and not a band.
- * Most ladders here are ratios — 0.6 / 0.75 / 0.9 / 1.0 / 1.05 — so the level
- * comes from actual divided by this. Showing the ladder without it leaves a
- * person reading "0.9" with no way to know 0.9 of what.
- * A blank is honest: not every KPI has a typed target, and the three derived
- * ones are computed from last month's data rather than typed at all. */
-/* HOW MANY DECIMALS A FIGURE DESERVES, decided by what it measures rather
- * than by whatever the arithmetic happened to produce.
- *
- *   Cr     2dp — lakhs matter on a crore figure
- *   days   1dp — 18.93 days is false precision; 18.9 is the honest form
- *   count  0dp — there is no such thing as 8.35 sellers
- *   other  2dp, trailing zeros dropped
- *
- * A YTD figure is a mean, so it arrives with a long tail (18.924999999) that
- * no formatter downstream was trimming. Every number on a tile, a card or a
- * table goes through here. */
 function fmtTarget(v,unit,exact){
-  /* Number(null), Number(undefined) and Number('') are all 0 or NaN, and the 0
-     is the dangerous one: a blank meaning NOTHING RECORDED would render as a
-     real measurement of zero. Callers do guard, but a formatter that invents a
-     figure from an absence is one call site away from a wrong number on
-     somebody's scorecard. */
   if(v===null||v===undefined||v==='') return '';
   var x=Number(v);
   if(!isFinite(x)) return '';
   var u=String(unit||'').toLowerCase();
   if(u==='cr') return (Math.round(x*100)/100).toFixed(2)+' Cr';
-  /* KRA owner, 17 Sep 2026: only GMV keeps its decimals. A DSO of 18.9 days
-     and one of 19 are the same answer, and the extra digit only invites a
-     conversation about the tenth of a day. */
   if(u==='days'||u==='day') return String(Math.round(x))+'\u2009days';
-  /* EXACT is for a LADDER RUNG, which is a threshold rather than a quantity.
-     Rounding 5.4 sellers to 5 would say somebody with 5 had cleared a rung
-     they had missed \u2014 the rounding that is right for a measured count is
-     wrong for the bar it is measured against. */
-  /* A RATE: the stored number is a fraction of 1, because the ladder it is
-     read against runs 0.8 to 1.0 and there is no target to divide by. Without
-     this it falls to the count branch below and Math.round turns 87% into "1"
-     and 33% into "0". One decimal, so 66.7% does not read as 67%. */
   if(u==='ratio') return String(Math.round(x*1000)/10)+'%';
   if(u==='count'||u===''){
     return exact?String(Math.round(x*100)/100):String(Math.round(x));
   }
   return String(Math.round(x))+'\u2009'+unit;
 }
-/* THE LADDER, READ IN THE UNITS PEOPLE WORK IN.
- *
- * A ratio ladder is stored as 0.6 / 0.75 / 0.9 / 1.0 / 1.05, which is what the
- * scoring compares against but is not what anybody has in their head. The
- * Target Sheet figure IS Target 4, so the other four rungs are that figure
- * scaled: a 6.50 Cr target makes Target 3 5.85 Cr and Target 5 6.83 Cr.
- *
- * Derived for display only — nothing is written back, and the rating still
- * comes from achieved over target. Returns null when there is nothing to
- * derive from: no numeric target, or an ABSOLUTE ladder (DSO in days, PDD in
- * crore) whose rungs are already real figures and must not be rescaled. */
 function ratioLadder(r){
   var v=(r||{}).values;
   if(!v||v.length!==5) return null;
   for(var i=0;i<5;i++){
     if(typeof v[i]!=='number'||!isFinite(v[i])) return null;
-    if(i&&v[i]<v[i-1]) return null;          /* descends: absolute, not a ratio */
+    if(i&&v[i]<v[i-1]) return null;
   }
-  return v[4]<=2?v:null;                     /* over 200% is an absolute ladder */
+  return v[4]<=2?v:null;
 }
+// Display only: ratio rungs shown in crore, sellers or days. Nothing is written back.
 function ladderInUnits(r){
   var v=ratioLadder(r), t=(r||{}).plan_target;
-  /* A RATE ROW has no target to scale the rungs by — the rungs ARE the rate.
-     Shown as percentages so the ladder and the achievement are in the same
-     units: 80% | 85% | 90% | 95% | 100% beside an achieved 87%, rather than
-     "0.8" beside "87%". */
   if(v&&String((r||{}).plan_unit||'')==='ratio'){
     return v.map(function(x){ return fmtTarget(x,'ratio'); });
   }
   if(!v||t===null||t===undefined||!isFinite(Number(t))||Number(t)===0) return null;
-  /* exact: these are THRESHOLDS, so 5.4 sellers must not read as 5 */
   return v.map(function(x){ return fmtTarget(Number(t)*x,(r||{}).plan_unit,true); });
 }
-/* HOW MANY KPIs THERE ARE — COUNTED BY NAME, NOT BY ROW.
- *
- * The KPIS table holds one row per KRA + KPI name, and that is deliberate: two
- * KRAs sharing a KPI name are different measurements with different targets,
- * and collapsing them onto one id used to drop a person's KPI and its
- * weightage outright. Right for storage; wrong for a headline count.
- *
- * 'Monthly Target Achievement (%)' alone occupies six catalogue rows — GMV,
- * New Buyer Acquisition, New Seller Acquisition and so on, in two verticals.
- * Reporting 91 KPIs where there are 64 distinct ones makes the framework look
- * broader than it is, and invites the reader to divide 225 assignments by the
- * wrong denominator.
- *
- * Names are folded the way the SERVER folds them (normName_ in Code.gs): upper
- * case, punctuation to spaces, runs of space collapsed. That is what makes
- * 'TAT ( 3 Days)' and 'TAT ( 3 Days )' one KPI rather than two — a typo in the
- * workbook, not a second measurement.
- *
- * COUNTING ONLY. Nothing is merged anywhere else: every assignment keeps its
- * own catalogue row, its own ladder and its own weightage, and the rollup
- * denominator is untouched. */
 function normKpiName(v){
   return String(v==null?'':v).toUpperCase()
     .replace(/[^A-Z0-9 ]+/g,' ').replace(/\s+/g,' ').trim();
 }
-/* WHAT MAKES TWO KPIs THE SAME KPI.
- *
- * The KRA AND the name together, never the name alone. Several KRAs share one
- * KPI name: "Monthly Target Achievement (%)" is the KPI for GMV, for New Buyer
- * Acquisition and for New Seller Acquisition alike. They are three different
- * measurements with three different targets and three different weightages,
- * and folding them together would report Metal as having 5 KPIs when it has 7.
- * 20 of the 38 people hold some KPI name more than once for this reason.
- *
- * The KRA is deliberately taken by NAME rather than by kra_id, because a KRA
- * id is scoped to a team: Metal's GMV and Plastic's GMV are different ids for
- * the same result area, and the whole point of these counts is that holding
- * the same KPI does not make it a new one.
- *
- * Both parts are folded the way the SERVER folds names (normName_ in Code.gs),
- * so a workbook typo does not invent a KPI. */
+// KRA + KPI name, never the name alone: several KRAs share one KPI name.
 function kpiIdentity(kraName,kpiName){
   var k=normKpiName(kraName), nm=normKpiName(kpiName);
   if(!nm) return '';
   return k?k+' | '+nm:nm;
 }
-/* Over the ROWS CURRENTLY ON SCREEN rather than the catalogue. The Overview
-   tiles are all filter-aware — People says "of 38 matching the filters" — so a
-   headline taken from the whole catalogue would sit still while every number
-   beside it moved. */
 function distinctKpiCountIn(rows){
   var seen={},n=0;
   (rows||[]).forEach(function(r){
@@ -872,14 +583,6 @@ function distinctKpiCount(){
   });
   return n;
 }
-/* ONE COMPUTATION, TWO READERS.
- *
- * The cards on the Overview and the breakdown that explains each card must
- * never be able to disagree. A second copy of "how the average was reached",
- * written for the explanation, would drift from the first the next time either
- * changed — and an explanation that quietly contradicts the number it explains
- * is worse than no explanation. So both read this, and it keeps the CONTENTS of
- * every bucket, not just its count, because the breakdown has to list them. */
 function ovStats(){
   var EPS=1e-9;
   var people=filteredEmployees(), list=filteredRows(), st=stats(list);
@@ -897,9 +600,6 @@ function ovStats(){
     return r.actual!==null&&r.actual!==undefined; });
   var noAch=tr.filter(function(r){
     return r.actual===null||r.actual===undefined; });
-  /* pctOfTarget is null on an ABSOLUTE ladder (DSO in days, PDD in crore),
-     which is scored on the raw figure and has no percentage to average. Those
-     rows are left out rather than counted as zero. */
   var pctRows=tr.filter(function(r){ return pctOfTarget(r)!==null; });
   var attain=mean(pctRows,function(r){ return pctOfTarget(r); });
   var atTgt=pctRows.filter(function(r){ return pctOfTarget(r)>=100-EPS; });
@@ -908,9 +608,6 @@ function ovStats(){
   var gap=list.filter(function(r){
     return r.level===null||r.level===undefined||r.level===''; });
 
-  /* THE THREE BANDS ARE CUT ON THE RATING SCALE, not on round percentages.
-     On target is Target 4, so at-or-above-target IS level 4 — that is what
-     makes On track mean something rather than a number somebody chose. */
   function band(lo,hi){
     return scored.filter(function(x){
       var v=Number(x.o.score);
@@ -936,41 +633,14 @@ function ovStats(){
            ok:ok, warn:warn, crit:crit, depts:depts, top:top,
            total:((S.model||{}).employees||[]).length };
 }
-/* Every filtered row that HAS a numeric target, newest department first.
-   A KPI with no target cannot appear here — there is nothing to be a
-   percentage of — and saying so is more useful than showing a blank row. */
 function targetedRows(){
   return filteredRows().filter(function(r){
     return r.plan_target!==null&&r.plan_target!==undefined; });
 }
-/* Achieved as a share of target. The server computes r.ratio only for a RATIO
-   ladder; an absolute one (DSO days, PDD crore) is scored on the raw number,
-   so a percentage there would be a number nobody is rated on. */
 function pctOfTarget(r){
   if(r.ratio===null||r.ratio===undefined) return null;
   return r.ratio*100;
 }
-/* One table per VERTICAL: POCs down the side, KRAs across the top, Target and
- * Achieved beneath each KRA.
- *
- * Built per vertical rather than as one wide grid because the KRA sets differ
- * — Metal has buyer KRAs that Plastic does not — so a single table would be
- * mostly empty cells, and an empty cell that means "this KRA is not theirs"
- * looks identical to one that means "nothing recorded".
- *
- * A person can hold the same KRA through more than one KPI, so the numbers are
- * accumulated per person+KRA rather than assumed unique. */
-/* Achievement as a percentage, with 100% always meaning ON TARGET.
- *
- * For a KRA where more is better that is achieved / target. For one where
- * LESS is better it has to be inverted — target / achieved — or the number
- * says the opposite of what it means: a DSO of 4 days against a 3-day target
- * would read as 133% and look like an overachievement when it is a miss.
- * Inverted, it reads 75%, and every column on the page can then be read the
- * same way: at or above 100 is at or above target.
- *
- * A zero target has no percentage — 5 of 0 is not 500%, it is a target nobody
- * set — and a zero achieved on a lower-is-better KRA cannot be divided into. */
 function achievedPct(c){
   if(c.t===null||c.a===null) return null;
   if(c.dir==='lower_is_better'){
@@ -980,13 +650,9 @@ function achievedPct(c){
   if(!c.t) return null;
   return c.a/c.t*100;
 }
-/* One row's target and achieved for the month being shown.
- * '' means the whole span, which is what the row already carries. */
 function rowSlice(r,month){
   if(!month) return {t:r.plan_target,a:r.actual};
   var m=(r.monthly||{})[month];
-  /* a month absent from the breakdown had neither a target nor an achievement,
-     which is different from the row having none at all */
   return m?{t:m.target,a:m.actual}:{t:null,a:null};
 }
 function verticalTable(tid,rs,month){
@@ -1001,7 +667,6 @@ function verticalTable(tid,rs,month){
     if(sl.t!==null&&sl.t!==undefined) c.t=(c.t===null?0:c.t)+Number(sl.t);
     if(sl.a!==null&&sl.a!==undefined) c.a=(c.a===null?0:c.a)+Number(sl.a);
     c.unit=r.plan_unit||c.unit;
-    /* which way is good — needed to state an achievement % honestly */
     c.dir=r.direction||c.dir;
     if(r.level!==null&&r.level!==undefined&&r.level!=='') c.lvl=r.level;
   });
@@ -1041,23 +706,6 @@ function verticalTable(tid,rs,month){
   return '<div class="tw">'+head+body+'</tbody></table></div>';
 }
 
-/* VERTICAL x KRA SUMMARY — one row per KRA, grouped by vertical, with a total
- * row per vertical and a grand total.
- *
- * WHAT CAN AND CANNOT BE ADDED UP.
- *
- * A KRA row sums across PEOPLE, which is sound: every person's GMV target is
- * in crore, every person's New Seller Acquisition target is a count. Same KRA,
- * same unit.
- *
- * A vertical TOTAL cannot sum those rows. 15.61 crore of GMV plus 19 sellers
- * plus 3 days of DSO is not 37.61 of anything. The shipment report this table
- * is modelled on can total its columns because each one is a single unit —
- * transactions, MT, lakhs. Here every row is a different unit, so the total
- * row reports what IS countable: how many KRAs met their target.
- *
- * Printing a sum there anyway would produce a confident number that means
- * nothing, on the most prominent row of the page. */
 function verticalSummary(){
   var rows=targetedRows();
   if(!rows.length) return '';
@@ -1067,17 +715,6 @@ function verticalSummary(){
     var v=String(e.team_id);
     if(!byV[v]){ byV[v]={kra:{},people:{}}; order.push(v); }
     byV[v].people[e.id]=1;
-    /* ADDING A DURATION ACROSS PEOPLE IS THE SAME MISTAKE AS ADDING IT ACROSS
-       MONTHS. This summed unconditionally, so Plastic's DSO read as Neelesh's
-       20 days plus Rishi's 10 against a target of 5 + 5 — 30 days against 10,
-       which is not a number of anything and showed as an achievement. The old
-       comment defended summing on the grounds that every POC's GMV is in crore
-       and every POC's seller target is a count: true, and irrelevant to a rate
-       or a duration.
-
-       So the values are collected and reduced afterwards by the SAME rule the
-       model applies down the month axis — agg_kind / plan_agg, which the server
-       already decided. Quantities total; durations and rates average. */
     var k=byV[v].kra[r.kra_id]||(byV[v].kra[r.kra_id]=
       {ts:[],as:[],unit:'',dir:'',agg:'',pagg:''});
     if(r.plan_target!==null&&r.plan_target!==undefined) k.ts.push(Number(r.plan_target));
@@ -1087,9 +724,6 @@ function verticalSummary(){
     k.agg=r.agg_kind||k.agg;
     k.pagg=r.plan_agg||k.pagg;
   });
-  /* A row's own aggregation kind is the authority. Where the server did not
-     state one — a single-month view does not — fall back to the unit, which is
-     what aggKind_ reads first anyway. */
   function meansAcrossPocs(k){
     if(k.agg==='mean'||k.pagg==='mean') return true;
     var u=String(k.unit||'').toLowerCase();
@@ -1110,7 +744,6 @@ function verticalSummary(){
       k.a=reduce_(k.as,mean);
     });
   });
-  /* the same department order the card breakdowns use — revenue first */
   order.sort(function(a,b){
     var ra=verticalRank(a), rb=verticalRank(b);
     if(ra!==rb) return ra-rb;
@@ -1126,8 +759,6 @@ function verticalSummary(){
       var c=g.kra[kid], p=achievedPct(c);
       if(p!==null){ cnt++; if(p>=100) met++; }
       body+='<tr class="vrow">'+
-        /* one cell spanning the group, rather than the name on row 1 and a
-           column of blanks under it */
         (i===0?'<td class="vname" rowspan="'+kids.length+'">'+
           h(teamLabel(M.teams[v]))+'</td>':'')+
         '<td class="kname">'+h((M.kras[kid]||{}).name||kid)+
@@ -1143,11 +774,6 @@ function verticalSummary(){
     });
     gMet+=met; gN+=cnt; gKra+=kids.length;
     Object.keys(g.people).forEach(function(id){ gPeople[id]=1; });
-    /* The two quantity columns stay EMPTY on a total row. They used to carry
-       "not summable — each KRA has its own unit", which is true but is a
-       sentence sitting in a column of numbers, repeated on every vertical.
-       Said once in the caption instead; the cells are marked so the blank
-       reads as deliberate rather than as missing data. */
     body+='<tr class="vtot"><td colspan="2">'+h(teamLabel(M.teams[v]))+' total'+
       '<span class="pill">'+Object.keys(g.people).length+' POCs · '+kids.length+' KRAs</span></td>'+
       '<td class="r na">·</td><td class="r na">·</td>'+
@@ -1170,11 +796,6 @@ function targetsPanel(){
       'Targets come from the Target Sheet, which covers the Metals and Plastics '+
       'tabs only. Departments outside those two have no target source yet.');
   }
-  /* Group by department AND sub-group, so Plastic splits into Supply and
-     Demand. They are different jobs against different KRAs — Demand works
-     buyers, Supply works sellers — so one merged Plastic table would be half
-     empty on every row and invite comparing two people who are not doing
-     comparable work. A department with no sub-group stays a single table. */
   var byGroup={}, order=[];
   rs.forEach(function(r){
     var e=M.emps[r.employee_id]; if(!e) return;
@@ -1183,20 +804,16 @@ function targetsPanel(){
     if(!byGroup[key]){ byGroup[key]={tid:e.team_id,sub:sub,rows:[]}; order.push(key); }
     byGroup[key].rows.push(r);
   });
-  /* teamLabel takes the team OBJECT, not its id. Sort by department, then
-     sub-group, so a department's tables stay adjacent. */
   order.sort(function(a,b){
     var ga=byGroup[a], gb=byGroup[b];
     var d=String(teamLabel(M.teams[ga.tid])).localeCompare(String(teamLabel(M.teams[gb.tid])));
     return d||String(ga.sub).localeCompare(String(gb.sub));
   });
-  /* the months this table can be sliced to — only meaningful for a span */
   var span=((S.model||{}).ytd_periods)||[];
   return order.map(function(key){
     var g=byGroup[key], list=g.rows, t=M.teams[g.tid]||{};
     var who={}; list.forEach(function(r){ who[r.employee_id]=1; });
     var month=S.tblMonth[key]||'';
-    /* a month the model no longer covers must not stick */
     if(month&&span.indexOf(month)<0){ month=''; }
     var sel=span.length>1
       ?'<select class="sel sm tblm" data-tbl="'+h(key)+'" '+
@@ -1222,16 +839,6 @@ function targetsPanel(){
       sel+'</div>'+verticalTable(g.tid,list,month)+'</section>';
   }).join('<div style="height:14px"></div>');
 }
-/* The achieved value. Under YTD this is the year's figure, and HOW it was
- * aggregated has to be said out loud: a seller count or a crore amount is
- * SUMMED across the months, while a DSO or a rate is AVERAGED. "22.75 days"
- * and "91 days" are the same four months read two different ways, and a
- * reader cannot tell which they are looking at unless the page says.
- *
- * The month count matters too: an achieved value from 2 months against a
- * target that spans 3 is not a shortfall, it is an incomplete year. */
-/* The working behind a number NOBODY TYPED. A DSO of 29.8 days is unarguable
-   and unexaminable at once; the three figures it came from make it neither. */
 function noteFor(r,month){
   return (month&&r&&r.monthly&&r.monthly[month]&&r.monthly[month].note)||
          (r&&r.actual_note)||'';
@@ -1239,11 +846,7 @@ function noteFor(r,month){
 function workingOf(r,month){
   var note=noteFor(r,month);
   if(!note) return '';
-  /* the note leads with its source, which the column already implies */
   var txt=String(note).replace(/^MM_CT DSO · /,'');
-  /* Clickable, because the one-line form is a summary: the modal lays the
-     calculation out against the ladder the rating came from, which is what
-     somebody actually wants when they disagree with the number. */
   return '<button class="working worklink" data-work="'+
     h(r.employee_id)+'|'+h(r.kpi_id)+'|'+h(month||'')+
     '" title="See the calculation">'+h(txt)+'</button>';
@@ -1261,8 +864,6 @@ function achievedCell(r,month){
 function targetCell(r){
   if(r.plan_target===null||r.plan_target===undefined) return '<span class="lv-na">\u2014</span>';
   var why=r.plan_rule||'';
-  /* a YTD figure built from fewer months than the span is not a full-year
-     target, and silently showing it as one would overstate the ask */
   var part=(r.months_total&&r.plan_months&&r.plan_months<r.months_total)
     ? '<div style="font-size:11px;color:var(--ink-3)">'+r.plan_months+' of '+
       r.months_total+' mo</div>' : '';
@@ -1278,9 +879,6 @@ function roleName(r){ return ({super_admin:'Super Admin',hr_admin:'HR / Admin',
   employee:'Employee',auditor:'Auditor',no_access:'No access'})[r]||r||''; }
 var MONTHS=['January','February','March','April','May','June','July','August',
             'September','October','November','December'];
-/* The server now stores these correctly, but a sheet written by an older
-   version still holds dates where the month name should be — and the id is the
-   only timezone-proof source, so read the label off that first. */
 function periodLabel(p){
   if(!p) return '';
   var m=String(p.id||'').match(/(\d{4})-(\d{2})$/);
@@ -1298,35 +896,12 @@ function periodName(id){
     return String(x.id)===String(id); })[0];
   return p?periodLabel(p):String(id||''); }
 
-/* Short display labels for departments whose full name will not fit a chart
- * axis, a table cell or a filter option.
- *
- * Keyed by team ID, and DISPLAY ONLY — deliberately not a rename in the data.
- * A team's id is derived from its name (`'team_' + slug_(name)` in both
- * seedFromEmbedded_ and importFromSource_), so renaming the team to "OMP_CT"
- * would mint a new id — team_omp-ct instead of
- * team_open-marketplace-control-tower — and the next import would create a
- * SECOND team, orphaning the 8 people still pointing at the old one. The full
- * name stays the record; this is what the reader sees. */
 var TEAM_SHORT={ 'team_open-marketplace-control-tower':'OMP_CT' };
 function teamLabel(t){ if(!t) return '—'; return TEAM_SHORT[t.id]||t.name||'—'; }
 function teamShortened(t){ return !!(t&&TEAM_SHORT[t.id]&&t.name&&t.name!==TEAM_SHORT[t.id]); }
-/* the full name is still worth surfacing on hover wherever it was shortened */
 function teamTitle(t){ return teamShortened(t)?' title="'+h(t.name)+'"':''; }
 function rows(){ return (S.model||{}).rows||[]; }
 
-/* ---------------------------------------------------------------- filters --
- * DEPARTMENT is team_id.  There is no separate department column in the
- * schema, and the two candidates that could have been one are unusable:
- * `region` is blank for all 38 people, and `sub_group` is set for 14.  The
- * team IS the business function here — Metal, Plastic, Onboarding, Collections,
- * Open Marketplace - Control Tower — so it is labelled Department and the old
- * "Team" control is this same control renamed, not a second one.
- *
- * MANAGER is manager_id, which assignLeads_ fills in from the team lead.  A
- * manager's OWN row is included in their group: filtering to a manager and
- * then not finding that manager in the list reads as a bug.
- * ------------------------------------------------------------------------ */
 function managerList(){
   var seen={}, out=[];
   ((S.model||{}).employees||[]).forEach(function(e){
@@ -1364,18 +939,6 @@ function fSel(key,label,pairs){
   return '<div class="f"><label>'+h(label)+'</label><select data-f="'+key+'">'+
     pairs.map(function(p){ return opt(p[0],p[1],S[key]); }).join('')+'</select></div>';
 }
-/* which cells a view wants; Department and Manager are on every one of them */
-/* THE MONTH SELECTOR.
- *
- * It used to sit in the top bar, which put it on every page for free. Moving
- * it into the filter row is what was asked for, but the filter row only exists
- * on Overview and People — so five other views would silently lose the ability
- * to change month, including the individual scorecard, which is where actuals
- * are RECORDED and therefore the one place a wrong month does real damage.
- *
- * Hence one definition, used as a cell inside the filter row and as a bar of
- * its own everywhere else. The element keeps id="pSel", so wire() binds it
- * wherever it lands. */
 function periodCell(){
   var m=S.model||{};
   var opts='<option value="ytd"'+(String(S.period)==='ytd'?' selected':'')+'>'+
@@ -1405,14 +968,6 @@ function filterRow(want){
      ['qualitative','Qualitative']]));
   if(want.search) cells.push('<div class="f"><label>Search</label>'+
     '<input data-fq="1" placeholder="KPI or KRA name" value="'+h(S.q)+'"></div>');
-  /* The clear button appears ONLY when there is something to clear. It used to
-     sit there permanently as a disabled "No filters" box — a control that
-     cannot be pressed, occupying a column, telling the reader what is already
-     obvious from the three selects beside it.
-     It is hidden rather than deleted: with two or three filters set, resetting
-     them one select at a time is tedious, and the count on the button is the
-     only place the page says how many are active. The grid is auto-fit, so the
-     remaining cells simply reflow. */
   var live=activeCount()+(S.q?1:0);
   if(live){
     cells.push('<div class="f"><label>&nbsp;</label><button class="btn" data-clear="1" '+
@@ -1422,16 +977,12 @@ function filterRow(want){
   return '<div class="filters">'+cells.join('')+'</div>';
 }
 
-/* -------------------------------------------------------------- fragments -- */
 var LV=['--lv1','--lv2','--lv3','--lv4','--lv5'];
 function lvColor(l){ return l>=1&&l<=5?'var('+LV[l-1]+')':'var(--lv0)'; }
-/* discrete bands: the score IS a level, so it must not be drawn as a bar fill */
 function levelMeter(level,label){
   if(level===null||level===undefined||level===''){
     return '<div class="lv"><span class="lv-na">not scored</span></div>';
   }
-  /* a YTD level is a mean, so the bands fill to the nearest whole target and
-     the exact figure is spelled out beside them */
   var l=Number(level), whole=Math.round(l), out='<div class="lv">';
   for(var i=1;i<=5;i++){
     out+='<b style="background:'+(i<=whole?lvColor(i):'var(--lvna)')+'"></b>';
@@ -1457,19 +1008,12 @@ function person(e,extra){
     '<div class="n">'+h(e.name)+'</div><div class="d">'+
     h(extra||e.designation||'')+'</div></div></div>';
 }
-/* A tile may carry WHERE ITS NUMBER COMES FROM. Passing an anchor makes the
-   whole card a link to the explanation page — the question "what is this and
-   how is it worked out" is asked of the card, so the card should answer it,
-   rather than the reader having to know a help page exists. */
 function tile(label,value,hint,small,go){
   return '<div class="tile'+(go?' clk" data-go="'+go:'')+'"'+
     (go?' title="How this is calculated"':'')+'><div class="l">'+h(label)+'</div>'+
     '<div class="v'+(small?' sm':'')+'">'+value+'</div>'+
     (hint?'<div class="h">'+hint+'</div>':'')+'</div>';
 }
-/* A tile whose number is a COUNT WITHIN A BAND, with the band named beside a
-   coloured dot. Everything else about it is a plain tile — same box, same
-   click-through to the explanation. */
 function statTile(kind,label,value,hint,go){
   return '<div class="tile clk" data-go="'+(go||'method')+
     '" title="How this is calculated">'+
@@ -1492,11 +1036,6 @@ function note(kind,title,msg){
     '<div><div class="t">'+h(title)+'</div><div class="m">'+msg+'</div></div></div>';
 }
 
-/* ============================ derived facts ================================
- * All of this is computed from what the server actually sent. Nothing is
- * synthesised — if no actual has been recorded, the number is null and the
- * chart says so rather than drawing a plausible line.
- * ========================================================================= */
 function stats(list){
   list=list||rows();
   var st={n:list.length,scored:0,levels:[0,0,0,0,0,0],kinds:{numeric:0,ordinal:0,qualitative:0,none:0},
@@ -1508,16 +1047,11 @@ function stats(list){
     if(r.band_note&&/not monotonic/i.test(r.band_note)) st.nonMono++;
     if(r.level!==null&&r.level!==undefined&&r.level!==''){
       st.scored++; st.measured+=r.weightage||0;
-      /* a YTD level is a MEAN and can be fractional — Number(2.67) as an array
-         index would silently produce NaN and lose the bar */
       st.levels[Math.max(0,Math.min(5,Math.round(Number(r.level))))]++;
     }
   });
   return st;
 }
-/* Ladders whose direction contradicts the KPI's wording, plus the ones that
-   cannot be measured at all. These decide people's ratings, so they are
-   surfaced rather than quietly normalised. */
 function flags(list){
   var out=[];
   (list||rows()).forEach(function(r){
@@ -1550,10 +1084,6 @@ function weightWarnings(){
   return out;
 }
 
-/* ================================ charts ==================================
- * Chart.js reads CSS custom properties through this helper so the palette
- * lives in exactly one place.
- * ======================================================================== */
 function tok(name){ return getComputedStyle(document.documentElement)
   .getPropertyValue(name).trim(); }
 function destroyCharts(){ Object.keys(CH).forEach(function(k){
@@ -1586,30 +1116,6 @@ function mkChart(id,cfg){
   if(CH[id]){ try{CH[id].destroy();}catch(e){} }
   CH[id]=new Chart(el,cfg);
 }
-/* chartLevels() lived here and drew the level distribution on the Overview.
-   That card was replaced by the per-vertical month-by-month cards, leaving it
-   with no caller, so it is gone rather than left as a function the next reader
-   has to work out is dead.
-   Note that the level distribution is now shown NOWHERE. stats() still counts
-   st.levels, so putting it back — on Teams or Structure review — is a panel and
-   a canvas, not a rebuild. */
-/* MONTH-WISE PERFORMANCE for one vertical.
- *
- * The measure is the SHARE OF TARGETED KPIs THAT MET OR BEAT TARGET in that
- * month, not an average achievement %.
- *
- * An average would be wrong here and badly so. The real data contains 600%,
- * 400% and 325% against small counts, and a mean of ratios lets one KPI with
- * a target of 3 drown twenty others — Metal would read as a triumph in a
- * month most of it missed. A share is immune to that: every targeted KPI
- * counts once, however spectacular its overshoot.
- *
- * Direction matters: on a lower-is-better KRA (DSO days) meeting target means
- * achieved <= target, not >=.
- *
- * A month with no targeted KPI carrying BOTH a target and an achievement has
- * no share at all, and is left null rather than drawn as zero — nothing
- * recorded is not the same as nothing achieved. */
 function monthlyHitRate(rows){
   var span=((S.model||{}).ytd_periods)||[];
   return span.map(function(pid){
@@ -1644,7 +1150,6 @@ function chartMonthly(id,rows){
 }
 function chartTeams(id,mode){
   var m=S.model||{}, labels=[], vals=[];
-  /* the bars must describe the same population the tiles and the table do */
   var keep={}; filteredEmployees().forEach(function(e){ keep[e.id]=1; });
   (m.teams||[]).forEach(function(t){
     var people=(M.byTeam[t.id]||[]).filter(function(e){ return keep[e.id]; });
@@ -1673,7 +1178,7 @@ function chartTeams(id,mode){
     maxBarThickness:24}]},options:o});
 }
 
-/* ================================= views ================================== */
+// ===== views =====
 var V={};
 
 V.overview=function(){
@@ -1691,14 +1196,6 @@ V.overview=function(){
     (activeCount()?people.length+' of '+total+' people (filtered)'
                   :total+' people in '+((S.model||{}).teams||[]).length+' departments')+
     '</div></div></div>';
-  /* The year-to-date explanation card was removed on request. The rules it
-     described are still in force and are NOT obvious from the numbers — a
-     count sums across months while a DSO averages, and the year is rated on
-     its own totals rather than on a mean of monthly ratings. They are written
-     up in HANDOVER.md §16.4, and each row still reports which way it
-     aggregated via agg_kind. */
-  /* the server sends only what this role may see, so say so — otherwise the
-     counts read as the whole company */
   if((S.model||{}).scoped){
     out+=note('i','You are seeing '+((S.model||{}).scope_kind==='self'
         ?'your own scorecard':'your team only'),
@@ -1725,30 +1222,10 @@ V.overview=function(){
   }
   if(ww.length){
     out+=note('w',ww.length+' scorecard'+(ww.length===1?'':'s')+' do not total 100% weightage',
-      /* weightWarnings() returns {emp, w} — NOT {e, w}. Reading the wrong field
-         threw "Cannot read properties of undefined (reading 'name')" and took
-         the whole Overview down. It stayed hidden because this branch only runs
-         when a scorecard does not total 100%, and none did until the framework
-         re-import took assignments from 208 to 225.
-         tests/shapetest.js asserts the page never reads that field again, so
-         do not write the offending expression even inside a comment. */
       ww.slice(0,4).map(function(x){ return h(x.emp.name)+' ('+f1(x.w)+'%)'; }).join(', ')+
       (ww.length>4?' and '+(ww.length-4)+' more':'')+'.');
   }
 
-  /* ======================= THE TWO CARD ROWS =============================
-   *
-   * Row 1, EXECUTIVE SUMMARY: how many people, how well they are doing, and
-   * how much of it is actually measured.
-   * Row 2, PERFORMANCE HEALTH: how those people split three ways, and what is
-   * still missing.
-   *
-   * Every figure respects the filters, like everything else on this page.
-   *
-   * The four tiles this replaced — with a numeric target, achieved recorded,
-   * at or above target, rated — are NOT lost: each of their numbers now sits
-   * in the small print of the tile that supersedes it, so nothing that was
-   * countable before has stopped being visible. */
   var V1=ovStats();
   function ofScored(x){
     return V1.scored.length?'<b>'+pc(x/V1.scored.length*100)+'</b> of scored':'—'; }
@@ -1785,9 +1262,6 @@ V.overview=function(){
     statTile('crit','Critical',String(V1.crit.length),
       ofScored(V1.crit.length)+' · below Target 3','card:crit')+
     tile('KPI gap',String(V1.gap.length),
-      /* the deduped KPI count keeps a home here: the Overview lost its own
-         KPIs card in this layout, and it is the one number that says how
-         much of the framework these assignments actually cover. */
       'of <b>'+V1.st.n+'</b> assignments · <b>'+distinctKpiCountIn(V1.list)+
       '</b> KPIs · <b>'+V1.rated.length+'</b> of '+V1.tr.length+' targeted rated',
       false,'card:gap')+
@@ -1797,8 +1271,6 @@ V.overview=function(){
         :'awaiting actuals',true,'card:dept')+
     '</div>';
 
-  /* ladder readiness — part-to-whole across 4 classes, so a stacked bar with a
-     legend AND direct labels; identity is never carried by colour alone */
   var k=st.kinds, tot=st.n||1;
   var segs=[['numeric','Numeric','--cat1'],['ordinal','Ordinal','--cat2'],
             ['qualitative','Qualitative','--cat3'],['none','No ladder','--cat-rest']];
@@ -1833,9 +1305,6 @@ V.overview=function(){
         'inflates confidence in a score.</div>'})+
     '</div>';
 
-  /* one table per vertical, so the KRA columns are the ones that vertical
-     actually owns */
-  /* the roll-up first, then the per-POC detail below it */
   (function(){
     var sum=verticalSummary();
     if(sum) out+='<div class="mt">'+panel({flush:true,
@@ -1854,7 +1323,6 @@ V.overview=function(){
       :h(periodName(S.period)))+'</div>'+
     targetsPanel()+'</div>';
 
-  /* month-wise performance, one card per vertical that has targets at all */
   var perfCards=[], perfDraw=[];
   (function(){
     var byTeam={};
@@ -1893,27 +1361,21 @@ V.overview=function(){
   return out;
 };
 
-/* People, banded by department.  The Team column is gone because the band
-   above each group already says it — repeating it on every row was noise. */
 function peopleTable(list){
   if(!list.length) return emptyBox('No people','Nothing matches the current filters.');
   var out='<table><thead><tr><th>Person</th>'+
     '<th class="opt2">KPIs</th><th class="r opt2">Weightage</th>'+
     '<th class="r">Score</th><th>Level</th></tr></thead><tbody>';
-  /* band them in the department order the workbook uses, not alphabetically,
-     so the sections line up with every other view */
   var byDept={}, order=[];
   ((S.model||{}).teams||[]).forEach(function(x){ byDept[x.id]=[]; order.push(x.id); });
   list.forEach(function(e){
     var k=String(e.team_id);
-    if(!byDept[k]){ byDept[k]=[]; order.push(k); }   /* a team with no TEAMS row */
+    if(!byDept[k]){ byDept[k]=[]; order.push(k); }
     byDept[k].push(e);
   });
   order.forEach(function(tid){
     var group=byDept[tid]; if(!group||!group.length) return;
     var t=M.teams[tid];
-    /* KPIs, not assignment rows: six Metal POCs holding the same seven KPIs is
-       seven, not forty-two. */
     var gr=[], acc=0, c=0;
     group.forEach(function(e){
       gr=gr.concat(M.byEmp[e.id]||[]);
@@ -1962,14 +1424,10 @@ V.teams=function(){
       var o=M.overalls[e.id]; if(o){ sc+=o.scored_count||0;
         if(o.score!==null&&o.score!==undefined){ acc+=o.score; c++; } }
     });
-    /* the column says KPIs, so it counts KPIs. Scored, beside it, stays a row
-       count — it is how many ASSIGNMENTS carry an actual. */
     var n=distinctKpiCountIn(all);
     var lead=M.emps[t.lead_id];
     body+='<tr class="clk" data-go="team/'+h(t.id)+'">'+
       '<td><div class="n" style="font-weight:650">'+h(teamLabel(t))+'</div>'+
-        /* the auto-generated code is noise under its own name (METAL under
-           Metal); the full name under a shortened label is not */
         (teamShortened(t)?'<div class="d" style="font-size:11.5px;'+
           'color:var(--ink-3)">'+h(t.name)+'</div>':'')+'</td>'+
       '<td>'+(lead?person(lead):'<span class="lv-na">unassigned</span>')+'</td>'+
@@ -2035,8 +1493,6 @@ V.emp=function(p){
     '<button class="btn" data-pdf="'+h(e.id)+'">'+svg('dl')+' Scorecard PDF</button>'+
     (mayFramework(e.id)?'<button class="btn p" data-assign="new:'+h(e.id)+
       '">+ Add KPI</button>':'')+'</div>';
-  /* the scorecard is where actuals are RECORDED, so the month must be pickable
-     here above all — editable() is false under Year to date */
   out+=periodBar();
 
   out+='<div class="row r-5">'+
@@ -2052,7 +1508,6 @@ V.emp=function(p){
     tile('Level',levelMeter(o.level===undefined?null:o.level),'',true)+
     '</div>';
 
-  /* KRA rollups — the same weighted mean renormalised inside each KRA */
   var byKra={};
   rs.forEach(function(r){ (byKra[r.kra_id]=byKra[r.kra_id]||[]).push(r); });
   var kraBody='';
@@ -2093,10 +1548,6 @@ V.emp=function(p){
     '<th class="r act">Actions</th></tr></thead><tbody>';
   rs.forEach(function(r){
     var kra=M.kras[r.kra_id]||{};
-    /* A ratio ladder reads as 0.6 / 0.75 / 0.9 / 1.0 / 1.05, which nobody
-       carries a target in. Where a numeric target exists the rungs are shown
-       as the figures they actually represent, with the stored ratios kept
-       underneath so the two can always be reconciled. */
     var inUnits=ladderInUnits(r);
     var bands=(inUnits||(r.bands||[]).map(function(b){ return String(b||'').trim(); }))
       .filter(Boolean).map(h).join('&nbsp; · &nbsp;');
@@ -2235,20 +1686,6 @@ V.review=function(){
   return out;
 };
 
-/* WHERE THE ANSWERS LIVE.
- *
- * "What is this card and how is it worked out?" is the question a scorecard
- * gets asked most, and it is asked by the person being rated. Answering it in
- * a handover document is answering the wrong audience — they will never read
- * it, and by the time they ask, the meeting is already happening.
- *
- * So every rule that decides a number is written on a page inside the app,
- * reachable from the nav, in the same words the KRA owner used when deciding
- * it. Definitions belong where the numbers are.
- *
- * This page is generated from the same helpers the dashboard uses, so a
- * worked example cannot drift from the real arithmetic: RATING_SCALE_UI below
- * is the one the server applies. */
 var RATING_SCALE_UI=[['60%','1'],['75%','2'],['90%','3'],
                      ['100% — on target','4'],['105%','5']];
 function dl(rows){
@@ -2492,26 +1929,9 @@ V.admin=function(){
   return out;
 };
 
-/* ================================ modals ================================== */
-/* ==========================================================================
- * THE CUSTOMERS BEHIND A SCORECARD
- *
- * One server round trip, on demand. It is not folded into apiModel because
- * 324 shipment rows joined to the POC maps on every dashboard load would be
- * paid for by everybody to be read by almost nobody — so it is a button, and
- * the modal shows its own loading state.
- * ======================================================================== */
-/* ==========================================================================
- * HOW ONE DERIVED FIGURE WAS REACHED
- *
- * The note stored with the achievement carries the three quantities; this puts
- * them next to the ladder the rating came from, so the whole chain — rupees to
- * days to a Target number — is on one screen.
- *
- * Parsed from the note rather than recomputed, deliberately: recomputing here
- * would let the explanation drift from the figure that was actually stored and
- * rated. If the two ever disagree, the note is the record of what happened.
- * ======================================================================== */
+// ===== modals =====
+// ===== CUSTOMER DETAIL =====
+// ===== DERIVATION =====
 function modalWorking(empId,kpiId,month){
   var r=findRow(empId,kpiId), e=M.emps[empId];
   if(!r||!e) return;
@@ -2522,7 +1942,6 @@ function modalWorking(empId,kpiId,month){
   parts.slice(1).forEach(function(p){
     if(/shipment/.test(p)) ships=p; else if(!formula) formula=p;
   });
-  /* pull the three quantities out of "receivable X ÷ GMV Y × Z days = N days" */
   var m=formula.match(/receivable\s+(.+?)\s+÷\s+GMV\s+(.+?)\s+×\s+(\d+)\s+days\s+=\s+(.+)$/);
   var rows='';
   if(m){
@@ -2535,7 +1954,6 @@ function modalWorking(empId,kpiId,month){
       '<div class="eq"><b>'+h(m[1])+'</b> &divide; <b>'+h(m[2])+'</b> &times; <b>'+
       h(m[3])+' days</b> = <b>'+h(m[4])+'</b></div>';
   } else {
-    /* an unrecognised note is shown verbatim rather than silently dropped */
     rows='<div class="eq">'+h(note)+'</div>';
   }
   var lad=(r.bands||[]).map(function(b,i){
@@ -2602,32 +2020,16 @@ function modalCustomers(empId){
       (err&&err.message)||'Try again.');
   });
 }
-/* rupees as crore, because every other money figure on the page is in crore */
 function crore(v){
   var x=Number(v);
   if(!isFinite(x)||x===0) return '0.00 Cr';
   return (Math.round(x/1e5)/100).toFixed(2)+' Cr';
 }
 
-/* ==========================================================================
- * THE WORKING BEHIND A CARD
- *
- * "33%" is not an explanation, and neither is a page of prose describing how
- * an average is taken. What answers the question is the five numbers that were
- * averaged, with the arithmetic written out underneath.
- *
- * So every card opens ITS OWN VALUES: the people, the KPIs, the targets and
- * the achieved figures that produced the number on its face, and a sum line
- * showing them being combined. The prose stays on the method page for anyone
- * who wants the rules rather than the workings; every modal links to it.
- *
- * Read from ovStats(), the same call the cards read, so a breakdown cannot
- * disagree with the number it explains.
- * ======================================================================== */
+// ===== CARD BREAKDOWN =====
 function sumLine(txt){
   return '<div class="sumline">'+txt+'</div>';
 }
-/* a person x level table, used by five of the cards */
 function pplTable(list,note){
   if(!list.length) return emptyBox('Nobody here',note||'No scorecard falls in this group.');
   return '<div class="tw"><table class="mini"><thead><tr><th>Person</th>'+
@@ -2641,7 +2043,6 @@ function pplTable(list,note){
           '<td class="r num">'+pc(Number(x.o.score)/5*100)+'</td></tr>';
       }).join('')+'</tbody></table></div>';
 }
-/* a KPI x target x achieved table, used by the target-side cards */
 function kpiTable(rows,showPct){
   if(!rows.length) return emptyBox('Nothing to show','No KPI falls in this group.');
   return '<div class="tw"><table class="mini"><thead><tr><th>Person</th><th>KPI</th>'+
@@ -2664,16 +2065,6 @@ function kpiTable(rows,showPct){
       rows.length+'</div>':'');
 }
 
-/* THE ORDER THE BUSINESS READS ITS DEPARTMENTS IN.
- *
- * The two revenue verticals first and side by side, because they are what
- * anybody opening a card looks at first; then the two support functions; then
- * Control Tower. Alphabetical put Collections at the top and Plastic fourth,
- * which is tidy and useless.
- *
- * Matched on the department NAME rather than the team id, so it survives a
- * re-seed. Anything not listed sorts after the listed ones, alphabetically —
- * a new department appears in a predictable place instead of vanishing. */
 var VERTICAL_ORDER=['PLASTIC','METAL','ONBOARDING','COLLECTIONS'];
 function verticalRank(tid){
   var nm=String(teamLabel(M.teams[tid])||'').toUpperCase().replace(/[^A-Z0-9 ]+/g,' ')
@@ -2696,9 +2087,6 @@ function byVertical(items,empOf){
     return String(teamLabel(M.teams[a])).localeCompare(String(teamLabel(M.teams[b])));
   }).map(function(tid){ return { tid:tid, items:by[tid] }; });
 }
-/* A vertical's card, with its LEAD named. The lead is who a reader goes to
-   about the numbers underneath, so a department heading without one is only
-   half an answer — and saying "no lead recorded" is itself worth knowing. */
 function vCard(tid,sub,body,foot){
   var t=M.teams[tid]||{}, lead=M.emps[t.lead_id];
   return '<section class="vcard"><div class="vch"><h4>'+h(teamLabel(t))+'</h4>'+
@@ -2711,12 +2099,6 @@ function sbs(cards){
   return cards.length?'<div class="sbs">'+cards.join('')+'</div>'
     :emptyBox('Nothing to show','No vertical falls in this group.');
 }
-/* a bare table, for inside a vertical card */
-/* A TOTAL ROW BEATS A WALL OF ADDITION. The footer used to print
-   ( 3.8 + 0.5 + 1.2 + 0.7 + ... ) ÷ 12 = 1.1 — twelve numbers nobody reads,
-   wrapping over two lines, in place of the one figure being explained. The sum
-   and the count still say how it was reached; they just say it in a row whose
-   columns line up with the ones above. */
 function vTable(heads,rows,tot){
   if(!rows.length) return '<div class="cap" style="padding:12px 13px">nothing here</div>';
   return '<div class="tw"><table class="mini"><thead><tr>'+
@@ -2865,8 +2247,6 @@ function cardDetail(key){
   }
   else if(key==='top'){
     t='Top performer';
-    /* shell() escapes cap, so this must NOT pre-escape or a name with an
-       ampersand arrives as &amp; on screen */
     cap=V.top?V.top.e.name+' · level '+f1(V.top.o.score)+' of 5':'awaiting actuals';
     if(!V.top){ body=emptyBox('Nothing scored yet','No level can be ranked.'); }
     else {
@@ -2900,7 +2280,6 @@ function cardDetail(key){
   else if(key==='gap'){
     t='KPI gap';
     cap=V.gap.length+' of '+V.st.n+' assignments carry no rating';
-    /* four different causes look identical on the Overview, so name them */
     var why={ noTarget:[], noActual:[], noLadder:[], other:[] };
     V.gap.forEach(function(r){
       var defined=(r.bands||[]).filter(function(b){ return String(b||'').trim()!==''; }).length;
@@ -2949,22 +2328,19 @@ function cardDetail(key){
 }
 
 function closeModal(){ var s=$('.scrim'); if(s) s.remove(); }
+// Modal controls are bound here: wire() runs before the modal exists.
 function openModal(html){
   closeModal();
   var d=document.createElement('div');
   d.className='scrim';
   d.innerHTML=html;
   d.addEventListener('click',function(ev){ if(ev.target===d) closeModal(); });
-  /* wire() runs at the end of render(); a modal is created afterwards, so its
-     [data-close] buttons were never bound and X / Cancel did nothing. Bind the
-     modal's own controls here, where they exist. */
   Array.prototype.slice.call(d.querySelectorAll('[data-close]')).forEach(function(b){
     b.addEventListener('click',function(ev){ ev.preventDefault(); closeModal(); }); });
   document.body.appendChild(d);
   var first=d.querySelector('input,select,textarea,button');
   if(first) first.focus();
 }
-/* wide: true for the 900px form shell, 'cards' for the roomy breakdown one */
 function shell(title,cap,body,footer,wide){
   var cls=wide===true?' wide':(wide?' '+wide:'');
   return '<div class="modal'+cls+'" role="dialog" aria-modal="true">'+
@@ -3037,10 +2413,6 @@ function modalTargets(empId,kpiId){
   openModal(shell('Target bands',h(e.name)+' · '+r.kpi,body,
     '<button class="btn" data-close="1">Cancel</button>'+
     '<button class="btn p" id="tSave">Save bands</button>',true));
-  /* Mirrors parseBands_ in Code.gs — the same tests IN THE SAME ORDER, because
-     the point of this preview is to say what the server will actually decide.
-     Order matters: an ordinal ladder has no parseable magnitudes, so if the
-     relative check does not come first it reads as qualitative instead. */
   function preview(){
     var el=$('#tPrev'); if(!el) return;
     var vals=[1,2,3,4,5].map(function(i){ return String(($('#t'+i)||{}).value||'').trim(); });
@@ -3049,8 +2421,6 @@ function modalTargets(empId,kpiId){
       /on\s*time/i.test(v)||/as\s+per\b/i.test(v); }
     function val(v){
       if(EMPTY.test(v)||isRel(v)) return null;
-      /* a hyphen after a LETTER is a separator, not a minus — "TGT-20 Days"
-         must parse as 20, never as -20, or every DSO ladder inverts */
       var t=v.replace(/[₹$,]/g,' ').replace(/([A-Za-z])\s*-\s*/g,'$1 ');
       var rg=t.match(/(\d+(?:\.\d+)?)\s*[–—]\s*(\d+(?:\.\d+)?)/)||
              t.match(/(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)/);
@@ -3137,7 +2507,7 @@ function modalAssign(spec){
   };
 }
 
-/* ================================ exports ================================= */
+// ===== exports =====
 function xlRows(kind){
   if(kind==='people'){
     return ((S.model||{}).employees||[]).map(function(e){
@@ -3222,7 +2592,7 @@ function exportPdf(empId){
   doc.save('PerformanceTracker_scorecard_'+String(e.name).replace(/[^\w]+/g,'_')+'.pdf');
 }
 
-/* ================================= shell ================================== */
+// ===== shell =====
 var NAV=[
   ['Performance',[['overview','Overview','grid'],['teams','Teams','layers'],
                   ['people','People','users']]],
@@ -3295,11 +2665,6 @@ function render(){
   catch(err){ content=emptyBox('This page could not be rendered',(err&&err.message)||String(err));
     if(window.console) console.error(err); }
 
-  /* THE REVEALING CLASS IS EMITTED HERE, not added to the element afterwards.
-     render() replaces root.innerHTML wholesale, so a class set on .app by the
-     bootstrap callback is destroyed by the very next render — and route()
-     calls one. The page would then never scale up, and the boot would look
-     like a plain fade. finishBoot() removes it once the page is painted. */
   root.innerHTML=
     '<div class="app'+((S.reveal&&!lessMotion())?' revealing':'')+'">'+
       '<aside class="sb">'+
@@ -3318,7 +2683,6 @@ function render(){
             'aria-label="Search">'+
             '<div class="sr" id="gsr"></div></div>'+
           viewAs+
-          /* the month selector lives in the filter row now, not up here */
           '<div class="who"><div class="av">'+h(ini(u.name))+'</div><div>'+
             '<div class="n">'+h(u.name||'—')+'</div>'+
             '<div class="r">'+h(roleName(u.role_id))+'</div></div></div>'+
@@ -3332,56 +2696,12 @@ function render(){
       '</div>'+
     '</div>';
   wire();
-  /* finishBoot owns playReveal when an overlay is up — it has to wait for
-     the white to lift. It returns false when there is none (a view-as
-     switch never paints one), and then the reveal is ours to run. */
   if(S.reveal){ S.reveal=false; if(!finishBoot()) playReveal(); }
 }
 
-/* The page-load reveal: tiles, then table rows, arriving in sequence rather
- * than all at once.
- *
- * The delay is set per element in JS because CSS cannot compute one from an
- * element's index, and it is CAPPED: with ~200 rows a fixed 18ms step would
- * take three and a half seconds to finish, so the tail all lands together.
- * An animation that outlives a reader's patience is worse than none.
- *
- * Only opacity and transform are animated — both composited, so a long list
- * does not thrash layout.
- *
- * NOT a count-up on the numbers. A figure that spins from 0 to 2.96 Cr is
- * briefly showing values that are not this person's, on a page whose whole
- * job is to state what their performance was. A number should be wrong for
- * zero milliseconds. */
-/* ==========================================================================
- * THE BOOT SCREEN
- *
- * startBoot paints it; the teardown hands the mark over to the sidebar: freeze
- * the spin where it stands, fly the mark onto the sidebar logo's exact rect,
- * and fade the white out around it while playReveal staggers the tiles in.
- *
- * The rect is MEASURED with getBoundingClientRect rather than assumed, so it
- * lands correctly at any zoom or window width. It is measured AFTER the
- * hiding class comes off, because .app.revealing holds the page at scale(.94)
- * and a rect read through that transform is 6% out — the mark would land
- * beside the sidebar logo rather than on it.
- *
- * IT IS TIED TO THE DATA, NOT TO A TIMER. A fixed three-second hold would be
- * wrong in both directions: on a warm cache the server answers in well under a
- * second and the reader would be made to watch the rest of the countdown, and
- * on a cold one it takes longer, so the timer would lift the cover off an
- * empty page. So the overlay comes down WHEN THE DATA LANDS, with a floor of
- * BOOT_MIN_MS underneath it — long enough that a fast load still reads as a
- * considered pause rather than a flash — and no ceiling at all, because the
- * mark turns for as long as the load takes.
- *
- * finishBoot RETURNS whether it took the job on, because it also owns the call
- * to playReveal: when the overlay is up, the tiles must not stagger in behind
- * a cover that is still opaque — they would finish their entrance unseen. When
- * there is no overlay (a view-as switch), the caller runs playReveal itself.
- * ======================================================================== */
+// ===== BOOT SCREEN =====
 var _bootShown=false, _bootAt=0;
-/* The floor, not the length. See above. */
+// The boot overlay stays up at least this long, and until the data lands (no ceiling).
 var BOOT_MIN_MS=1750;
 
 function lessMotion(){
@@ -3393,9 +2713,6 @@ function startBoot(){
   if(_bootShown) return;
   var ov=document.createElement('div');
   ov.className='boot'; ov.id='bootOverlay';
-  /* The mark is decorative and hidden from assistive tech; the sentence is
-     announced instead, so a reader who cannot see it is still told that
-     something is loading rather than being left in silence. */
   ov.innerHTML='<div class="boot-inner">'+
     '<div class="boot-mark" id="bootMark" aria-hidden="true">'+
       '<img src="'+LOGO+'" alt=""></div>'+
@@ -3406,9 +2723,6 @@ function startBoot(){
   _bootShown=true; _bootAt=Date.now();
 }
 
-/* now=true skips the floor. Used by the two failure paths: somebody being told
-   they were refused should be told at once, not after a pause staged to make a
-   success feel considered. */
 function finishBoot(now){
   if(!_bootShown) return false;
   _bootShown=false;
@@ -3419,10 +2733,6 @@ function finishBoot(now){
 
 function closeBoot(){
   var ov=document.getElementById('bootOverlay');
-  /* Cleared FIRST, and on every path including the one where the overlay has
-     already gone missing. A decorative class left behind would hide the whole
-     dashboard behind an invisible nothing. It also has to come off before the
-     flight measures, or the target rect is read through scale(.94). */
   var app=$('.app'); if(app) app.classList.remove('revealing');
   if(!ov){ playReveal(); return; }
   if(lessMotion()){
@@ -3432,9 +2742,6 @@ function closeBoot(){
   }
   var mark=document.getElementById('bootMark');
   var target=$('.sb-logo img');
-  /* Freeze the spin exactly where it stands before stopping it. Removing the
-     animation drops the mark to its base transform, so without this it snaps
-     upright a quarter-second before the flight — a visible jerk. */
   if(mark){
     var cur=window.getComputedStyle(mark).transform;
     if(cur && cur!=='none') mark.style.transform=cur;
@@ -3447,15 +2754,10 @@ function closeBoot(){
         var k=b.width/a.width;
         var tx=(b.left+b.width/2)-(a.left+a.width/2);
         var ty=(b.top+b.height/2)-(a.top+a.height/2);
-        /* No rotate() on the flight. It lands upright because the sidebar mark
-           is upright, and the frozen angle means the turn it makes getting
-           there is however far it still had to go — the spin finishing, rather
-           than a separate extra revolution. */
         mark.style.transform='translate('+tx+'px,'+ty+'px) scale('+k+')';
       }
     }
     ov.classList.add('gone');
-    /* The tiles start arriving as the white lifts, not before. */
     playReveal();
     setTimeout(function(){ if(ov.parentNode) ov.remove(); },900);
   },240);
@@ -3471,11 +2773,6 @@ function playReveal(){
 function wire(){
   var ps=$('#pSel');
   if(ps) ps.onchange=function(){ S.period=ps.value; reload(); };
-  /* per-table month: no round trip, the rows already carry every month.
-     $$ returns an array; $ returns one element. Using $ here threw a TypeError
-     that aborted the whole of wire(), so every binding BELOW this point —
-     view-as, row clicks, the filter row, search — silently stopped working
-     too. A throw in a wiring function is never local to the line it is on. */
   $$('.tblm').forEach(function(el){
     el.onchange=function(){ S.tblMonth[el.getAttribute('data-tbl')]=el.value; render(); };
   });
@@ -3486,9 +2783,6 @@ function wire(){
     el.addEventListener('click',function(ev){
       if(ev.target.closest('button')&&ev.target.closest('button')!==el) return;
       var go=el.getAttribute('data-go');
-      /* A CARD SHOWS ITS OWN WORKING rather than navigating to a page of
-         prose. Falls back to navigation if the key is unknown, so a card can
-         never become a dead click. */
       if(go.indexOf('card:')===0){
         var m=cardDetail(go.slice(5));
         if(m){ ev.preventDefault(); openModal(m); return; }
@@ -3606,30 +2900,9 @@ document.addEventListener('keydown',function(ev){
     var gs=$('#gs'); if(gs){ ev.preventDefault(); gs.focus(); } }
 });
 
-/* Changing the month is a full server round trip: buildModel_ re-reads every
- * table and re-parses every ladder for all 38 people. In Apps Script that is
- * seconds, not milliseconds, and three things made it feel broken rather than
- * slow:
- *
- *   1. NO FEEDBACK. The select changed, nothing else did, and the old month
- *      stayed on screen for several seconds. Indistinguishable from a dead
- *      control, which is why it was reported as "not working".
- *
- *   2. A STALE-RESPONSE RACE, which is a correctness bug and not just a
- *      nuisance. Every change fired another apiModel and the LAST response to
- *      arrive won — not the one for the month currently selected. Pick July
- *      then August quickly and July's slower reply lands second and overwrites
- *      August, so the page shows July's numbers under August's heading. That is
- *      the "sometimes not working". The sequence number makes any reply that is
- *      not the newest request get dropped.
- *
- *   3. NO CACHING. Going back to a month you had already opened paid the full
- *      round trip again.
- *
- * The cache is per period and is dropped whenever a write lands, because a
- * saved actual or band changes the model the server would return. */
 var _modelCache={}, _reloadSeq=0;
 function invalidateModelCache(){ _modelCache={}; }
+// Sequence guard: only the newest month request may update the page.
 function reload(){
   var want=String(S.period);
   if(_modelCache[want]){
@@ -3638,7 +2911,7 @@ function reload(){
   var mine=++_reloadSeq;
   S.periodBusy=true; render();
   Api.call('apiModel',[want],function(res){
-    if(mine!==_reloadSeq) return;   /* a newer month was picked; this reply is stale */
+    if(mine!==_reloadSeq) return;
     S.periodBusy=false;
     if(!res||!res.ok){ render();
       toast((res&&res.error)||'Could not load that period.','err'); return; }
@@ -3651,38 +2924,29 @@ function reload(){
   });
 }
 function boot(quiet){
-  /* The boot screen belongs to a PAGE LOAD, not to a view-as switch: quiet is
-     true when the reader changed who they are looking at, and covering the
-     page for that would read as a fault rather than as loading. */
   if(!quiet){ S.loading=true; startBoot(); render(); }
   Api.call('apiBootstrap',[S.period,S.viewAs],function(res){
     S.loading=false;
     if(!res||!res.ok){
-      /* Denied is the likeliest real outcome for somebody not yet in USERS,
-         and it returns EARLY. Without this the overlay stays up and they watch
-         somebody write in a book for ever instead of reading why. */
       finishBoot(true);
       S.denied=!!(res&&res.denied);
       S.error=(res&&res.error)||'The server returned nothing.';
       render(); return;
     }
     S.error=null; S.denied=false;
-    /* a page load, not a filter change — this is the one time it plays */
     S.reveal=true;
     S.session=res.session; S.users=res.users||[]; S.model=res.model;
     S.period=res.model.period_id;
     index();
     if(!location.hash){ location.hash='#/overview'; } else { route(); }
   },function(e){
-    /* The overlay is torn down on the ERROR path too. A load that fails must
-       show the reader the error, not a figure writing for ever. */
     S.loading=false; finishBoot(true);
     S.error=(e&&e.message)||'Could not reach the server.'; render();
   });
 }
 
 window.__PerfTracker={S:S,M:M,V:V,boot:boot,render:render,index:index};
-window.__PerformOS=window.__PerfTracker;   /* old handle kept: the preview harness uses it */
+window.__PerformOS=window.__PerfTracker;
 boot();
 })();
 </script>
