@@ -6545,4 +6545,764 @@ function selfTest() {
   return txt;
 }
 // The KRA/KPI framework as exported on 2026-08-20. Used only to seed an empty database.
-var SRC_SEED = {"source_sheet_id":"1c0_pP4Mmye5s5D_vzoxrvJ-utkLb6JhD69TvvOBbjoo","exported":"2026-08-20","people":[{"team":"Metal","group":"","sheet":"Metal (Supply \u0026 Demand KRAKPI)","name":"AMIT JHA","designation":"Team Lead - Business Development","extra":"","kpis":[["Process","Retention of Existing Transacted Sellers","Repeat Seller Transaction Rate (%)","Achieve repeat transactions from at least 50% of sellers who transacted in the previous month.","5.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Customer","New Buyer Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the KPI.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Customer","New Seller Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the KPI.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Process","Transaction from New Onboarded Buyers","New Buyer Same-Month Transaction Rate (%)","Ensure at least 20% of buyers onboarded during the month complete a transaction within the same month.","5.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","GMV","Monthly Target Achievement (%)","Achieve the defined monthly target for the KPI.","40.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Transaction Closure","Successfully Closed Transactions (Count)","Successfully close the targeted number of transactions through completion of POD, DNCN, and payment upload requirements.","10.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Process","DSO Days","Days Sales Outstanding (DSO)","Maintain DSO within the defined monthly target, calculated as (Average Receivables ÷ GMV) × Number of Days in the Month.","10.0","Monthly MIS Report","15.0","10.0","5.0","3.0","2.0"]]},{"team":"Metal","group":"","sheet":"Metal (Supply \u0026 Demand KRAKPI)","name":"ABHISEK SANYAL","designation":"Assistant Manager - Business Development","extra":"","kpis":[["Process","Retention of Existing Transacted Sellers","Repeat Seller Transaction Rate (%)","Achieve repeat transactions from at least 50% of sellers who transacted in the previous month.","5.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Customer","New Buyer Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the KPI.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Customer","New Seller Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the KPI.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Process","Transaction from New Onboarded Buyers","New Buyer Same-Month Transaction Rate (%)","Ensure at least 20% of buyers onboarded during the month complete a transaction within the same month.","5.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","GMV","Monthly Target Achievement (%)","Achieve the defined monthly target for the KPI.","40.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Transaction Closure","Successfully Closed Transactions (Count)","Successfully close the targeted number of transactions through completion of POD, DNCN, and payment upload requirements.","10.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Process","DSO Days","Days Sales Outstanding (DSO)","Maintain DSO within the defined monthly target, calculated as (Average Receivables ÷ GMV) × Number of Days in the Month.","10.0","Monthly MIS Report","15.0","10.0","5.0","3.0","2.0"]]},{"team":"Metal","group":"","sheet":"Metal (Supply \u0026 Demand KRAKPI)","name":"ADARSH KRISHNA","designation":"Assistant Manager - Business Development","extra":"","kpis":[["Process","Retention of Existing Transacted Sellers","Repeat Seller Transaction Rate (%)","Achieve repeat transactions from at least 50% of sellers who transacted in the previous month.","5.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Customer","New Buyer Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the KPI.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Customer","New Seller Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the KPI.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Process","Transaction from New Onboarded Buyers","New Buyer Same-Month Transaction Rate (%)","Ensure at least 20% of buyers onboarded during the month complete a transaction within the same month.","5.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","GMV","Monthly Target Achievement (%)","Achieve the defined monthly target for the KPI.","40.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Transaction Closure","Successfully Closed Transactions (Count)","Successfully close the targeted number of transactions through completion of POD, DNCN, and payment upload requirements.","10.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Process","DSO Days","Days Sales Outstanding (DSO)","Maintain DSO within the defined monthly target, calculated as (Average Receivables ÷ GMV) × Number of Days in the Month.","10.0","Monthly MIS Report","15.0","10.0","5.0","3.0","2.0"]]},{"team":"Metal","group":"","sheet":"Metal (Supply \u0026 Demand KRAKPI)","name":"ARIJIT DUTTA","designation":"Senior Executive - Business Development","extra":"","kpis":[["Process","Retention of Existing Transacted Sellers","Repeat Seller Transaction Rate (%)","Achieve repeat transactions from at least 50% of sellers who transacted in the previous month.","5.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Customer","New Buyer Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the KPI.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Customer","New Seller Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the KPI.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Process","Transaction from New Onboarded Buyers","New Buyer Same-Month Transaction Rate (%)","Ensure at least 20% of buyers onboarded during the month complete a transaction within the same month.","5.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","GMV","Monthly Target Achievement (%)","Achieve the defined monthly target for the KPI.","40.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Transaction Closure","Successfully Closed Transactions (Count)","Successfully close the targeted number of transactions through completion of POD, DNCN, and payment upload requirements.","10.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Process","DSO Days","Days Sales Outstanding (DSO)","Maintain DSO within the defined monthly target, calculated as (Average Receivables ÷ GMV) × Number of Days in the Month.","10.0","Monthly MIS Report","15.0","10.0","5.0","3.0","2.0"]]},{"team":"Metal","group":"","sheet":"Metal (Supply \u0026 Demand KRAKPI)","name":"ARGHYADEEP SAMANTA","designation":"Senior Executive - Business Development","extra":"","kpis":[["Process","Retention of Existing Transacted Sellers","Repeat Seller Transaction Rate (%)","Achieve repeat transactions from at least 50% of sellers who transacted in the previous month.","5.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Customer","New Buyer Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the KPI.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Customer","New Seller Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the KPI.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Process","Transaction from New Onboarded Buyers","New Buyer Same-Month Transaction Rate (%)","Ensure at least 20% of buyers onboarded during the month complete a transaction within the same month.","5.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","GMV","Monthly Target Achievement (%)","Achieve the defined monthly target for the KPI.","40.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Transaction Closure","Successfully Closed Transactions (Count)","Successfully close the targeted number of transactions through completion of POD, DNCN, and payment upload requirements.","10.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Process","DSO Days","Days Sales Outstanding (DSO)","Maintain DSO within the defined monthly target, calculated as (Average Receivables ÷ GMV) × Number of Days in the Month.","10.0","Monthly MIS Report","15.0","10.0","5.0","3.0","2.0"]]},{"team":"Metal","group":"","sheet":"Metal (Supply \u0026 Demand KRAKPI)","name":"AYUSH GOYAL","designation":"Assistant Manager - Business Development","extra":"","kpis":[["Process","Retention of Existing Transacted Sellers","Repeat Seller Transaction Rate (%)","Achieve repeat transactions from at least 50% of sellers who transacted in the previous month.","5.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Customer","New Buyer Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the KPI.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Customer","New Seller Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the KPI.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Process","Transaction from New Onboarded Buyers","New Buyer Same-Month Transaction Rate (%)","Ensure at least 20% of buyers onboarded during the month complete a transaction within the same month.","5.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","GMV","Monthly Target Achievement (%)","Achieve the defined monthly target for the KPI.","40.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Transaction Closure","Successfully Closed Transactions (Count)","Successfully close the targeted number of transactions through completion of POD, DNCN, and payment upload requirements.","10.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Process","DSO Days","Days Sales Outstanding (DSO)","Maintain DSO within the defined monthly target, calculated as (Average Receivables ÷ GMV) × Number of Days in the Month.","10.0","Monthly MIS Report","15.0","10.0","5.0","3.0","2.0"]]},{"team":"Plastic","group":"Supply","sheet":"Plastic (Supply KRAKPI)","name":"ASHISH KUMAR RAI","designation":"Senior Executive - Business Development","extra":"","kpis":[["Sales","Transaction from Existing Sellers","Seller Monthly Transaction Rate (%)","Ensure at least 50% of total onboarded sellers transact during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Transaction from New Onboarded Sellers","New Seller Same-Month Transaction Rate (%)","Ensure at least 20% of sellers onboarded during the current month complete a transaction within the same month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","New Seller Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","GMV","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","40.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Retention of Existing Transacted Sellers","Repeat Seller Transaction Rate (%)","Ensure at least 70% of sellers who transacted in the previous month transact again during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"]]},{"team":"Plastic","group":"Supply","sheet":"Plastic (Supply KRAKPI)","name":"RAJU B","designation":"Senior Executive - Business Development","extra":"","kpis":[["Sales","Transaction from Existing Sellers","Seller Monthly Transaction Rate (%)","Ensure at least 50% of total onboarded sellers transact during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Transaction from New Onboarded Sellers","New Seller Same-Month Transaction Rate (%)","Ensure at least 20% of sellers onboarded during the current month complete a transaction within the same month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","New Seller Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","GMV","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","40.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Retention of Existing Transacted Sellers","Repeat Seller Transaction Rate (%)","Ensure at least 70% of sellers who transacted in the previous month transact again during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"]]},{"team":"Plastic","group":"Supply","sheet":"Plastic (Supply KRAKPI)","name":"BRAJENDRA UPADHYAY","designation":"Assistant Manager - Business Development","extra":"","kpis":[["Sales","Transaction from Existing Sellers","Seller Monthly Transaction Rate (%)","Ensure at least 50% of total onboarded sellers transact during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Transaction from New Onboarded Sellers","New Seller Same-Month Transaction Rate (%)","Ensure at least 20% of sellers onboarded during the current month complete a transaction within the same month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","New Seller Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","GMV","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","40.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Retention of Existing Transacted Sellers","Repeat Seller Transaction Rate (%)","Ensure at least 70% of sellers who transacted in the previous month transact again during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"]]},{"team":"Plastic","group":"Supply","sheet":"Plastic (Supply KRAKPI)","name":"ATHARVA SUDHIR PATIL","designation":"Senior Executive - Business Development","extra":"","kpis":[["Sales","Transaction from Existing Sellers","Seller Monthly Transaction Rate (%)","Ensure at least 50% of total onboarded sellers transact during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Transaction from New Onboarded Sellers","New Seller Same-Month Transaction Rate (%)","Ensure at least 20% of sellers onboarded during the current month complete a transaction within the same month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","New Seller Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","GMV","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","40.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Retention of Existing Transacted Sellers","Repeat Seller Transaction Rate (%)","Ensure at least 70% of sellers who transacted in the previous month transact again during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"]]},{"team":"Plastic","group":"Supply","sheet":"Plastic (Supply KRAKPI)","name":"PRAVEEN RAJ P","designation":"Senior Executive - Business Development","extra":"","kpis":[["Sales","Transaction from Existing Sellers","Seller Monthly Transaction Rate (%)","Ensure at least 50% of total onboarded sellers transact during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Transaction from New Onboarded Sellers","New Seller Same-Month Transaction Rate (%)","Ensure at least 20% of sellers onboarded during the current month complete a transaction within the same month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","New Seller Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","GMV","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","40.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Retention of Existing Transacted Sellers","Repeat Seller Transaction Rate (%)","Ensure at least 70% of sellers who transacted in the previous month transact again during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"]]},{"team":"Plastic","group":"Supply","sheet":"Plastic (Supply KRAKPI)","name":"ASRAFUL HASAN","designation":"Assistant Manager - Business Development","extra":"","kpis":[["Sales","Transaction from Existing Sellers","Seller Monthly Transaction Rate (%)","Ensure at least 50% of total onboarded sellers transact during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Transaction from New Onboarded Sellers","New Seller Same-Month Transaction Rate (%)","Ensure at least 20% of sellers onboarded during the current month complete a transaction within the same month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","New Seller Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","GMV","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","40.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Retention of Existing Transacted Sellers","Repeat Seller Transaction Rate (%)","Ensure at least 70% of sellers who transacted in the previous month transact again during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"]]},{"team":"Plastic","group":"Supply","sheet":"Plastic (Supply KRAKPI)","name":"RUSTUMPET ASHWIN KUMAR","designation":"Assistant Manager - Business Development","extra":"","kpis":[["Sales","Transaction from Existing Sellers","Seller Monthly Transaction Rate (%)","Ensure at least 50% of total onboarded sellers transact during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Transaction from New Onboarded Sellers","New Seller Same-Month Transaction Rate (%)","Ensure at least 20% of sellers onboarded during the current month complete a transaction within the same month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","New Seller Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","GMV","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","40.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Retention of Existing Transacted Sellers","Repeat Seller Transaction Rate (%)","Ensure at least 70% of sellers who transacted in the previous month transact again during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"]]},{"team":"Plastic","group":"Supply","sheet":"Plastic (Supply KRAKPI)","name":"JOYDEEP DAS","designation":"Senior Executive - Business Development","extra":"","kpis":[["Sales","Transaction from Existing Sellers","Seller Monthly Transaction Rate (%)","Ensure at least 50% of total onboarded sellers transact during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Transaction from New Onboarded Sellers","New Seller Same-Month Transaction Rate (%)","Ensure at least 20% of sellers onboarded during the current month complete a transaction within the same month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","New Seller Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","GMV","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","40.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Retention of Existing Transacted Sellers","Repeat Seller Transaction Rate (%)","Ensure at least 70% of sellers who transacted in the previous month transact again during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"]]},{"team":"Plastic","group":"Supply","sheet":"Plastic (Supply KRAKPI)","name":"PARTH GAUTAM","designation":"Senior Manager - BusinessDevelopment","extra":"","kpis":[["Sales","Transaction from Existing Sellers","Seller Monthly Transaction Rate (%)","Ensure at least 50% of total onboarded sellers transact during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Transaction from New Onboarded Sellers","New Seller Same-Month Transaction Rate (%)","Ensure at least 20% of sellers onboarded during the current month complete a transaction within the same month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","New Seller Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","GMV","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","40.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Retention of Existing Transacted Sellers","Repeat Seller Transaction Rate (%)","Ensure at least 70% of sellers who transacted in the previous month transact again during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"]]},{"team":"Plastic","group":"Supply","sheet":"Plastic (Supply KRAKPI)","name":"UDAY KIRAN KUMAR THOTA","designation":"Senior Manager - Business Development","extra":"","kpis":[["Sales","Transaction from Existing Sellers","Seller Monthly Transaction Rate (%)","Ensure at least 50% of total onboarded sellers transact during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Transaction from New Onboarded Sellers","New Seller Same-Month Transaction Rate (%)","Ensure at least 20% of sellers onboarded during the current month complete a transaction within the same month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","New Seller Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","GMV","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","40.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Retention of Existing Transacted Sellers","Repeat Seller Transaction Rate (%)","Ensure at least 70% of sellers who transacted in the previous month transact again during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"]]},{"team":"Plastic","group":"Supply","sheet":"Plastic (Supply KRAKPI)","name":"TABESH MOHAMMAD","designation":"General Manager - Business Development","extra":"","kpis":[["Sales","Demand Activation","Existing Buyer Monthly Transaction Rate (%)","Ensure at least 50% of active/onboarded buyers transact during the current month, maintaining healthy demand utilisation across the category.","10.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Scale","New Demand Activation","New Buyer Same-Month Transaction Rate (%)","Ensure at least 20% of buyers onboarded during the current month complete a transaction within the same month.","10.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales","Supply Activation","Existing Seller Monthly Transaction Rate (%)","Ensure at least 50% of active/onboarded sellers transact during the current month, maintaining healthy supply utilisation.","10.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Scale","New Supply Activation","New Seller Same-Month Transaction Rate (%)","Ensure at least 20% of sellers onboarded during the current month complete a transaction within the same month.","10.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Sales / Profit","Category GMV Growth","GMV Target Achievement (%)","Achieve the approved monthly GMV target for the category, balancing demand and supply growth to drive sustainable category revenue.","30.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Customer","Transaction Quality","Debit Note Rate (%)","Ensure debit notes remain within the defined threshold as a percentage of current-month GMV, protecting transaction quality and commercial realisation.","10.0","Monthly MIS Report","0.013","0.012","0.01","0.008","0.006"],["Process / Profit","Working Capital Management","Days Sales Outstanding (DSO)","Maintain DSO within the defined threshold to ensure timely collections and healthy working capital for the category.","15.0","Monthly MIS Report","15.0","10.0","5.0","3.0","2.0"],["Sales / Profit","Category Growth \u0026 Balance","Demand–Supply Conversion Rate (%)","Ensure available category demand is effectively fulfilled through available supply, improving transaction conversion and reducing demand–supply imbalance.","5.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"]]},{"team":"Plastic","group":"Supply","sheet":"Plastic (Supply KRAKPI)","name":"NARESH","designation":"","extra":"","kpis":[["Process","Seller Onboarding","Seller Onboarding TAT Achievement (%)","Ensure seller onboarding cases are completed within the defined TAT through timely document validation, third-party verification, OSV coordination and closure of pending documentation.","30.0","COP / MIS","0.6","0.75","0.9","1.0","1.05"],["Process","Buyer Onboarding","Buyer Onboarding TAT Achievement (%)","Ensure buyer onboarding cases are completed within the defined TAT through timely document collection, KYC/business validation, document updation and closure of identified gaps.","20.0","COP / MIS","0.6","0.75","0.9","1.0","1.05"],["Process","Escalation Management \u0026 Issue Resolution","Issue Resolution TAT Achievement (%)","Ensure seller, buyer and transaction-related operational issues are logged, coordinated, followed up and resolved within the defined TAT, with timely communication to relevant stakeholders.","25.0","MIS","0.6","0.75","0.9","1.0","1.05"],["Customer","Sales \u0026 Relationship Team Coordination","Pending Action Closure Rate (%)","Ensure pending actions related to onboarding, inactive sellers/buyers, listing/requisition, matchmaking, transaction readiness, dispatch, QC/POD and payment are tracked and closed within the defined timeline.","10.0","MIS","0.6","0.75","0.9","1.0","1.05"],["Process","MIS \u0026 Operational Reporting","MIS Accuracy \u0026 Timeliness (%)","Maintain accurate and timely reporting of onboarding, pending cases, escalations, ageing, TAT and transaction-related operational metrics, ensuring critical gaps and dependencies are highlighted to stakeholders.","10.0","MIS / COP / Dashboard","0.6","0.75","0.9","1.0","1.05"],["Process","Process Improvement \u0026 SOP Adherence","SOP Compliance \u0026 Process Improvement Achievement (%)","Ensure adherence to defined SOPs and contribute to identifying and addressing recurring process gaps, bottlenecks and documentation issues to improve operational efficiency and reduce TAT.","5.0","SOP Audit / MIS / Process Tracker","0.6","0.75","0.9","1.0","1.05"]]},{"team":"Plastic","group":"Demand","sheet":"Plastic (Demand KRAKPI)","name":"NEELESH DIXIT","designation":"Senior Manager - Bsuiness Development","extra":"","kpis":[["Sales","Transaction from Existing Buyers","Buyer Monthly Transaction Rate (%)","Ensure at least 60% of total onboarded buyers transact during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Scale","Transaction from New Onboarded Buyers","New Buyer Same-Month Transaction Rate (%)","Ensure at least 20% of buyers onboarded during the current month complete a transaction within the same month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Customer","New Buyer Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Process","GMV","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","30.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Customer","DN % of GMV","Debit Note Rate (%)","Ensure debit notes do not exceed 1% of the buyer\u0027s current-month GMV.","10.0","Monthly MIS Report","0.013","0.012","0.01","0.008","0.006"],["Process","DSO Days","Days Sales Outstanding (DSO)","Calculate DSO as (Average Receivables ÷ GMV) × Number of Days in the Month.","15.0","Monthly MIS Report","15.0","10.0","5.0","3.0","2.0"]]},{"team":"Plastic","group":"Demand","sheet":"Plastic (Demand KRAKPI)","name":"RISHI PANCHAL","designation":"Senior Executive - Business Development","extra":"","kpis":[["Sales","Transaction from Existing Buyers","Buyer Monthly Transaction Rate (%)","Ensure at least 60% of total onboarded buyers transact during the current month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Scale","Transaction from New Onboarded Buyers","New Buyer Same-Month Transaction Rate (%)","Ensure at least 20% of buyers onboarded during the current month complete a transaction within the same month.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Customer","New Buyer Acquisition","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","15.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Process","GMV","Monthly Target Achievement (%)","Achieve the defined monthly target for the respective KPI within the evaluation period.","30.0","Monthly MIS Report","0.6","0.75","0.9","1.0","1.05"],["Customer","DN % of GMV","Debit Note Rate (%)","Ensure debit notes do not exceed 1% of the buyer\u0027s current-month GMV.","10.0","Monthly MIS Report","0.013","0.012","0.01","0.008","0.006"],["Process","DSO Days","Days Sales Outstanding (DSO)","Maintain DSO as per the defined formula: (Average Receivables ÷ GMV) × Number of Days in the Month.","15.0","Monthly MIS Report","15.0","10.0","5.0","3.0","2.0"]]},{"team":"Onboarding","group":"","sheet":"Onboarding (Individual)","name":"VAMSI","designation":"Senior Executive - Onboarding","extra":"","kpis":[["Process","Open Marketplace – Buyer \u0026 Seller Onboarding","TAT ( 1 Day )","% of cases completed within TAT","0.35","COP (Data)","0.8","0.85","0.9","0.95","1.0"],["Process","Re-Commerce – Seller Onboarding","TAT ( 1 Day )","% of cases completed within TAT","0.1","COP (Data)","0.8","0.85","0.9","0.95","1.0"],["Process","Fall Back – AFR \u0026 INFRA (Seller \u0026 Buyer Onboarding)","TAT ( 3 Days)","% of cases completed within TAT","0.1","COP (Data)","0.8","0.85","0.9","0.95","1.0"],["Process","Audit \u0026 Monitoring of Onboarded Vendors","Document Completeness","% of audited vendors with complete and correctly validated documentation","0.2","Individual Work Sheet","0.8","0.85","0.9","0.95","1.0"],["Process","On-Site Verification","TAT ( 4 Days )","% of OSVs completed within TAT","0.15","Individual Work Sheet","0.8","0.85","0.9","0.95","1.0"],["Process","Vendor Payments – Third Party (Finoscale / Carma One)","Timely Validation of Bills \u0026 Vendor Payments","% of bills/payments validated within defined TAT","0.1","Individual Work Sheet","0.8","0.85","0.9","0.95","1.0"]]},{"team":"Onboarding","group":"","sheet":"Onboarding (Individual)","name":"HARSHITA","designation":"Executive - Onboarding","extra":"","kpis":[["Process","INFRA – Buyer \u0026 Seller Onboarding","TAT ( 3 Days )","% of cases completed within TAT","0.25","COP (Data)","0.8","0.85","0.9","0.95","1.0"],["Process","AFR – Buyer \u0026 Seller Onboarding","TAT ( 3 Days )","% of cases completed within TAT","0.25","COP (Data)","0.8","0.85","0.9","0.95","1.0"],["Process","Audit \u0026 Monitoring of Onboarded Vendors","Document Completeness","% of audited vendors with complete and correctly validated documentation","0.2","Individual Work Sheet","0.8","0.85","0.9","0.95","1.0"],["Process","Fall Back – EPR (Seller Onboarding)","TAT","% of cases completed within defined TAT","0.1","COP (Data)","0.8","0.85","0.9","0.95","1.0"],["Process","Vendor Payments – Third Party (Ongrid)","Timely Validation of Bills \u0026 Vendor Payments","% of bills/payments validated within defined TAT","0.1","Individual Work Sheet","0.8","0.85","0.9","0.95","1.0"],["Process","Vendor Payments – Third Party (Finoscale / Carma One)","Timely Validation of Bills \u0026 Vendor Payments","% of bills/payments validated within defined TAT","0.1","Individual Work Sheet","0.8","0.85","0.9","0.95","1.0"]]},{"team":"Onboarding","group":"","sheet":"Onboarding (Individual)","name":"NAVEEN RANGA","designation":"Senior Executive - Onboarding","extra":"","kpis":[["Process","EPR – Buyer \u0026 Seller Onboarding","TAT ( 3 Days)","% of cases completed within defined TAT","0.35","COP (Data)","0.8","0.85","0.9","0.95","1.0"],["Process","Audit \u0026 Monitoring of Onboarded Vendors","Document Completeness","% of audited vendors with complete and correctly validated documentation","0.2","Individual Work Sheet","0.8","0.85","0.9","0.95","1.0"],["Process","Transporter Onboarding","TAT","% of cases completed within defined TAT","0.15","COP (Data)","0.8","0.85","0.9","0.95","1.0"],["Process","Fall Back – Open Marketplace Onboarding","TAT ( 1 Day )","% of cases completed within defined TAT","0.1","COP (Data)","0.8","0.85","0.9","0.95","1.0"],["Process","Open Marketplace – NBFC Coordination","NBFC Coordination \u0026 Case Management","% of NBFC coordination activities completed within defined SLA","0.1","Emails / Dashboard","0.8","0.85","0.9","0.95","1.0"],["Process","GST Payments","Compliance Check","% of Third Party vendors paid within defined payment timeline","0.1","Documentation","0.8","0.85","0.9","0.95","1.0"]]},{"team":"Onboarding","group":"","sheet":"Onboarding (Individual)","name":"VISHWASH","designation":"Management Trainee","extra":"","kpis":[["Process","Fall Back for All Verticals – Vendor \u0026 Buyer Onboarding","TAT","% of onboarding cases completed within defined TAT as per SOP","0.1","COP (Data)","0.8","0.85","0.9","0.95","1.0"],["Process","Design Standard Operating Procedures for Onboarding","Approved SOPs","% of required SOPs validated, approved and implemented","0.2","COP (Data)","0.8","0.85","0.9","0.95","1.0"],["Process","Digitalization of the Onboarding Process","Automation of Process","% of identified onboarding processes automated","0.3","Process Flow","0.0","0.1","0.2","0.35","0.5"],["Process","Maintain Daily Reports for Buyer \u0026 Seller Onboarding Across Verticals","Accuracy \u0026 Timeliness of Reports / Dashboard Representation","% of reports accurately represented and delivered within defined timeline","0.3","Individual Work Sheet","0.8","0.85","0.9","0.95","1.0"],["Process","Audit Process for Entire Onboarding \u0026 Collections","Reporting \u0026 Escalations","% of audit findings reported and escalated within defined timeline","0.1","Meeting","More than (T+7 days)","T+7 days","On Time (Defined TAT)","T-1 day","T - 2 days"]]},{"team":"Onboarding","group":"","sheet":"Onboarding (Individual)","name":"AJAY","designation":"Manager - Onboarding","extra":"","kpis":[["Process","All Verticals – Vendor \u0026 Buyer Onboarding","TAT","% of onboarding cases completed within defined TAT as per SOP","0.4","COP (Data)","0.8","0.85","0.9","0.95","1.0"],["Process","Design Standard Operating Procedures for Onboarding","Approved SOPs","% of required SOPs validated, approved and implemented","0.2","COP (Data)","0.8","0.85","0.9","0.95","1.0"],["Process","Audit \u0026 Monitoring of Onboarded Vendors","Document Completeness","% of audited vendors with complete and correctly validated documentation","0.1","Monthly Reporting","0.8","0.85","0.9","0.95","1.0"],["Process","Digitalization of the Onboarding Process","Automation of Process","% of identified onboarding processes automated","0.2","Process Flow","0.0","0.15","0.3","0.5","0.7"],["Process","Vendor Payments","Timely Validation of Bills \u0026 Vendor Payments","% of bills/payments validated within defined payment timeline","0.1","Team Work Sheet","0.8","0.85","0.9","0.95","1.0"]]},{"team":"Collections","group":"","sheet":"Collections (Individual)","name":"SAI NITIN","designation":"Executive - Collections","extra":"","kpis":[["Customer","Due Date + 7 Days Collections – Marketplace \u0026 EPR","Collection % vs Target","Achieve the defined collection target within the evaluation period.","0.6","MIS Report","0.8","0.85","0.9","1.0","1.05"],["Process","Balance Confirmation","Confirmation Coverage %","Ensure at least the defined percentage of customers with dues exceeding ₹50K have their payments confirmed.","0.1","MIS Report","0.8","0.85","0.9","0.95","1.0"],["Process","Reminder Emails","Adherence to Reminder (Total)","Ensure adherence to the defined collections reminder process within the evaluation period.","0.1","MIS Report","As per Collections Process","—","—","—","—"],["Process","Payment Posting","TAT – Days","Ensure payment posting is completed within the defined TAT from the date of payment receipt.","0.1","MIS Report","12 Days","10 Days","8 Days","7 Days","5 Days"],["Process","Cross-Functional Coordination","Coordination Adherence %","Ensure adherence to the defined coordination requirements during each quarter.","0.1","MIS Report","75% in Quater","80% in Quater","85% in Quater","90% in Quater","100% in Quater"]]},{"team":"Collections","group":"","sheet":"Collections (Individual)","name":"RAVI NAIK","designation":"Manager - Collections","extra":"","kpis":[["Customer","Due Date + 7 Days Collections – Marketplace \u0026 EPR","Collection % vs Target","Achieve the defined collection target within the evaluation period.","0.3","MIS Report","0.8","0.85","0.9","1.0","1.05"],["Customer","DSO – Marketplace \u0026 EPR","DSO Days","Maintain DSO within the defined target during the evaluation period.","0.3","MIS Report","\u003e 28 Days","25–28 Days","21–24 Days","TGT-20 Days","≤ 19 Days"],["Collections","Legacy Collections","Legacy Collection % of LD","Ensure the defined percentage of Legacy Debt (LD) is collected within the evaluation period.","0.15","MIS Report","10% of LD","15% of LD","20% of LD","25% of LD","30% of LD"],["Collections","PDD (Past Due Debt)","PDD ₹ Cr Recovered","Recover the defined PDD amount in ₹ Cr within the evaluation period.","0.1","MIS Report","≥ ₹9 Cr","₹8 Cr","₹7 Cr","₹6 Cr","\u003c ₹5 Cr"],["Process","Legal Actions","Legal Action Coordination %","Achieve the defined cumulative percentage of the team target through effective coordination of legal actions.","0.05","MIS Report","80% Cumulative of Team Target","100% Cumulative of Team Target","120% Cumulative of Team Target","140% Cumulative of Team Target","160% Cumulative of Team Target"],["Collections","Collection of Previous Dues (Marketplace \u0026 EPR)","Collections of Overdue of Previous Financial prior to FY 25-26 (Marketplace \u0026 EPR)","Ensure the defined percentage of overdue collections from financial years prior to FY 25-26 is recovered during the evaluation period.","0.1","MIS Report","0.4","0.5","0.6","0.7","0.8"]]},{"team":"Collections","group":"","sheet":"Collections (Individual)","name":"ANKUR","designation":"Assistant Manager - Collections","extra":"","kpis":[["Customer","Due Date + 7 Days Collections – Marketplace \u0026 EPR","Collection % vs Target","Achieve the defined collection target within the evaluation period.","0.3","MIS Report","0.8","0.85","0.9","1.0","1.05"],["Customer","DSO – Marketplace \u0026 EPR","DSO Days","Maintain DSO within the defined target during the evaluation period.","0.3","MIS Report","\u003e 28 Days","25–28 Days","21–24 Days","TGT-20 Days","≤ 19 Days"],["Collections","Legacy Collections","Legacy Collection % of LD","Ensure the defined percentage of Legacy Debt (LD) is collected within the evaluation period.","0.15","MIS Report","10% of LD","15% of LD","20% of LD","25% of LD","30% of LD"],["Collections","PDD (Past Due Debt)","PDD ₹ Cr Recovered","Recover the defined PDD amount in ₹ Cr within the evaluation period.","0.1","MIS Report","≥ ₹9 Cr","₹8 Cr","₹7 Cr","₹6 Cr","\u003c ₹5 Cr"],["Process","Legal Actions","Legal Action Coordination %","Achieve the defined cumulative percentage of the team target through effective coordination of legal actions.","0.05","MIS Report","80% Cumulative of Team Target","100% Cumulative of Team Target","120% Cumulative of Team Target","140% Cumulative of Team Target","160% Cumulative of Team Target"],["Collections","Collection of Previous Dues (Marketplace)","Collections of Overdue of Previous Financial prior to FY 25-26 (Marketplace)","Ensure the defined percentage of overdue collections from financial years prior to FY 25-26 is recovered during the evaluation period.","0.1","MIS Report","0.4","0.5","0.6","0.7","0.8"]]},{"team":"Collections","group":"","sheet":"Collections (Individual)","name":"VENKAT","designation":"Assistant Manager - Collections","extra":"","kpis":[["Customer","Due Date + 7 Days Collections – Marketplace \u0026 EPR","Collection % vs Target","Achieve the defined collection target within the evaluation period.","0.3","MIS Report","0.8","0.85","0.9","1.0","1.05"],["Customer","DSO – Marketplace \u0026 EPR","DSO Days","Maintain DSO within the defined target during the evaluation period.","0.3","MIS Report","\u003e 28 Days","25–28 Days","21–24 Days","TGT-20 Days","≤ 19 Days"],["Collections","Legacy Collections","Legacy Collection % of LD","Ensure the defined percentage of Legacy Debt (LD) is collected within the evaluation period.","0.15","MIS Report","10% of LD","15% of LD","20% of LD","25% of LD","30% of LD"],["Collections","PDD (Past Due Debt)","PDD ₹ Cr Recovered","Recover the defined PDD amount in ₹ Cr within the evaluation period.","0.1","MIS Report","≥ ₹9 Cr","₹8 Cr","₹7 Cr","₹6 Cr","\u003c ₹5 Cr"],["Process","Legal Actions","Legal Action Coordination %","Achieve the defined cumulative percentage of the team target through effective coordination of legal actions.","0.05","MIS Report","80% Cumulative of Team Target","100% Cumulative of Team Target","120% Cumulative of Team Target","140% Cumulative of Team Target","160% Cumulative of Team Target"],["Collections","Collection of Previous Dues (EPR)","Collections of Overdue of Previous Financial prior to FY 25-26 (EPR)","Ensure the defined percentage of overdue collections from financial years prior to FY 25-26 is recovered during the evaluation period.","0.1","MIS Report","0.4","0.5","0.6","0.7","0.8"]]},{"team":"Collections","group":"","sheet":"Collections (Individual)","name":"SRINIVAS REDDY","designation":"Assistant Manager - Collections","extra":"","kpis":[["Collections","Collection of Previous Dues (Marketplace \u0026 EPR)","Collections of Overdue of Previous Financial prior to FY 25-26 (EPR)","Ensure the defined percentage of overdue collections from financial years prior to FY 25-26 is recovered during the evaluation period.","0.1","MIS Report","0.4","0.5","0.6","0.7","0.8"],["Customer","DSO – Marketplace \u0026 EPR","DSO Days","Maintain DSO within the defined target during the evaluation period.","0.1","MIS Report","\u003e 28 Days","25–28 Days","21–24 Days","TGT-20 Days","≤ 19 Days"],["Process","Transaction (Marketplace)","Coordination Adherence %","Ensure adherence to the defined coordination requirements during the evaluation period.","0.15","MIS Report / Email / Communication Channel","0.8","0.85","0.9","0.95","1.0"],["Process","Payment Posting \u0026 Reconciliation","TAT – Days","Ensure payment posting and reconciliation are completed within the defined TAT from the date of payment receipt.","0.15","MIS Report","12 Days","10 Days","8 Days","7 Days","5 Days"],["Process","Process Improvement \u0026 Automation","Process Automation (%)","Identify process gaps and leakages and implement solutions to improve operational efficiency, reduce manual intervention, and minimize errors.","0.3","Project Tracker / Process Improvement Tracker","0.8","0.85","0.9","0.95","1.0"],["Process","Compliance (Documentation) \u0026 Audit","Documentation Completion (%)","Ensure 100% completion of required documentation from both Buyers and Sellers for every transaction.","0.2","Dashboard / MIS","0.8","0.85","0.9","0.95","1.0"]]},{"team":"Open Marketplace - Control Tower","group":"","sheet":"Marketplace - Control Tower (In","name":"ASHWIN KUMAR SINGH","designation":"Manager","extra":"","kpis":[["Process","Compliance (Documentation)","Documentation Completion (%)","Ensure 100% completion of required documentation from both Buyers and Sellers for every transaction.","0.2","Dashboard / MIP","0.8","0.85","0.9","0.95","1.0"],["Process","Match Making","Demand \u0026 Listing Conversion Rate (%)","Achieve at least 80% conversion of demand requisitions and platform listings into successful transactions.","0.1","Dashboard / MIP","0.8","0.85","0.9","0.95","1.0"],["MIS","Transaction Tracking","Transaction Closure \u0026 Tracking (%)","Ensure 100% transaction closure, including completion of material movement, GST payment, and end-to-end transaction tracking with complete dashboard visibility.","0.2","Dashboard / MIP","0.8","0.85","0.9","0.95","1.0"],["Process","DN / CN Tracking","CN \u0026 DN Closure Rate (%)","Ensure 100% closure of all Credit Note (CN) and Debit Note (DN) transactions within the defined timeline.","0.2","Dashboard / MIP","0.8","0.85","0.9","0.95","1.0"],["Process","Process Improvement \u0026 Automation","Process Automation (%)","Identify process gaps and leakages and implement solutions to improve operational efficiency, reduce manual intervention, and minimize errors.","0.3","Project Tracker / Process Improvement Tracker","0.0","0.15","0.3","0.5","0.7"]]},{"team":"Open Marketplace - Control Tower","group":"","sheet":"Marketplace - Control Tower (In","name":"DIVYA BOPPURI","designation":"Executive","extra":"","kpis":[["Process","Dispatch Execution","Timely Dispatch Rate (%)","Ensure shipments are dispatched within 2 days of matchmaking in accordance with the defined SOP.","0.4","Dashboard / MIP","0.8","0.85","0.9","0.95","1.0"],["Process","Dispatch Documentation Management","Dispatch Documentation Accuracy (%)","Ensure 100% of dispatches have a complete and error-free 6-Document Pack.","0.35","Audit / Reconciliation","0.8","0.85","0.9","0.95","1.0"],["Process","Dispatch Coordination \u0026 Resolution","Dispatch Issue Resolution Rate (%)","Ensure seller follow-ups, gate-pass coordination, and dispatch-related queries are resolved within the defined SLA.","0.15","Email / MIP / Communication Channel","0.8","0.85","0.9","0.95","1.0"],["Process","SOP \u0026 Process Compliance","Dispatch SOP Compliance Rate (%)","Ensure 100% of transactions are executed in accordance with the defined dispatch and documentation guidelines.","0.1","Email / MIP / Training \u0026 Meetings","0.8","0.85","0.9","0.95","1.0"]]},{"team":"Open Marketplace - Control Tower","group":"","sheet":"Marketplace - Control Tower (In","name":"JITHENDER CHITAKODUR","designation":"Executive","extra":"","kpis":[["Process","Dispatch Execution","Timely Dispatch Rate (%)","Ensure shipments are dispatched within 2 days of matchmaking in accordance with the defined SOP.","0.4","Dashboard / MIP","0.8","0.85","0.9","0.95","1.0"],["Process","Dispatch Documentation Management","Dispatch Documentation Accuracy (%)","Ensure 100% of dispatches have a complete and error-free 6-Document Pack.","0.35","Audit / Reconciliation","0.8","0.85","0.9","0.95","1.0"],["Process","Dispatch Coordination \u0026 Resolution","Dispatch Issue Resolution Rate (%)","Ensure seller follow-ups, gate-pass coordination, and dispatch-related queries are resolved within the defined SLA.","0.15","MIP / Communication Channel","0.8","0.85","0.9","0.95","1.0"],["Process","SOP \u0026 Process Compliance","Dispatch SOP Compliance Rate (%)","Ensure 100% of transactions are executed in accordance with the defined dispatch and documentation guidelines.","0.1","Email /MIP / Training \u0026 Meetings","0.8","0.85","0.9","0.95","1.0"]]},{"team":"Open Marketplace - Control Tower","group":"","sheet":"Marketplace - Control Tower (In","name":"BHARATH KUMAR","designation":"Senior Executive","extra":"","kpis":[["Process","In-Transit Delivery Management","On-Time Transit Completion Rate (%)","Ensure shipments reach the buyer location within the planned transit window.","0.5","Dashboard / MIP","0.8","0.85","0.9","0.95","1.0"],["Process","Shipment Visibility \u0026 Monitoring","Tracking Accuracy Rate (%)","Ensure shipments are accurately monitored through Mobile SIM / FASTag without tracking blind spots.","0.3","Audit / Reconciliation","0.8","0.85","0.9","0.95","1.0"],["Process","Buyer Coordination \u0026 Delay Management","Pre-Arrival \u0026 Delay Resolution Rate (%)","Ensure buyer notifications and shipment-delay cases are handled within the defined SLA.","0.1","Email / MIP / Communication Channel","0.8","0.85","0.9","0.95","1.0"],["Process","In-Transit SOP Compliance","Transit Process Compliance Rate (%)","Ensure 100% of shipments are managed in accordance with the defined tracking and escalation SOPs.","0.1","Email / MIP / Training \u0026 Meetings","0.8","0.85","0.9","0.95","1.0"]]},{"team":"Open Marketplace - Control Tower","group":"","sheet":"Marketplace - Control Tower (In","name":"RAJESWARI","designation":"Executive","extra":"","kpis":[["Process","POD Closure Management","POD Collection TAT (%)","Ensure PODs are collected within 48 hours of delivery.","0.35","Dashboard / MIP","0.8","0.85","0.9","0.95","1.0"],["Process","POD Documentation Management","POD First-Time-Right Rate (%)","Ensure POD submissions are complete and accurate on the first submission.","0.4","Audit / Reconciliation","0.8","0.85","0.9","0.95","1.0"],["Process","Delivery Coordination \u0026 Exception Resolution","Delivery Exception Resolution Rate (%)","Ensure BR POC follow-ups and vehicle-rejection cases are resolved within the defined SLA.","0.15","Email / MIP / Communication Channel","0.8","0.85","0.9","0.95","1.0"],["Process","POD \u0026 Exception Compliance","POD Process Compliance Rate (%)","Ensure 100% of shipments are handled in accordance with the defined POD collection and rejection-handling SOPs.","0.1","Email / MIP / Training \u0026 Meetings","0.8","0.85","0.9","0.95","1.0"]]},{"team":"Open Marketplace - Control Tower","group":"","sheet":"Marketplace - Control Tower (In","name":"AISHWARYA KARANAM","designation":"Executive","extra":"","kpis":[["Process","Payment Release Management","Timely Payment Release Rate (%)","Ensure payments are released within 5 days of delivery in accordance with the defined SOP.","0.3","Dashboard / MIP","0.8","0.85","0.9","0.95","1.0"],["Process","QC \u0026 Settlement Management","QC \u0026 Settlement Accuracy Rate (%)","Ensure QC reports, debit notes, and settlements are processed accurately and within the defined timeline.","0.4","Audit / Reconciliation","0.8","0.85","0.9","0.95","1.0"],["Process","Dispute \u0026 Payment Resolution","Dispute \u0026 Follow-Up Resolution Rate (%)","Ensure disputes and payment reminders are managed and resolved within the defined SLA.","0.2","Email / MIP / Communication Channel","0.8","0.85","0.9","0.95","1.0"],["Process","Settlement Process Compliance","QC \u0026 Settlement SOP Compliance Rate (%)","Ensure 100% of transactions are executed in accordance with the defined QC, dispute, and settlement SOPs.","0.1","Email / MIP / Training \u0026 Meetings","0.8","0.85","0.9","0.95","1.0"]]},{"team":"Open Marketplace - Control Tower","group":"","sheet":"Marketplace - Control Tower (In","name":"MEGARAJ","designation":"Senior Executive","extra":"","kpis":[["Process","POD Closure Management","POD Collection TAT (%)","Ensure at least the defined percentage of PODs are collected within 48 hours of delivery.","0.35","Dashboard / MIP","0.8","0.85","0.9","0.95","1.0"],["Process","POD Documentation Management","POD First-Time-Right Rate (%)","Ensure at least the defined percentage of POD submissions are complete and accurate on the first submission.","0.4","Audit / Reconciliation","0.8","0.85","0.9","0.95","1.0"],["Process","Delivery Coordination \u0026 Exception Resolution","Delivery Exception Resolution Rate (%)","Ensure at least the defined percentage of BR POC follow-ups and vehicle-rejection cases are resolved within the defined SLA.","0.15","Email / MIP / Communication Channel","0.8","0.85","0.9","0.95","1.0"],["Process","POD \u0026 Exception Compliance","POD Process Compliance Rate (%)","Ensure 100% of shipments are handled in accordance with the defined POD collection and rejection-handling SOPs.","0.1","Email / MIP / Training \u0026 Meetings","0.8","0.85","0.9","0.95","1.0"]]},{"team":"Open Marketplace - Control Tower","group":"","sheet":"Marketplace - Control Tower (In","name":"ARVIND JAKKULA","designation":"Executive","extra":"","kpis":[["Process","In-Transit Delivery Management","On-Time Transit Completion Rate (%)","Ensure at least the defined percentage of shipments reach the buyer location within the planned transit window.","0.5","Dashboard / MIP","0.8","0.85","0.9","0.95","1.0"],["Process","Shipment Visibility \u0026 Monitoring","Tracking Accuracy Rate (%)","Ensure at least the defined percentage of shipments are accurately monitored through Mobile SIM / FASTag without tracking blind spots.","0.3","Audit / Reconciliation","0.8","0.85","0.9","0.95","1.0"],["Process","Buyer Coordination \u0026 Delay Management","Pre-Arrival \u0026 Delay Resolution Rate (%)","Ensure at least the defined percentage of buyer notifications and shipment-delay cases are handled within the defined SLA.","0.1","Email / MIP / Communication Channel","0.8","0.85","0.9","0.95","1.0"],["Process","In-Transit SOP Compliance","Transit Process Compliance Rate (%)","Ensure 100% of shipments are managed in accordance with the defined tracking and escalation SOPs.","0.1","Email / MIP / Training \u0026 Meetings","0.8","0.85","0.9","0.95","1.0"]]}]};
+var SRC_SEED = {
+  "source_sheet_id": "1c0_pP4Mmye5s5D_vzoxrvJ-utkLb6JhD69TvvOBbjoo",
+  "exported": "2026-08-20",
+  "people": [
+    {"team": "Metal", "group": "", "sheet": "Metal (Supply & Demand KRAKPI)", "name": "AMIT JHA",
+     "designation": "Team Lead - Business Development", "extra": "", "kpis": [
+      ["Process", "Retention of Existing Transacted Sellers", "Repeat Seller Transaction Rate (%)",
+       "Achieve repeat transactions from at least 50% of sellers who transacted in the previous month.",
+       "5.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Customer", "New Buyer Acquisition", "Monthly Target Achievement (%)",
+       "Achieve the defined monthly target for the KPI.", "15.0", "Monthly MIS Report",
+       "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Customer", "New Seller Acquisition", "Monthly Target Achievement (%)",
+       "Achieve the defined monthly target for the KPI.", "15.0", "Monthly MIS Report",
+       "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Process", "Transaction from New Onboarded Buyers", "New Buyer Same-Month Transaction Rate (%)",
+       "Ensure at least 20% of buyers onboarded during the month complete a transaction within the same " +
+         "month.", "5.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "GMV", "Monthly Target Achievement (%)", "Achieve the defined monthly target for the KPI.",
+       "40.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "Transaction Closure", "Successfully Closed Transactions (Count)",
+       "Successfully close the targeted number of transactions through completion of POD, DNCN, and " +
+         "payment upload requirements.", "10.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Process", "DSO Days", "Days Sales Outstanding (DSO)",
+       "Maintain DSO within the defined monthly target, calculated as (Average Receivables ÷ GMV) × Number " +
+         "of Days in the Month.", "10.0", "Monthly MIS Report", "15.0", "10.0", "5.0", "3.0", "2.0"]
+    ]},
+    {"team": "Metal", "group": "", "sheet": "Metal (Supply & Demand KRAKPI)", "name": "ABHISEK SANYAL",
+     "designation": "Assistant Manager - Business Development", "extra": "", "kpis": [
+      ["Process", "Retention of Existing Transacted Sellers", "Repeat Seller Transaction Rate (%)",
+       "Achieve repeat transactions from at least 50% of sellers who transacted in the previous month.",
+       "5.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Customer", "New Buyer Acquisition", "Monthly Target Achievement (%)",
+       "Achieve the defined monthly target for the KPI.", "15.0", "Monthly MIS Report",
+       "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Customer", "New Seller Acquisition", "Monthly Target Achievement (%)",
+       "Achieve the defined monthly target for the KPI.", "15.0", "Monthly MIS Report",
+       "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Process", "Transaction from New Onboarded Buyers", "New Buyer Same-Month Transaction Rate (%)",
+       "Ensure at least 20% of buyers onboarded during the month complete a transaction within the same " +
+         "month.", "5.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "GMV", "Monthly Target Achievement (%)", "Achieve the defined monthly target for the KPI.",
+       "40.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "Transaction Closure", "Successfully Closed Transactions (Count)",
+       "Successfully close the targeted number of transactions through completion of POD, DNCN, and " +
+         "payment upload requirements.", "10.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Process", "DSO Days", "Days Sales Outstanding (DSO)",
+       "Maintain DSO within the defined monthly target, calculated as (Average Receivables ÷ GMV) × Number " +
+         "of Days in the Month.", "10.0", "Monthly MIS Report", "15.0", "10.0", "5.0", "3.0", "2.0"]
+    ]},
+    {"team": "Metal", "group": "", "sheet": "Metal (Supply & Demand KRAKPI)", "name": "ADARSH KRISHNA",
+     "designation": "Assistant Manager - Business Development", "extra": "", "kpis": [
+      ["Process", "Retention of Existing Transacted Sellers", "Repeat Seller Transaction Rate (%)",
+       "Achieve repeat transactions from at least 50% of sellers who transacted in the previous month.",
+       "5.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Customer", "New Buyer Acquisition", "Monthly Target Achievement (%)",
+       "Achieve the defined monthly target for the KPI.", "15.0", "Monthly MIS Report",
+       "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Customer", "New Seller Acquisition", "Monthly Target Achievement (%)",
+       "Achieve the defined monthly target for the KPI.", "15.0", "Monthly MIS Report",
+       "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Process", "Transaction from New Onboarded Buyers", "New Buyer Same-Month Transaction Rate (%)",
+       "Ensure at least 20% of buyers onboarded during the month complete a transaction within the same " +
+         "month.", "5.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "GMV", "Monthly Target Achievement (%)", "Achieve the defined monthly target for the KPI.",
+       "40.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "Transaction Closure", "Successfully Closed Transactions (Count)",
+       "Successfully close the targeted number of transactions through completion of POD, DNCN, and " +
+         "payment upload requirements.", "10.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Process", "DSO Days", "Days Sales Outstanding (DSO)",
+       "Maintain DSO within the defined monthly target, calculated as (Average Receivables ÷ GMV) × Number " +
+         "of Days in the Month.", "10.0", "Monthly MIS Report", "15.0", "10.0", "5.0", "3.0", "2.0"]
+    ]},
+    {"team": "Metal", "group": "", "sheet": "Metal (Supply & Demand KRAKPI)", "name": "ARIJIT DUTTA",
+     "designation": "Senior Executive - Business Development", "extra": "", "kpis": [
+      ["Process", "Retention of Existing Transacted Sellers", "Repeat Seller Transaction Rate (%)",
+       "Achieve repeat transactions from at least 50% of sellers who transacted in the previous month.",
+       "5.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Customer", "New Buyer Acquisition", "Monthly Target Achievement (%)",
+       "Achieve the defined monthly target for the KPI.", "15.0", "Monthly MIS Report",
+       "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Customer", "New Seller Acquisition", "Monthly Target Achievement (%)",
+       "Achieve the defined monthly target for the KPI.", "15.0", "Monthly MIS Report",
+       "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Process", "Transaction from New Onboarded Buyers", "New Buyer Same-Month Transaction Rate (%)",
+       "Ensure at least 20% of buyers onboarded during the month complete a transaction within the same " +
+         "month.", "5.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "GMV", "Monthly Target Achievement (%)", "Achieve the defined monthly target for the KPI.",
+       "40.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "Transaction Closure", "Successfully Closed Transactions (Count)",
+       "Successfully close the targeted number of transactions through completion of POD, DNCN, and " +
+         "payment upload requirements.", "10.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Process", "DSO Days", "Days Sales Outstanding (DSO)",
+       "Maintain DSO within the defined monthly target, calculated as (Average Receivables ÷ GMV) × Number " +
+         "of Days in the Month.", "10.0", "Monthly MIS Report", "15.0", "10.0", "5.0", "3.0", "2.0"]
+    ]},
+    {"team": "Metal", "group": "", "sheet": "Metal (Supply & Demand KRAKPI)", "name": "ARGHYADEEP SAMANTA",
+     "designation": "Senior Executive - Business Development", "extra": "", "kpis": [
+      ["Process", "Retention of Existing Transacted Sellers", "Repeat Seller Transaction Rate (%)",
+       "Achieve repeat transactions from at least 50% of sellers who transacted in the previous month.",
+       "5.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Customer", "New Buyer Acquisition", "Monthly Target Achievement (%)",
+       "Achieve the defined monthly target for the KPI.", "15.0", "Monthly MIS Report",
+       "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Customer", "New Seller Acquisition", "Monthly Target Achievement (%)",
+       "Achieve the defined monthly target for the KPI.", "15.0", "Monthly MIS Report",
+       "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Process", "Transaction from New Onboarded Buyers", "New Buyer Same-Month Transaction Rate (%)",
+       "Ensure at least 20% of buyers onboarded during the month complete a transaction within the same " +
+         "month.", "5.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "GMV", "Monthly Target Achievement (%)", "Achieve the defined monthly target for the KPI.",
+       "40.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "Transaction Closure", "Successfully Closed Transactions (Count)",
+       "Successfully close the targeted number of transactions through completion of POD, DNCN, and " +
+         "payment upload requirements.", "10.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Process", "DSO Days", "Days Sales Outstanding (DSO)",
+       "Maintain DSO within the defined monthly target, calculated as (Average Receivables ÷ GMV) × Number " +
+         "of Days in the Month.", "10.0", "Monthly MIS Report", "15.0", "10.0", "5.0", "3.0", "2.0"]
+    ]},
+    {"team": "Metal", "group": "", "sheet": "Metal (Supply & Demand KRAKPI)", "name": "AYUSH GOYAL",
+     "designation": "Assistant Manager - Business Development", "extra": "", "kpis": [
+      ["Process", "Retention of Existing Transacted Sellers", "Repeat Seller Transaction Rate (%)",
+       "Achieve repeat transactions from at least 50% of sellers who transacted in the previous month.",
+       "5.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Customer", "New Buyer Acquisition", "Monthly Target Achievement (%)",
+       "Achieve the defined monthly target for the KPI.", "15.0", "Monthly MIS Report",
+       "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Customer", "New Seller Acquisition", "Monthly Target Achievement (%)",
+       "Achieve the defined monthly target for the KPI.", "15.0", "Monthly MIS Report",
+       "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Process", "Transaction from New Onboarded Buyers", "New Buyer Same-Month Transaction Rate (%)",
+       "Ensure at least 20% of buyers onboarded during the month complete a transaction within the same " +
+         "month.", "5.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "GMV", "Monthly Target Achievement (%)", "Achieve the defined monthly target for the KPI.",
+       "40.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "Transaction Closure", "Successfully Closed Transactions (Count)",
+       "Successfully close the targeted number of transactions through completion of POD, DNCN, and " +
+         "payment upload requirements.", "10.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Process", "DSO Days", "Days Sales Outstanding (DSO)",
+       "Maintain DSO within the defined monthly target, calculated as (Average Receivables ÷ GMV) × Number " +
+         "of Days in the Month.", "10.0", "Monthly MIS Report", "15.0", "10.0", "5.0", "3.0", "2.0"]
+    ]},
+    {"team": "Plastic", "group": "Supply", "sheet": "Plastic (Supply KRAKPI)", "name": "ASHISH KUMAR RAI",
+     "designation": "Senior Executive - Business Development", "extra": "", "kpis": [
+      ["Sales", "Transaction from Existing Sellers", "Seller Monthly Transaction Rate (%)",
+       "Ensure at least 50% of total onboarded sellers transact during the current month.", "15.0",
+       "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "Transaction from New Onboarded Sellers", "New Seller Same-Month Transaction Rate (%)",
+       "Ensure at least 20% of sellers onboarded during the current month complete a transaction within " +
+         "the same month.", "15.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "New Seller Acquisition", "Monthly Target Achievement (%)",
+       "Achieve the defined monthly target for the respective KPI within the evaluation period.", "15.0",
+       "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "GMV", "Monthly Target Achievement (%)",
+       "Achieve the defined monthly target for the respective KPI within the evaluation period.", "40.0",
+       "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "Retention of Existing Transacted Sellers", "Repeat Seller Transaction Rate (%)",
+       "Ensure at least 70% of sellers who transacted in the previous month transact again during the " +
+         "current month.", "15.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"]
+    ]},
+    {"team": "Plastic", "group": "Supply", "sheet": "Plastic (Supply KRAKPI)", "name": "RAJU B",
+     "designation": "Senior Executive - Business Development", "extra": "", "kpis": [
+      ["Sales", "Transaction from Existing Sellers", "Seller Monthly Transaction Rate (%)",
+       "Ensure at least 50% of total onboarded sellers transact during the current month.", "15.0",
+       "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "Transaction from New Onboarded Sellers", "New Seller Same-Month Transaction Rate (%)",
+       "Ensure at least 20% of sellers onboarded during the current month complete a transaction within " +
+         "the same month.", "15.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "New Seller Acquisition", "Monthly Target Achievement (%)",
+       "Achieve the defined monthly target for the respective KPI within the evaluation period.", "15.0",
+       "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "GMV", "Monthly Target Achievement (%)",
+       "Achieve the defined monthly target for the respective KPI within the evaluation period.", "40.0",
+       "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "Retention of Existing Transacted Sellers", "Repeat Seller Transaction Rate (%)",
+       "Ensure at least 70% of sellers who transacted in the previous month transact again during the " +
+         "current month.", "15.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"]
+    ]},
+    {"team": "Plastic", "group": "Supply", "sheet": "Plastic (Supply KRAKPI)", "name": "BRAJENDRA UPADHYAY",
+     "designation": "Assistant Manager - Business Development", "extra": "", "kpis": [
+      ["Sales", "Transaction from Existing Sellers", "Seller Monthly Transaction Rate (%)",
+       "Ensure at least 50% of total onboarded sellers transact during the current month.", "15.0",
+       "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "Transaction from New Onboarded Sellers", "New Seller Same-Month Transaction Rate (%)",
+       "Ensure at least 20% of sellers onboarded during the current month complete a transaction within " +
+         "the same month.", "15.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "New Seller Acquisition", "Monthly Target Achievement (%)",
+       "Achieve the defined monthly target for the respective KPI within the evaluation period.", "15.0",
+       "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "GMV", "Monthly Target Achievement (%)",
+       "Achieve the defined monthly target for the respective KPI within the evaluation period.", "40.0",
+       "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "Retention of Existing Transacted Sellers", "Repeat Seller Transaction Rate (%)",
+       "Ensure at least 70% of sellers who transacted in the previous month transact again during the " +
+         "current month.", "15.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"]
+    ]},
+    {"team": "Plastic", "group": "Supply", "sheet": "Plastic (Supply KRAKPI)", "name": "ATHARVA SUDHIR PATIL",
+     "designation": "Senior Executive - Business Development", "extra": "", "kpis": [
+      ["Sales", "Transaction from Existing Sellers", "Seller Monthly Transaction Rate (%)",
+       "Ensure at least 50% of total onboarded sellers transact during the current month.", "15.0",
+       "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "Transaction from New Onboarded Sellers", "New Seller Same-Month Transaction Rate (%)",
+       "Ensure at least 20% of sellers onboarded during the current month complete a transaction within " +
+         "the same month.", "15.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "New Seller Acquisition", "Monthly Target Achievement (%)",
+       "Achieve the defined monthly target for the respective KPI within the evaluation period.", "15.0",
+       "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "GMV", "Monthly Target Achievement (%)",
+       "Achieve the defined monthly target for the respective KPI within the evaluation period.", "40.0",
+       "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "Retention of Existing Transacted Sellers", "Repeat Seller Transaction Rate (%)",
+       "Ensure at least 70% of sellers who transacted in the previous month transact again during the " +
+         "current month.", "15.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"]
+    ]},
+    {"team": "Plastic", "group": "Supply", "sheet": "Plastic (Supply KRAKPI)", "name": "PRAVEEN RAJ P",
+     "designation": "Senior Executive - Business Development", "extra": "", "kpis": [
+      ["Sales", "Transaction from Existing Sellers", "Seller Monthly Transaction Rate (%)",
+       "Ensure at least 50% of total onboarded sellers transact during the current month.", "15.0",
+       "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "Transaction from New Onboarded Sellers", "New Seller Same-Month Transaction Rate (%)",
+       "Ensure at least 20% of sellers onboarded during the current month complete a transaction within " +
+         "the same month.", "15.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "New Seller Acquisition", "Monthly Target Achievement (%)",
+       "Achieve the defined monthly target for the respective KPI within the evaluation period.", "15.0",
+       "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "GMV", "Monthly Target Achievement (%)",
+       "Achieve the defined monthly target for the respective KPI within the evaluation period.", "40.0",
+       "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "Retention of Existing Transacted Sellers", "Repeat Seller Transaction Rate (%)",
+       "Ensure at least 70% of sellers who transacted in the previous month transact again during the " +
+         "current month.", "15.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"]
+    ]},
+    {"team": "Plastic", "group": "Supply", "sheet": "Plastic (Supply KRAKPI)", "name": "ASRAFUL HASAN",
+     "designation": "Assistant Manager - Business Development", "extra": "", "kpis": [
+      ["Sales", "Transaction from Existing Sellers", "Seller Monthly Transaction Rate (%)",
+       "Ensure at least 50% of total onboarded sellers transact during the current month.", "15.0",
+       "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "Transaction from New Onboarded Sellers", "New Seller Same-Month Transaction Rate (%)",
+       "Ensure at least 20% of sellers onboarded during the current month complete a transaction within " +
+         "the same month.", "15.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "New Seller Acquisition", "Monthly Target Achievement (%)",
+       "Achieve the defined monthly target for the respective KPI within the evaluation period.", "15.0",
+       "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "GMV", "Monthly Target Achievement (%)",
+       "Achieve the defined monthly target for the respective KPI within the evaluation period.", "40.0",
+       "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "Retention of Existing Transacted Sellers", "Repeat Seller Transaction Rate (%)",
+       "Ensure at least 70% of sellers who transacted in the previous month transact again during the " +
+         "current month.", "15.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"]
+    ]},
+    {"team": "Plastic", "group": "Supply", "sheet": "Plastic (Supply KRAKPI)",
+     "name": "RUSTUMPET ASHWIN KUMAR", "designation": "Assistant Manager - Business Development", "extra": "",
+     "kpis": [
+      ["Sales", "Transaction from Existing Sellers", "Seller Monthly Transaction Rate (%)",
+       "Ensure at least 50% of total onboarded sellers transact during the current month.", "15.0",
+       "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "Transaction from New Onboarded Sellers", "New Seller Same-Month Transaction Rate (%)",
+       "Ensure at least 20% of sellers onboarded during the current month complete a transaction within " +
+         "the same month.", "15.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "New Seller Acquisition", "Monthly Target Achievement (%)",
+       "Achieve the defined monthly target for the respective KPI within the evaluation period.", "15.0",
+       "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "GMV", "Monthly Target Achievement (%)",
+       "Achieve the defined monthly target for the respective KPI within the evaluation period.", "40.0",
+       "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "Retention of Existing Transacted Sellers", "Repeat Seller Transaction Rate (%)",
+       "Ensure at least 70% of sellers who transacted in the previous month transact again during the " +
+         "current month.", "15.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"]
+    ]},
+    {"team": "Plastic", "group": "Supply", "sheet": "Plastic (Supply KRAKPI)", "name": "JOYDEEP DAS",
+     "designation": "Senior Executive - Business Development", "extra": "", "kpis": [
+      ["Sales", "Transaction from Existing Sellers", "Seller Monthly Transaction Rate (%)",
+       "Ensure at least 50% of total onboarded sellers transact during the current month.", "15.0",
+       "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "Transaction from New Onboarded Sellers", "New Seller Same-Month Transaction Rate (%)",
+       "Ensure at least 20% of sellers onboarded during the current month complete a transaction within " +
+         "the same month.", "15.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "New Seller Acquisition", "Monthly Target Achievement (%)",
+       "Achieve the defined monthly target for the respective KPI within the evaluation period.", "15.0",
+       "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "GMV", "Monthly Target Achievement (%)",
+       "Achieve the defined monthly target for the respective KPI within the evaluation period.", "40.0",
+       "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "Retention of Existing Transacted Sellers", "Repeat Seller Transaction Rate (%)",
+       "Ensure at least 70% of sellers who transacted in the previous month transact again during the " +
+         "current month.", "15.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"]
+    ]},
+    {"team": "Plastic", "group": "Supply", "sheet": "Plastic (Supply KRAKPI)", "name": "PARTH GAUTAM",
+     "designation": "Senior Manager - BusinessDevelopment", "extra": "", "kpis": [
+      ["Sales", "Transaction from Existing Sellers", "Seller Monthly Transaction Rate (%)",
+       "Ensure at least 50% of total onboarded sellers transact during the current month.", "15.0",
+       "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "Transaction from New Onboarded Sellers", "New Seller Same-Month Transaction Rate (%)",
+       "Ensure at least 20% of sellers onboarded during the current month complete a transaction within " +
+         "the same month.", "15.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "New Seller Acquisition", "Monthly Target Achievement (%)",
+       "Achieve the defined monthly target for the respective KPI within the evaluation period.", "15.0",
+       "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "GMV", "Monthly Target Achievement (%)",
+       "Achieve the defined monthly target for the respective KPI within the evaluation period.", "40.0",
+       "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "Retention of Existing Transacted Sellers", "Repeat Seller Transaction Rate (%)",
+       "Ensure at least 70% of sellers who transacted in the previous month transact again during the " +
+         "current month.", "15.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"]
+    ]},
+    {"team": "Plastic", "group": "Supply", "sheet": "Plastic (Supply KRAKPI)",
+     "name": "UDAY KIRAN KUMAR THOTA", "designation": "Senior Manager - Business Development", "extra": "",
+     "kpis": [
+      ["Sales", "Transaction from Existing Sellers", "Seller Monthly Transaction Rate (%)",
+       "Ensure at least 50% of total onboarded sellers transact during the current month.", "15.0",
+       "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "Transaction from New Onboarded Sellers", "New Seller Same-Month Transaction Rate (%)",
+       "Ensure at least 20% of sellers onboarded during the current month complete a transaction within " +
+         "the same month.", "15.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "New Seller Acquisition", "Monthly Target Achievement (%)",
+       "Achieve the defined monthly target for the respective KPI within the evaluation period.", "15.0",
+       "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "GMV", "Monthly Target Achievement (%)",
+       "Achieve the defined monthly target for the respective KPI within the evaluation period.", "40.0",
+       "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "Retention of Existing Transacted Sellers", "Repeat Seller Transaction Rate (%)",
+       "Ensure at least 70% of sellers who transacted in the previous month transact again during the " +
+         "current month.", "15.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"]
+    ]},
+    {"team": "Plastic", "group": "Supply", "sheet": "Plastic (Supply KRAKPI)", "name": "TABESH MOHAMMAD",
+     "designation": "General Manager - Business Development", "extra": "", "kpis": [
+      ["Sales", "Demand Activation", "Existing Buyer Monthly Transaction Rate (%)",
+       "Ensure at least 50% of active/onboarded buyers transact during the current month, maintaining " +
+         "healthy demand utilisation across the category.", "10.0", "Monthly MIS Report",
+       "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Scale", "New Demand Activation", "New Buyer Same-Month Transaction Rate (%)",
+       "Ensure at least 20% of buyers onboarded during the current month complete a transaction within the " +
+         "same month.", "10.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales", "Supply Activation", "Existing Seller Monthly Transaction Rate (%)",
+       "Ensure at least 50% of active/onboarded sellers transact during the current month, maintaining " +
+         "healthy supply utilisation.", "10.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Scale", "New Supply Activation", "New Seller Same-Month Transaction Rate (%)",
+       "Ensure at least 20% of sellers onboarded during the current month complete a transaction within " +
+         "the same month.", "10.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Sales / Profit", "Category GMV Growth", "GMV Target Achievement (%)",
+       "Achieve the approved monthly GMV target for the category, balancing demand and supply growth to " +
+         "drive sustainable category revenue.", "30.0", "Monthly MIS Report",
+       "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Customer", "Transaction Quality", "Debit Note Rate (%)",
+       "Ensure debit notes remain within the defined threshold as a percentage of current-month GMV, " +
+         "protecting transaction quality and commercial realisation.", "10.0", "Monthly MIS Report",
+       "0.013", "0.012", "0.01", "0.008", "0.006"],
+      ["Process / Profit", "Working Capital Management", "Days Sales Outstanding (DSO)",
+       "Maintain DSO within the defined threshold to ensure timely collections and healthy working capital " +
+         "for the category.", "15.0", "Monthly MIS Report", "15.0", "10.0", "5.0", "3.0", "2.0"],
+      ["Sales / Profit", "Category Growth & Balance", "Demand–Supply Conversion Rate (%)",
+       "Ensure available category demand is effectively fulfilled through available supply, improving " +
+         "transaction conversion and reducing demand–supply imbalance.", "5.0", "Monthly MIS Report",
+       "0.6", "0.75", "0.9", "1.0", "1.05"]
+    ]},
+    {"team": "Plastic", "group": "Supply", "sheet": "Plastic (Supply KRAKPI)", "name": "NARESH",
+     "designation": "", "extra": "", "kpis": [
+      ["Process", "Seller Onboarding", "Seller Onboarding TAT Achievement (%)",
+       "Ensure seller onboarding cases are completed within the defined TAT through timely document " +
+         "validation, third-party verification, OSV coordination and closure of pending documentation.",
+       "30.0", "COP / MIS", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Process", "Buyer Onboarding", "Buyer Onboarding TAT Achievement (%)",
+       "Ensure buyer onboarding cases are completed within the defined TAT through timely document " +
+         "collection, KYC/business validation, document updation and closure of identified gaps.", "20.0",
+       "COP / MIS", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Process", "Escalation Management & Issue Resolution", "Issue Resolution TAT Achievement (%)",
+       "Ensure seller, buyer and transaction-related operational issues are logged, coordinated, followed " +
+         "up and resolved within the defined TAT, with timely communication to relevant stakeholders.",
+       "25.0", "MIS", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Customer", "Sales & Relationship Team Coordination", "Pending Action Closure Rate (%)",
+       "Ensure pending actions related to onboarding, inactive sellers/buyers, listing/requisition, " +
+         "matchmaking, transaction readiness, dispatch, QC/POD and payment are tracked and closed within the " +
+         "defined timeline.", "10.0", "MIS", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Process", "MIS & Operational Reporting", "MIS Accuracy & Timeliness (%)",
+       "Maintain accurate and timely reporting of onboarding, pending cases, escalations, ageing, TAT and " +
+         "transaction-related operational metrics, ensuring critical gaps and dependencies are highlighted " +
+         "to stakeholders.", "10.0", "MIS / COP / Dashboard", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Process", "Process Improvement & SOP Adherence",
+       "SOP Compliance & Process Improvement Achievement (%)",
+       "Ensure adherence to defined SOPs and contribute to identifying and addressing recurring process " +
+         "gaps, bottlenecks and documentation issues to improve operational efficiency and reduce TAT.",
+       "5.0", "SOP Audit / MIS / Process Tracker", "0.6", "0.75", "0.9", "1.0", "1.05"]
+    ]},
+    {"team": "Plastic", "group": "Demand", "sheet": "Plastic (Demand KRAKPI)", "name": "NEELESH DIXIT",
+     "designation": "Senior Manager - Bsuiness Development", "extra": "", "kpis": [
+      ["Sales", "Transaction from Existing Buyers", "Buyer Monthly Transaction Rate (%)",
+       "Ensure at least 60% of total onboarded buyers transact during the current month.", "15.0",
+       "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Scale", "Transaction from New Onboarded Buyers", "New Buyer Same-Month Transaction Rate (%)",
+       "Ensure at least 20% of buyers onboarded during the current month complete a transaction within the " +
+         "same month.", "15.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Customer", "New Buyer Acquisition", "Monthly Target Achievement (%)",
+       "Achieve the defined monthly target for the respective KPI within the evaluation period.", "15.0",
+       "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Process", "GMV", "Monthly Target Achievement (%)",
+       "Achieve the defined monthly target for the respective KPI within the evaluation period.", "30.0",
+       "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Customer", "DN % of GMV", "Debit Note Rate (%)",
+       "Ensure debit notes do not exceed 1% of the buyer's current-month GMV.", "10.0", "Monthly MIS Report",
+       "0.013", "0.012", "0.01", "0.008", "0.006"],
+      ["Process", "DSO Days", "Days Sales Outstanding (DSO)",
+       "Calculate DSO as (Average Receivables ÷ GMV) × Number of Days in the Month.", "15.0",
+       "Monthly MIS Report", "15.0", "10.0", "5.0", "3.0", "2.0"]
+    ]},
+    {"team": "Plastic", "group": "Demand", "sheet": "Plastic (Demand KRAKPI)", "name": "RISHI PANCHAL",
+     "designation": "Senior Executive - Business Development", "extra": "", "kpis": [
+      ["Sales", "Transaction from Existing Buyers", "Buyer Monthly Transaction Rate (%)",
+       "Ensure at least 60% of total onboarded buyers transact during the current month.", "15.0",
+       "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Scale", "Transaction from New Onboarded Buyers", "New Buyer Same-Month Transaction Rate (%)",
+       "Ensure at least 20% of buyers onboarded during the current month complete a transaction within the " +
+         "same month.", "15.0", "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Customer", "New Buyer Acquisition", "Monthly Target Achievement (%)",
+       "Achieve the defined monthly target for the respective KPI within the evaluation period.", "15.0",
+       "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Process", "GMV", "Monthly Target Achievement (%)",
+       "Achieve the defined monthly target for the respective KPI within the evaluation period.", "30.0",
+       "Monthly MIS Report", "0.6", "0.75", "0.9", "1.0", "1.05"],
+      ["Customer", "DN % of GMV", "Debit Note Rate (%)",
+       "Ensure debit notes do not exceed 1% of the buyer's current-month GMV.", "10.0", "Monthly MIS Report",
+       "0.013", "0.012", "0.01", "0.008", "0.006"],
+      ["Process", "DSO Days", "Days Sales Outstanding (DSO)",
+       "Maintain DSO as per the defined formula: (Average Receivables ÷ GMV) × Number of Days in the Month.",
+       "15.0", "Monthly MIS Report", "15.0", "10.0", "5.0", "3.0", "2.0"]
+    ]},
+    {"team": "Onboarding", "group": "", "sheet": "Onboarding (Individual)", "name": "VAMSI",
+     "designation": "Senior Executive - Onboarding", "extra": "", "kpis": [
+      ["Process", "Open Marketplace – Buyer & Seller Onboarding", "TAT ( 1 Day )",
+       "% of cases completed within TAT", "0.35", "COP (Data)", "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "Re-Commerce – Seller Onboarding", "TAT ( 1 Day )", "% of cases completed within TAT",
+       "0.1", "COP (Data)", "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "Fall Back – AFR & INFRA (Seller & Buyer Onboarding)", "TAT ( 3 Days)",
+       "% of cases completed within TAT", "0.1", "COP (Data)", "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "Audit & Monitoring of Onboarded Vendors", "Document Completeness",
+       "% of audited vendors with complete and correctly validated documentation", "0.2",
+       "Individual Work Sheet", "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "On-Site Verification", "TAT ( 4 Days )", "% of OSVs completed within TAT", "0.15",
+       "Individual Work Sheet", "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "Vendor Payments – Third Party (Finoscale / Carma One)",
+       "Timely Validation of Bills & Vendor Payments", "% of bills/payments validated within defined TAT",
+       "0.1", "Individual Work Sheet", "0.8", "0.85", "0.9", "0.95", "1.0"]
+    ]},
+    {"team": "Onboarding", "group": "", "sheet": "Onboarding (Individual)", "name": "HARSHITA",
+     "designation": "Executive - Onboarding", "extra": "", "kpis": [
+      ["Process", "INFRA – Buyer & Seller Onboarding", "TAT ( 3 Days )", "% of cases completed within TAT",
+       "0.25", "COP (Data)", "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "AFR – Buyer & Seller Onboarding", "TAT ( 3 Days )", "% of cases completed within TAT",
+       "0.25", "COP (Data)", "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "Audit & Monitoring of Onboarded Vendors", "Document Completeness",
+       "% of audited vendors with complete and correctly validated documentation", "0.2",
+       "Individual Work Sheet", "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "Fall Back – EPR (Seller Onboarding)", "TAT", "% of cases completed within defined TAT",
+       "0.1", "COP (Data)", "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "Vendor Payments – Third Party (Ongrid)", "Timely Validation of Bills & Vendor Payments",
+       "% of bills/payments validated within defined TAT", "0.1", "Individual Work Sheet",
+       "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "Vendor Payments – Third Party (Finoscale / Carma One)",
+       "Timely Validation of Bills & Vendor Payments", "% of bills/payments validated within defined TAT",
+       "0.1", "Individual Work Sheet", "0.8", "0.85", "0.9", "0.95", "1.0"]
+    ]},
+    {"team": "Onboarding", "group": "", "sheet": "Onboarding (Individual)", "name": "NAVEEN RANGA",
+     "designation": "Senior Executive - Onboarding", "extra": "", "kpis": [
+      ["Process", "EPR – Buyer & Seller Onboarding", "TAT ( 3 Days)",
+       "% of cases completed within defined TAT", "0.35", "COP (Data)", "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "Audit & Monitoring of Onboarded Vendors", "Document Completeness",
+       "% of audited vendors with complete and correctly validated documentation", "0.2",
+       "Individual Work Sheet", "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "Transporter Onboarding", "TAT", "% of cases completed within defined TAT", "0.15",
+       "COP (Data)", "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "Fall Back – Open Marketplace Onboarding", "TAT ( 1 Day )",
+       "% of cases completed within defined TAT", "0.1", "COP (Data)", "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "Open Marketplace – NBFC Coordination", "NBFC Coordination & Case Management",
+       "% of NBFC coordination activities completed within defined SLA", "0.1", "Emails / Dashboard",
+       "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "GST Payments", "Compliance Check",
+       "% of Third Party vendors paid within defined payment timeline", "0.1", "Documentation",
+       "0.8", "0.85", "0.9", "0.95", "1.0"]
+    ]},
+    {"team": "Onboarding", "group": "", "sheet": "Onboarding (Individual)", "name": "VISHWASH",
+     "designation": "Management Trainee", "extra": "", "kpis": [
+      ["Process", "Fall Back for All Verticals – Vendor & Buyer Onboarding", "TAT",
+       "% of onboarding cases completed within defined TAT as per SOP", "0.1", "COP (Data)",
+       "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "Design Standard Operating Procedures for Onboarding", "Approved SOPs",
+       "% of required SOPs validated, approved and implemented", "0.2", "COP (Data)",
+       "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "Digitalization of the Onboarding Process", "Automation of Process",
+       "% of identified onboarding processes automated", "0.3", "Process Flow",
+       "0.0", "0.1", "0.2", "0.35", "0.5"],
+      ["Process", "Maintain Daily Reports for Buyer & Seller Onboarding Across Verticals",
+       "Accuracy & Timeliness of Reports / Dashboard Representation",
+       "% of reports accurately represented and delivered within defined timeline", "0.3",
+       "Individual Work Sheet", "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "Audit Process for Entire Onboarding & Collections", "Reporting & Escalations",
+       "% of audit findings reported and escalated within defined timeline", "0.1", "Meeting",
+       "More than (T+7 days)", "T+7 days", "On Time (Defined TAT)", "T-1 day", "T - 2 days"]
+    ]},
+    {"team": "Onboarding", "group": "", "sheet": "Onboarding (Individual)", "name": "AJAY",
+     "designation": "Manager - Onboarding", "extra": "", "kpis": [
+      ["Process", "All Verticals – Vendor & Buyer Onboarding", "TAT",
+       "% of onboarding cases completed within defined TAT as per SOP", "0.4", "COP (Data)",
+       "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "Design Standard Operating Procedures for Onboarding", "Approved SOPs",
+       "% of required SOPs validated, approved and implemented", "0.2", "COP (Data)",
+       "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "Audit & Monitoring of Onboarded Vendors", "Document Completeness",
+       "% of audited vendors with complete and correctly validated documentation", "0.1", "Monthly Reporting",
+       "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "Digitalization of the Onboarding Process", "Automation of Process",
+       "% of identified onboarding processes automated", "0.2", "Process Flow",
+       "0.0", "0.15", "0.3", "0.5", "0.7"],
+      ["Process", "Vendor Payments", "Timely Validation of Bills & Vendor Payments",
+       "% of bills/payments validated within defined payment timeline", "0.1", "Team Work Sheet",
+       "0.8", "0.85", "0.9", "0.95", "1.0"]
+    ]},
+    {"team": "Collections", "group": "", "sheet": "Collections (Individual)", "name": "SAI NITIN",
+     "designation": "Executive - Collections", "extra": "", "kpis": [
+      ["Customer", "Due Date + 7 Days Collections – Marketplace & EPR", "Collection % vs Target",
+       "Achieve the defined collection target within the evaluation period.", "0.6", "MIS Report",
+       "0.8", "0.85", "0.9", "1.0", "1.05"],
+      ["Process", "Balance Confirmation", "Confirmation Coverage %",
+       "Ensure at least the defined percentage of customers with dues exceeding ₹50K have their payments " +
+         "confirmed.", "0.1", "MIS Report", "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "Reminder Emails", "Adherence to Reminder (Total)",
+       "Ensure adherence to the defined collections reminder process within the evaluation period.", "0.1",
+       "MIS Report", "As per Collections Process", "—", "—", "—", "—"],
+      ["Process", "Payment Posting", "TAT – Days",
+       "Ensure payment posting is completed within the defined TAT from the date of payment receipt.", "0.1",
+       "MIS Report", "12 Days", "10 Days", "8 Days", "7 Days", "5 Days"],
+      ["Process", "Cross-Functional Coordination", "Coordination Adherence %",
+       "Ensure adherence to the defined coordination requirements during each quarter.", "0.1", "MIS Report",
+       "75% in Quater", "80% in Quater", "85% in Quater", "90% in Quater", "100% in Quater"]
+    ]},
+    {"team": "Collections", "group": "", "sheet": "Collections (Individual)", "name": "RAVI NAIK",
+     "designation": "Manager - Collections", "extra": "", "kpis": [
+      ["Customer", "Due Date + 7 Days Collections – Marketplace & EPR", "Collection % vs Target",
+       "Achieve the defined collection target within the evaluation period.", "0.3", "MIS Report",
+       "0.8", "0.85", "0.9", "1.0", "1.05"],
+      ["Customer", "DSO – Marketplace & EPR", "DSO Days",
+       "Maintain DSO within the defined target during the evaluation period.", "0.3", "MIS Report",
+       "> 28 Days", "25–28 Days", "21–24 Days", "TGT-20 Days", "≤ 19 Days"],
+      ["Collections", "Legacy Collections", "Legacy Collection % of LD",
+       "Ensure the defined percentage of Legacy Debt (LD) is collected within the evaluation period.", "0.15",
+       "MIS Report", "10% of LD", "15% of LD", "20% of LD", "25% of LD", "30% of LD"],
+      ["Collections", "PDD (Past Due Debt)", "PDD ₹ Cr Recovered",
+       "Recover the defined PDD amount in ₹ Cr within the evaluation period.", "0.1", "MIS Report",
+       "≥ ₹9 Cr", "₹8 Cr", "₹7 Cr", "₹6 Cr", "< ₹5 Cr"],
+      ["Process", "Legal Actions", "Legal Action Coordination %",
+       "Achieve the defined cumulative percentage of the team target through effective coordination of " +
+         "legal actions.", "0.05", "MIS Report", "80% Cumulative of Team Target",
+       "100% Cumulative of Team Target", "120% Cumulative of Team Target", "140% Cumulative of Team Target",
+       "160% Cumulative of Team Target"],
+      ["Collections", "Collection of Previous Dues (Marketplace & EPR)",
+       "Collections of Overdue of Previous Financial prior to FY 25-26 (Marketplace & EPR)",
+       "Ensure the defined percentage of overdue collections from financial years prior to FY 25-26 is " +
+         "recovered during the evaluation period.", "0.1", "MIS Report", "0.4", "0.5", "0.6", "0.7", "0.8"]
+    ]},
+    {"team": "Collections", "group": "", "sheet": "Collections (Individual)", "name": "ANKUR",
+     "designation": "Assistant Manager - Collections", "extra": "", "kpis": [
+      ["Customer", "Due Date + 7 Days Collections – Marketplace & EPR", "Collection % vs Target",
+       "Achieve the defined collection target within the evaluation period.", "0.3", "MIS Report",
+       "0.8", "0.85", "0.9", "1.0", "1.05"],
+      ["Customer", "DSO – Marketplace & EPR", "DSO Days",
+       "Maintain DSO within the defined target during the evaluation period.", "0.3", "MIS Report",
+       "> 28 Days", "25–28 Days", "21–24 Days", "TGT-20 Days", "≤ 19 Days"],
+      ["Collections", "Legacy Collections", "Legacy Collection % of LD",
+       "Ensure the defined percentage of Legacy Debt (LD) is collected within the evaluation period.", "0.15",
+       "MIS Report", "10% of LD", "15% of LD", "20% of LD", "25% of LD", "30% of LD"],
+      ["Collections", "PDD (Past Due Debt)", "PDD ₹ Cr Recovered",
+       "Recover the defined PDD amount in ₹ Cr within the evaluation period.", "0.1", "MIS Report",
+       "≥ ₹9 Cr", "₹8 Cr", "₹7 Cr", "₹6 Cr", "< ₹5 Cr"],
+      ["Process", "Legal Actions", "Legal Action Coordination %",
+       "Achieve the defined cumulative percentage of the team target through effective coordination of " +
+         "legal actions.", "0.05", "MIS Report", "80% Cumulative of Team Target",
+       "100% Cumulative of Team Target", "120% Cumulative of Team Target", "140% Cumulative of Team Target",
+       "160% Cumulative of Team Target"],
+      ["Collections", "Collection of Previous Dues (Marketplace)",
+       "Collections of Overdue of Previous Financial prior to FY 25-26 (Marketplace)",
+       "Ensure the defined percentage of overdue collections from financial years prior to FY 25-26 is " +
+         "recovered during the evaluation period.", "0.1", "MIS Report", "0.4", "0.5", "0.6", "0.7", "0.8"]
+    ]},
+    {"team": "Collections", "group": "", "sheet": "Collections (Individual)", "name": "VENKAT",
+     "designation": "Assistant Manager - Collections", "extra": "", "kpis": [
+      ["Customer", "Due Date + 7 Days Collections – Marketplace & EPR", "Collection % vs Target",
+       "Achieve the defined collection target within the evaluation period.", "0.3", "MIS Report",
+       "0.8", "0.85", "0.9", "1.0", "1.05"],
+      ["Customer", "DSO – Marketplace & EPR", "DSO Days",
+       "Maintain DSO within the defined target during the evaluation period.", "0.3", "MIS Report",
+       "> 28 Days", "25–28 Days", "21–24 Days", "TGT-20 Days", "≤ 19 Days"],
+      ["Collections", "Legacy Collections", "Legacy Collection % of LD",
+       "Ensure the defined percentage of Legacy Debt (LD) is collected within the evaluation period.", "0.15",
+       "MIS Report", "10% of LD", "15% of LD", "20% of LD", "25% of LD", "30% of LD"],
+      ["Collections", "PDD (Past Due Debt)", "PDD ₹ Cr Recovered",
+       "Recover the defined PDD amount in ₹ Cr within the evaluation period.", "0.1", "MIS Report",
+       "≥ ₹9 Cr", "₹8 Cr", "₹7 Cr", "₹6 Cr", "< ₹5 Cr"],
+      ["Process", "Legal Actions", "Legal Action Coordination %",
+       "Achieve the defined cumulative percentage of the team target through effective coordination of " +
+         "legal actions.", "0.05", "MIS Report", "80% Cumulative of Team Target",
+       "100% Cumulative of Team Target", "120% Cumulative of Team Target", "140% Cumulative of Team Target",
+       "160% Cumulative of Team Target"],
+      ["Collections", "Collection of Previous Dues (EPR)",
+       "Collections of Overdue of Previous Financial prior to FY 25-26 (EPR)",
+       "Ensure the defined percentage of overdue collections from financial years prior to FY 25-26 is " +
+         "recovered during the evaluation period.", "0.1", "MIS Report", "0.4", "0.5", "0.6", "0.7", "0.8"]
+    ]},
+    {"team": "Collections", "group": "", "sheet": "Collections (Individual)", "name": "SRINIVAS REDDY",
+     "designation": "Assistant Manager - Collections", "extra": "", "kpis": [
+      ["Collections", "Collection of Previous Dues (Marketplace & EPR)",
+       "Collections of Overdue of Previous Financial prior to FY 25-26 (EPR)",
+       "Ensure the defined percentage of overdue collections from financial years prior to FY 25-26 is " +
+         "recovered during the evaluation period.", "0.1", "MIS Report", "0.4", "0.5", "0.6", "0.7", "0.8"],
+      ["Customer", "DSO – Marketplace & EPR", "DSO Days",
+       "Maintain DSO within the defined target during the evaluation period.", "0.1", "MIS Report",
+       "> 28 Days", "25–28 Days", "21–24 Days", "TGT-20 Days", "≤ 19 Days"],
+      ["Process", "Transaction (Marketplace)", "Coordination Adherence %",
+       "Ensure adherence to the defined coordination requirements during the evaluation period.", "0.15",
+       "MIS Report / Email / Communication Channel", "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "Payment Posting & Reconciliation", "TAT – Days",
+       "Ensure payment posting and reconciliation are completed within the defined TAT from the date of " +
+         "payment receipt.", "0.15", "MIS Report", "12 Days", "10 Days", "8 Days", "7 Days", "5 Days"],
+      ["Process", "Process Improvement & Automation", "Process Automation (%)",
+       "Identify process gaps and leakages and implement solutions to improve operational efficiency, " +
+         "reduce manual intervention, and minimize errors.", "0.3",
+       "Project Tracker / Process Improvement Tracker", "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "Compliance (Documentation) & Audit", "Documentation Completion (%)",
+       "Ensure 100% completion of required documentation from both Buyers and Sellers for every " +
+         "transaction.", "0.2", "Dashboard / MIS", "0.8", "0.85", "0.9", "0.95", "1.0"]
+    ]},
+    {"team": "Open Marketplace - Control Tower", "group": "", "sheet": "Marketplace - Control Tower (In",
+     "name": "ASHWIN KUMAR SINGH", "designation": "Manager", "extra": "", "kpis": [
+      ["Process", "Compliance (Documentation)", "Documentation Completion (%)",
+       "Ensure 100% completion of required documentation from both Buyers and Sellers for every " +
+         "transaction.", "0.2", "Dashboard / MIP", "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "Match Making", "Demand & Listing Conversion Rate (%)",
+       "Achieve at least 80% conversion of demand requisitions and platform listings into successful " +
+         "transactions.", "0.1", "Dashboard / MIP", "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["MIS", "Transaction Tracking", "Transaction Closure & Tracking (%)",
+       "Ensure 100% transaction closure, including completion of material movement, GST payment, and " +
+         "end-to-end transaction tracking with complete dashboard visibility.", "0.2", "Dashboard / MIP",
+       "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "DN / CN Tracking", "CN & DN Closure Rate (%)",
+       "Ensure 100% closure of all Credit Note (CN) and Debit Note (DN) transactions within the defined " +
+         "timeline.", "0.2", "Dashboard / MIP", "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "Process Improvement & Automation", "Process Automation (%)",
+       "Identify process gaps and leakages and implement solutions to improve operational efficiency, " +
+         "reduce manual intervention, and minimize errors.", "0.3",
+       "Project Tracker / Process Improvement Tracker", "0.0", "0.15", "0.3", "0.5", "0.7"]
+    ]},
+    {"team": "Open Marketplace - Control Tower", "group": "", "sheet": "Marketplace - Control Tower (In",
+     "name": "DIVYA BOPPURI", "designation": "Executive", "extra": "", "kpis": [
+      ["Process", "Dispatch Execution", "Timely Dispatch Rate (%)",
+       "Ensure shipments are dispatched within 2 days of matchmaking in accordance with the defined SOP.",
+       "0.4", "Dashboard / MIP", "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "Dispatch Documentation Management", "Dispatch Documentation Accuracy (%)",
+       "Ensure 100% of dispatches have a complete and error-free 6-Document Pack.", "0.35",
+       "Audit / Reconciliation", "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "Dispatch Coordination & Resolution", "Dispatch Issue Resolution Rate (%)",
+       "Ensure seller follow-ups, gate-pass coordination, and dispatch-related queries are resolved within " +
+         "the defined SLA.", "0.15", "Email / MIP / Communication Channel",
+       "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "SOP & Process Compliance", "Dispatch SOP Compliance Rate (%)",
+       "Ensure 100% of transactions are executed in accordance with the defined dispatch and documentation " +
+         "guidelines.", "0.1", "Email / MIP / Training & Meetings", "0.8", "0.85", "0.9", "0.95", "1.0"]
+    ]},
+    {"team": "Open Marketplace - Control Tower", "group": "", "sheet": "Marketplace - Control Tower (In",
+     "name": "JITHENDER CHITAKODUR", "designation": "Executive", "extra": "", "kpis": [
+      ["Process", "Dispatch Execution", "Timely Dispatch Rate (%)",
+       "Ensure shipments are dispatched within 2 days of matchmaking in accordance with the defined SOP.",
+       "0.4", "Dashboard / MIP", "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "Dispatch Documentation Management", "Dispatch Documentation Accuracy (%)",
+       "Ensure 100% of dispatches have a complete and error-free 6-Document Pack.", "0.35",
+       "Audit / Reconciliation", "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "Dispatch Coordination & Resolution", "Dispatch Issue Resolution Rate (%)",
+       "Ensure seller follow-ups, gate-pass coordination, and dispatch-related queries are resolved within " +
+         "the defined SLA.", "0.15", "MIP / Communication Channel", "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "SOP & Process Compliance", "Dispatch SOP Compliance Rate (%)",
+       "Ensure 100% of transactions are executed in accordance with the defined dispatch and documentation " +
+         "guidelines.", "0.1", "Email /MIP / Training & Meetings", "0.8", "0.85", "0.9", "0.95", "1.0"]
+    ]},
+    {"team": "Open Marketplace - Control Tower", "group": "", "sheet": "Marketplace - Control Tower (In",
+     "name": "BHARATH KUMAR", "designation": "Senior Executive", "extra": "", "kpis": [
+      ["Process", "In-Transit Delivery Management", "On-Time Transit Completion Rate (%)",
+       "Ensure shipments reach the buyer location within the planned transit window.", "0.5",
+       "Dashboard / MIP", "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "Shipment Visibility & Monitoring", "Tracking Accuracy Rate (%)",
+       "Ensure shipments are accurately monitored through Mobile SIM / FASTag without tracking blind spots.",
+       "0.3", "Audit / Reconciliation", "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "Buyer Coordination & Delay Management", "Pre-Arrival & Delay Resolution Rate (%)",
+       "Ensure buyer notifications and shipment-delay cases are handled within the defined SLA.", "0.1",
+       "Email / MIP / Communication Channel", "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "In-Transit SOP Compliance", "Transit Process Compliance Rate (%)",
+       "Ensure 100% of shipments are managed in accordance with the defined tracking and escalation SOPs.",
+       "0.1", "Email / MIP / Training & Meetings", "0.8", "0.85", "0.9", "0.95", "1.0"]
+    ]},
+    {"team": "Open Marketplace - Control Tower", "group": "", "sheet": "Marketplace - Control Tower (In",
+     "name": "RAJESWARI", "designation": "Executive", "extra": "", "kpis": [
+      ["Process", "POD Closure Management", "POD Collection TAT (%)",
+       "Ensure PODs are collected within 48 hours of delivery.", "0.35", "Dashboard / MIP",
+       "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "POD Documentation Management", "POD First-Time-Right Rate (%)",
+       "Ensure POD submissions are complete and accurate on the first submission.", "0.4",
+       "Audit / Reconciliation", "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "Delivery Coordination & Exception Resolution", "Delivery Exception Resolution Rate (%)",
+       "Ensure BR POC follow-ups and vehicle-rejection cases are resolved within the defined SLA.", "0.15",
+       "Email / MIP / Communication Channel", "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "POD & Exception Compliance", "POD Process Compliance Rate (%)",
+       "Ensure 100% of shipments are handled in accordance with the defined POD collection and " +
+         "rejection-handling SOPs.", "0.1", "Email / MIP / Training & Meetings",
+       "0.8", "0.85", "0.9", "0.95", "1.0"]
+    ]},
+    {"team": "Open Marketplace - Control Tower", "group": "", "sheet": "Marketplace - Control Tower (In",
+     "name": "AISHWARYA KARANAM", "designation": "Executive", "extra": "", "kpis": [
+      ["Process", "Payment Release Management", "Timely Payment Release Rate (%)",
+       "Ensure payments are released within 5 days of delivery in accordance with the defined SOP.", "0.3",
+       "Dashboard / MIP", "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "QC & Settlement Management", "QC & Settlement Accuracy Rate (%)",
+       "Ensure QC reports, debit notes, and settlements are processed accurately and within the defined " +
+         "timeline.", "0.4", "Audit / Reconciliation", "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "Dispute & Payment Resolution", "Dispute & Follow-Up Resolution Rate (%)",
+       "Ensure disputes and payment reminders are managed and resolved within the defined SLA.", "0.2",
+       "Email / MIP / Communication Channel", "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "Settlement Process Compliance", "QC & Settlement SOP Compliance Rate (%)",
+       "Ensure 100% of transactions are executed in accordance with the defined QC, dispute, and " +
+         "settlement SOPs.", "0.1", "Email / MIP / Training & Meetings", "0.8", "0.85", "0.9", "0.95", "1.0"]
+    ]},
+    {"team": "Open Marketplace - Control Tower", "group": "", "sheet": "Marketplace - Control Tower (In",
+     "name": "MEGARAJ", "designation": "Senior Executive", "extra": "", "kpis": [
+      ["Process", "POD Closure Management", "POD Collection TAT (%)",
+       "Ensure at least the defined percentage of PODs are collected within 48 hours of delivery.", "0.35",
+       "Dashboard / MIP", "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "POD Documentation Management", "POD First-Time-Right Rate (%)",
+       "Ensure at least the defined percentage of POD submissions are complete and accurate on the first " +
+         "submission.", "0.4", "Audit / Reconciliation", "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "Delivery Coordination & Exception Resolution", "Delivery Exception Resolution Rate (%)",
+       "Ensure at least the defined percentage of BR POC follow-ups and vehicle-rejection cases are " +
+         "resolved within the defined SLA.", "0.15", "Email / MIP / Communication Channel",
+       "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "POD & Exception Compliance", "POD Process Compliance Rate (%)",
+       "Ensure 100% of shipments are handled in accordance with the defined POD collection and " +
+         "rejection-handling SOPs.", "0.1", "Email / MIP / Training & Meetings",
+       "0.8", "0.85", "0.9", "0.95", "1.0"]
+    ]},
+    {"team": "Open Marketplace - Control Tower", "group": "", "sheet": "Marketplace - Control Tower (In",
+     "name": "ARVIND JAKKULA", "designation": "Executive", "extra": "", "kpis": [
+      ["Process", "In-Transit Delivery Management", "On-Time Transit Completion Rate (%)",
+       "Ensure at least the defined percentage of shipments reach the buyer location within the planned " +
+         "transit window.", "0.5", "Dashboard / MIP", "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "Shipment Visibility & Monitoring", "Tracking Accuracy Rate (%)",
+       "Ensure at least the defined percentage of shipments are accurately monitored through Mobile SIM / " +
+         "FASTag without tracking blind spots.", "0.3", "Audit / Reconciliation",
+       "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "Buyer Coordination & Delay Management", "Pre-Arrival & Delay Resolution Rate (%)",
+       "Ensure at least the defined percentage of buyer notifications and shipment-delay cases are handled " +
+         "within the defined SLA.", "0.1", "Email / MIP / Communication Channel",
+       "0.8", "0.85", "0.9", "0.95", "1.0"],
+      ["Process", "In-Transit SOP Compliance", "Transit Process Compliance Rate (%)",
+       "Ensure 100% of shipments are managed in accordance with the defined tracking and escalation SOPs.",
+       "0.1", "Email / MIP / Training & Meetings", "0.8", "0.85", "0.9", "0.95", "1.0"]
+    ]}
+  ]
+};
