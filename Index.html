@@ -753,8 +753,8 @@ tr.grp .n{font-weight:500;color:var(--ink-3)}
   .sb-brand{padding:18px 0;justify-content:center}
   .sb-nav{padding:0 8px}
   .sb-i{justify-content:center;padding:11px 0}
-  .content{padding:16px 14px 50px}
-  .top{padding:8px 14px}
+  .content{padding:16px 16px 50px}
+  .top{padding:8px 16px}
   .ov-b{grid-template-columns:1fr}
   .ov-hleg{row-gap:0}
   .ov-lg{margin-bottom:12px}
@@ -3104,10 +3104,20 @@ function modalAssign(spec){
       goal:$('#gGoal').value,weightage:$('#gW').value,source:$('#gSrc').value,
       unit:$('#gU').value},isNew?'KPI added.':'Assignment saved.');
   };
+  // The reason is asked inside the dialog: a browser prompt() is refused in embedded frames,
+  // which left this button doing nothing there. First click shows the box, second confirms.
   if($('#gDel')) $('#gDel').onclick=function(){
-    var why=window.prompt('Why is this KPI being removed? (recorded in the audit trail)');
-    if(why===null) return;
-    write('apiRemoveAssignment',{assignment_id:asgId,employee_id:empId,reason:why},
+    var t=$('#gWhyT');
+    if(!t){
+      var d=document.createElement('div'); d.className='fld'; d.id='gWhy';
+      d.innerHTML='<label for="gWhyT">Why is this KPI being removed? (recorded in the audit trail)</label>'+
+        '<textarea id="gWhyT" rows="2"></textarea>'+
+        '<div class="hint">Select Remove from scorecard again to confirm, or Cancel to keep it.</div>';
+      var mb=$('.modal .m-b'); if(!mb) return;
+      mb.appendChild(d); mb.scrollTop=mb.scrollHeight; $('#gWhyT').focus();
+      return;
+    }
+    write('apiRemoveAssignment',{assignment_id:asgId,employee_id:empId,reason:t.value||''},
       'Removed from the scorecard.');
   };
 }
