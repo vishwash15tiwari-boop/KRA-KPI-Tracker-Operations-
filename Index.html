@@ -17,15 +17,15 @@
   --ink:#111111; --ink-2:#5a5a5a; --ink-3:#8a8a8a;
   --accent:#111111; --accent-soft:#d8d8d8;
   --accent-weak:rgba(0,0,0,.07);
-  --lv1:#b0b0b0; --lv2:#8c8c8c; --lv3:#6a6a6a; --lv4:#464646; --lv5:#1a1a1a;
+  --lv1:#99bbff; --lv2:#6699ff; --lv3:#3377ff; --lv4:#005dff; --lv5:#024c8a;
   --lv0:#d8d8d8;
-  --lvna:#ededed;
+  --lvna:#eceef2;
   --cat1:#1a1a1a; --cat2:#5e5e5e; --cat3:#949494; --cat-rest:#d0d0d0;
-  --good:#1a1a1a; --warn:#5a5a5a; --crit:#0d0d0d;
-  --head:#1f3a5f;
-  --st-ok:#22a55b; --st-warn:#f58220; --st-crit:#e23d3d;
-  --rk:#f58220; --rk-s:#fff2e6; --ok-s:#eaf7ef; --warn-s:#fff4ea; --crit-s:#fdeeee;
-  --blue:#2f7cf6; --blue-s:#edf3fe; --violet:#7c5cfc; --violet-s:#f2efff; --page:#f7f7f9;
+  --good:#049769; --warn:#b85c10; --crit:#d12e2e;
+  --head:#111111;
+  --st-ok:#049769; --st-warn:#f58220; --st-crit:#e23d3d;
+  --rk:#005dff; --rk-s:#ebf2ff; --ok-s:#e6f5ef; --warn-s:#fff4ea; --crit-s:#fdeeee;
+  --blue:#005dff; --blue-s:#ebf2ff; --violet:#8460d4; --violet-s:#f3effb; --page:#f7f7f9;
   --r-lg:14px; --r:10px; --r-sm:7px;
   --font:Poppins,Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
   color-scheme:light;
@@ -620,7 +620,7 @@ body{background:var(--page)}
   color:var(--ink-2);cursor:pointer;white-space:nowrap}
 .ov-tabs button:first-child{border-left:0}
 .ov-tabs button.on{background:var(--rk-s);color:var(--rk);font-weight:600;box-shadow:inset 0 0 0 1px var(--rk)}
-.ov-tabs.b button.on{background:var(--blue-s);color:var(--blue);box-shadow:inset 0 0 0 1px var(--blue)}
+.ov-tabs.b button.on{background:var(--violet-s);color:var(--violet);box-shadow:inset 0 0 0 1px var(--violet)}
 .ov-ghost{visibility:hidden}
 .ov-tt{font-size:13.5px;font-weight:600;color:var(--ink)}
 .ov-chart{height:118px;position:relative;margin-top:4px}
@@ -654,6 +654,123 @@ body{background:var(--page)}
   .ov-hleg{grid-template-columns:1fr 1fr;gap:12px}.ov-lg{border-left:0;padding-left:0}
   .filters.ov-f{margin-left:0}.filters.ov-f .f{min-width:0;flex:1}
   .top-h{font-size:17px}.hp{height:36px}
+}
+/* ===== Recykal brand pass =====
+   Colour comes from the brand palette: black, Bright Blue #005DFF, Midnight Blue #024C8A,
+   Medium purple #8460D4, Dark Green #049769 and Fern Green #3E7D44. Orange and red stay only
+   as the status colours for "needs attention" and "critical". Every page uses the Overview's
+   white cards, sentence-case labels, tables and buttons. */
+.app{grid-template-columns:216px 1fr}
+.sb-brand{padding:20px 16px 20px 20px;gap:10px}
+.sb-logo{width:30px;height:30px}
+.sb-name{font-size:24px;font-weight:600;letter-spacing:-.6px;line-height:1}
+.sb-name small{margin-top:5px;font-size:10.5px;font-weight:400;letter-spacing:0;color:var(--ink-2);white-space:nowrap}
+.sb-nav{padding:0 12px}
+.sb-i{gap:11px;padding:9px 11px;font-size:13.5px}
+.sb-i svg{width:18px;height:18px}
+.sb-i span{white-space:nowrap}
+.sb-tag{margin:12px}
+.content{max-width:none}
+.hdr{margin-bottom:16px}
+.hdr h1{font-size:26px;font-weight:700;letter-spacing:-.6px;line-height:1.15}
+.hdr .sub{font-size:13px;margin-top:4px}
+.panel,.tile,.filters,.tm-ov,.tm-chart{background:#ffffff;border:1px solid var(--line-soft);border-radius:14px;
+  box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.panel .ph{padding:14px 18px 12px}
+/* a short card beside a long one keeps its own height instead of stretching into empty space */
+.row.r-21,.row.r-2{align-items:start}
+.panel h3{font-size:15px;font-weight:600;letter-spacing:-.2px}
+.panel .cap{font-size:12.5px}
+.tile{padding:14px 16px}
+.tile .l{font-size:12.5px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--ink-2)}
+.tile .v{font-size:26px;font-weight:700;letter-spacing:-.7px;margin-top:6px;line-height:1.1}
+.tile .v.sm{font-size:17px;font-weight:600}
+.tile .h{font-size:11.5px;margin-top:5px}
+.tile.clk:hover{background:#ffffff;border-color:var(--line);box-shadow:0 6px 18px rgba(16,24,40,.08)}
+.filters{padding:12px 14px;gap:12px}
+.filters.ov-f{box-shadow:none}
+.f label{font-size:11.5px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--ink-2);margin-bottom:4px}
+.f select,.f input{height:36px;padding:6px 10px;background:#ffffff;border:1px solid var(--line);border-radius:8px;font-size:13px}
+.fld label,.bands .b label{font-size:11.5px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--ink-2)}
+.fld input,.fld select,.fld textarea,.bands .b input,.sel{background:#ffffff;border-radius:8px}
+th{background:#ffffff;font-size:10.5px;font-weight:600;letter-spacing:.05em;color:var(--ink-3);padding:9px 14px;
+  border-bottom:1px solid var(--line-soft)}
+th.act{background:#ffffff}
+td{border-bottom:1px solid #f1f2f4}
+tbody tr:hover,tbody tr:hover td.act{background:#fafbfc}
+tr.grp td{background:#f6f7f9;font-size:12px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--ink);
+  border-top:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft)}
+tbody tr.grp:hover td{background:#f6f7f9}
+tr.grp .n{font-weight:500;color:var(--ink-3)}
+.btn{background:#ffffff;border:1px solid var(--line);border-radius:8px;color:var(--ink)}
+.btn:hover{background:#f6f7f9;border-color:#d5d9e0}
+.btn.p{background:#000000;border-color:#000000;color:#ffffff}
+.btn.p:hover{background:#1f1f1f;border-color:#1f1f1f}
+.note{border-radius:12px;border-color:var(--line-soft)}
+.note.w{border-left:3px solid var(--st-warn);background:#fff9f3}.note.w svg{color:var(--st-warn)}
+.note.c{border-left:3px solid var(--st-crit);background:#fef6f6}.note.c svg{color:var(--st-crit)}
+.note.i{border-left:3px solid var(--blue);background:#f5f8ff}.note.i svg{color:var(--blue)}
+.modal{border-color:var(--line-soft);border-radius:16px}
+.m-h h2{font-weight:700}
+.tm-badge{color:var(--rk);background:var(--rk-s)}
+/* a person's name is never cut short: wider cards, and a name too long for one line wraps */
+.tm-card{width:224px;height:292px}
+.tm-n{white-space:normal;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+/* Overview: white cards, brand-coloured icons, status colour only where the card is a status */
+.ov-kpi{gap:9px;background:#ffffff}
+.ov-kpi .ic{width:32px;height:32px}
+.ov-kpi .t{font-size:12.5px}
+.k-emp,.k-avg,.k-att,.k-com,.k-warn,.k-crit{background:#ffffff;border-color:var(--line-soft)}
+.k-emp .ic{background:#ebf2ff;color:#005dff}
+.k-avg .ic{background:#f3effb;color:#8460d4}
+.k-att .ic{background:#e6f5ef;color:#049769}
+.k-com .ic{background:#e6eef5;color:#024c8a}
+.k-warn .ic{background:#fff1e4;color:var(--st-warn)}.k-warn .t{color:var(--warn)}
+.k-crit .ic{background:#fdecec;color:var(--st-crit)}.k-crit .t{color:var(--crit)}
+.c-warn{color:#d66a0f}
+.ov-b{grid-template-columns:1.6fr 1.15fr 1.05fr}
+/* the four health figures share rows, so a label that wraps never pushes its number out of line */
+.ov-hleg{grid-template-rows:auto auto auto;row-gap:0}
+.ov-lg{display:grid;grid-row:span 3;grid-template-rows:subgrid;row-gap:0;align-content:start}
+.ov-lg .l{align-items:flex-start}
+.ov-lg .l .ov-dot{margin-top:3px}
+@media(min-width:901px) and (max-width:1500px){
+  /* People performance spans the full width here, so names need not wrap */
+  .ov-pp .nm{max-width:none;white-space:nowrap}
+}
+@media(max-width:1440px){
+  .ov-b{grid-template-columns:1fr 1fr}.ov-b>:first-child{grid-column:1/-1}
+}
+@media(max-width:900px){
+  .app{grid-template-columns:64px 1fr}
+  .sb-brand{padding:18px 0;justify-content:center}
+  .sb-nav{padding:0 8px}
+  .sb-i{justify-content:center;padding:11px 0}
+  .content{padding:16px 14px 50px}
+  .top{padding:8px 14px}
+  .ov-b{grid-template-columns:1fr}
+  .ov-hleg{row-gap:0}
+  .ov-lg{margin-bottom:12px}
+  .sb-tag{display:none}
+}
+@media(max-width:600px){
+  /* phone: header on two lines, filters and KPI cards stacked so nothing is cut or overlapped */
+  .top{flex-wrap:wrap;gap:8px 10px;padding:8px 12px}
+  .top-t{flex:1 1 100%}
+  .top .spacer{display:none}
+  .hp{flex:1 1 auto;min-width:0;height:38px}
+  .hp select{min-width:0;width:100%}
+  .search{flex:1 1 110px}
+  .search input{height:38px}
+  .who svg{display:none}
+  .who .av{width:38px;height:38px}
+  .filters.ov-f .f{flex:1 1 100%}
+  .ov-kpi{flex-direction:column;gap:8px}
+  .ov-kpi .t{white-space:normal;min-height:0}
+  .tm-lead{width:100%}
+  .tm-lead .tm-k{grid-template-columns:repeat(2,1fr)}
+  table.mini{min-width:0}
+  .ov-wm{flex-direction:column;align-items:stretch}.ov-ring{align-self:center}
 }
 </style></head>
 <body>
@@ -1461,16 +1578,22 @@ function chartMonthly(id,rows,color){
   var o=baseOpts();
   o.scales.y.min=0; o.scales.y.max=100;
   o.scales.y.ticks.callback=function(v){ return v+'%'; };
-  o.plugins.tooltip.callbacks={label:function(c){
+  var name=function(p){
+    var per=((S.model||{}).periods||[]).filter(function(x){
+      return String(x.id)===String(p.period); })[0];
+    return per?periodLabel(per):p.period; };
+  // "Apr / 2026" so six months fit side by side; the tooltip keeps the full name.
+  o.plugins.tooltip.callbacks={title:function(items){ return name(pts[items[0].dataIndex]); },
+    label:function(c){
     var p=pts[c.dataIndex];
     return p.n? p.hit+' of '+p.n+' targeted KPIs met target'
               : 'nothing recorded'; }};
   o.scales.x.ticks.maxRotation=0; o.scales.x.ticks.autoSkip=false;
+  o.scales.x.ticks.font.size=10.5;
   mkChart(id,{type:'bar',data:{
     labels:pts.map(function(p){
-      var per=((S.model||{}).periods||[]).filter(function(x){
-        return String(x.id)===String(p.period); })[0];
-      return per?periodLabel(per).split(' '):p.period; }),
+      var s=String(name(p)), m=/^([A-Za-z]{3})[A-Za-z]*\s+(\d{4})$/.exec(s);
+      return m?[m[1],m[2]]:s.split(' '); }),
     datasets:[{data:pts.map(function(p){ return p.pct; }),
       backgroundColor:color||tok('--accent'),borderRadius:4,borderSkipped:'bottom',
       maxBarThickness:46}]},options:o});
@@ -1483,8 +1606,8 @@ var V={};
 // Presentation only. Every figure is one ovStats(), stats() and the existing formatters already
 // produce. A department row is ovStats() with that department set in the Department filter, so
 // it shows exactly what the cards show when you filter to that department.
-var OV_TEAM_ICON=[['METAL','cog','#f58220'],['PLASTIC','recycle','#2f7cf6'],
-  ['ONBOARDING','users','#7c5cfc'],['COLLECTIONS','box','#22a55b'],['CONTROL TOWER','nodes','#b4532a']];
+var OV_TEAM_ICON=[['METAL','cog','#024c8a'],['PLASTIC','recycle','#005dff'],
+  ['ONBOARDING','users','#8460d4'],['COLLECTIONS','box','#049769'],['CONTROL TOWER','nodes','#3e7d44']];
 function ovTeamIcon(t){
   var k=teamKey(t);
   for(var i=0;i<OV_TEAM_ICON.length;i++){
@@ -1715,7 +1838,7 @@ V.overview=function(){
       '<th class="r">Weightage</th><th class="r">Score</th><th>Level</th></tr></thead><tbody>'+
     (prow||'<tr><td colspan="6" class="na">Nobody matches the filters.</td></tr>')+'</tbody></table></div></section>';
 
-  out+='<div class="ov-row ov-d">'+trend('A',ta,'#f58220',true)+trend('B',tb,'#2f7cf6',false)+peopleCard+'</div>';
+  out+='<div class="ov-row ov-d">'+trend('A',ta,'#005dff',true)+trend('B',tb,'#8460d4',false)+peopleCard+'</div>';
 
   // ---- the detail sections the Overview already had, unchanged, below the dashboard
   (function(){
@@ -2080,7 +2203,7 @@ V.framework=function(){
     var e=M.emps[r.employee_id], kra=M.kras[r.kra_id]||{};
     body+='<tr class="clk" data-go="emp/'+h(r.employee_id)+'">'+
       '<td>'+person(e)+'</td>'+
-      '<td style="max-width:190px"><div style="font-size:12.5px;font-weight:550">'+
+      '<td style="min-width:170px;max-width:250px"><div style="font-size:12.5px;font-weight:550">'+
         h(kra.name||'—')+'</div><div style="font-size:11px;color:var(--ink-3)">'+
         h(kra.perspective||'')+'</div></td>'+
       '<td style="min-width:180px;max-width:250px"><div style="font-weight:600;'+
@@ -3153,7 +3276,7 @@ function render(){
         '<div class="sb-brand"><div class="sb-logo">'+
           '<img src="'+LOGO+'" alt="Recykal" width="32" height="29">'+
         '</div>'+
-        '<div class="sb-name">Recykal</div></div>'+
+        '<div class="sb-name">recykal<small>Sustainable Circularity</small></div></div>'+
         '<nav class="sb-nav">'+nav+'</nav>'+
         '<div class="sb-tag"><div class="lf">'+svg('leaf')+'</div>'+
           '<div class="pp">Process<br>People<br>Profit<br>Planet</div>'+
