@@ -670,6 +670,13 @@ body{background:var(--page)}
 .sb-i svg{width:18px;height:18px}
 .sb-i span{white-space:nowrap}
 .sb-tag{margin:12px}
+/* header: the title keeps its width; search and "Viewing as" give way, and on a narrow
+   window the controls wrap to a second line rather than overlap */
+.top{flex-wrap:wrap;row-gap:6px}
+.top-t{flex:0 0 auto}
+.search{flex:1 1 150px;min-width:120px}
+.top .sel{max-width:180px;min-width:0}
+@media(max-width:1200px){ .top .sel{max-width:150px} .search{flex-basis:120px} }
 .content{max-width:none}
 .hdr{margin-bottom:16px}
 .hdr h1{font-size:26px;font-weight:700;letter-spacing:-.6px;line-height:1.15}
@@ -3396,7 +3403,7 @@ function wire(){
         if(m){ ev.preventDefault(); openModal(m); return; }
         go='method';
       }
-      location.hash='#/'+go;
+      nav('#/'+go);
     });
   });
   $$('[data-ovtab]').forEach(function(el){ el.onclick=function(){
@@ -3412,7 +3419,7 @@ function wire(){
   };
   $$('[data-team]').forEach(function(el){ el.onclick=function(){
     S.teamSel=el.getAttribute('data-team');
-    if(S.route==='team') location.hash='#/teams'; else render(); }; });
+    if(S.route==='team') nav('#/teams'); else render(); }; });
   $$('[data-f]').forEach(function(el){
     el.onchange=function(){ S[el.getAttribute('data-f')]=el.value; render(); }; });
   $$('[data-clear]').forEach(function(el){
@@ -3504,18 +3511,33 @@ function search(q){
   box.classList.add('open');
 }
 
-function parseHash(){
-  var r=String(location.hash||'').replace(/^#\/?/,'').split('/')
+function parseHash(hs){
+  var r=String(typeof hs==='string'?hs:(location.hash||'')).replace(/^#\/?/,'').split('/')
     .filter(function(x){ return x!==''; });
   return {route:r[0]||'overview',params:r.slice(1)};
 }
-function route(){
-  var p=parseHash(); S.route=p.route; S.params=p.params;
+function route(hs){
+  var p=parseHash(hs); S.route=p.route; S.params=p.params;
   closeModal(); render();
   var c=$('.content'); if(c) c.scrollTop=0;
   window.scrollTo(0,0);
 }
+// Every in-app move goes through nav(). Where the address cannot change (a page shown inside a
+// sandboxed frame or a file preview) it routes from the link itself, so the menu and every
+// card, row and tab still work there.
+function nav(to){
+  if(location.hash===to) return;
+  var before=location.hash;
+  try{ location.hash=to; }catch(e){}
+  if(location.hash===before) route(to);
+}
 window.addEventListener('hashchange',route);
+document.addEventListener('click',function(ev){
+  if(ev.defaultPrevented||ev.button!==0||ev.metaKey||ev.ctrlKey||ev.shiftKey||ev.altKey) return;
+  var a=ev.target&&ev.target.closest?ev.target.closest('a[href^="#/"]'):null;
+  if(!a||a.getAttribute('target')) return;
+  ev.preventDefault(); nav(a.getAttribute('href'));
+});
 document.addEventListener('keydown',function(ev){
   if(ev.key==='Escape') closeModal();
   if(ev.key==='/'&&document.activeElement===document.body){
@@ -3569,7 +3591,7 @@ function bootLoaded(res){
     S.session=res.session; S.users=res.users||[]; S.model=res.model;
     S.period=res.model.period_id;
     index();
-    if(!location.hash){ location.hash='#/overview'; } else { route(); }
+    if(!location.hash){ nav('#/overview'); } else { route(); }
 }
 
 window.__PerfTracker={S:S,M:M,V:V,boot:boot,render:render,index:index};
